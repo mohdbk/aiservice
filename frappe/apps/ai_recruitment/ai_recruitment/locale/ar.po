@@ -1,0 +1,124 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: ar\n"
+
+msgid "Ask AI"
+msgstr "اسأل الذكاء الاصطناعي"
+
+msgid "Recruitment Assistant"
+msgstr "مساعد التوظيف"
+
+msgid "New chat"
+msgstr "محادثة جديدة"
+
+msgid "Close"
+msgstr "إغلاق"
+
+msgid "Send"
+msgstr "إرسال"
+
+msgid "AI suggestions only. You approve every change."
+msgstr "اقتراحات الذكاء الاصطناعي فقط. أنت من يعتمد كل تغيير."
+
+msgid "Ask about openings or applicants"
+msgstr "اسأل عن الوظائف أو المتقدمين"
+
+msgid "Approve"
+msgstr "اعتماد"
+
+msgid "Applying"
+msgstr "جارٍ التطبيق"
+
+msgid "Failed. Tap to retry."
+msgstr "تعذّر التنفيذ. اضغط لإعادة المحاولة."
+
+msgid "Thinking"
+msgstr "جارٍ التفكير"
+
+msgid "(no reply)"
+msgstr "(لا يوجد رد)"
+
+msgid "Sorry, something went wrong. Please try again."
+msgstr "عذرًا، حدث خطأ. يرجى المحاولة مرة أخرى."
+
+msgid "Re-score with AI"
+msgstr "إعادة التقييم بالذكاء الاصطناعي"
+
+msgid "Hi! Try **\"Shortlist the top 3 for the AI Engineer role\"**, **\"Who knows vLLM?\"** or open an applicant and ask **\"لخّص هذا المتقدم\"**."
+msgstr "مرحبًا! جرّب **\"اختر أفضل 3 مرشحين لوظيفة مهندس الذكاء الاصطناعي\"** أو **\"من يعرف vLLM؟\"** أو افتح ملف متقدم واسأل **\"لخّص هذا المتقدم\"**."
+
+msgid "Searching applicants"
+msgstr "جارٍ البحث عن المتقدمين"
+
+msgid "Ranking applicants"
+msgstr "جارٍ ترتيب المتقدمين"
+
+msgid "Comparing applicants"
+msgstr "جارٍ مقارنة المتقدمين"
+
+msgid "Checking the pipeline"
+msgstr "جارٍ مراجعة مسار التوظيف"
+
+msgid "Reading the applicant"
+msgstr "جارٍ قراءة ملف المتقدم"
+
+msgid "Reading interview feedback"
+msgstr "جارٍ قراءة ملاحظات المقابلات"
+
+msgid "Checking calendars"
+msgstr "جارٍ التحقق من التقويمات"
+
+msgid "Reading the job opening"
+msgstr "جارٍ قراءة الوظيفة"
+
+msgid "Working"
+msgstr "جارٍ العمل"
+
+msgid "AI Screening"
+msgstr "الفرز بالذكاء الاصطناعي"
+
+msgid "AI Score"
+msgstr "تقييم الذكاء الاصطناعي"
+
+msgid "AI Status"
+msgstr "حالة التقييم"
+
+msgid "AI Model"
+msgstr "نموذج الذكاء الاصطناعي"
+
+msgid "Scored On"
+msgstr "تاريخ التقييم"
+
+msgid "AI Summary"
+msgstr "ملخص الذكاء الاصطناعي"
+
+msgid "Must-have Gaps"
+msgstr "متطلبات أساسية غير مستوفاة"
+
+msgid "Per-criterion Reasoning"
+msgstr "مبررات كل معيار"
+
+msgid "AI Scoring Criteria"
+msgstr "معايير التقييم بالذكاء الاصطناعي"
+
+msgid "AI Recruitment Settings"
+msgstr "إعدادات التوظيف بالذكاء الاصطناعي"
+
+msgid "AI Chat Log"
+msgstr "سجل محادثات الذكاء الاصطناعي"
+
+msgid "AI Evaluation Run"
+msgstr "اختبار تقييم الذكاء الاصطناعي"
+
+msgid "You are not allowed to use the Recruitment Assistant."
+msgstr "غير مسموح لك باستخدام مساعد التوظيف."
+
+msgid "The assistant can only set Open, Hold or Replied."
+msgstr "يمكن للمساعد فقط تعيين الحالة إلى مفتوح أو معلّق أو تم الرد."
+
+msgid "Compare between 2 and 5 applicants."
+msgstr "قارن بين 2 و5 متقدمين."
+
+msgid "Give a search term."
+msgstr "أدخل كلمة للبحث."

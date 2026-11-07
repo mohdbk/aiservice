@@ -40,15 +40,18 @@ def after_migrate():
 
 
 def _ensure_settings_defaults():
-    s = frappe.get_single(SETTINGS)
-    if s.llm_model:
-        return
-    meta = frappe.get_meta(SETTINGS)
-    for df in meta.fields:
-        if df.default and not s.get(df.fieldname):
-            s.set(df.fieldname, df.default)
-    s.flags.ignore_permissions = True
-    s.save()
+    """Fill defaults for any setting that has never been saved (new fields on upgrade
+    included), without touching values an admin has set."""
+    saved = {r[0] for r in frappe.db.sql("select field from `tabSingles` where doctype=%s", SETTINGS)}
+    for df in frappe.get_meta(SETTINGS).fields:
+        if df.default and df.fieldname not in saved and df.fieldtype not in ("Section Break", "Column Break", "HTML"):
+            frappe.db.set_single_value(SETTINGS, df.fieldname, df.default)
+    frappe.clear_document_cache(SETTINGS, SETTINGS)
+
+
+def setting(fieldname, fallback):
+    """Read a setting, treating empty/0 as 'use the default'."""
+    return frappe.get_cached_doc(SETTINGS).get(fieldname) or fallback
 
 
 def allowed_roles() -> set[str]:

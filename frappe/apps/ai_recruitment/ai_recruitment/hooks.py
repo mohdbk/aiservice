@@ -8,7 +8,10 @@ app_license = "mit"
 required_apps = ["hrms"]
 
 # Chat panel on every Desk page (shown only to roles allowed in AI Recruitment Settings)
-app_include_js = "/assets/ai_recruitment/js/ai_chat.js"
+app_include_js = [
+    "/assets/ai_recruitment/js/ai_markdown.js",
+    "/assets/ai_recruitment/js/ai_chat.js",
+]
 
 extend_bootinfo = "ai_recruitment.setup.boot"
 
@@ -19,4 +22,8 @@ doc_events = {
     "Job Applicant": {
         "after_insert": "ai_recruitment.scoring.on_applicant_insert",
     }
+}
+
+scheduler_events = {
+    "daily": ["ai_recruitment.governance.purge_old_logs"],
 }

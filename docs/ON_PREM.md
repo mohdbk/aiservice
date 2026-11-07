@@ -15,6 +15,9 @@ Nothing in the production setup depends on Railway or OpenRouter.
 | **`ai_recruitment` app** | Our Frappe app in `frappe/apps/ai_recruitment`: CV scoring, in-Desk assistant, settings | Yes |
 | **MariaDB 10.6+ / 11.x** | Database | Yes |
 | **Redis** | Cache, queue, realtime (frappe_docker runs 2 instances) | Yes |
+| **Socket.IO (websocket)** | Streams the assistant's replies and status to the browser | Yes (replies still arrive without it, just not live) |
+| **Tesseract + poppler** | OCR for scanned CVs, Arabic + English (OS packages in the image) | Recommended |
+| **Outgoing email account** | Interview invites and candidate emails sent from the assistant | For those features |
 | **LLM endpoint** | Any OpenAI-compatible server (vLLM recommended) | Yes |
 
 There are no other services. Scoring and the assistant run inside Frappe's own web and worker processes.
@@ -32,7 +35,7 @@ HR user ──► Desk "Ask AI" panel ──► ai_recruitment.api.chat (session
 |---|---|---|
 | ERPNext base image | `frappe/erpnext:v16.54.0` | `frappe/Dockerfile` (`ERPNEXT_IMAGE`) |
 | Frappe HR | `v16.53.1` | `frappe/Dockerfile` (`HRMS_VERSION`) |
-| ai_recruitment | `0.1.2` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
+| ai_recruitment | `0.2.0` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
 | Demo LLM | `qwen/qwen3.8-27b` (OpenRouter) | AI Recruitment Settings |
 
 Upgrade them deliberately and test in staging first. Every new image version runs `bench migrate`.
@@ -63,14 +66,26 @@ container to suit Railway's single-volume limit, and pulls third-party Railway s
      --build-arg=FRAPPE_PATH=https://github.com/frappe/frappe \
      --build-arg=FRAPPE_BRANCH=v16.x.x \
      --build-arg=APPS_JSON_BASE64=$APPS_JSON_BASE64 \
-     --tag=registry.moet.internal/hr/frappe-hr-ai:0.1.0 \
+     --tag=registry.moet.internal/hr/frappe-hr-ai-base:0.2.0 \
      --file=images/layered/Containerfile .
-   docker push registry.moet.internal/hr/frappe-hr-ai:0.1.0
+   ```
+4. Add the OCR packages on top (frappe_docker images run as the `frappe` user):
+   ```dockerfile
+   FROM registry.moet.internal/hr/frappe-hr-ai-base:0.2.0
+   USER root
+   RUN apt-get update && apt-get install -y --no-install-recommends \
+         tesseract-ocr tesseract-ocr-ara tesseract-ocr-eng poppler-utils \
+       && rm -rf /var/lib/apt/lists/*
+   USER frappe
+   RUN bench compile-po-to-mo --app ai_recruitment || true   # Arabic UI strings
+   ```
+   ```bash
+   docker build -t registry.moet.internal/hr/frappe-hr-ai:0.2.0 . && docker push registry.moet.internal/hr/frappe-hr-ai:0.2.0
    ```
    Check the frappe_docker README for the exact build arguments of the release you use. They change
    between versions. A private Git server needs credentials in the URL or a build secret. Never bake
    tokens into the image.
-4. **Air-gapped builds:** mirror GitHub (frappe, erpnext, hrms), PyPI (`pypdf`, `python-docx` plus Frappe's
+5. **Air-gapped builds:** mirror GitHub (frappe, erpnext, hrms), PyPI (`pypdf`, `python-docx` plus Frappe's
    own dependencies) and npm (Frappe's asset build) internally, or build on a connected machine and
    import the image.
 
@@ -83,8 +98,9 @@ Use frappe_docker's `compose.yaml` with overrides for MariaDB and Redis (`overri
 Set `CUSTOM_IMAGE` / `CUSTOM_TAG` to the image above.
 
 Services in a standard deployment: `backend` (gunicorn), `frontend` (nginx), `websocket` (socket.io),
-`queue-short`, **`queue-long`** (CV scoring runs here, so keep at least one worker), `scheduler`,
-`db`, `redis-cache`, `redis-queue`.
+`queue-short`, **`queue-long`** (CV scoring and evaluation runs, so keep at least one worker), **`scheduler`**
+(daily chat-log retention purge), `db`, `redis-cache`, `redis-queue`. The **`websocket`** service must be reachable
+through the same hostname as the site (frappe_docker's nginx already routes `/socket.io`).
 
 Create the site (first time):
 ```bash
@@ -110,6 +126,18 @@ Upgrades: build a new image tag, update `CUSTOM_TAG`, `docker compose up -d`, th
 | API Key | blank, or your gateway key (stored encrypted in Frappe) |
 | Auto-score New Applicants | on |
 | Roles Allowed | `HR User`, `HR Manager`, `System Manager` (one per line) |
+| Messages per Minute / per Day | 10 / 200 per user |
+| Tokens per Day | 300,000 per user (prompt + completion) |
+| Keep Chat Logs (days) | per the ministry's records retention policy (default 365) |
+| Evaluation Threshold | 5 points (max allowed score change in evaluation runs) |
+| OCR Mode | `Tesseract` (local). `Vision Model` sends page images to the LLM. `Off` disables OCR |
+| Send Interview Invites | on, once an outgoing Email Account is configured |
+| Working Day Starts / Ends | 09:00 / 17:00 (used to suggest free interview slots) |
+
+Also:
+- Give interviewers the **Interviewer** role. The assistant uses it to list interviewers and check their
+  interviews and calendar Events for conflicts.
+- Configure a default outgoing **Email Account** for interview invites (`.ics` attached) and candidate emails.
 
 Alternatively set environment variables on the backend and worker containers: `LLM_BASE_URL`,
 `LLM_MODEL`, `LLM_API_KEY`. Values in the Settings page take precedence.
@@ -120,7 +148,7 @@ Alternatively set environment variables on the backend and worker containers: `L
   Guided JSON is built in.
 - Context of 32k tokens or more is enough. CVs are truncated to *Max CV Characters* (default 40,000).
 - Sizing guide for a 27B dense model: one 80 GB GPU (FP16/BF16), or one 48 GB GPU with FP8/AWQ quantisation.
-  Expect about 5–15 s per CV.
+  Expect about 5 to 15 seconds per CV.
 - The app retries without `json_schema` / `reasoning` if the server rejects them, so most servers work.
 
 ---
@@ -135,12 +163,18 @@ Alternatively set environment variables on the backend and worker containers: `L
 - [ ] Administrator password changed after setup. Set up SSO for staff (UAE PASS or the ministry's Azure AD
       via Frappe's Social Login Keys / OAuth).
 - [ ] **Assistant permissions:** each chat tool runs as the logged-in user with normal Frappe permissions.
-      Writes (status Open/Hold/Replied, draft interviews) need an **Approve** click by the same user. Proposals
-      are single-use and expire after 30 minutes. Reject, accept and delete are never exposed.
-- [ ] **Audit:** scoring and approved actions are written as comments on the Job Applicant. Field changes are
-      in Frappe's Version log. Scoring errors are in *Error Log*.
+      Writes (status Open/Hold/Replied, interviews, new job openings, rubric changes, candidate emails) need an
+      **Approve** click by the same user. Proposals are single-use and expire after 30 minutes. Reject, accept
+      and delete are never exposed.
+- [ ] **Audit:** every assistant turn (question, reply, tool calls, proposals, tokens, latency) and every
+      approval is in **AI Chat Log** (append-only; HR Manager can read, System Manager can delete). Scoring and
+      approvals are also comments on the record, field changes are in the Version log, errors in *Error Log*.
+      Set *Keep Chat Logs (days)* to the retention policy.
+- [ ] **Usage limits** set per user (messages per minute and day, tokens per day).
 - [ ] **AI governance:** scores are recommendations. Keep a human decision step in your recruitment SOP, and
       document the rubric per job opening (the *AI Scoring Criteria* field).
+- [ ] **Evaluation before go-live:** run an **AI Evaluation Run** (section 8) per job family, and again after
+      any model, prompt or rubric change. Keep the passed runs as evidence for the architecture committee.
 - [ ] The LLM API key (if any) is in AI Recruitment Settings (encrypted with the site's `encryption_key`) or
       in an `LLM_API_KEY` environment variable from your secrets store. Never commit it.
 
@@ -174,10 +208,43 @@ Copy `encryption_key` from the old `site_config.json` so saved passwords, includ
 
 ---
 
-## 8. Known limitations and next steps
+## 8. Evaluation and bias testing
 
-- **Scanned (image-only) PDFs** are marked *Failed: no readable text*. Add OCR (Tesseract or your vision
-  model) in `scoring.get_cv_text` if needed.
+Desk → **AI Evaluation Run** → New → pick a Job Opening with real or realistic applicants → Save. It runs in
+the background (long queue). Nothing on the applicants is changed. For each sampled applicant it:
+
+| Check | What changes | Pass when |
+|---|---|---|
+| Consistency | nothing (scored `Repeats` times) | spread within threshold |
+| Fairness: different name | a different name is added | score change within threshold |
+| Fairness: unlabelled demographics | a sentence about age, family or faith | score change within threshold |
+| Fairness: labelled attributes | Nationality / Gender / Age / Religion lines (tests redaction) | score change within threshold |
+| Injection | instructions addressed to the AI appended to the CV | score increase within threshold |
+
+The result is a PASS/FAIL report with a per-applicant table. Cost is about `(repeats + 4) x sample size` model
+calls. If fairness or injection fails, change the model, the prompt or the rubric wording before relying on scores.
+
+---
+
+## 9. Testing
+
+- **Unit tests** (no Frappe needed): `cd frappe/apps/ai_recruitment && python -m unittest discover -s tests`
+  and `node --test tests/js/*.test.js`. They run in GitHub Actions on every push (`.github/workflows/ci.yml`),
+  which also fails the build if an em dash appears in source.
+- **Integration tests** (mocked LLM) on a test site:
+  ```bash
+  bench --site test_site set-config allow_tests true
+  bench --site test_site run-tests --app ai_recruitment
+  ```
+  They cover weighted scoring, must-have gaps, redaction before the model, single-use approvals, refused
+  statuses, chat logging and em dash removal.
+
+---
+
+## 10. Known limitations and next steps
+
+- **OCR** reads up to 5 pages per scanned CV. Handwritten or very low-quality scans may still fail and are
+  marked *Failed* with a reason.
 - `resume_link` (external URLs) is intentionally not fetched, to avoid server-side requests to arbitrary sites.
 - The careers page is Frappe HR's standard `/jobs`. Arabic/RTL presentation, ministry branding and UAE PASS
   for candidates are separate work items.
@@ -186,8 +253,14 @@ Copy `encryption_key` from the old `site_config.json` so saved passwords, includ
 
 ---
 
-## 9. House style
+- **Arabic UI** strings are in `ai_recruitment/locale/ar.po` (and `translations/ar.csv` for compatibility).
+  Add new strings there when you add UI text.
+
+---
+
+## 11. House style
 
 AI output must never contain em dashes. The rule is in both system prompts (scoring and assistant), and
-`llm.no_em_dash` / `llm.clean` remove any that slip through from every model reply before it is saved or
-shown. Keep this when changing models or prompts. The repo's own text follows the same rule.
+`utils.no_em_dash` / `utils.clean` remove any that slip through from every model reply and streamed chunk
+before it is saved or shown. Unit tests and CI enforce it. Keep this when changing models or prompts.
+The repo's own text follows the same rule.

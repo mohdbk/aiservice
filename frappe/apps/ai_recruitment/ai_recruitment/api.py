@@ -3,6 +3,7 @@ import frappe
 from frappe import _
 
 from ai_recruitment import agent
+from ai_recruitment import governance as G
 from ai_recruitment.setup import chat_allowed
 
 
@@ -12,9 +13,18 @@ def _guard():
 
 
 @frappe.whitelist(methods=["POST"])
-def chat(messages=None, context=None):
+def chat(message: str, session_id: str | None = None, context=None, request_id: str | None = None):
     _guard()
-    return agent.run(frappe.parse_json(messages) or [], frappe.parse_json(context) or {})
+    session_id = (session_id or "")[:40] or frappe.generate_hash(length=16)
+    return agent.run(message, session_id, frappe.parse_json(context) or {}, (request_id or "")[:40] or None)
+
+
+@frappe.whitelist(methods=["POST"])
+def history(session_id: str | None = None):
+    """The current user's own conversation (latest session if none given)."""
+    _guard()
+    session_id = session_id or G.latest_session()
+    return {"session_id": session_id, "messages": G.history(session_id, turns=30) if session_id else []}
 
 
 @frappe.whitelist(methods=["POST"])

@@ -16,7 +16,25 @@
   "access_section",
   "chat_roles",
   "column_break_access",
-  "max_cv_chars"
+  "max_cv_chars",
+  "limits_section",
+  "chat_per_minute",
+  "chat_per_day",
+  "column_break_limits",
+  "tokens_per_user_day",
+  "governance_section",
+  "log_retention_days",
+  "column_break_gov",
+  "eval_threshold",
+  "ocr_section",
+  "ocr_mode",
+  "column_break_ocr",
+  "vision_model",
+  "interview_section",
+  "send_interview_emails",
+  "column_break_int",
+  "work_day_start",
+  "work_day_end"
  ],
  "fields": [
   {
@@ -92,12 +110,115 @@
    "fieldname": "max_cv_chars",
    "fieldtype": "Int",
    "label": "Max CV Characters Sent to Model"
+  },
+  {
+   "fieldname": "limits_section",
+   "fieldtype": "Section Break",
+   "label": "Usage Limits (per user)"
+  },
+  {
+   "default": "10",
+   "fieldname": "chat_per_minute",
+   "fieldtype": "Int",
+   "label": "Messages per Minute"
+  },
+  {
+   "default": "200",
+   "fieldname": "chat_per_day",
+   "fieldtype": "Int",
+   "label": "Messages per Day"
+  },
+  {
+   "fieldname": "column_break_limits",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "300000",
+   "description": "Prompt + completion tokens per user per day. 0 uses the default.",
+   "fieldname": "tokens_per_user_day",
+   "fieldtype": "Int",
+   "label": "Tokens per Day"
+  },
+  {
+   "fieldname": "governance_section",
+   "fieldtype": "Section Break",
+   "label": "Governance"
+  },
+  {
+   "default": "365",
+   "description": "AI Chat Log entries older than this are deleted daily.",
+   "fieldname": "log_retention_days",
+   "fieldtype": "Int",
+   "label": "Keep Chat Logs (days)"
+  },
+  {
+   "fieldname": "column_break_gov",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "5",
+   "description": "Max allowed score change (points out of 100) in AI Evaluation Runs.",
+   "fieldname": "eval_threshold",
+   "fieldtype": "Float",
+   "label": "Evaluation Threshold"
+  },
+  {
+   "fieldname": "ocr_section",
+   "fieldtype": "Section Break",
+   "label": "Scanned CVs (OCR)"
+  },
+  {
+   "default": "Tesseract",
+   "description": "Tesseract runs locally (Arabic + English). Vision Model sends page images to the LLM endpoint.",
+   "fieldname": "ocr_mode",
+   "fieldtype": "Select",
+   "label": "OCR Mode",
+   "options": "Tesseract\nVision Model\nOff"
+  },
+  {
+   "fieldname": "column_break_ocr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.ocr_mode=='Vision Model'",
+   "description": "Empty uses the main model.",
+   "fieldname": "vision_model",
+   "fieldtype": "Data",
+   "label": "Vision Model"
+  },
+  {
+   "fieldname": "interview_section",
+   "fieldtype": "Section Break",
+   "label": "Interviews"
+  },
+  {
+   "default": "1",
+   "description": "Email interviewers and the candidate a calendar invite when an interview is approved.",
+   "fieldname": "send_interview_emails",
+   "fieldtype": "Check",
+   "label": "Send Interview Invites"
+  },
+  {
+   "fieldname": "column_break_int",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "09:00:00",
+   "fieldname": "work_day_start",
+   "fieldtype": "Time",
+   "label": "Working Day Starts"
+  },
+  {
+   "default": "17:00:00",
+   "fieldname": "work_day_end",
+   "fieldtype": "Time",
+   "label": "Working Day Ends"
   }
  ],
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-08 00:00:00.000000",
+ "modified": "2026-11-08 00:40:00.000000",
  "modified_by": "Administrator",
  "module": "AI Recruitment",
  "name": "AI Recruitment Settings",

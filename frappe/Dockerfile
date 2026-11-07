@@ -28,14 +28,17 @@ RUN cd /home/frappe/src/ai_recruitment \
     && echo '{"socketio_port": 9000}' > sites/common_site_config.json \
     && bench get-app --branch "$HRMS_VERSION" https://github.com/frappe/hrms \
     && bench get-app /home/frappe/src/ai_recruitment \
+    && (bench compile-po-to-mo --app ai_recruitment || echo "compile-po-to-mo unavailable; CSV translations used") \
     && rm sites/assets \
     && grep -qx ai_recruitment sites/apps.txt
 
 USER root
 
 # Railway runs everything in one container: Redis for cache + queue.
+# OCR for scanned CVs: Tesseract with Arabic + English, and poppler for PDF pages.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends redis-server \
+       tesseract-ocr tesseract-ocr-ara tesseract-ocr-eng poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
 RUN sed -i -e 's/^worker_processes .*/worker_processes 2;/' \

@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frappe/apps/ai_recruitment
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Python unit tests (no Frappe needed)
+        run: python -m unittest discover -s tests -v
+      - name: JS unit tests (markdown renderer)
+        run: node --test tests/js/*.test.js
+      - name: Syntax check
+        run: |
+          python -m compileall -q ai_recruitment
+          for f in ai_recruitment/public/js/*.js; do node --check "$f"; done
+      - name: No em dashes in source
+        run: |
+          python - <<'PY'
+          import pathlib, sys
+          bad = [f"{p}:{i}" for p in pathlib.Path("../../..").rglob("*")
+                 if p.is_file() and ".git" not in p.parts and p.suffix in {".py", ".js", ".json", ".md", ".po", ".csv", ".yml"}
+                 for i, line in enumerate(p.read_text(encoding="utf-8", errors="ignore").splitlines(), 1)
+                 if chr(0x2014) in line]
+          print("\n".join(bad)); sys.exit(1 if bad else 0)
+          PY
+# Integration tests need a Frappe bench with erpnext + hrms:
+#   bench --site test_site set-config allow_tests true
+#   bench --site test_site run-tests --app ai_recruitment
+# See docs/ON_PREM.md section "Testing".
