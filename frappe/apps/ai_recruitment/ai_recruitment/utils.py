@@ -225,6 +225,20 @@ def years_of_experience(work: list, today=None) -> float:
     return round(total / 12, 1)
 
 
+def resolve_experience(from_dates: float, stated: float) -> tuple:
+    """Pick the years of experience to show, and say where it came from.
+    Dated roles are preferred; a number stated in the CV is used when dates are missing
+    or clearly incomplete (dated roles cover under 80% of the stated figure)."""
+    from_dates = max(float(from_dates or 0), 0.0)
+    stated = max(float(stated or 0), 0.0)
+    if from_dates and (not stated or from_dates >= 0.8 * stated):
+        return round(from_dates, 1), "from dated roles"
+    if stated:
+        basis = "stated in CV (dates incomplete)" if from_dates else "stated in CV (no dates)"
+        return round(max(stated, from_dates), 1), basis
+    return 0.0, "unknown"
+
+
 def looks_multicolumn(x_starts: list, page_width: float) -> bool:
     """True when text runs start in two separate bands (sidebar or two-column CV)."""
     xs = [x for x in x_starts if x is not None]
@@ -242,7 +256,7 @@ def to_json_resume(profile: dict, name: str = "", email: str = "", phone: str = 
                                  "label": (p.get("basics") or {}).get("label", ""),
                                  "summary": (p.get("basics") or {}).get("summary", "")}.items() if v}
     keep = {
-        "work": ("name", "position", "startDate", "endDate", "summary", "highlights"),
+        "work": ("name", "description", "position", "startDate", "endDate", "summary", "highlights"),
         "education": ("institution", "area", "studyType", "startDate", "endDate"),
         "skills": ("name", "level", "keywords"),
         "languages": ("language", "fluency"),

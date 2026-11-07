@@ -139,6 +139,25 @@ class TestExperience(unittest.TestCase):
         self.assertEqual(u.years_of_experience([{"startDate": "2025-01", "endDate": "\u062d\u062a\u0649 \u0627\u0644\u0622\u0646"}], today), 1.1)
 
 
+class TestResolveExperience(unittest.TestCase):
+    def test_dates_preferred(self):
+        self.assertEqual(u.resolve_experience(5.5, 6), (5.5, "from dated roles"))
+
+    def test_stated_when_no_dates(self):
+        self.assertEqual(u.resolve_experience(0, 6), (6.0, "stated in CV (no dates)"))
+
+    def test_stated_when_dates_incomplete(self):
+        # e.g. CV says 6 years but only one role is dated "since 2024"
+        self.assertEqual(u.resolve_experience(2.0, 6), (6.0, "stated in CV (dates incomplete)"))
+
+    def test_unknown(self):
+        self.assertEqual(u.resolve_experience(0, 0), (0.0, "unknown"))
+
+    def test_export_keeps_unnamed_employer_description(self):
+        out = u.to_json_resume({"work": [{"name": "", "description": "a logistics company", "position": "Dev"}]})
+        self.assertEqual(out["work"], [{"description": "a logistics company", "position": "Dev"}])
+
+
 class TestLayout(unittest.TestCase):
     def test_single_column(self):
         self.assertFalse(u.looks_multicolumn([50] * 40 + [60] * 10, 600))

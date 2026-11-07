@@ -169,7 +169,7 @@ def score_applicant(name: str) -> dict:
     app.add_comment(
         "Info",
         f"AI screening: {r['total']}/100 by {r['model']}. CV read as {cv['layout']} via {cv['method']}; "
-        f"{p.get('years_of_experience', 0)} years of experience parsed. {len(r['rows'])} criteria "
+        f"{p.get('years_of_experience', 0)} years of experience ({p.get('years_basis', 'unknown')}). {len(r['rows'])} criteria "
         f"({'job rubric' if r['rubric_used'] else 'derived by model'}), {r['cv_chars']} CV characters after redaction. "
         f"{'Must-have gaps: ' + ', '.join(r['gaps']) + '. ' if r['gaps'] else ''}"
         "Recommendation only; the recruiter decides.",

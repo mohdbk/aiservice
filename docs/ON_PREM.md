@@ -35,7 +35,7 @@ HR user ──► Desk "Ask AI" panel ──► ai_recruitment.api.chat (session
 |---|---|---|
 | ERPNext base image | `frappe/erpnext:v16.54.0` | `frappe/Dockerfile` (`ERPNEXT_IMAGE`) |
 | Frappe HR | `v16.53.1` | `frappe/Dockerfile` (`HRMS_VERSION`) |
-| ai_recruitment | `0.3.0` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
+| ai_recruitment | `0.3.1` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
 | Demo LLM | `qwen/qwen3.8-27b` (OpenRouter) | AI Recruitment Settings |
 
 Upgrade them deliberately and test in staging first. Every new image version runs `bench migrate`.

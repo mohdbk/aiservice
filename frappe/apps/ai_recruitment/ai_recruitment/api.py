@@ -72,4 +72,6 @@ def export_json_resume(applicant: str):
                           phone=doc.get("phone_number") or "",
                           meta={"source": "Frappe HR ai_recruitment", "applicant": doc.name,
                                 "jobOpening": doc.job_title, "parsedOn": str(doc.get("ai_scored_on") or ""),
-                                "cvLanguage": doc.get("ai_cv_language") or ""})
+                                "cvLanguage": doc.get("ai_cv_language") or "",
+                                "yearsOfExperience": profile.get("years_of_experience"),
+                                "experienceBasis": profile.get("years_basis", "")})
