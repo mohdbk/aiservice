@@ -35,7 +35,7 @@ HR user ──► Desk "Ask AI" panel ──► ai_recruitment.api.chat (session
 |---|---|---|
 | ERPNext base image | `frappe/erpnext:v16.54.0` | `frappe/Dockerfile` (`ERPNEXT_IMAGE`) |
 | Frappe HR | `v16.53.1` | `frappe/Dockerfile` (`HRMS_VERSION`) |
-| ai_recruitment | `0.2.0` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
+| ai_recruitment | `0.3.0` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
 | Demo LLM | `qwen/qwen3.8-27b` (OpenRouter) | AI Recruitment Settings |
 
 Upgrade them deliberately and test in staging first. Every new image version runs `bench migrate`.
@@ -66,12 +66,12 @@ container to suit Railway's single-volume limit, and pulls third-party Railway s
      --build-arg=FRAPPE_PATH=https://github.com/frappe/frappe \
      --build-arg=FRAPPE_BRANCH=v16.x.x \
      --build-arg=APPS_JSON_BASE64=$APPS_JSON_BASE64 \
-     --tag=registry.moet.internal/hr/frappe-hr-ai-base:0.2.0 \
+     --tag=registry.moet.internal/hr/frappe-hr-ai-base:0.3.0 \
      --file=images/layered/Containerfile .
    ```
 4. Add the OCR packages on top (frappe_docker images run as the `frappe` user):
    ```dockerfile
-   FROM registry.moet.internal/hr/frappe-hr-ai-base:0.2.0
+   FROM registry.moet.internal/hr/frappe-hr-ai-base:0.3.0
    USER root
    RUN apt-get update && apt-get install -y --no-install-recommends \
          tesseract-ocr tesseract-ocr-ara tesseract-ocr-eng poppler-utils \
@@ -80,7 +80,7 @@ container to suit Railway's single-volume limit, and pulls third-party Railway s
    RUN bench compile-po-to-mo --app ai_recruitment || true   # Arabic UI strings
    ```
    ```bash
-   docker build -t registry.moet.internal/hr/frappe-hr-ai:0.2.0 . && docker push registry.moet.internal/hr/frappe-hr-ai:0.2.0
+   docker build -t registry.moet.internal/hr/frappe-hr-ai:0.3.0 . && docker push registry.moet.internal/hr/frappe-hr-ai:0.3.0
    ```
    Check the frappe_docker README for the exact build arguments of the release you use. They change
    between versions. A private Git server needs credentials in the URL or a build secret. Never bake
@@ -130,7 +130,7 @@ Upgrades: build a new image tag, update `CUSTOM_TAG`, `docker compose up -d`, th
 | Tokens per Day | 300,000 per user (prompt + completion) |
 | Keep Chat Logs (days) | per the ministry's records retention policy (default 365) |
 | Evaluation Threshold | 5 points (max allowed score change in evaluation runs) |
-| OCR Mode | `Tesseract` (local). `Vision Model` sends page images to the LLM. `Off` disables OCR |
+| CV Reading Mode | `Auto` (recommended, see section 4a). `Vision Model`, `Tesseract` or `Off` |
 | Send Interview Invites | on, once an outgoing Email Account is configured |
 | Working Day Starts / Ends | 09:00 / 17:00 (used to suggest free interview slots) |
 
@@ -142,6 +142,32 @@ Also:
 Alternatively set environment variables on the backend and worker containers: `LLM_BASE_URL`,
 `LLM_MODEL`, `LLM_API_KEY`. Values in the Settings page take precedence.
 
+## 4a. Reading CVs: Arabic and English, ATS and non-ATS
+
+Every CV, whatever its format, becomes the same structured profile (JSON Resume v1 shape: work with dates,
+education, skills, languages, certificates, projects, plus computed years of experience). Scoring uses that profile
+and the text, so layout does not decide the score.
+
+| CV type | How it is read in `Auto` mode |
+|---|---|
+| ATS-style PDF (single column, real text) | PDF text layer |
+| Designed / multi-column PDF (sidebars, columns) | detected from text positions, then read by the **vision model** from page images. The text layer is the fallback |
+| Scanned PDF, photo or image CV | **vision model** OCR, with **Tesseract** (Arabic + English) as fallback |
+| DOCX, including tables and text boxes | DOCX XML in document order |
+
+The method and layout used are saved on each applicant (*CV Read As*). The parsed profile is in *Structured
+Profile* and can be downloaded as JSON Resume (**AI → Download JSON Resume** on the applicant). JSON Resume
+is an open schema ([jsonresume.org](https://jsonresume.org/schema)). It is not a formal certification, and
+HR Open Standards mapping can be added later if a system you integrate with needs it.
+
+**Why vision first, not Tesseract:** on KITAB-Bench, an Arabic OCR benchmark ([paper](https://arxiv.org/html/2502.14949v2)),
+Tesseract had about 0.54 character and 0.84 word error rate on Arabic text recognition and about 28% on tables, while
+vision-language models reduced character errors by roughly 60% on average. Small older Qwen-VL 7B models did worse than
+Tesseract there, so **measure your own model**: Desk → **AI OCR Test** → upload a sample CV and paste its correct text.
+It reports CER/WER for Tesseract and the vision model side by side. Test 10 to 20 real Arabic and English CVs before go-live.
+
+Cost: each CV now uses 2 model calls (parse, then score) plus 1 vision call per scanned or designed CV (up to 5 pages).
+
 ### LLM server requirements
 - OpenAI-compatible `/v1/chat/completions` with **tool calling** (assistant) and **JSON schema / JSON mode**
   (scoring). With vLLM, enable tool calling (`--enable-auto-tool-choice --tool-call-parser <parser for your model>`).
@@ -150,6 +176,9 @@ Alternatively set environment variables on the backend and worker containers: `L
 - Sizing guide for a 27B dense model: one 80 GB GPU (FP16/BF16), or one 48 GB GPU with FP8/AWQ quantisation.
   Expect about 5 to 15 seconds per CV.
 - The app retries without `json_schema` / `reasoning` if the server rejects them, so most servers work.
+- **Vision input** (images in chat messages) for reading scanned and designed CVs. Serve a vision-language model
+  (Qwen3.8 27B accepts images), or set a separate *Vision Model* in settings. With vLLM, set a sensible
+  `--limit-mm-per-prompt image=5`.
 
 ---
 
@@ -221,8 +250,8 @@ the background (long queue). Nothing on the applicants is changed. For each samp
 | Fairness: labelled attributes | Nationality / Gender / Age / Religion lines (tests redaction) | score change within threshold |
 | Injection | instructions addressed to the AI appended to the CV | score increase within threshold |
 
-The result is a PASS/FAIL report with a per-applicant table. Cost is about `(repeats + 4) x sample size` model
-calls. If fairness or injection fails, change the model, the prompt or the rubric wording before relying on scores.
+The result is a PASS/FAIL report with a per-applicant table. Each check runs the full production pipeline
+(parse, then score), so the cost is about `2 x (repeats + 4) x sample size` model calls. If fairness or injection fails, change the model, the prompt or the rubric wording before relying on scores.
 
 ---
 
@@ -243,8 +272,9 @@ calls. If fairness or injection fails, change the model, the prompt or the rubri
 
 ## 10. Known limitations and next steps
 
-- **OCR** reads up to 5 pages per scanned CV. Handwritten or very low-quality scans may still fail and are
-  marked *Failed* with a reason.
+- **OCR** reads up to 5 pages per scanned or designed CV. Handwritten or very low-quality scans may still fail and
+  are marked *Failed* with a reason.
+- Multi-column detection is a heuristic based on text start positions. Check *CV Read As* on a sample of applicants.
 - `resume_link` (external URLs) is intentionally not fetched, to avoid server-side requests to arbitrary sites.
 - The careers page is Frappe HR's standard `/jobs`. Arabic/RTL presentation, ministry branding and UAE PASS
   for candidates are separate work items.

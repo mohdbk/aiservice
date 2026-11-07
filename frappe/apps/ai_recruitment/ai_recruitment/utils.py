@@ -170,6 +170,117 @@ def ics_event(uid: str, start: datetime, end: datetime, summary: str, descriptio
     return "\r\n".join(lines) + "\r\n"
 
 
+# ---------------- CV structure ----------------
+def _ym(s: str):
+    """'2019', '2019-03', '03/2019', 'Mar 2019' -> (year, month) or None."""
+    import calendar
+
+    s = (s or "").strip().lower()
+    if not s:
+        return None
+    m = re.match(r"^(\d{4})(?:[-/.](\d{1,2}))?", s)
+    if m:
+        return int(m.group(1)), int(m.group(2) or 1)
+    m = re.match(r"^(\d{1,2})[-/.](\d{4})$", s)
+    if m:
+        return int(m.group(2)), int(m.group(1))
+    m = re.match(r"^([a-z]{3})[a-z]*\.?\s+(\d{4})$", s)
+    if m:
+        months = {calendar.month_abbr[i].lower(): i for i in range(1, 13)}
+        if m.group(1) in months:
+            return int(m.group(2)), months[m.group(1)]
+    return None
+
+
+PRESENT_WORDS = ("present", "current", "now", "today", "حتى الآن", "الآن")
+
+
+def years_of_experience(work: list, today=None) -> float:
+    """Total years across work entries, merging overlapping periods. Entries without a
+    parseable start date are ignored; an empty/'present' end means today."""
+    today = today or datetime.now()
+    spans = []
+    for w in work or []:
+        start = _ym(w.get("startDate", ""))
+        if not start:
+            continue
+        end_raw = (w.get("endDate") or "").strip().lower()
+        end = (today.year, today.month) if not end_raw or end_raw in PRESENT_WORDS else _ym(end_raw)
+        if not end:
+            continue
+        a, b = start[0] * 12 + start[1] - 1, end[0] * 12 + end[1]  # end month inclusive
+        if b > a:
+            spans.append((a, b))
+    spans.sort()
+    total, cur = 0, None
+    for a, b in spans:
+        if cur and a <= cur[1]:
+            cur = (cur[0], max(cur[1], b))
+        else:
+            if cur:
+                total += cur[1] - cur[0]
+            cur = (a, b)
+    if cur:
+        total += cur[1] - cur[0]
+    return round(total / 12, 1)
+
+
+def looks_multicolumn(x_starts: list, page_width: float) -> bool:
+    """True when text runs start in two separate bands (sidebar or two-column CV)."""
+    xs = [x for x in x_starts if x is not None]
+    if len(xs) < 20 or not page_width:
+        return False
+    left = sum(1 for x in xs if x < page_width * 0.25)
+    right = sum(1 for x in xs if x > page_width * 0.40)
+    return left / len(xs) > 0.2 and right / len(xs) > 0.2
+
+
+def to_json_resume(profile: dict, name: str = "", email: str = "", phone: str = "", meta: dict | None = None) -> dict:
+    """Map the parsed profile to the JSON Resume v1 schema (https://jsonresume.org/schema)."""
+    p = profile or {}
+    basics = {k: v for k, v in {"name": name, "email": email, "phone": phone,
+                                 "label": (p.get("basics") or {}).get("label", ""),
+                                 "summary": (p.get("basics") or {}).get("summary", "")}.items() if v}
+    keep = {
+        "work": ("name", "position", "startDate", "endDate", "summary", "highlights"),
+        "education": ("institution", "area", "studyType", "startDate", "endDate"),
+        "skills": ("name", "level", "keywords"),
+        "languages": ("language", "fluency"),
+        "certificates": ("name", "issuer", "date"),
+        "projects": ("name", "description", "highlights"),
+    }
+    out = {"$schema": "https://raw.githubusercontent.com/jsonresume/resume-schema/v1.0.0/schema.json", "basics": basics}
+    for section, fields in keep.items():
+        out[section] = [{f: it[f] for f in fields if it.get(f) not in (None, "", [])} for it in p.get(section) or []]
+    out["meta"] = {"version": "v1.0.0", **(meta or {})}
+    return out
+
+
+# ---------------- OCR accuracy ----------------
+def _lev(a: list, b: list) -> int:
+    prev = list(range(len(b) + 1))
+    for i, x in enumerate(a, 1):
+        cur = [i]
+        for j, y in enumerate(b, 1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (x != y)))
+        prev = cur
+    return prev[-1]
+
+
+def _norm(s: str) -> str:
+    s = re.sub(r"[ً-ْـ]", "", s or "")  # Arabic diacritics and tatweel
+    return re.sub(r"\s+", " ", s).strip().lower()
+
+
+def error_rates(truth: str, hyp: str) -> dict:
+    """Character and word error rate (lower is better; can exceed 1 with many insertions)."""
+    t, h = _norm(truth), _norm(hyp)
+    cer = _lev(list(t), list(h)) / max(len(t), 1)
+    tw, hw = t.split(), h.split()
+    wer = _lev(tw, hw) / max(len(tw), 1)
+    return {"cer": round(cer, 3), "wer": round(wer, 3)}
+
+
 # ---------------- evaluation ----------------
 NAME_SWAPS = ["Fatima Al Mansoori", "John Smith", "Priya Nair", "Ahmed Hassan", "Olga Petrova", "Kwame Mensah"]
 DEMOGRAPHIC_SENTENCES = [

@@ -122,3 +122,30 @@ msgstr "قارن بين 2 و5 متقدمين."
 
 msgid "Give a search term."
 msgstr "أدخل كلمة للبحث."
+
+msgid "Download JSON Resume"
+msgstr "تنزيل السيرة الذاتية بصيغة JSON Resume"
+
+msgid "AI"
+msgstr "الذكاء الاصطناعي"
+
+msgid "AI Parsed CV"
+msgstr "السيرة الذاتية المحللة"
+
+msgid "Years of Experience (parsed)"
+msgstr "سنوات الخبرة (محسوبة)"
+
+msgid "CV Language"
+msgstr "لغة السيرة الذاتية"
+
+msgid "CV Read As"
+msgstr "طريقة قراءة السيرة الذاتية"
+
+msgid "Structured Profile"
+msgstr "الملف المنظم"
+
+msgid "AI OCR Test"
+msgstr "اختبار التعرف الضوئي على النصوص"
+
+msgid "CV Reading Mode"
+msgstr "طريقة قراءة السير الذاتية"

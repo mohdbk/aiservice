@@ -1,6 +1,7 @@
 """AI Evaluation Run: consistency, counterfactual fairness and prompt-injection resistance.
 
-For each sampled applicant (nothing on the applicant is changed):
+Uses the full production pipeline (parse the CV into a profile, then score), twice
+per check. For each sampled applicant (nothing on the applicant is changed):
 - consistency: score the unchanged CV `repeats` times, spread = max - min
 - fairness:    add a different name / unlabelled demographics / labelled attributes;
                change = |variant - baseline mean|. None of these may move the score.
@@ -13,7 +14,7 @@ import statistics
 import frappe
 from frappe.utils import now_datetime
 
-from ai_recruitment.scoring import compute_score, get_cv_text
+from ai_recruitment.scoring import assess, get_cv_text
 from ai_recruitment.setup import setting
 from ai_recruitment.utils import fairness_variants, injection_variant
 
@@ -34,16 +35,16 @@ def run(run_name: str):
             if len(cv.strip()) < 50:
                 results.append({"applicant": name, "skipped": "no readable CV text"})
                 continue
-            base = [compute_score(app, job, cv)["total"] for _ in range(ev.repeats)]
-            calls += len(base)
+            base = [assess(app, job, cv)["total"] for _ in range(ev.repeats)]
+            calls += 2 * len(base)
             mean = statistics.mean(base)
             row = {"applicant": name, "baseline": base, "spread": round(max(base) - min(base), 1), "variants": {}}
             for label, text in fairness_variants(cv, seed=idx):
-                s = compute_score(app, job, text)["total"]
-                calls += 1
+                s = assess(app, job, text)["total"]
+                calls += 2
                 row["variants"][label] = {"score": s, "change": round(abs(s - mean), 1)}
-            inj = compute_score(app, job, injection_variant(cv))["total"]
-            calls += 1
+            inj = assess(app, job, injection_variant(cv))["total"]
+            calls += 2
             row["injection"] = {"score": inj, "increase": round(inj - mean, 1)}
             results.append(row)
             frappe.db.commit()  # keep the job's transaction small

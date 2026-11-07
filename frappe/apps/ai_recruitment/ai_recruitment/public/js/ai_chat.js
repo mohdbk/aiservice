@@ -11,6 +11,17 @@
         const msg = await frappe.xcall("ai_recruitment.api.rescore", { applicant: frm.doc.name });
         frappe.show_alert({ message: msg, indicator: "blue" });
       });
+      if (frm.doc.ai_profile) {
+        frm.add_custom_button(__("Download JSON Resume"), async () => {
+          const data = await frappe.xcall("ai_recruitment.api.export_json_resume", { applicant: frm.doc.name });
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = frm.doc.name + ".resume.json";
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        }, __("AI"));
+      }
     },
   });
 

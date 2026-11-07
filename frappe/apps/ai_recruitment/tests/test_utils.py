@@ -122,5 +122,56 @@ class TestEvaluationVariants(unittest.TestCase):
         self.assertNotIn("58", out)
 
 
+class TestExperience(unittest.TestCase):
+    def test_overlapping_periods_merged(self):
+        work = [{"startDate": "2018-01", "endDate": "2020-12"},
+                {"startDate": "2020-06", "endDate": "2022-12"},   # overlaps the first
+                {"startDate": "bad"}]
+        self.assertEqual(u.years_of_experience(work), 5.0)
+
+    def test_present_and_formats(self):
+        today = datetime(2026, 1, 15)
+        work = [{"startDate": "Jan 2024", "endDate": "present"}, {"startDate": "03/2020", "endDate": "2021-02"}]
+        self.assertEqual(u.years_of_experience(work, today), round((25 + 12) / 12, 1))
+
+    def test_arabic_present(self):
+        today = datetime(2026, 1, 15)
+        self.assertEqual(u.years_of_experience([{"startDate": "2025-01", "endDate": "\u062d\u062a\u0649 \u0627\u0644\u0622\u0646"}], today), 1.1)
+
+
+class TestLayout(unittest.TestCase):
+    def test_single_column(self):
+        self.assertFalse(u.looks_multicolumn([50] * 40 + [60] * 10, 600))
+
+    def test_two_columns(self):
+        self.assertTrue(u.looks_multicolumn([40] * 25 + [300] * 25, 600))
+
+
+class TestJsonResume(unittest.TestCase):
+    def test_mapping(self):
+        prof = {"basics": {"label": "Engineer", "summary": "S"},
+                "work": [{"name": "MoET", "position": "Dev", "startDate": "2020", "endDate": "", "extra": "x"}],
+                "skills": [{"name": "Python", "keywords": ["FastAPI"]}]}
+        out = u.to_json_resume(prof, name="A B", email="a@b.c", meta={"source": "test"})
+        self.assertEqual(out["basics"]["name"], "A B")
+        self.assertEqual(out["work"], [{"name": "MoET", "position": "Dev", "startDate": "2020"}])
+        self.assertEqual(out["skills"][0]["keywords"], ["FastAPI"])
+        self.assertEqual(out["education"], [])
+        self.assertIn("jsonresume", out["$schema"])
+        self.assertEqual(out["meta"]["source"], "test")
+
+
+class TestErrorRates(unittest.TestCase):
+    def test_identical(self):
+        self.assertEqual(u.error_rates("Hello world", "hello   world"), {"cer": 0.0, "wer": 0.0})
+
+    def test_word_error(self):
+        r = u.error_rates("one two three four", "one too three four")
+        self.assertEqual(r["wer"], 0.25)
+
+    def test_arabic_diacritics_ignored(self):
+        self.assertEqual(u.error_rates("\u0645\u064f\u0647\u064e\u0646\u062f\u0650\u0633", "\u0645\u0647\u0646\u062f\u0633")["cer"], 0.0)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -4,7 +4,7 @@ compute_score() has no side effects (used by evaluation runs); score_applicant()
 Runs in a background job. Writes use db.set_value so scoring never depends on who
 submitted the application (often a Guest on /jobs).
 """
-import io
+import json
 
 import frappe
 from frappe.utils import now_datetime
@@ -13,7 +13,6 @@ from ai_recruitment.llm import chat_completion, clean, config, extract_json, is_
 from ai_recruitment.utils import WRITING_RULE, combine_scores, parse_criteria, redact, strip_html
 
 JA = "Job Applicant"
-IMAGE_EXT = ("png", "jpg", "jpeg", "tif", "tiff", "webp")
 
 SCORE_SCHEMA = {
     "type": "object",
@@ -85,48 +84,11 @@ def score_applicant_job(applicant: str):
 
 
 # ---------------- text extraction ----------------
-def _file_bytes(file_url: str) -> bytes:
-    name = frappe.db.get_value("File", {"file_url": file_url}, "name")
-    if not name:
-        return b""
-    content = frappe.get_doc("File", name).get_content()
-    return content.encode() if isinstance(content, str) else content
-
-
 def get_cv_text(app) -> str:
-    from ai_recruitment.setup import setting
+    """CV text only (kept for callers that do not need the reading metadata)."""
+    from ai_recruitment.cv_reader import read_cv
 
-    parts, ocr_mode = [], setting("ocr_mode", "Tesseract")
-    url = app.get("resume_attachment")
-    if url:
-        data = _file_bytes(url)
-        ext = url.lower().rsplit(".", 1)[-1] if "." in url else ""
-        try:
-            text = ""
-            if ext == "pdf":
-                from pypdf import PdfReader
-
-                text = "\n".join((p.extract_text() or "") for p in PdfReader(io.BytesIO(data)).pages)
-                if len(text.strip()) < 200 and ocr_mode != "Off":
-                    from ai_recruitment.ocr import ocr
-
-                    text = ocr(data, "pdf", ocr_mode) or text
-            elif ext == "docx":
-                import docx
-
-                text = "\n".join(p.text for p in docx.Document(io.BytesIO(data)).paragraphs)
-            elif ext in ("txt", "md"):
-                text = data.decode("utf-8", "ignore")
-            elif ext in IMAGE_EXT and ocr_mode != "Off":
-                from ai_recruitment.ocr import ocr
-
-                text = ocr(data, ext, ocr_mode)
-            parts.append(text)
-        except Exception:
-            frappe.log_error(title=f"CV extraction failed: {app.get('name')}")
-    if app.get("cover_letter"):
-        parts.append(strip_html(app.get("cover_letter")))
-    return "\n\n".join(p for p in parts if p and p.strip())
+    return read_cv(app)["text"]
 
 
 def _set(name, **fields):
@@ -134,8 +96,9 @@ def _set(name, **fields):
 
 
 # ---------------- scoring ----------------
-def compute_score(app, job, cv_text: str) -> dict:
-    """Score cv_text for this applicant and job. No database writes."""
+def compute_score(app, job, cv_text: str, profile: dict | None = None) -> dict:
+    """Score cv_text (and the structured profile, when given) for this applicant and job.
+    No database writes."""
     c = config()
     cv = redact(cv_text, app.get("applicant_name"))[: int(c.settings.max_cv_chars or 40000)]
     rubric = parse_criteria(job.get("ai_scoring_criteria") or "")
@@ -149,9 +112,15 @@ def compute_score(app, job, cv_text: str) -> dict:
         rubric_instr = ("No rubric was provided. Derive 4-6 criteria from the job description, "
                         "assign weights that sum to 100, and score each.")
     job_txt = f"Title: {job.get('job_title') or job.get('name')}\n\n{strip_html(job.get('description') or '')}"
+    from ai_recruitment.profile_parser import profile_brief
+
+    brief = profile_brief(profile)
+    prof_block = (f"<structured_profile>\n{brief}\n</structured_profile>\n"
+                  "The structured profile was extracted from the CV below; use both, and trust the CV text if they differ.\n\n"
+                  if brief else "")
     msg = chat_completion(
         [{"role": "system", "content": SYSTEM_PROMPT},
-         {"role": "user", "content": f"<job>\n{job_txt[:12000]}\n</job>\n\n{rubric_instr}\n\n<cv>\n{cv}\n</cv>"}],
+         {"role": "user", "content": f"<job>\n{job_txt[:12000]}\n</job>\n\n{rubric_instr}\n\n{prof_block}<cv>\n{cv}\n</cv>"}],
         schema=SCORE_SCHEMA, schema_name="cv_score",
     )
     result = clean(extract_json(msg.get("content")))
@@ -160,7 +129,19 @@ def compute_score(app, job, cv_text: str) -> dict:
     return {**combined, "summary": summary, "model": c.model, "cv_chars": len(cv), "rubric_used": bool(rubric)}
 
 
+def assess(app, job, cv_text: str) -> dict:
+    """Full pipeline used in production and in evaluation runs: parse, then score."""
+    from ai_recruitment.profile_parser import parse_profile
+
+    c = config()
+    redacted = redact(cv_text, app.get("applicant_name"))[: int(c.settings.max_cv_chars or 40000)]
+    profile = parse_profile(redacted)
+    return {**compute_score(app, job, cv_text, profile), "profile": profile}
+
+
 def score_applicant(name: str) -> dict:
+    from ai_recruitment.cv_reader import read_cv
+
     app = frappe.get_doc(JA, name)
     if not app.job_title:
         _set(name, ai_status="Skipped", ai_summary="No job opening linked to this application.")
@@ -170,19 +151,25 @@ def score_applicant(name: str) -> dict:
         return {"status": "Pending"}
 
     job = frappe.get_doc("Job Opening", app.job_title)
-    cv = get_cv_text(app)
-    if len(cv.strip()) < 50:
-        _set(name, ai_status="Failed", ai_scored_on=now_datetime(),
+    cv = read_cv(app)
+    if len(cv["text"].strip()) < 50:
+        _set(name, ai_status="Failed", ai_scored_on=now_datetime(), ai_cv_read=f"{cv['layout']} / {cv['method']}",
              ai_summary="No readable CV text (missing file, or OCR could not read it).")
         return {"status": "Failed"}
 
-    r = compute_score(app, job, cv)
+    r = assess(app, job, cv["text"])
+    p = r["profile"]
     _set(name, ai_score=r["total"], ai_status="Scored", ai_summary=r["summary"][:2000],
          ai_reasoning=r["reasoning"][:20000], ai_must_have_gaps=", ".join(r["gaps"]),
-         ai_model=r["model"], ai_scored_on=now_datetime())
+         ai_model=r["model"], ai_scored_on=now_datetime(),
+         ai_years_experience=p.get("years_of_experience") or 0,
+         ai_cv_language=p.get("cv_language") or "",
+         ai_cv_read=f"{cv['layout']} / {cv['method']}",
+         ai_profile=json.dumps(p, ensure_ascii=False, indent=1)[:60000])
     app.add_comment(
         "Info",
-        f"AI screening: {r['total']}/100 by {r['model']}. {len(r['rows'])} criteria "
+        f"AI screening: {r['total']}/100 by {r['model']}. CV read as {cv['layout']} via {cv['method']}; "
+        f"{p.get('years_of_experience', 0)} years of experience parsed. {len(r['rows'])} criteria "
         f"({'job rubric' if r['rubric_used'] else 'derived by model'}), {r['cv_chars']} CV characters after redaction. "
         f"{'Must-have gaps: ' + ', '.join(r['gaps']) + '. ' if r['gaps'] else ''}"
         "Recommendation only; the recruiter decides.",

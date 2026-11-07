@@ -165,22 +165,22 @@
   {
    "fieldname": "ocr_section",
    "fieldtype": "Section Break",
-   "label": "Scanned CVs (OCR)"
+   "label": "Reading CVs (ATS and non-ATS)"
   },
   {
-   "default": "Tesseract",
-   "description": "Tesseract runs locally (Arabic + English). Vision Model sends page images to the LLM endpoint.",
+   "default": "Auto",
+   "description": "Auto: text layer for ATS-style CVs; the vision model for scanned, image and designed multi-column CVs, with Tesseract (Arabic + English) as fallback. Vision Model: same but always prefer the vision model for OCR. Tesseract: local OCR only (scanned CVs). Off: text layer only.",
    "fieldname": "ocr_mode",
    "fieldtype": "Select",
-   "label": "OCR Mode",
-   "options": "Tesseract\nVision Model\nOff"
+   "label": "CV Reading Mode",
+   "options": "Auto\nVision Model\nTesseract\nOff"
   },
   {
    "fieldname": "column_break_ocr",
    "fieldtype": "Column Break"
   },
   {
-   "depends_on": "eval:doc.ocr_mode=='Vision Model'",
+   "depends_on": "eval:doc.ocr_mode=='Auto' || doc.ocr_mode=='Vision Model'",
    "description": "Empty uses the main model.",
    "fieldname": "vision_model",
    "fieldtype": "Data",
@@ -218,7 +218,7 @@
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-08 00:40:00.000000",
+ "modified": "2026-11-08 01:00:00.000000",
  "modified_by": "Administrator",
  "module": "AI Recruitment",
  "name": "AI Recruitment Settings",

@@ -54,3 +54,22 @@ def rescore_unscored(job_opening: str | None = None):
     for n in names:
         enqueue(n)
     return {"queued": len(names)}
+
+
+@frappe.whitelist()
+def export_json_resume(applicant: str):
+    """The applicant's parsed profile in JSON Resume v1 format (requires read access)."""
+    import json
+
+    from ai_recruitment.utils import to_json_resume
+
+    doc = frappe.get_doc("Job Applicant", applicant)
+    doc.check_permission("read")
+    profile = json.loads(doc.get("ai_profile") or "{}")
+    if not profile:
+        frappe.throw(_("This applicant has no parsed profile yet. Re-score with AI first."))
+    return to_json_resume(profile, name=doc.applicant_name, email=doc.email_id or "",
+                          phone=doc.get("phone_number") or "",
+                          meta={"source": "Frappe HR ai_recruitment", "applicant": doc.name,
+                                "jobOpening": doc.job_title, "parsedOn": str(doc.get("ai_scored_on") or ""),
+                                "cvLanguage": doc.get("ai_cv_language") or ""})

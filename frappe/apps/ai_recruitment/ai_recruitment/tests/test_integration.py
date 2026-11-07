@@ -13,7 +13,7 @@ try:
 except ImportError:  # older v15
     from frappe.tests.utils import FrappeTestCase as TestCase
 
-from ai_recruitment import agent, scoring
+from ai_recruitment import agent, profile_parser, scoring
 
 RUBRIC = "60 | Python services | must\n40 | LLM work"
 CV = "Senior engineer. Eight years of Python services. Built RAG assistants with evaluation. " * 3
@@ -24,6 +24,13 @@ def _score_reply(scores):
         "criteria": [{"criterion": f"c{i}", "weight": 1, "score": s, "evidence": "e \u2014 x"} for i, s in enumerate(scores)],
         "summary": "Strong \u2014 fit.", "summary_ar": "مناسب",
     })}
+
+
+PROFILE = {"role": "assistant", "content": json.dumps({
+    "basics": {"label": "Engineer", "summary": "Python"},
+    "work": [{"name": "Org", "position": "Dev", "startDate": "2018-01", "endDate": "2020-12", "summary": "", "highlights": []}],
+    "education": [], "skills": [{"name": "Python", "keywords": ["FastAPI"]}], "languages": [],
+    "certificates": [], "projects": [], "cv_language": "en"})}
 
 
 def _company():
@@ -53,17 +60,21 @@ class TestAIRecruitment(TestCase):
 
     def test_scoring_writes_weighted_score_without_em_dash(self):
         app = self._applicant()
-        with patch.object(scoring, "chat_completion", return_value=_score_reply([10, 5])):
+        with patch.object(scoring, "chat_completion", return_value=_score_reply([10, 5])), \
+                patch.object(profile_parser, "chat_completion", return_value=PROFILE):
             res = scoring.score_applicant(app.name)
         app.reload()
         self.assertEqual(res["status"], "Scored")
         self.assertEqual(app.ai_score, 80.0)  # 60*10 + 40*5 over 1000 -> 80
         self.assertEqual(app.ai_status, "Scored")
+        self.assertEqual(app.ai_years_experience, 3.0)
+        self.assertEqual(json.loads(app.ai_profile)["skills"][0]["name"], "Python")
         self.assertNotIn("\u2014", app.ai_summary + app.ai_reasoning)
 
     def test_must_have_gap(self):
         app = self._applicant("Gap Candidate")
-        with patch.object(scoring, "chat_completion", return_value=_score_reply([2, 9])):
+        with patch.object(scoring, "chat_completion", return_value=_score_reply([2, 9])), \
+                patch.object(profile_parser, "chat_completion", return_value=PROFILE):
             scoring.score_applicant(app.name)
         app.reload()
         self.assertIn("Python services", app.ai_must_have_gaps)
@@ -105,3 +116,15 @@ class TestAIRecruitment(TestCase):
         log = frappe.get_last_doc("AI Chat Log", filters={"session_id": "sess2"})
         self.assertEqual(log.status, "Success")
         self.assertEqual(log.prompt_tokens, 10)
+
+    def test_json_resume_export(self):
+        from ai_recruitment.api import export_json_resume
+
+        app = self._applicant("Export Candidate")
+        with patch.object(scoring, "chat_completion", return_value=_score_reply([7, 7])), \
+                patch.object(profile_parser, "chat_completion", return_value=PROFILE):
+            scoring.score_applicant(app.name)
+        out = export_json_resume(app.name)
+        self.assertEqual(out["basics"]["name"], "Export Candidate")
+        self.assertEqual(out["work"][0]["name"], "Org")
+        self.assertIn("jsonresume", out["$schema"])

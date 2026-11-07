@@ -6,8 +6,11 @@ By the **Ministry of Economy & Tourism**. AI CV screening and a recruitment assi
 - **Automatic CV scoring.** Each new Job Applicant is scored in a background job against the job's rubric
   (*AI Scoring Criteria*: `weight | criterion | must`). Before anything is sent to the model, contacts, the
   name and labelled personal attributes are redacted. The weighted score is computed in code. It writes per-criterion
-  evidence, must-have gaps and an English + Arabic summary, plus an audit comment. Scanned PDFs and image CVs
-  go through OCR (local Tesseract, Arabic + English, or the vision model).
+  evidence, must-have gaps and an English + Arabic summary, plus an audit comment.
+- **Any CV, Arabic or English, ATS-style or not.** ATS-style PDFs use the text layer. Designed or multi-column
+  PDFs, scans and images are read by the vision model, with Tesseract (Arabic + English) as fallback. DOCX tables
+  and text boxes are included. Every CV is parsed into a JSON Resume shaped profile with computed years of
+  experience, which can be downloaded as JSON Resume. **AI OCR Test** compares OCR engines on your own sample CVs.
 - **Recruitment Assistant.** The **Ask AI** panel appears on every Desk page for allowed roles. Replies stream live
   and render Markdown, and the panel is translated into Arabic with RTL support. It calls whitelisted methods
   with the user's own session, so every tool obeys that user's permissions. It can:
