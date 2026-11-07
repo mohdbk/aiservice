@@ -26,6 +26,16 @@ class Settings:
     max_cv_chars = int(_env("MAX_CV_CHARS", "40000"))
 
     @property
+    def chat_token(self) -> str:
+        """Token embedded in the Frappe chat widget. Derived from MCP_TOKEN unless set,
+        so it can be rotated independently but needs no extra setup."""
+        explicit = _env("CHAT_TOKEN")
+        if explicit:
+            return explicit
+        import hashlib, hmac
+        return hmac.new((self.mcp_token or "dev").encode(), b"frappe-chat-widget", hashlib.sha256).hexdigest()[:40]
+
+    @property
     def llm_configured(self) -> bool:
         # A hosted gateway needs a key; a local vLLM/Ollama endpoint may not.
         if "openrouter.ai" in self.llm_base_url:

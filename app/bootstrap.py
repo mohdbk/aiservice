@@ -100,6 +100,24 @@ async def ensure_webhook(admin: Frappe):
         log.info("Created webhook -> %s", url)
 
 
+async def ensure_chat_widget(admin: Frappe):
+    """Inject the chat panel into Desk on the recruitment screens via Client Scripts."""
+    if not settings.service_public_url:
+        return
+    from .widget import render
+
+    script = render(settings.service_public_url, settings.chat_token)
+    for dt in (JA, JO):
+        for view in ("List", "Form"):
+            name = f"AI Assistant - {dt} - {view}"
+            doc = {"dt": dt, "view": view, "enabled": 1, "script": script}
+            if await admin.exists("Client Script", name):
+                await admin.update("Client Script", name, doc)
+            else:
+                await admin.insert({"doctype": "Client Script", "name": name, "__newname": name, **doc})
+                log.info("Created client script %s", name)
+
+
 # ---------------- demo data (fictional people) ----------------
 DEMO_JOBS = [
     {
@@ -239,6 +257,10 @@ async def bootstrap_once():
         await ensure_custom_fields(admin)
         key, secret = await ensure_service_user(admin)
         await ensure_webhook(admin)
+        try:
+            await ensure_chat_widget(admin)
+        except FrappeError as e:
+            log.warning("Chat widget not installed: %s", e)
     elif settings.frappe_api_key and settings.frappe_api_secret:
         key, secret = settings.frappe_api_key, settings.frappe_api_secret
     else:

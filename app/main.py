@@ -4,8 +4,10 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from . import agent
 from .bootstrap import bootstrap_loop
 from .config import settings
 from .mcp_tools import mcp
@@ -28,6 +30,14 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Ministry Career Portal — AI Service", lifespan=lifespan)
+
+# Only the Frappe site may call the chat endpoints from a browser.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[settings.frappe_url] if settings.frappe_url else [],
+    allow_methods=["POST"],
+    allow_headers=["Content-Type", "X-Chat-Token"],
+)
 
 
 def _token_ok(given: str | None, expected: str) -> bool:
@@ -87,6 +97,43 @@ async def rescore_pending(request: Request):
         return JSONResponse({"error": f"not ready ({state.phase})"}, status_code=503)
     await queue_unscored(state.svc)
     return {"queued": state.queue.qsize()}
+
+
+def _chat_auth(request: Request):
+    if not _token_ok(request.headers.get("x-chat-token"), settings.chat_token):
+        return JSONResponse({"error": "unauthorized"}, status_code=401)
+    if not state.ready:
+        return JSONResponse({"error": f"assistant not ready ({state.phase})"}, status_code=503)
+    if not settings.llm_configured:
+        return JSONResponse({"error": "LLM not configured"}, status_code=503)
+    return None
+
+
+@app.post("/chat")
+async def chat(request: Request):
+    if (denied := _chat_auth(request)) is not None:
+        return denied
+    body = await request.json()
+    try:
+        return await agent.chat(body.get("messages") or [], body.get("context") or {},
+                                str(body.get("user") or "unknown")[:140])
+    except Exception as e:
+        logging.getLogger("agent").exception("chat failed")
+        return JSONResponse({"error": f"assistant error: {str(e)[:200]}"}, status_code=502)
+
+
+@app.post("/chat/approve")
+async def chat_approve(request: Request):
+    if (denied := _chat_auth(request)) is not None:
+        return denied
+    body = await request.json()
+    try:
+        result = await agent.approve(str(body.get("token") or ""), str(body.get("user") or ""))
+        return {"result": result}
+    except ValueError as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    except Exception as e:
+        return JSONResponse({"error": str(e)[:200]}, status_code=502)
 
 
 # MCP last, so the routes above take precedence.
