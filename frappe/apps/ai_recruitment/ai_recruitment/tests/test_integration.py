@@ -128,3 +128,30 @@ class TestAIRecruitment(TestCase):
         self.assertEqual(out["basics"]["name"], "Export Candidate")
         self.assertEqual(out["work"][0]["name"], "Org")
         self.assertIn("jsonresume", out["$schema"])
+
+    def test_parsing_run_measures_accuracy_and_grounding(self):
+        from ai_recruitment import parsing_eval
+
+        case = frappe.get_doc({
+            "doctype": "AI Parsing Case", "title": "Test case", "language": "English", "layout": "ATS",
+            "cv_text": "Data scientist, 4 years at a bank. Python, pandas, XGBoost. Completed a course on LLMs. " * 2,
+            "expected_years": 4, "expected_roles": "Data scientist |", "expected_skills": "Python, pandas, XGBoost",
+        }).insert()
+        reply = {"role": "assistant", "content": json.dumps({
+            "basics": {"label": "", "summary": ""},
+            "work": [{"name": "", "description": "a bank", "position": "Data scientist", "startDate": "", "endDate": "",
+                      "summary": "", "highlights": []}],
+            "education": [], "skills": [{"name": "ML", "keywords": ["Python", "pandas", "LLMs", "Terraform"]}],
+            "languages": [], "certificates": [], "projects": [], "stated_years_of_experience": 4, "cv_language": "en"})}
+        run = frappe.get_doc({"doctype": "AI Parsing Run"})
+        run.insert()
+        frappe.db.set_value("AI Parsing Case", {"name": ["!=", case.name]}, "active", 0)
+        with patch.object(profile_parser, "chat_completion", return_value=reply):
+            parsing_eval.run(run.name)
+        run.reload()
+        self.assertEqual(run.status, "Completed")
+        self.assertEqual(run.years_accuracy, 100.0)
+        self.assertEqual(run.role_recall, 100.0)
+        self.assertEqual(run.skill_recall, round(2 / 3 * 100, 1))    # XGBoost missed
+        self.assertEqual(run.grounding, 75.0)                          # Terraform is not in the CV
+        self.assertIn("Terraform", run.report)

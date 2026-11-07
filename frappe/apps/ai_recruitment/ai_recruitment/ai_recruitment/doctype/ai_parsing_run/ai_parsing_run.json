@@ -1,0 +1,250 @@
+{
+ "actions": [],
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified_by": "Administrator",
+ "module": "AI Recruitment",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "creation": "2026-11-08 01:10:00.000000",
+ "modified": "2026-11-08 01:10:00.000000",
+ "name": "AI Parsing Run",
+ "autoname": "format:AI-PRUN-{#####}",
+ "description": "Parses every active AI Parsing Case with the current model and prompt and reports accuracy. Run it before go-live and after any model or prompt change.",
+ "fields": [
+  {
+   "fieldname": "language",
+   "fieldtype": "Select",
+   "label": "Only Language",
+   "options": "\nArabic\nEnglish\nMixed"
+  },
+  {
+   "fieldname": "layout",
+   "fieldtype": "Select",
+   "label": "Only Layout",
+   "options": "\nATS\nDesigned\nScanned\nDOCX"
+  },
+  {
+   "fieldname": "column_break_a",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Queued",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Queued\nRunning\nCompleted\nFailed",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "passed",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Passed",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_thresholds",
+   "fieldtype": "Section Break",
+   "label": "Pass Thresholds",
+   "collapsible": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "years_tolerance",
+   "fieldtype": "Float",
+   "label": "Years Tolerance (+/-)"
+  },
+  {
+   "default": "0.9",
+   "fieldname": "min_years_accuracy",
+   "fieldtype": "Float",
+   "label": "Min Years Accuracy",
+   "precision": "2"
+  },
+  {
+   "default": "0.8",
+   "fieldname": "min_role_recall",
+   "fieldtype": "Float",
+   "label": "Min Roles Found",
+   "precision": "2"
+  },
+  {
+   "fieldname": "column_break_t",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0.8",
+   "fieldname": "min_skill_recall",
+   "fieldtype": "Float",
+   "label": "Min Skills Found",
+   "precision": "2"
+  },
+  {
+   "default": "0.95",
+   "fieldname": "min_grounding",
+   "fieldtype": "Float",
+   "label": "Min Grounding",
+   "precision": "2"
+  },
+  {
+   "default": "1",
+   "fieldname": "min_language_accuracy",
+   "fieldtype": "Float",
+   "label": "Min Language Accuracy",
+   "precision": "2"
+  },
+  {
+   "fieldname": "section_results",
+   "fieldtype": "Section Break",
+   "label": "Results"
+  },
+  {
+   "fieldname": "cases_tested",
+   "fieldtype": "Int",
+   "label": "Cases Tested",
+   "read_only": 1
+  },
+  {
+   "fieldname": "years_accuracy",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Years Accuracy",
+   "read_only": 1
+  },
+  {
+   "fieldname": "role_recall",
+   "fieldtype": "Percent",
+   "label": "Roles Found",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_r",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "skill_recall",
+   "fieldtype": "Percent",
+   "label": "Skills Found",
+   "read_only": 1
+  },
+  {
+   "fieldname": "grounding",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Grounding",
+   "read_only": 1
+  },
+  {
+   "fieldname": "language_accuracy",
+   "fieldtype": "Percent",
+   "label": "Language Accuracy",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_m",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "model",
+   "fieldtype": "Data",
+   "label": "Model",
+   "read_only": 1
+  },
+  {
+   "fieldname": "started_on",
+   "fieldtype": "Datetime",
+   "label": "Started On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "finished_on",
+   "fieldtype": "Datetime",
+   "label": "Finished On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_report",
+   "fieldtype": "Section Break",
+   "label": "Report"
+  },
+  {
+   "fieldname": "report",
+   "fieldtype": "Markdown Editor",
+   "label": "Report",
+   "read_only": 1
+  },
+  {
+   "fieldname": "details",
+   "fieldtype": "Code",
+   "label": "Raw Results",
+   "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "error",
+   "fieldtype": "Small Text",
+   "label": "Error",
+   "read_only": 1
+  }
+ ],
+ "field_order": [
+  "language",
+  "layout",
+  "column_break_a",
+  "status",
+  "passed",
+  "section_thresholds",
+  "years_tolerance",
+  "min_years_accuracy",
+  "min_role_recall",
+  "column_break_t",
+  "min_skill_recall",
+  "min_grounding",
+  "min_language_accuracy",
+  "section_results",
+  "cases_tested",
+  "years_accuracy",
+  "role_recall",
+  "column_break_r",
+  "skill_recall",
+  "grounding",
+  "language_accuracy",
+  "column_break_m",
+  "model",
+  "started_on",
+  "finished_on",
+  "section_report",
+  "report",
+  "details",
+  "error"
+ ],
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "write": 1
+  }
+ ],
+ "track_changes": 1
+}

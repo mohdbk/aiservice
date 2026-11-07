@@ -35,7 +35,7 @@ HR user ──► Desk "Ask AI" panel ──► ai_recruitment.api.chat (session
 |---|---|---|
 | ERPNext base image | `frappe/erpnext:v16.54.0` | `frappe/Dockerfile` (`ERPNEXT_IMAGE`) |
 | Frappe HR | `v16.53.1` | `frappe/Dockerfile` (`HRMS_VERSION`) |
-| ai_recruitment | `0.3.2` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
+| ai_recruitment | `0.4.0` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
 | Demo LLM | `qwen/qwen3.8-27b` (OpenRouter) | AI Recruitment Settings |
 
 Upgrade them deliberately and test in staging first. Every new image version runs `bench migrate`.
@@ -66,12 +66,12 @@ container to suit Railway's single-volume limit, and pulls third-party Railway s
      --build-arg=FRAPPE_PATH=https://github.com/frappe/frappe \
      --build-arg=FRAPPE_BRANCH=v16.x.x \
      --build-arg=APPS_JSON_BASE64=$APPS_JSON_BASE64 \
-     --tag=registry.moet.internal/hr/frappe-hr-ai-base:0.3.0 \
+     --tag=registry.moet.internal/hr/frappe-hr-ai-base:0.4.0 \
      --file=images/layered/Containerfile .
    ```
 4. Add the OCR packages on top (frappe_docker images run as the `frappe` user):
    ```dockerfile
-   FROM registry.moet.internal/hr/frappe-hr-ai-base:0.3.0
+   FROM registry.moet.internal/hr/frappe-hr-ai-base:0.4.0
    USER root
    RUN apt-get update && apt-get install -y --no-install-recommends \
          tesseract-ocr tesseract-ocr-ara tesseract-ocr-eng poppler-utils \
@@ -80,7 +80,7 @@ container to suit Railway's single-volume limit, and pulls third-party Railway s
    RUN bench compile-po-to-mo --app ai_recruitment || true   # Arabic UI strings
    ```
    ```bash
-   docker build -t registry.moet.internal/hr/frappe-hr-ai:0.3.0 . && docker push registry.moet.internal/hr/frappe-hr-ai:0.3.0
+   docker build -t registry.moet.internal/hr/frappe-hr-ai:0.4.0 . && docker push registry.moet.internal/hr/frappe-hr-ai:0.4.0
    ```
    Check the frappe_docker README for the exact build arguments of the release you use. They change
    between versions. A private Git server needs credentials in the URL or a build secret. Never bake
@@ -165,6 +165,28 @@ Tesseract had about 0.54 character and 0.84 word error rate on Arabic text recog
 vision-language models reduced character errors by roughly 60% on average. Small older Qwen-VL 7B models did worse than
 Tesseract there, so **measure your own model**: Desk → **AI OCR Test** → upload a sample CV and paste its correct text.
 It reports CER/WER for Tesseract and the vision model side by side. Test 10 to 20 real Arabic and English CVs before go-live.
+
+### Measuring parsing accuracy
+
+Prompt rules reduce parsing mistakes but cannot guarantee them, so measure:
+
+1. Desk → **AI Parsing Case** → New, for 10 to 20 real CVs (anonymised if possible) covering Arabic, English,
+   ATS-style, designed and scanned layouts. For each, attach the CV and record the correct answers: total years,
+   roles (`position | employer`, employer empty when the CV names none) and the key skills actually used.
+2. Desk → **AI Parsing Run** → New → Save. It parses every active case and reports, overall and per language
+   and layout:
+
+| Metric | Meaning | Default minimum |
+|---|---|---|
+| Years accuracy | years of experience within +/- 1 year | 90% |
+| Roles found | labelled roles found; an invented employer counts as not found | 80% |
+| Skills found | labelled skills found | 80% |
+| Grounding | extracted skills, employers and institutions that actually appear in the CV | 95% |
+| Language | CV language detected correctly | 100% |
+
+Grounding needs no labels and catches the most harmful errors (invented employers, courses turned into skills).
+Run it before go-live and after any change of model, prompt or CV Reading Mode, and keep the passed runs with the
+evaluation runs as evidence. The demo site comes with the 5 demo applicants already labelled.
 
 Cost: each CV now uses 2 model calls (parse, then score) plus 1 vision call per scanned or designed CV (up to 5 pages).
 

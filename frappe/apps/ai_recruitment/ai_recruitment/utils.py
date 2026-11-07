@@ -270,6 +270,93 @@ def to_json_resume(profile: dict, name: str = "", email: str = "", phone: str = 
     return out
 
 
+# ---------------- parsing accuracy ----------------
+_AR_NORMALISE = str.maketrans({
+    "أ": "ا", "إ": "ا", "آ": "ا",  # alef forms -> alef
+    "ة": "ه",                                         # taa marbuta -> haa
+    "ى": "ي",                                         # alef maqsura -> yaa
+})
+
+
+def norm_text(s: str) -> str:
+    s = re.sub(r"[ً-ْـ]", "", (s or "").casefold())  # Arabic diacritics, tatweel
+    s = s.translate(_AR_NORMALISE)
+    return re.sub(r"[^\w؀-ۿ+#.]+", " ", s).strip()
+
+
+def tokens(s: str) -> list:
+    return [t.strip(".") for t in norm_text(s).split() if len(t.strip(".")) > 1]
+
+
+def _contained(item: str, text_tokens: set, min_share: float = 0.8) -> bool:
+    it = tokens(item)
+    return bool(it) and sum(1 for t in it if t in text_tokens) / len(it) >= min_share
+
+
+def predicted_skills(profile: dict) -> list:
+    """Skill keywords (category names are labels, not skills); a skill without keywords is itself the skill."""
+    out = []
+    for s in (profile or {}).get("skills") or []:
+        kws = [k for k in (s.get("keywords") or []) if k]
+        out += kws if kws else ([s.get("name")] if s.get("name") else [])
+    return list(dict.fromkeys(out))
+
+
+def _skill_match(a: str, b: str) -> bool:
+    na, nb = norm_text(a), norm_text(b)
+    return bool(na and nb) and (na == nb or na in nb or nb in na)
+
+
+def skill_recall(expected: list, predicted: list) -> dict:
+    exp = [e for e in expected if e and e.strip()]
+    found = [e for e in exp if any(_skill_match(e, p) for p in predicted)]
+    return {"recall": round(len(found) / len(exp), 3) if exp else None,
+            "missing": [e for e in exp if e not in found]}
+
+
+def parse_role_lines(raw: str) -> list:
+    """'position | employer' per line; employer may be empty for unnamed employers."""
+    out = []
+    for line in (raw or "").splitlines():
+        if not line.strip() or line.strip().startswith("#"):
+            continue
+        pos, _, emp = line.partition("|")
+        out.append({"position": pos.strip(), "employer": emp.strip()})
+    return out
+
+
+def role_recall(expected: list, work: list) -> dict:
+    def overlap(a, b):
+        ta, tb = set(tokens(a)), set(tokens(b))
+        return len(ta & tb) / len(ta) if ta else 0.0
+
+    found, wrong_employer = 0, []
+    for e in expected:
+        match = next((w for w in work or [] if overlap(e["position"], w.get("position", "")) >= 0.5), None)
+        if not match:
+            continue
+        given = f"{match.get('name', '')} {match.get('description', '')}"
+        if e["employer"] and overlap(e["employer"], given) < 0.5:
+            wrong_employer.append(e["position"])
+            continue
+        if not e["employer"] and (match.get("name") or "").strip():
+            wrong_employer.append(f"{e['position']} (named '{match.get('name')}', CV names none)")
+            continue
+        found += 1
+    return {"recall": round(found / len(expected), 3) if expected else None, "wrong_employer": wrong_employer}
+
+
+def grounding(profile: dict, cv_text: str) -> dict:
+    """Share of extracted skills, employers and institutions that actually appear in the CV text."""
+    text_tokens = set(tokens(cv_text))
+    items = predicted_skills(profile)
+    items += [w.get("name") for w in (profile or {}).get("work") or [] if w.get("name")]
+    items += [e.get("institution") for e in (profile or {}).get("education") or [] if e.get("institution")]
+    items = [i for i in items if i]
+    unsupported = [i for i in items if not _contained(i, text_tokens)]
+    return {"rate": round(1 - len(unsupported) / len(items), 3) if items else None, "unsupported": unsupported}
+
+
 # ---------------- OCR accuracy ----------------
 def _lev(a: list, b: list) -> int:
     prev = list(range(len(b) + 1))

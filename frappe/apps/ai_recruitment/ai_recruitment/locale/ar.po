@@ -149,3 +149,27 @@ msgstr "اختبار التعرف الضوئي على النصوص"
 
 msgid "CV Reading Mode"
 msgstr "طريقة قراءة السير الذاتية"
+
+msgid "AI Parsing Case"
+msgstr "حالة اختبار تحليل السيرة الذاتية"
+
+msgid "AI Parsing Run"
+msgstr "اختبار دقة تحليل السير الذاتية"
+
+msgid "Years Accuracy"
+msgstr "دقة سنوات الخبرة"
+
+msgid "Roles Found"
+msgstr "الوظائف المكتشفة"
+
+msgid "Skills Found"
+msgstr "المهارات المكتشفة"
+
+msgid "Grounding"
+msgstr "الاستناد إلى السيرة الذاتية"
+
+msgid "Language Accuracy"
+msgstr "دقة تحديد اللغة"
+
+msgid "Correct Answers (labelled by a person)"
+msgstr "الإجابات الصحيحة (يحددها شخص)"

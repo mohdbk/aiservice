@@ -1,0 +1,155 @@
+{
+ "actions": [],
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified_by": "Administrator",
+ "module": "AI Recruitment",
+ "owner": "Administrator",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "creation": "2026-11-08 01:10:00.000000",
+ "modified": "2026-11-08 01:10:00.000000",
+ "name": "AI Parsing Case",
+ "autoname": "format:AI-PCASE-{#####}",
+ "title_field": "title",
+ "description": "A hand-labelled CV used to measure how accurately CVs are parsed. Add 10 to 20 real CVs covering Arabic, English, ATS and designed or scanned layouts.",
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Title",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Active"
+  },
+  {
+   "fieldname": "column_break_a",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "English",
+   "fieldname": "language",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "CV Language",
+   "options": "Arabic\nEnglish\nMixed"
+  },
+  {
+   "default": "ATS",
+   "fieldname": "layout",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "CV Layout",
+   "options": "ATS\nDesigned\nScanned\nDOCX"
+  },
+  {
+   "fieldname": "section_source",
+   "fieldtype": "Section Break",
+   "label": "CV (one of)",
+   "description": "Attach the CV file, or link an existing applicant, or paste the text."
+  },
+  {
+   "fieldname": "cv_file",
+   "fieldtype": "Attach",
+   "label": "CV File"
+  },
+  {
+   "fieldname": "job_applicant",
+   "fieldtype": "Link",
+   "label": "Job Applicant",
+   "options": "Job Applicant"
+  },
+  {
+   "fieldname": "column_break_b",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Used only to redact the name before parsing, as in production.",
+   "fieldname": "candidate_name",
+   "fieldtype": "Data",
+   "label": "Candidate Name"
+  },
+  {
+   "fieldname": "cv_text",
+   "fieldtype": "Long Text",
+   "label": "CV Text"
+  },
+  {
+   "fieldname": "section_expected",
+   "fieldtype": "Section Break",
+   "label": "Correct Answers (labelled by a person)"
+  },
+  {
+   "fieldname": "expected_years",
+   "fieldtype": "Float",
+   "label": "Total Years of Experience",
+   "precision": "1"
+  },
+  {
+   "description": "One per line: position | employer. Leave the employer empty when the CV does not name it.",
+   "fieldname": "expected_roles",
+   "fieldtype": "Small Text",
+   "label": "Roles"
+  },
+  {
+   "fieldname": "column_break_c",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "One per line or comma separated: the key skills the person has actually used. Do not list things only studied.",
+   "fieldname": "expected_skills",
+   "fieldtype": "Small Text",
+   "label": "Key Skills"
+  }
+ ],
+ "field_order": [
+  "title",
+  "active",
+  "column_break_a",
+  "language",
+  "layout",
+  "section_source",
+  "cv_file",
+  "job_applicant",
+  "column_break_b",
+  "candidate_name",
+  "cv_text",
+  "section_expected",
+  "expected_years",
+  "expected_roles",
+  "column_break_c",
+  "expected_skills"
+ ],
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "HR Manager",
+   "write": 1
+  }
+ ],
+ "track_changes": 1
+}

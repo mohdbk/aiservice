@@ -192,5 +192,44 @@ class TestErrorRates(unittest.TestCase):
         self.assertEqual(u.error_rates("\u0645\u064f\u0647\u064e\u0646\u062f\u0650\u0633", "\u0645\u0647\u0646\u062f\u0633")["cer"], 0.0)
 
 
+class TestParsingMetrics(unittest.TestCase):
+    CV = "Senior Python engineer, 6 years at a logistics company. FastAPI, vLLM on Kubernetes. Completed a course on LLMs."
+    PROFILE = {
+        "skills": [{"name": "Languages", "keywords": ["Python"]}, {"name": "Infra", "keywords": ["Kubernetes", "vLLM", "Terraform"]},
+                   {"name": "FastAPI", "keywords": []}],
+        "work": [{"name": "Logistics Company", "description": "", "position": "Senior Python Engineer"}],
+    }
+
+    def test_predicted_skills_use_keywords_not_categories(self):
+        self.assertEqual(u.predicted_skills(self.PROFILE), ["Python", "Kubernetes", "vLLM", "Terraform", "FastAPI"])
+
+    def test_skill_recall(self):
+        r = u.skill_recall(["Python", "FastAPI", "Docker"], u.predicted_skills(self.PROFILE))
+        self.assertEqual(r["recall"], round(2 / 3, 3))
+        self.assertEqual(r["missing"], ["Docker"])
+
+    def test_grounding_flags_invented_skill(self):
+        g = u.grounding(self.PROFILE, self.CV)
+        self.assertIn("Terraform", g["unsupported"])
+        self.assertNotIn("vLLM", g["unsupported"])
+
+    def test_role_recall_flags_invented_employer(self):
+        r = u.role_recall(u.parse_role_lines("Senior Python engineer |"), self.PROFILE["work"])
+        self.assertEqual(r["recall"], 0.0)
+        self.assertTrue(r["wrong_employer"])
+
+    def test_role_recall_unnamed_employer_ok(self):
+        work = [{"name": "", "description": "a logistics company", "position": "Senior Python engineer"}]
+        self.assertEqual(u.role_recall(u.parse_role_lines("Senior Python Engineer |"), work)["recall"], 1.0)
+
+    def test_role_with_named_employer(self):
+        work = [{"name": "Emirates NBD", "position": "BI Analyst"}]
+        self.assertEqual(u.role_recall(u.parse_role_lines("BI analyst | Emirates NBD"), work)["recall"], 1.0)
+        self.assertEqual(u.role_recall(u.parse_role_lines("BI analyst | ADCB"), work)["recall"], 0.0)
+
+    def test_arabic_normalisation(self):
+        self.assertEqual(u.norm_text("\u0625\u062f\u0627\u0631\u0629"), u.norm_text("\u0627\u062f\u0627\u0631\u0647"))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -27,6 +27,8 @@ By the **Ministry of Economy & Tourism**. AI CV screening and a recruitment assi
     proposals, tokens and latency. It has a retention period, and a daily purge removes older entries.
   - Each user has limits on messages per minute and per day, and on tokens per day.
   - Conversations are kept server-side per session.
+- **AI Parsing Case / AI Parsing Run.** Hand-labelled CVs and an accuracy report (years, roles, skills,
+  grounding, language), overall and per language and layout.
 - **AI Evaluation Run.** Tests consistency, fairness (name, unlabelled demographics, labelled attributes) and
   prompt-injection resistance on a job's applicants, and produces a PASS/FAIL report.
 - **AI Recruitment Settings.** Covers the LLM endpoint and model, the encrypted API key, roles, limits, retention, the

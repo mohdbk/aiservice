@@ -47,3 +47,11 @@ CV Read As,طريقة قراءة السيرة الذاتية
 Structured Profile,الملف المنظم
 AI OCR Test,اختبار التعرف الضوئي على النصوص
 CV Reading Mode,طريقة قراءة السير الذاتية
+AI Parsing Case,حالة اختبار تحليل السيرة الذاتية
+AI Parsing Run,اختبار دقة تحليل السير الذاتية
+Years Accuracy,دقة سنوات الخبرة
+Roles Found,الوظائف المكتشفة
+Skills Found,المهارات المكتشفة
+Grounding,الاستناد إلى السيرة الذاتية
+Language Accuracy,دقة تحديد اللغة
+Correct Answers (labelled by a person),الإجابات الصحيحة (يحددها شخص)
