@@ -95,7 +95,8 @@ async def ensure_webhook(admin: Frappe):
     if existing:
         await admin.update("Webhook", existing[0]["name"], doc)
     else:
-        await admin.insert({"doctype": "Webhook", **doc})
+        name = "AI Screening - Job Applicant"
+        await admin.insert({"doctype": "Webhook", "name": name, "__newname": name, **doc})
         log.info("Created webhook -> %s", url)
 
 
