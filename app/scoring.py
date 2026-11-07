@@ -228,19 +228,21 @@ async def score_applicant(name: str) -> dict:
 
     # Audit trail on the record itself.
     try:
-        await state.svc.insert({
-            "doctype": "Comment",
-            "comment_type": "Comment",
-            "reference_doctype": "Job Applicant",
-            "reference_name": name,
-            "content": (
+        # Whitelisted method: needs only read access on the applicant, not Comment create rights.
+        await state.svc.call(
+            "frappe.desk.form.utils.add_comment",
+            reference_doctype="Job Applicant",
+            reference_name=name,
+            comment_email=settings.service_user_email,
+            comment_by="AI Screening Agent",
+            content=(
                 f"AI screening: score {total}/100 by {settings.llm_model}. "
                 f"{len(rows)} criteria, {'rubric from job opening' if rubric else 'criteria derived by model'}, "
                 f"{len(cv)} CV characters after redaction. "
                 f"{'Must-have gaps: ' + ', '.join(gaps) + '. ' if gaps else ''}"
                 "This is a recommendation only; the recruiter decides."
             ),
-        })
+        )
     except Exception as e:
         log.warning("Audit comment failed for %s: %s", name, e)
 
@@ -253,8 +255,8 @@ async def scoring_worker():
         try:
             while not state.ready:
                 await asyncio.sleep(5)
-            await score_applicant(name)
-            log.info("Scored %s", name)
+            res = await score_applicant(name)
+            log.info("%s: %s", name, res)
         except Exception as e:
             log.exception("Scoring failed for %s", name)
             state.last_error = f"{name}: {e}"
