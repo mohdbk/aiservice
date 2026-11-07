@@ -16,7 +16,8 @@ Nothing in the production setup depends on Railway or OpenRouter.
 | **MariaDB 10.6+ / 11.x** | Database | Yes |
 | **Redis** | Cache, queue, realtime (frappe_docker runs 2 instances) | Yes |
 | **LLM endpoint** | Any OpenAI-compatible server (vLLM recommended) | Yes |
-| **AI service** (repo root) | Optional MCP gateway for *external* agents (e.g. your agentic pipeline). Not needed for scoring or the Desk chat | Optional |
+
+There are no other services. Scoring and the assistant run inside Frappe's own web and worker processes.
 
 ```
 Candidate ──► /jobs (Frappe web) ──► Job Applicant ──after_insert──► background job (long queue)
@@ -24,7 +25,6 @@ Candidate ──► /jobs (Frappe web) ──► Job Applicant ──after_inser
 HR user ──► Desk "Ask AI" panel ──► ai_recruitment.api.chat (session) ─┤
                                                                       ▼
                                                      LLM endpoint (on-prem vLLM)
-External agent ──MCP──► AI service (optional) ──REST, HR User──► Frappe
 ```
 
 ### Versions pinned in this repo
@@ -32,7 +32,7 @@ External agent ──MCP──► AI service (optional) ──REST, HR User─�
 |---|---|---|
 | ERPNext base image | `frappe/erpnext:v16.54.0` | `frappe/Dockerfile` (`ERPNEXT_IMAGE`) |
 | Frappe HR | `v16.53.1` | `frappe/Dockerfile` (`HRMS_VERSION`) |
-| ai_recruitment | `0.1.0` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
+| ai_recruitment | `0.1.1` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
 | Demo LLM | `qwen/qwen3.8-27b` (OpenRouter) | AI Recruitment Settings |
 
 Upgrade them deliberately and test in staging first. Every new image version runs `bench migrate`.
@@ -141,8 +141,8 @@ Alternatively set environment variables on the backend and worker containers: `L
       in Frappe's Version log. Scoring errors are in *Error Log*.
 - [ ] **AI governance:** scores are recommendations. Keep a human decision step in your recruitment SOP, and
       document the rubric per job opening (the *AI Scoring Criteria* field).
-- [ ] If the optional AI service is deployed: keep `MCP_TOKEN` in your secrets store, expose `/mcp` only on the
-      internal network, set `MANAGE_FRAPPE=false`, and give its service user only the `HR User` role.
+- [ ] The LLM API key (if any) is in AI Recruitment Settings (encrypted with the site's `encryption_key`) or
+      in an `LLM_API_KEY` environment variable from your secrets store. Never commit it.
 
 ---
 

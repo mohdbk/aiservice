@@ -36,7 +36,6 @@ def after_migrate():
     fields = {dt: [{k: v for k, v in f.items() if v is not None} for f in fl] for dt, fl in CUSTOM_FIELDS.items()}
     create_custom_fields(fields, ignore_validate=True, update=True)
     _ensure_settings_defaults()
-    _disable_external_ai_service_hooks()
     frappe.db.commit()
 
 
@@ -50,19 +49,6 @@ def _ensure_settings_defaults():
             s.set(df.fieldname, df.default)
     s.flags.ignore_permissions = True
     s.save()
-
-
-def _disable_external_ai_service_hooks():
-    """The standalone AI service (MCP gateway) used to score via webhook and inject a
-    chat Client Script. This app now does both natively, so switch those off."""
-    for name in frappe.get_all(
-        "Webhook",
-        filters={"webhook_doctype": "Job Applicant", "request_url": ["like", "%/webhook/job-applicant"]},
-        pluck="name",
-    ):
-        frappe.db.set_value("Webhook", name, "enabled", 0)
-    for name in frappe.get_all("Client Script", filters={"name": ["like", "AI Assistant - %"]}, pluck="name"):
-        frappe.db.set_value("Client Script", name, "enabled", 0)
 
 
 def allowed_roles() -> set[str]:
