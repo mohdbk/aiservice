@@ -32,7 +32,7 @@ HR user ──► Desk "Ask AI" panel ──► ai_recruitment.api.chat (session
 |---|---|---|
 | ERPNext base image | `frappe/erpnext:v16.54.0` | `frappe/Dockerfile` (`ERPNEXT_IMAGE`) |
 | Frappe HR | `v16.53.1` | `frappe/Dockerfile` (`HRMS_VERSION`) |
-| ai_recruitment | `0.1.1` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
+| ai_recruitment | `0.1.2` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
 | Demo LLM | `qwen/qwen3.8-27b` (OpenRouter) | AI Recruitment Settings |
 
 Upgrade them deliberately and test in staging first. Every new image version runs `bench migrate`.
@@ -183,3 +183,11 @@ Copy `encryption_key` from the old `site_config.json` so saved passwords, includ
   for candidates are separate work items.
 - The demo's Railway setup runs everything in one container with no high availability. On-prem should run the multi-service
   compose or Helm deployment above.
+
+---
+
+## 9. House style
+
+AI output must never contain em dashes. The rule is in both system prompts (scoring and assistant), and
+`llm.no_em_dash` / `llm.clean` remove any that slip through from every model reply before it is saved or
+shown. Keep this when changing models or prompts. The repo's own text follows the same rule.

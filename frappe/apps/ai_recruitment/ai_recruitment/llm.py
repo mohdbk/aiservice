@@ -66,6 +66,31 @@ def chat_completion(messages, tools=None, schema=None, schema_name="output", tem
         frappe.throw(f"Unexpected language model response: {r.text[:300]}")
 
 
+WRITING_RULE = "Never use em dashes or spaced en dashes. Use commas, colons, full stops or brackets instead."
+
+
+def no_em_dash(text):
+    """House style: no em dashes anywhere in AI output. Applied after every model reply,
+    because prompts alone are not reliable."""
+    if not isinstance(text, str) or not text:
+        return text
+    text = re.sub(r"\s*\u2014\s*", ", ", text)        # em dash -> comma
+    text = re.sub(r"\s+\u2013\s+", ", ", text)        # spaced en dash used as a dash -> comma
+    text = re.sub(r",\s*,", ",", text)
+    return re.sub(r"^\s*,\s*", "", text, flags=re.M)
+
+
+def clean(obj):
+    """Apply no_em_dash recursively to strings in dicts/lists."""
+    if isinstance(obj, str):
+        return no_em_dash(obj)
+    if isinstance(obj, list):
+        return [clean(v) for v in obj]
+    if isinstance(obj, dict):
+        return {k: clean(v) for k, v in obj.items()}
+    return obj
+
+
 def extract_json(text: str) -> dict:
     text = (text or "").strip()
     text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text)

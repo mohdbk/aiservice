@@ -1,4 +1,4 @@
-# Ministry Career Portal — AI Recruitment
+# Ministry Career Portal: AI Recruitment
 
 **Ministry of Economy & Tourism.** AI CV screening and a recruitment assistant for Frappe HR v16.
 

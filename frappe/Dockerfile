@@ -5,7 +5,7 @@
 #
 # DEMO ONLY: the Railway runtime scripts (entrypoint, nginx config, backup/restore)
 # come from the two-workspaces Railway template at a pinned commit, fetched at build
-# time. They are not part of this repo and are not needed on-prem — see
+# time. They are not part of this repo and are not needed on-prem. See
 # docs/ON_PREM.md, which uses frappe_docker's compose setup instead.
 
 ARG ERPNEXT_IMAGE=frappe/erpnext:v16.54.0

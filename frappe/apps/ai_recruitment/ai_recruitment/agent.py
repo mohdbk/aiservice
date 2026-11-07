@@ -9,11 +9,12 @@ import json
 import frappe
 
 from ai_recruitment import tools as T
-from ai_recruitment.llm import chat_completion
+from ai_recruitment.llm import WRITING_RULE, chat_completion, no_em_dash
 
 ACTION_TTL = 30 * 60
 
-SYSTEM = """You are the ministry's recruitment assistant inside Frappe HR.
+SYSTEM = f"""You are the ministry's recruitment assistant inside Frappe HR.
+- Writing style: {WRITING_RULE}
 - Reply in the user's language (Arabic or English). Be concise. Markdown is rendered: use short lists, **bold** and small tables where helpful.
 - Use the tools to answer; never guess IDs, scores or statuses. Job openings and applicants are referenced by their ID.
 - AI scores are recommendations only. Humans make hiring decisions; you cannot reject, accept or delete.
@@ -74,7 +75,7 @@ def run(history: list, context: dict) -> dict:
         msg = chat_completion(msgs, tools=TOOL_SPECS, temperature=0.2, timeout=120)
         calls = msg.get("tool_calls") or []
         if not calls:
-            return {"reply": (msg.get("content") or "").strip(), "actions": actions}
+            return {"reply": no_em_dash((msg.get("content") or "").strip()), "actions": actions}
         msgs.append({"role": "assistant", "content": msg.get("content") or "", "tool_calls": calls})
         for call in calls:
             name = call["function"]["name"]

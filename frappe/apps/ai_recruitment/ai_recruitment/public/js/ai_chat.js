@@ -1,4 +1,4 @@
-// AI Recruitment Assistant — Desk chat panel (Ministry of Economy & Tourism)
+// AI Recruitment Assistant: Desk chat panel (Ministry of Economy & Tourism)
 // Calls whitelisted methods with the user's own Frappe session; no tokens in the page.
 (function () {
   "use strict";
@@ -160,7 +160,7 @@
         b.textContent = "✓ " + res.result;
         if (window.cur_frm && cur_frm.doc && !cur_frm.is_dirty()) cur_frm.reload_doc();
       } catch (e) {
-        b.disabled = false; b.textContent = __("Failed — tap to retry");
+        b.disabled = false; b.textContent = __("Failed. Tap to retry.");
       }
     }
     form.onsubmit = async (ev) => {
