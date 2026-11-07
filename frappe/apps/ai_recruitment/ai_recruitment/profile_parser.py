@@ -39,8 +39,14 @@ Rules:
   "a logistics company" or "a bank", leave name "" and put the description in "description".
 - Use separate work entries for different employers or clearly different periods. "Since 2024" means
   startDate "2024". Leave dates "" when the CV gives none.
-- summary and highlights must stay close to the CV's own wording. Do not add verbs, achievements or
-  responsibilities the CV does not state (if the CV only lists a tool, do not say it was "implemented").
+- Record every role the CV states, even without an employer or dates (e.g. "Data scientist, 4 years" is a
+  work entry with position "Data scientist", name "" and dates "").
+- basics.summary, work summaries and highlights must stay close to the CV's own wording. Do not add verbs,
+  achievements, proficiency levels or responsibilities the CV does not state, and keep qualifiers such as
+  "some", "basic" or "learning" (if the CV only lists a tool, do not say it was "implemented").
+- skills: only what the CV shows the person has used or worked with. Things only studied (online courses,
+  "learning X") are not skills: put a named course or certificate in certificates, otherwise mention it in
+  basics.summary as studied.
 - stated_years_of_experience: the total years the CV explicitly claims (e.g. "6 years" -> 6), else 0.
 - Do not include names, contact details, nationality, age, gender, religion, marital status or photos.
 - Never invent anything. Use "" or [] when unknown.
