@@ -1,7 +1,23 @@
-# Ministry Career Portal — AI Service
+# Ministry Career Portal — AI
 
-A small, portable service that adds **AI CV scoring** and **HR chatbot tools (MCP)** to
-[Frappe HR](https://github.com/frappe/hrms). It's a plain Docker container that talks to Frappe over its REST API and to
+Ministry of Economy & Tourism. AI CV screening and a recruitment assistant for Frappe HR.
+
+## Repository layout
+| Path | What |
+|---|---|
+| `frappe/apps/ai_recruitment/` | **The Frappe app**: scoring, in-Desk assistant, settings. This is the main product. |
+| `frappe/Dockerfile` | Demo image for Railway (Frappe HR + the app). On-prem uses frappe_docker instead. |
+| `app/`, `Dockerfile` (root) | **AI service**: optional MCP gateway for external agents (`MANAGE_FRAPPE=false`). |
+| `docs/ON_PREM.md` | **On-premises deployment guide.** |
+
+---
+
+# AI Service (MCP gateway)
+
+A small, portable service that exposes **HR recruitment tools over MCP** to outside agents, such as the
+ministry's agentic pipeline. With `MANAGE_FRAPPE=true` (the original demo mode) it also scored CVs via
+webhook. That is now done natively by the `ai_recruitment` Frappe app, so production runs it with
+`MANAGE_FRAPPE=false`. It's a plain Docker container that talks to Frappe over its REST API and to
 any OpenAI-compatible LLM. It has no dependency on any hosting platform.
 
 ```

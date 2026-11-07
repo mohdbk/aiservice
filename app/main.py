@@ -70,6 +70,8 @@ async def health():
 async def job_applicant_webhook(request: Request):
     if not _token_ok(request.headers.get("x-webhook-token"), settings.webhook_token):
         return JSONResponse({"error": "unauthorized"}, status_code=401)
+    if not settings.manage_frappe:
+        return JSONResponse({"error": "scoring is handled by the ai_recruitment Frappe app"}, status_code=410)
     body = await request.json()
     name = (body or {}).get("name")
     if not name:

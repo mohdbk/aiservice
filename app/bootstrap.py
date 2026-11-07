@@ -254,13 +254,15 @@ async def bootstrap_once():
             state.phase = "waiting_for_setup_wizard"
             await admin.close()
             raise RuntimeError("Finish the Frappe setup wizard (country, company) — will retry")
-        await ensure_custom_fields(admin)
+        if settings.manage_frappe:
+            await ensure_custom_fields(admin)
         key, secret = await ensure_service_user(admin)
-        await ensure_webhook(admin)
-        try:
-            await ensure_chat_widget(admin)
-        except FrappeError as e:
-            log.warning("Chat widget not installed: %s", e)
+        if settings.manage_frappe:
+            await ensure_webhook(admin)
+            try:
+                await ensure_chat_widget(admin)
+            except FrappeError as e:
+                log.warning("Chat widget not installed: %s", e)
     elif settings.frappe_api_key and settings.frappe_api_secret:
         key, secret = settings.frappe_api_key, settings.frappe_api_secret
     else:
@@ -270,15 +272,16 @@ async def bootstrap_once():
         await state.svc.close()
     state.svc = Frappe(settings.frappe_url, key, secret)
 
-    if admin and settings.seed_demo:
+    if admin and settings.seed_demo and settings.manage_frappe:
         state.phase = "seeding_demo"
         await seed_demo(admin, state.svc)
     if admin:
         await admin.close()
 
     state.ready = True
-    state.phase = "ready"
-    await queue_unscored(state.svc)
+    state.phase = "ready" if settings.manage_frappe else "ready (mcp-only)"
+    if settings.manage_frappe:
+        await queue_unscored(state.svc)
 
 
 async def bootstrap_loop():

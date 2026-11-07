@@ -1,0 +1,19 @@
+[project]
+name = "ai_recruitment"
+authors = [{ name = "Ministry of Economy & Tourism", email = "digital-solutions@example.com" }]
+description = "AI CV screening and an HR recruitment assistant for Frappe HR"
+requires-python = ">=3.10"
+readme = "README.md"
+dynamic = ["version"]
+dependencies = [
+    "pypdf>=4.2",
+    "python-docx>=1.1",
+]
+
+[build-system]
+requires = ["flit_core >=3.4,<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.bench.frappe-dependencies]
+frappe = ">=16.0.0-dev,<17.0.0"
+hrms = ">=16.0.0-dev,<17.0.0"

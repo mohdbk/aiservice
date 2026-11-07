@@ -22,6 +22,10 @@ class Settings:
 
     seed_demo = _env("SEED_DEMO", "false").lower() in ("1", "true", "yes")
 
+    # true  = this service configures Frappe (custom fields, webhook, chat script) and scores CVs.
+    # false = MCP gateway only; the ai_recruitment Frappe app does scoring and in-Desk chat.
+    manage_frappe = _env("MANAGE_FRAPPE", "true").lower() in ("1", "true", "yes")
+
     # Max CV characters sent to the model
     max_cv_chars = int(_env("MAX_CV_CHARS", "40000"))
 
