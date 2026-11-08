@@ -4,5 +4,5 @@ no_cache = 1
 
 
 def get_context(context):
-    base_context(context, "How we use AI and your data", "كيف نستخدم الذكاء الاصطناعي وبياناتك")
+    base_context(context, "Privacy notice for applicants", "إشعار الخصوصية للمتقدمين")
     return context

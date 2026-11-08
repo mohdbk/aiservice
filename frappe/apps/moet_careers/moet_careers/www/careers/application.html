@@ -29,14 +29,14 @@
   </div>
 
   <section class="mc-surface rounded-xl border border-aeblack-100 bg-white p-6" aria-labelledby="cv-title" id="cv-reading" data-application="{{ name }}">
-    <h2 id="cv-title" class="font-heading text-xl font-semibold text-aeblack-900">{{ t('What we read from your CV', 'ما قرأناه من سيرتك الذاتية') }}</h2>
+    <h2 id="cv-title" class="font-heading text-xl font-semibold text-aeblack-900">{{ t('Your details from your CV', 'بياناتك من سيرتك الذاتية') }}</h2>
     <p class="mt-1 text-aeblack-600">{{ t('Please check these details. If something is missing or wrong, tell us below so the hiring team sees it.', 'يرجى مراجعة هذه البيانات. إذا كان هناك شيء ناقص أو غير صحيح، أخبرنا أدناه ليطّلع عليه فريق التوظيف.') }}</p>
 
     <div data-state="reading" class="mt-6 flex items-center gap-3 text-aeblack-700" aria-live="polite">
       <span class="inline-block h-5 w-5 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" aria-hidden="true"></span>
-      {{ t('Reading your CV. This usually takes under a minute.', 'جاري قراءة سيرتك الذاتية. يستغرق ذلك عادة أقل من دقيقة.') }}
+      {{ t('Preparing your details. This usually takes under a minute.', 'جاري تجهيز بياناتك. يستغرق ذلك عادة أقل من دقيقة.') }}
     </div>
-    <div data-state="unreadable" class="mt-6 hidden aegov-alert alert-warning"><div class="alert-content"><p>{{ t('We could not read your CV automatically. The hiring team will review the file itself, so you do not need to do anything.', 'لم نتمكن من قراءة سيرتك الذاتية تلقائيا. سيراجع فريق التوظيف الملف نفسه، ولا يلزمك أي إجراء.') }}</p></div></div>
+    <div data-state="unreadable" class="mt-6 hidden aegov-alert alert-warning"><div class="alert-content"><p>{{ t('Your details are not shown here yet. The hiring team will review your CV file directly, so you do not need to do anything.', 'لا تظهر بياناتك هنا بعد. سيراجع فريق التوظيف ملف سيرتك الذاتية مباشرة، ولا يلزمك أي إجراء.') }}</p></div></div>
 
     <dl data-state="profile" class="mt-6 hidden grid gap-5">
       <div><dt class="text-sm text-aeblack-600">{{ t('Total experience', 'إجمالي الخبرة') }}</dt><dd class="font-medium" data-field="years"></dd></div>
@@ -57,6 +57,5 @@
     </form>
   </section>
 
-  <p class="mt-6 text-sm text-aeblack-600">{{ t('AI helps read CVs. Every decision is made by a person.', 'يساعد الذكاء الاصطناعي في قراءة السير الذاتية، ويتخذ كل قرار شخص من الفريق.') }} <a class="underline" href="/careers/privacy">{{ t('Learn more', 'اعرف المزيد') }}</a></p>
 </div>
 {% endautoescape %}{% endblock %}

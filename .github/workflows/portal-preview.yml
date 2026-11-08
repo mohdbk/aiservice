@@ -1,0 +1,66 @@
+# Design preview of the careers portal: compiles the stylesheet, renders every page with sample data,
+# screenshots them (and the live guest pages) and pushes the images to the "screenshots" branch.
+name: Portal preview
+on:
+  workflow_dispatch:
+    inputs:
+      site:
+        description: Live site to screenshot (guest pages only)
+        default: https://frappe-hr-production-6ec4.up.railway.app
+permissions:
+  contents: write
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Build stylesheet
+        run: cd frappe/apps/moet_careers/frontend && npm install --no-audit --no-fund && npm run build
+      - name: Render pages
+        run: |
+          pip install jinja2
+          mkdir -p /tmp/site/assets/moet_careers/css /tmp/site/assets/moet_careers/js /tmp/site/p
+          cp frappe/apps/moet_careers/moet_careers/public/css/careers.css /tmp/site/assets/moet_careers/css/
+          cp frappe/apps/moet_careers/moet_careers/public/js/careers.js /tmp/site/assets/moet_careers/js/
+          cd frappe/apps && python3 moet_careers/tests/render_preview.py /tmp/site/p
+      - name: Screenshots
+        env: { SITE: "${{ inputs.site }}" }
+        run: |
+          cd /tmp && npm init -y >/dev/null && npm install playwright@1.49.1 >/dev/null && npx playwright install --with-deps chromium >/dev/null
+          (cd /tmp/site && python3 -m http.server 8080 >/dev/null 2>&1 &) ; sleep 1
+          cat > shot.js <<'JS'
+          const { chromium, devices } = require('playwright');
+          const fs = require('fs');
+          (async () => {
+            const b = await chromium.launch(); fs.mkdirSync('/tmp/shots', { recursive: true });
+            const desk = await b.newContext({ viewport: { width: 1366, height: 900 }, deviceScaleFactor: 1 });
+            const phone = await b.newContext({ ...devices['iPhone 13'] });
+            const pages = fs.readdirSync('/tmp/site/p').filter(f => f.endsWith('.html'));
+            for (const f of pages) {
+              const p = await desk.newPage(); await p.goto('http://localhost:8080/p/' + f, { waitUntil: 'networkidle' });
+              await p.screenshot({ path: '/tmp/shots/local_' + f.replace('.html', '.png'), fullPage: true }); await p.close();
+            }
+            for (const f of ['ar_index.html', 'en_index.html', 'ar_apply.html', 'ar_application.html']) {
+              const p = await phone.newPage(); await p.goto('http://localhost:8080/p/' + f, { waitUntil: 'networkidle' });
+              await p.screenshot({ path: '/tmp/shots/phone_' + f.replace('.html', '.png'), fullPage: true }); await p.close();
+            }
+            const live = [['live_ar_index', '/careers?lang=ar'], ['live_en_index', '/careers?lang=en'], ['live_ar_login', '/careers/login?lang=ar'], ['live_ar_privacy', '/careers/privacy?lang=ar']];
+            for (const [n, path] of live) {
+              const p = await desk.newPage();
+              try { await p.goto(process.env.SITE + path, { waitUntil: 'networkidle', timeout: 60000 });
+                    await p.screenshot({ path: '/tmp/shots/' + n + '.png', fullPage: true }); } catch (e) { console.log(n, e.message); }
+              await p.close();
+            }
+            await b.close();
+          })();
+          JS
+          sed -i 's/^          //' shot.js && node shot.js
+      - name: Push to screenshots branch
+        run: |
+          cd /tmp/shots && git init -q -b screenshots && git add . \
+            && git -c user.name=preview -c user.email=preview@localhost commit -qm "Portal preview ${GITHUB_SHA::7}" \
+            && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" screenshots

@@ -126,7 +126,7 @@ def apply(job: str, phone: str = "", country: str = "", cover_note: str = "", co
         "attached_to_field": "resume_attachment",
     }).insert(ignore_permissions=True)
     frappe.db.set_value("Job Applicant", applicant.name, "resume_attachment", file_doc.file_url, update_modified=False)
-    applicant.add_comment("Info", f"Applied via the careers portal ({lang}). Consent to AI-assisted screening recorded.")
+    applicant.add_comment("Info", f"Applied via the careers portal ({lang}). Consent to application processing recorded.")
     return {"application": applicant.name}
 
 

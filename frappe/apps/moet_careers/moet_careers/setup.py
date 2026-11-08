@@ -15,7 +15,7 @@ CUSTOM_FIELDS = {
          "insert_after": "cover_letter", "collapsible": 1},
         {"fieldname": "applied_via_portal", "fieldtype": "Check", "label": "Applied via Careers Portal", "read_only": 1,
          "insert_after": "portal_section"},
-        {"fieldname": "consent_ai_screening", "fieldtype": "Check", "label": "Consented to AI-assisted Screening",
+        {"fieldname": "consent_ai_screening", "fieldtype": "Check", "label": "Consented to Application Processing",
          "read_only": 1, "insert_after": "applied_via_portal"},
         {"fieldname": "consent_at", "fieldtype": "Datetime", "label": "Consent Given On", "read_only": 1,
          "insert_after": "consent_ai_screening"},

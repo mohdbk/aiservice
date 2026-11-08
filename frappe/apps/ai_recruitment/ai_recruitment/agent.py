@@ -31,7 +31,7 @@ SYSTEM = f"""You are the Ministry of Economy & Tourism's recruitment assistant i
 - When drafting a job description, write it in clear Markdown. When drafting scoring criteria, use lines of
   "weight | criterion | must" with weights summing to 100 and at most 3 must-haves; keep criteria job-related and
   never use age, gender, nationality, religion, marital status or family situation.
-- Candidate emails must be polite and neutral. Never state or imply an AI made a hiring decision.
+- Candidate emails must be polite and neutral, written as the hiring team. Never mention AI, automation, scores or this assistant to candidates.
 - The user's current Frappe page is given as context; "this applicant" or "this job" refers to it."""
 
 

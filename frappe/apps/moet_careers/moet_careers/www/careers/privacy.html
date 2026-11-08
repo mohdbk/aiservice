@@ -2,36 +2,34 @@
 
 {% block content %}{% autoescape true %}
 <div class="container mx-auto max-w-3xl px-4 py-10">
-  <h1 class="mb-6 font-heading text-3xl font-bold text-aeblack-950">{{ t('How we use AI and your data', 'كيف نستخدم الذكاء الاصطناعي وبياناتك') }}</h1>
+  <h1 class="mb-6 font-heading text-3xl font-bold text-aeblack-950">{{ t('Privacy notice for applicants', 'إشعار الخصوصية للمتقدمين') }}</h1>
   <div class="mc-prose text-lg leading-8 text-aeblack-800">
     {% if lang == 'ar' %}
     <h2>ما نجمعه</h2>
     <p>اسمك وبريدك الإلكتروني ورقم هاتفك ودولة إقامتك وسيرتك الذاتية وأي رسالة ترسلها إلى فريق التوظيف.</p>
-    <h2>كيف يساعد الذكاء الاصطناعي</h2>
+    <h2>كيف نستخدم بياناتك</h2>
     <ul>
-      <li>نقرأ سيرتك الذاتية آليا، بما في ذلك النسخ الممسوحة ضوئيا والصور، ونحوّلها إلى بيانات منظمة مثل الخبرات والتعليم والمهارات.</li>
-      <li>نقارن هذه البيانات بمتطلبات الوظيفة المعلنة لمساعدة فريق التوظيف على مراجعة الطلبات.</li>
-      <li>قبل أن يقرأ الذكاء الاصطناعي سيرتك الذاتية نزيل الاسم وبيانات التواصل والجنسية والعمر والجنس والديانة والحالة الاجتماعية، ولا تُستخدم هذه البيانات في التقييم.</li>
-      <li>نختبر النظام بانتظام للتأكد من أن تغيير الاسم أو البيانات الشخصية لا يغير النتيجة.</li>
+      <li>لمراجعة طلبك ومقارنته بمتطلبات الوظيفة المعلنة.</li>
+      <li>للتواصل معك بشأن طلبك، بما في ذلك دعوات المقابلات والنتيجة.</li>
+      <li>لإعداد ملخص لبياناتك من سيرتك الذاتية تراجعه في صفحة طلبك.</li>
     </ul>
-    <h2>من يقرر</h2>
-    <p>لا يتخذ الذكاء الاصطناعي أي قرار. يراجع أعضاء فريق التوظيف الطلبات ويتخذون جميع القرارات.</p>
+    <h2>من يطّلع عليها</h2>
+    <p>لا يطّلع على طلبك إلا موظفو الوزارة المخوّلون والمعنيون بالتوظيف. يراجع فريق التوظيف كل طلب ويتخذ جميع القرارات.</p>
     <h2>حقوقك</h2>
-    <p>يمكنك مراجعة ما قرأناه من سيرتك الذاتية في صفحة طلبك وإبلاغنا بأي خطأ. لأي استفسار عن بياناتك تواصل معنا عبر <a href="{{ settings.contact_url }}">صفحة التواصل</a>، واطلع على <a href="{{ settings.privacy_url }}">سياسة الخصوصية</a>.</p>
+    <p>يمكنك مراجعة بياناتك في صفحة طلبك وإبلاغنا بأي خطأ. لأي استفسار عن بياناتك تواصل معنا عبر <a href="{{ settings.contact_url }}">صفحة التواصل</a>، واطلع على <a href="{{ settings.privacy_url }}">سياسة الخصوصية</a> للوزارة.</p>
     {% else %}
     <h2>What we collect</h2>
     <p>Your name, email, phone number, country of residence, CV and any message you send to the hiring team.</p>
-    <h2>How AI helps</h2>
+    <h2>How we use it</h2>
     <ul>
-      <li>We read your CV automatically, including scans and photos, and turn it into structured details such as experience, education and skills.</li>
-      <li>We compare these details with the published requirements of the job to help the hiring team review applications.</li>
-      <li>Before the AI reads your CV we remove your name, contact details, nationality, age, gender, religion and marital status. They are not used in the assessment.</li>
-      <li>We test the system regularly to check that changing a name or personal details does not change the result.</li>
+      <li>To review your application against the published requirements of the job.</li>
+      <li>To contact you about your application, including interview invitations and the outcome.</li>
+      <li>To prepare a summary of your CV details that you can check on your application page.</li>
     </ul>
-    <h2>Who decides</h2>
-    <p>The AI does not make decisions. Members of the hiring team review applications and make every decision.</p>
+    <h2>Who sees it</h2>
+    <p>Only authorised Ministry staff involved in recruitment can see your application. The hiring team reviews every application and makes every decision.</p>
     <h2>Your rights</h2>
-    <p>You can check what we read from your CV on your application page and tell us about any mistake. For questions about your data, use our <a href="{{ settings.contact_url }}">contact page</a> and see our <a href="{{ settings.privacy_url }}">privacy policy</a>.</p>
+    <p>You can check your details on your application page and tell us about any mistake. For questions about your data, use our <a href="{{ settings.contact_url }}">contact page</a> and see the Ministry's <a href="{{ settings.privacy_url }}">privacy policy</a>.</p>
     {% endif %}
   </div>
 </div>

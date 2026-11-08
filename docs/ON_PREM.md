@@ -37,8 +37,8 @@ HR user ──► Desk "Ask AI" panel ──► ai_recruitment.api.chat (session
 |---|---|---|
 | ERPNext base image | `frappe/erpnext:v16.54.0` | `frappe/Dockerfile` (`ERPNEXT_IMAGE`) |
 | Frappe HR | `v16.53.1` | `frappe/Dockerfile` (`HRMS_VERSION`) |
-| ai_recruitment | `0.6.0` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
-| moet_careers | `0.1.0` | `frappe/apps/moet_careers/moet_careers/__init__.py` |
+| ai_recruitment | `0.6.1` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
+| moet_careers | `0.1.1` | `frappe/apps/moet_careers/moet_careers/__init__.py` |
 | UAE Design System | `@aegov/design-system 3.0.7` + Tailwind `4.1.x` | `frappe/apps/moet_careers/frontend/package.json` |
 | Demo LLM | `qwen/qwen3.8-27b` (OpenRouter) | AI Recruitment Settings |
 
@@ -279,17 +279,21 @@ and the design system's buttons, forms, cards, alerts, badges, steps and paginat
 | Sign in / Create account | `/careers/login`, `/careers/signup` | Guests |
 | Apply (CV, phone, country, note, consent) | `/careers/apply/<job opening>` | Signed-in applicants |
 | My applications / one application | `/careers/applications`, `/careers/applications/<id>` | The applicant only |
-| How we use AI and your data | `/careers/privacy` | Everyone |
+| Privacy notice for applicants | `/careers/privacy` | Everyone |
 
 How it fits Frappe HR:
 - Applicants sign in with **email and password** (Website User accounts), since many apply from outside
   the UAE. Applying creates a normal **Job Applicant**; the CV is a private file. `ai_recruitment` then
   reads and scores it as before.
 - Applicants see a friendly status (Under review, Interview scheduled, Successful, Not selected), a
-  reference number, and **what was read from their CV** so they can report mistakes (saved as a comment on
-  the Job Applicant). They never see the AI score, summary or gaps.
-- Consent to AI screening is required to apply and is stored on the Job Applicant (`consent_ai_screening`,
-  `consent_at`) with the portal language.
+  reference number, and **their details from their CV** so they can report mistakes (saved as a comment on
+  the Job Applicant). They never see scores, summaries or gaps.
+- **Candidate-facing text does not mention AI** (ministry decision, November 2026). The privacy notice and
+  the consent checkbox describe data processing in general terms, and the assistant is told never to
+  mention AI, automation or scores in candidate emails. Keep this in mind when editing templates.
+- Consent to data processing is required to apply and is stored on the Job Applicant
+  (`consent_ai_screening`, labelled "Consented to Application Processing", and `consent_at`) with the
+  portal language.
 - Job Openings get two optional fields, **Job Title (Arabic)** and **Description (Arabic)**. Fill them so the
   Arabic site is fully Arabic; English is shown when they are empty.
 - Accessibility: skip link, text size A-/A/A+, high contrast mode, keyboard focus, `lang`/`dir` per page.
@@ -304,6 +308,10 @@ How it fits Frappe HR:
 - Allow sign up, maximum CV size.
 
 Before going live on-prem:
+0. **Legal review of the privacy notice.** UAE PDPL (Federal Decree-Law 45 of 2021) gives people the right
+   to information about how their data is processed and to object to decisions made by automated
+   processing alone. Hiring decisions here are always made by people, but ask the legal and data
+   protection team to confirm that the general wording on `/careers/privacy` is enough.
 1. **Email.** Configure an outgoing Email Account, then turn on email verification and password reset for
    website users (Website Settings / System Settings). The demo creates accounts without verification
    because it has no mail server.
