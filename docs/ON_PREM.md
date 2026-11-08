@@ -39,7 +39,7 @@ HR user ──► Desk "Ask AI" panel ──► ai_recruitment.api.chat (session
 | ERPNext base image | `frappe/erpnext:v16.54.0` | `frappe/Dockerfile` (`ERPNEXT_IMAGE`) |
 | Frappe HR | `v16.53.1` | `frappe/Dockerfile` (`HRMS_VERSION`) |
 | ai_recruitment | `0.6.1` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
-| moet_careers | `0.2.0` | `frappe/apps/moet_careers/moet_careers/__init__.py` |
+| moet_careers | `0.2.2` | `frappe/apps/moet_careers/moet_careers/__init__.py` |
 | Careers portal | `0.1.0` (Node 22, React 18.3, Vite 5.4) | `portal/web/package.json`, `portal/server/package.json` |
 | UAE Design System | `@aegov/design-system 3.0.7` + Tailwind `4.1.17` | `portal/web/package.json` |
 | Demo LLM | `qwen/qwen3.8-27b` (OpenRouter) | AI Recruitment Settings |
@@ -356,8 +356,14 @@ and the account `layla@example.com` / `password123`) and `cd portal/web && npm i
 open http://localhost:5173/ar. `npm test` in `portal/server` runs the backend tests. The **Portal preview**
 GitHub workflow builds everything and screenshots every page in Arabic and English.
 
-**MoET Careers Settings** also holds the **Logo** and **Logo (dark)** (upload the official files from the
-ministry's brand team; until then the ministry name is shown as text, and the emblem must not be redrawn),
+**Logos:** the official ministry logos ship with the portal (`portal/web/public/logo-ar.png` for Arabic,
+`logo-en.png` for every other language) and always sit on the left of the header and footer, in both
+directions. To replace them, swap those files or upload a **Logo** / **Logo (dark)** in MoET Careers
+Settings (an uploaded logo takes priority). Do not redraw or alter the emblem.
+**Account note:** sign-in and create-account pages state that portal accounts are only for applying,
+tracking applications and taking exams if required (Portal Text key `auth.account_note`).
+
+**MoET Careers Settings** also holds
 the ministry website address (the only external link), sign-up on/off and the maximum CV size. The logo is
 streamed through the portal, so browsers never load files from Frappe.
 

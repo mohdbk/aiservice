@@ -82,17 +82,20 @@ function LanguageSwitcher() {
   );
 }
 
+// Official ministry logo per language (Arabic for /ar, English otherwise). A logo uploaded in
+// MoET Careers Settings replaces it.
+export function logoSrc(lang: string, uploaded: string, dark = false) {
+  if (uploaded) return dark ? "/api/logo?dark=1" : "/api/logo";
+  return lang === "ar" ? "/logo-ar.png" : "/logo-en.png";
+}
+
 function Brand() {
-  const { config, t, path } = useSite();
+  const { config, t, path, lang } = useSite();
   return (
-    <Link to={path()} className="flex items-center gap-3" aria-label={`${t("site.ministry")}, ${t("site.portal")}`}>
-      {config.logo ? (
-        <img src="/api/logo" alt={t("site.ministry")} className="h-12 w-auto md:h-14" />
-      ) : (
-        <span className="font-heading text-base font-bold leading-tight text-aeblack-900 md:text-xl">{t("site.ministry")}</span>
-      )}
-      <span className="h-9 w-px bg-aeblack-200" aria-hidden="true" />
-      <span className="font-heading text-base font-semibold text-primary-700 md:text-lg">{t("site.portal")}</span>
+    <Link to={path()} className="flex min-w-0 items-center gap-3" aria-label={`${t("site.ministry")}, ${t("site.portal")}`}>
+      <img src={logoSrc(lang, config.logo)} alt={t("site.ministry")} className="h-10 w-auto max-w-[60vw] sm:h-12 md:h-14" width={907} height={228} />
+      <span className="hidden h-9 w-px bg-aeblack-200 sm:block" aria-hidden="true" />
+      <span className="hidden font-heading text-base font-semibold text-primary-700 sm:block md:text-lg" dir={config.dir}>{t("site.portal")}</span>
     </Link>
   );
 }
@@ -127,7 +130,7 @@ function Nav({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 export default function Layout({ children }: { children: ReactNode }) {
-  const { t, config, path } = useSite();
+  const { t, config, path, lang } = useSite();
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
   useEffect(() => setOpen(false), [pathname]);
@@ -147,9 +150,9 @@ export default function Layout({ children }: { children: ReactNode }) {
             </div>
           </div>
         </div>
-        <div className="container mx-auto flex items-center justify-between gap-4 px-4 py-3">
+        <div className="container mx-auto flex items-center justify-between gap-4 px-4 py-3" dir="ltr">
           <Brand />
-          <nav aria-label={t("nav.main")} className="hidden md:block"><Nav /></nav>
+          <nav aria-label={t("nav.main")} className="hidden md:block" dir={config.dir}><Nav /></nav>
           <button type="button" className="rounded-lg p-2 text-aeblack-800 hover:bg-aeblack-100 md:hidden" aria-expanded={open} aria-controls="mobile-nav" onClick={() => setOpen((o) => !o)}>
             <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               {open ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
@@ -167,16 +170,12 @@ export default function Layout({ children }: { children: ReactNode }) {
       <main id="main" tabIndex={-1} className="flex-1 focus:outline-none">{children}</main>
 
       <footer className="mc-surface bg-aeblack-900 text-aeblack-200">
-        <div className="container mx-auto grid gap-8 px-4 py-10 md:grid-cols-2">
-          <div>
-            {config.logo_dark ? (
-              <img src="/api/logo?dark=1" alt={t("site.ministry")} className="mb-3 h-12 w-auto" />
-            ) : (
-              <p className="mb-2 font-heading text-lg font-semibold text-white">{t("site.ministry")}</p>
-            )}
-            <p className="max-w-md text-sm leading-6">{t("site.tagline")}</p>
+        <div className="container mx-auto grid gap-8 px-4 py-10 md:grid-cols-2" dir="ltr">
+          <div className="flex flex-col items-start">
+            <img src={logoSrc(lang, config.logo_dark || config.logo, Boolean(config.logo_dark))} alt={t("site.ministry")} className="mb-4 h-14 w-auto max-w-full rounded-lg bg-white p-2" width={907} height={228} />
+            <p className="max-w-md text-sm leading-6" dir={config.dir}>{t("site.tagline")}</p>
           </div>
-          <nav aria-label={t("footer.portal_links")}>
+          <nav aria-label={t("footer.portal_links")} dir={config.dir} className="md:justify-self-end">
             <p className="mb-3 font-semibold text-white">{t("footer.portal_links")}</p>
             <ul className="space-y-2 text-sm">
               <li><Link className="hover:text-primary-300" to={path()}>{t("nav.jobs")}</Link></li>

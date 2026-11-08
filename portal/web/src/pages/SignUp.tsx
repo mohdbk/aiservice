@@ -40,6 +40,7 @@ export default function SignUp() {
       <Steps current={1} />
       <h1 className="font-heading text-3xl font-bold text-aeblack-950">{t("auth.signup_title")}</h1>
       <p className="mb-6 mt-2 text-aeblack-600">{t("auth.signup_intro")}</p>
+      <div className="mb-6"><Alert tone="info">{t("auth.account_note")}</Alert></div>
       {!config.allow_signup ? (
         <Alert tone="warning" title={t("error.signup_closed")} />
       ) : (

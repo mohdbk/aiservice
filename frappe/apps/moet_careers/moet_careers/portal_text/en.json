@@ -170,5 +170,6 @@
  "error.forbidden": "This action is not allowed.",
  "error.payload_too_large": "The file is too large.",
  "error.bad_request": "Please check the form and try again.",
- "error.connection": "Connection problem. Please check your internet and try again."
+ "error.connection": "Connection problem. Please check your internet and try again.",
+ "auth.account_note": "Careers portal accounts are only for applying for jobs, tracking your applications and taking exams if required."
 }

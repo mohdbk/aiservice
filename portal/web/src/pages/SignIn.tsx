@@ -55,6 +55,7 @@ export default function SignIn() {
       {next.includes("/apply") && <Steps current={1} />}
       <h1 className="font-heading text-3xl font-bold text-aeblack-950">{t("auth.sign_in_title")}</h1>
       <p className="mb-6 mt-2 text-aeblack-600">{t("auth.sign_in_intro")}</p>
+      <div className="mb-6"><Alert tone="info">{t("auth.account_note")}</Alert></div>
       <form onSubmit={submit} className="mc-surface space-y-5 rounded-2xl border border-aeblack-100 bg-white p-6" noValidate>
         <div ref={errRef}>{error ? <Alert tone="error" title={errorText(error)} /> : null}</div>
         <Field id="email" label={t("auth.email")}>
