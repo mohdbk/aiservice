@@ -16,8 +16,17 @@ export function PasswordInput({ id, value, onChange, autoComplete, describedBy }
   return (
     <>
       <input id={id} type={show ? "text" : "password"} value={value} onChange={(e) => onChange(e.target.value)} autoComplete={autoComplete} required minLength={8} maxLength={128} aria-describedby={describedBy} />
-      <button type="button" className="control-suffix px-3 text-sm font-medium text-primary-700" onClick={() => setShow((s) => !s)} aria-pressed={show}>
-        {show ? t("auth.hide_password") : t("auth.show_password")}
+      <button type="button" className="control-suffix rounded-lg px-3 text-aeblack-600 hover:text-primary-700 focus-visible:outline-2" onClick={() => setShow((s) => !s)}
+        aria-pressed={show} aria-label={show ? t("auth.hide_password") : t("auth.show_password")} title={show ? t("auth.hide_password") : t("auth.show_password")}>
+        {show ? (
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.1A10.4 10.4 0 0 1 12 5c6 0 10 7 10 7a17.6 17.6 0 0 1-3.2 3.9M6.6 6.6A17.4 17.4 0 0 0 2 12s4 7 10 7a9.8 9.8 0 0 0 5.4-1.6" />
+          </svg>
+        ) : (
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" />
+          </svg>
+        )}
       </button>
     </>
   );
