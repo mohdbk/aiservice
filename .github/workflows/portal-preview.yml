@@ -63,6 +63,12 @@ jobs:
             }
             await shoot(desk, 'ar_08_application_preparing', '/ar/applications/HR-APP-2026-00007');
             await shoot(desk, 'ar_09_not_found', '/ar/nothing-here');
+          for (const [ctx, name] of [[desk, 'ar_10_accessibility_menu'], [phone, 'phone_ar_accessibility_menu']]) {
+            const p = await ctx.newPage();
+            await p.goto(B + '/ar', { waitUntil: 'networkidle' });
+            await p.click('button[aria-controls="a11y-panel"]'); await p.waitForTimeout(300);
+            await p.screenshot({ path: `/tmp/shots/${name}.png` }); await p.close();
+          }
             await shoot(phone, 'phone_ar_jobs', '/ar');
             await shoot(phone, 'phone_ar_job', '/ar/jobs/HR-OPN-2026-0001');
             await shoot(phone, 'phone_ar_apply', '/ar/jobs/HR-OPN-2026-0003/apply');

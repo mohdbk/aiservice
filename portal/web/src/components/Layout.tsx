@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import { useSite } from "../site";
@@ -32,22 +32,58 @@ function A11yTools() {
   const { t } = useSite();
   const [size, setSize] = useState(() => store.get("mc-text") || "md");
   const [contrast, setContrast] = useState(() => store.get("mc-contrast") === "1");
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     applyA11y(size, contrast);
     store.set("mc-text", size);
     store.set("mc-contrast", contrast ? "1" : "0");
   }, [size, contrast]);
-  const step = (d: number) => setSize((s) => SIZES[Math.max(0, Math.min(3, SIZES.indexOf(s as (typeof SIZES)[number]) + d))]);
-  const btn = "rounded px-1.5 py-0.5 text-aeblack-700 hover:bg-aeblack-100 hover:text-primary-700";
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { setOpen(false); buttonRef.current?.focus(); } };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
+  }, [open]);
+  const idx = SIZES.indexOf(size as (typeof SIZES)[number]);
+  const step = (d: number) => setSize(SIZES[Math.max(0, Math.min(3, idx + d))]);
+  const sizeBtn = "flex h-10 flex-1 items-center justify-center rounded-lg border font-semibold disabled:opacity-40";
   return (
-    <div className="flex items-center gap-1" role="group" aria-label={t("a11y.tools")}>
-      <button type="button" className={btn} onClick={() => step(-1)} aria-label={t("a11y.smaller")}>A-</button>
-      <button type="button" className={btn} onClick={() => setSize("md")} aria-label={t("a11y.default")}>A</button>
-      <button type="button" className={btn} onClick={() => step(1)} aria-label={t("a11y.larger")}>A+</button>
-      <button type="button" className={btn} onClick={() => setContrast((c) => !c)} aria-pressed={contrast} title={t("a11y.contrast")}>
-        <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2" /><path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor" /></svg>
-        <span className="sr-only">{t("a11y.contrast")}</span>
+    <div className="relative" ref={ref}>
+      <button ref={buttonRef} type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls="a11y-panel"
+        className="inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-aeblack-700 hover:bg-aeblack-100 hover:text-primary-700">
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <circle cx="12" cy="4.5" r="1.5" /><path d="M5 8l7 1.5L19 8M12 9.5V14m0 0-3 6m3-6 3 6" />
+        </svg>
+        <span className="hidden sm:inline">{t("a11y.tools")}</span>
+        <span className="sr-only sm:hidden">{t("a11y.tools")}</span>
+        <svg className={`h-3 w-3 transition ${open ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
       </button>
+      {open && (
+        <div id="a11y-panel" role="group" aria-label={t("a11y.tools")}
+          className="absolute end-0 z-40 mt-2 w-64 rounded-xl border border-aeblack-100 bg-white p-4 text-aeblack-800 shadow-xl">
+          <p className="mb-2 text-sm font-semibold">{t("a11y.text_size")}</p>
+          <div className="flex gap-2" dir="ltr">
+            <button type="button" className={`${sizeBtn} border-aeblack-200 text-sm hover:bg-primary-50`} onClick={() => step(-1)} disabled={idx <= 0} aria-label={t("a11y.smaller")}>A-</button>
+            <button type="button" className={`${sizeBtn} ${size === "md" ? "border-primary-600 bg-primary-50 text-primary-800" : "border-aeblack-200 hover:bg-primary-50"}`} onClick={() => setSize("md")} aria-pressed={size === "md"} aria-label={t("a11y.default")}>A</button>
+            <button type="button" className={`${sizeBtn} border-aeblack-200 text-lg hover:bg-primary-50`} onClick={() => step(1)} disabled={idx >= 3} aria-label={t("a11y.larger")}>A+</button>
+          </div>
+          <label className="mt-4 flex cursor-pointer items-center justify-between gap-3 border-t border-aeblack-100 pt-4">
+            <span className="text-sm font-semibold">{t("a11y.contrast")}</span>
+            <span className="relative inline-flex">
+              <input type="checkbox" role="switch" className="peer sr-only" checked={contrast} onChange={(e) => setContrast(e.target.checked)} />
+              <span className="h-6 w-11 rounded-full bg-aeblack-200 transition peer-checked:bg-primary-600 peer-focus-visible:ring-2 peer-focus-visible:ring-primary-600" aria-hidden="true" />
+              <span className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ltr:left-0.5 rtl:right-0.5 ltr:peer-checked:translate-x-5 rtl:peer-checked:-translate-x-5" aria-hidden="true" />
+            </span>
+          </label>
+          {(size !== "md" || contrast) && (
+            <button type="button" className="mt-4 w-full text-sm font-medium text-primary-700 underline" onClick={() => { setSize("md"); setContrast(false); }}>{t("a11y.reset")}</button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
