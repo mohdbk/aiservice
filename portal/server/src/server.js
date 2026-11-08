@@ -134,7 +134,7 @@ export function createApp(cfg = loadConfig(), deps = {}) {
 
     if (m === "GET" && pathname === "/api/config") {
       const lang = url.searchParams.get("lang") ? langParam(url) : "";
-      return send(res, 200, await siteConfig(lang), { "Cache-Control": "public, max-age=60" });
+      return send(res, 200, await siteConfig(lang));
     }
     if (m === "GET" && pathname === "/api/jobs") {
       const q = { lang: langParam(url), q: str(url.searchParams.get("q"), 100), department: str(url.searchParams.get("department"), 140),
