@@ -23,24 +23,35 @@ def _fields(res):
 
 
 _ENGINES = {}
+# Recognition models must be named explicitly: when any model name is given, PaddleOCR ignores `lang`.
+REC_MODELS = {"ar": ["arabic_PP-OCRv5_mobile_rec"], "en": ["en_PP-OCRv5_mobile_rec", "PP-OCRv5_server_rec"]}
 
 
 def _engine(lang):
     from paddleocr import PaddleOCR
 
-    if lang not in _ENGINES:
-        _ENGINES[lang] = PaddleOCR(
-        lang=lang,
-        text_detection_model_name=os.environ.get("PADDLEOCR_DET_MODEL", "PP-OCRv5_mobile_det"),
-        use_doc_orientation_classify=False,
-        use_doc_unwarping=False,
-        use_textline_orientation=False,
-        device=os.environ.get("PADDLEOCR_DEVICE", "cpu"),
-        # oneDNN is off by default: PaddlePaddle 3.3 on CPU fails with
-        # "ConvertPirAttribute2RuntimeAttribute not support" when it is on.
-        enable_mkldnn=os.environ.get("PADDLEOCR_ENABLE_MKLDNN", "0") == "1",
-        )
-    return _ENGINES[lang]
+    if lang in _ENGINES:
+        return _ENGINES[lang]
+    names = [os.environ[f"PADDLEOCR_REC_MODEL_{lang.upper()}"]] if os.environ.get(f"PADDLEOCR_REC_MODEL_{lang.upper()}") \
+        else REC_MODELS[lang]
+    last = None
+    for rec in names:
+        try:
+            _ENGINES[lang] = PaddleOCR(
+                text_detection_model_name=os.environ.get("PADDLEOCR_DET_MODEL", "PP-OCRv5_mobile_det"),
+                text_recognition_model_name=rec,
+                use_doc_orientation_classify=False,
+                use_doc_unwarping=False,
+                use_textline_orientation=False,
+                device=os.environ.get("PADDLEOCR_DEVICE", "cpu"),
+                # oneDNN is off by default: PaddlePaddle 3.3 on CPU fails with
+                # "ConvertPirAttribute2RuntimeAttribute not support" when it is on.
+                enable_mkldnn=os.environ.get("PADDLEOCR_ENABLE_MKLDNN", "0") == "1",
+            )
+            return _ENGINES[lang]
+        except Exception as e:  # unknown model name in this PaddleOCR version: try the next one
+            last = e
+    raise last
 
 
 def run(lang, paths):
