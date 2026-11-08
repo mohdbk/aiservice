@@ -38,7 +38,7 @@ HR user ──► Desk "Ask AI" panel ──► ai_recruitment.api.chat (session
 | ERPNext base image | `frappe/erpnext:v16.54.0` | `frappe/Dockerfile` (`ERPNEXT_IMAGE`) |
 | Frappe HR | `v16.53.1` | `frappe/Dockerfile` (`HRMS_VERSION`) |
 | ai_recruitment | `0.6.1` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
-| moet_careers | `0.1.3` | `frappe/apps/moet_careers/moet_careers/__init__.py` |
+| moet_careers | `0.1.4` | `frappe/apps/moet_careers/moet_careers/__init__.py` |
 | UAE Design System | `@aegov/design-system 3.0.7` + Tailwind `4.1.x` | `frappe/apps/moet_careers/frontend/package.json` |
 | Demo LLM | `qwen/qwen3.8-27b` (OpenRouter) | AI Recruitment Settings |
 
