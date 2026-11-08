@@ -194,7 +194,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       <header className="mc-surface sticky top-0 z-20 border-b border-aeblack-100 bg-white/95 backdrop-blur">
         <div className="border-b border-aeblack-100 bg-aeblack-50">
           <div className="container mx-auto flex items-center justify-between gap-2 px-4 py-1 text-sm">
-            <p className="hidden truncate font-medium text-aeblack-800 sm:block">{t("site.official_note")}</p>
+            <p className="m-0 hidden truncate font-medium leading-none text-aeblack-800 sm:block">{t("site.official_note")}</p>
             <div className="ms-auto flex shrink-0 items-center gap-1">
               {config.main_site_url && (
                 <>
