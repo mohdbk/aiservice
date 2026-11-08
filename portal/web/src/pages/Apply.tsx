@@ -76,7 +76,7 @@ export default function Apply() {
           </dl>
           <div className="grid gap-5 md:grid-cols-2">
             <Field id="phone" label={t("apply.phone")} hint={t("apply.phone_hint")} prefix={Phone}>
-              <input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" required maxLength={30} dir="ltr" aria-describedby="phone-hint" />
+              <input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" required maxLength={30} dir="ltr" className="rtl:text-right" aria-describedby="phone-hint" />
             </Field>
             <Field id="country" label={t("apply.country")} prefix={GlobeHemisphereEast}>
               <select id="country" value={country} onChange={(e) => setCountry(e.target.value)} autoComplete="country-name">

@@ -96,7 +96,7 @@ export function VerifyEmail() {
         <div className="mc-surface space-y-4 rounded-2xl border border-aeblack-100 bg-white p-6">
           <Alert tone="warning" title={errorText(state.error)} />
           <Field id="email" label={t("auth.email")} prefix={Envelope}>
-            <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" dir="ltr" maxLength={200} />
+            <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" dir="ltr" className="rtl:text-right" maxLength={200} />
           </Field>
           <ResendButton email={email.trim()} />
         </div>
@@ -138,7 +138,7 @@ export function ForgotPassword() {
         <form onSubmit={submit} className="mc-surface space-y-5 rounded-2xl border border-aeblack-100 bg-white p-6" noValidate>
           {error ? <Alert tone="error" title={errorText(error)} /> : null}
           <Field id="email" label={t("auth.email")} prefix={Envelope}>
-            <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required maxLength={200} inputMode="email" dir="ltr" />
+            <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required maxLength={200} inputMode="email" dir="ltr" className="rtl:text-right" />
           </Field>
           <button type="submit" className="aegov-btn btn-block" disabled={state === "busy" || !email.includes("@")}>
             <PaperPlaneTilt size={20} className="rtl:-scale-x-100" aria-hidden="true" />{t("auth.forgot_button")}

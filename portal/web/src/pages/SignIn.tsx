@@ -75,7 +75,7 @@ export default function SignIn() {
           </Alert>
         ) : null}</div>
         <Field id="email" label={t("auth.email")} prefix={Envelope}>
-          <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required maxLength={200} inputMode="email" dir="ltr" />
+          <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required maxLength={200} inputMode="email" dir="ltr" className="rtl:text-right" />
         </Field>
         <Field id="password" label={t("auth.password")} prefix={LockSimple}>
           <PasswordInput id="password" value={password} onChange={setPassword} autoComplete="current-password" />

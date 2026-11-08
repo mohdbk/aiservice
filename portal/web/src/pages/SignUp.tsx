@@ -52,7 +52,7 @@ export default function SignUp() {
             <input id="full_name" value={form.full_name} onChange={(e) => set("full_name")(e.target.value)} autoComplete="name" required maxLength={140} />
           </Field>
           <Field id="email" label={t("auth.email")} prefix={Envelope}>
-            <input id="email" type="email" value={form.email} onChange={(e) => set("email")(e.target.value)} autoComplete="email" required maxLength={200} inputMode="email" dir="ltr" />
+            <input id="email" type="email" value={form.email} onChange={(e) => set("email")(e.target.value)} autoComplete="email" required maxLength={200} inputMode="email" dir="ltr" className="rtl:text-right" />
           </Field>
           <Field id="password" label={t("auth.password")} hint={t("auth.password_hint")} prefix={LockSimple}>
             <PasswordInput id="password" value={form.password} onChange={set("password")} autoComplete="new-password" describedBy="password-hint" />
