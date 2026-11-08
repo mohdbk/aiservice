@@ -1,0 +1,32 @@
+{% extends "moet_careers/templates/careers_base.html" %}
+
+{% block content %}{% autoescape true %}
+<div class="container mx-auto max-w-md px-4 py-12">
+  {% set current = 1 %}{% include "moet_careers/templates/includes/steps.html" %}
+  <h1 class="mb-2 font-heading text-3xl font-bold text-aeblack-950">{{ t('Create an account', 'إنشاء حساب') }}</h1>
+  <p class="mb-6 text-aeblack-600">{{ t('One account lets you apply for any job and follow your applications, wherever you live.', 'حساب واحد يتيح لك التقديم على أي وظيفة ومتابعة طلباتك أينما كنت.') }}</p>
+
+  {% if not settings.allow_signup %}
+  <div class="aegov-alert alert-warning"><div class="alert-content"><p>{{ t('Sign-up is currently closed.', 'التسجيل مغلق حاليا.') }}</p></div></div>
+  {% else %}
+  <form id="signup-form" class="mc-surface space-y-5 rounded-xl border border-aeblack-100 bg-white p-6" novalidate data-redirect="{{ redirect_to }}">
+    <div class="aegov-form-control">
+      <label for="full_name">{{ t('Full name (as in your passport)', 'الاسم الكامل (كما في جواز السفر)') }}</label>
+      <div class="form-control-input"><input id="full_name" name="full_name" autocomplete="name" maxlength="140" required></div>
+    </div>
+    <div class="aegov-form-control">
+      <label for="email">{{ t('Email', 'البريد الإلكتروني') }}</label>
+      <div class="form-control-input"><input id="email" name="email" type="email" autocomplete="email" dir="ltr" required></div>
+    </div>
+    <div class="aegov-form-control">
+      <label for="password">{{ t('Password', 'كلمة المرور') }}</label>
+      <div class="form-control-input"><input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required aria-describedby="pw-help"></div>
+      <p id="pw-help" class="mt-1 text-sm text-aeblack-600">{{ t('At least 8 characters. Use a mix of letters, numbers and symbols.', '8 أحرف على الأقل. استخدم مزيجا من الحروف والأرقام والرموز.') }}</p>
+    </div>
+    <div id="form-error" class="aegov-alert alert-error hidden" role="alert"><div class="alert-content"><p></p></div></div>
+    <button type="submit" class="aegov-btn btn-block w-full">{{ t('Create account', 'إنشاء الحساب') }}</button>
+    <p class="text-sm">{{ t('Already have an account?', 'لديك حساب؟') }} <a class="aegov-link underline" href="/careers/login?redirect-to={{ redirect_to|urlencode }}">{{ t('Sign in', 'تسجيل الدخول') }}</a></p>
+  </form>
+  {% endif %}
+</div>
+{% endautoescape %}{% endblock %}

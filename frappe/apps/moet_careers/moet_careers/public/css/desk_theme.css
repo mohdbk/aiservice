@@ -1,0 +1,19 @@
+/* MoET light theme for Frappe Desk (HR back office), aligned with the UAE Design System palette and fonts.
+   Desk layout is untouched so Frappe upgrades stay simple. */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@400;500;600;700&display=swap");
+
+:root,
+[data-theme="light"] {
+  --primary: oklch(0.570 0.097 84.4);          /* aegold-600 */
+  --primary-color: oklch(0.570 0.097 84.4);
+  --btn-primary: oklch(0.570 0.097 84.4);
+  --blue-500: oklch(0.570 0.097 84.4);
+  --blue-600: oklch(0.501 0.084 81.0);         /* aegold-700 */
+  --text-on-blue: oklch(1 0 0);
+}
+
+html[dir="rtl"] body,
+html[dir="rtl"] .form-control,
+html[dir="rtl"] .btn {
+  font-family: "Noto Kufi Arabic", "Inter", sans-serif;
+}

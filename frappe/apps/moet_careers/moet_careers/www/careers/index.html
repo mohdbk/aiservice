@@ -1,0 +1,94 @@
+{% extends "moet_careers/templates/careers_base.html" %}
+
+{% block content %}{% autoescape true %}
+<section class="mc-surface bg-gradient-to-b from-primary-50 to-whitely-50">
+  <div class="container mx-auto px-4 py-12 md:py-16">
+    <p class="mb-2 font-medium text-primary-700">{{ entity_name }}</p>
+    <h1 class="max-w-3xl font-heading text-3xl font-bold leading-tight text-aeblack-950 md:text-5xl">{{ t('Build the future of the UAE economy with us', 'شاركنا في بناء مستقبل اقتصاد دولة الإمارات') }}</h1>
+    <p class="mt-4 max-w-2xl text-lg leading-8 text-aeblack-700">{{ t('Explore open roles, apply in a few minutes and follow your application online.', 'اكتشف الوظائف المتاحة وقدّم طلبك خلال دقائق وتابع طلبك عبر الإنترنت.') }}</p>
+
+    <form class="mt-8 grid gap-4 rounded-xl border border-aeblack-100 bg-white p-4 shadow-sm md:grid-cols-12" method="get" action="/careers" role="search">
+      <div class="aegov-form-control md:col-span-5">
+        <label for="q">{{ t('Keyword', 'كلمة البحث') }}</label>
+        <div class="form-control-input">
+          <input id="q" name="q" type="search" value="{{ q }}" placeholder="{{ t('Job title or skill', 'المسمى الوظيفي أو المهارة') }}">
+        </div>
+      </div>
+      <div class="aegov-form-control md:col-span-3">
+        <label for="department">{{ t('Department', 'الإدارة') }}</label>
+        <div class="form-control-input">
+          <select id="department" name="department">
+            <option value="">{{ t('All departments', 'جميع الإدارات') }}</option>
+            {% for d in options.department %}<option value="{{ d }}" {{ 'selected' if d == department }}>{{ clean_department(d) }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      {% if options.location %}
+      <div class="aegov-form-control md:col-span-2">
+        <label for="location">{{ t('Location', 'الموقع') }}</label>
+        <div class="form-control-input">
+          <select id="location" name="location">
+            <option value="">{{ t('All', 'الكل') }}</option>
+            {% for d in options.location %}<option value="{{ d }}" {{ 'selected' if d == location }}>{{ d }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+      {% endif %}
+      <div class="flex items-end md:col-span-2">
+        <button type="submit" class="aegov-btn btn-block w-full">{{ t('Search', 'بحث') }}</button>
+      </div>
+      <input type="hidden" name="lang" value="{{ lang }}">
+    </form>
+  </div>
+</section>
+
+<section class="container mx-auto px-4 py-10" aria-labelledby="results-title">
+  <div class="mb-6 flex flex-wrap items-baseline justify-between gap-2">
+    <h2 id="results-title" class="font-heading text-2xl font-bold text-aeblack-900">{{ t('Open jobs', 'الوظائف المتاحة') }}</h2>
+    <p class="text-aeblack-600" aria-live="polite">{{ total }} {{ t('jobs', 'وظيفة') }}{% if q or department or location %} &middot; <a class="aegov-link" href="/careers">{{ t('Clear filters', 'إزالة عوامل التصفية') }}</a>{% endif %}</p>
+  </div>
+
+  {% if jobs %}
+  <ul class="grid gap-4 md:grid-cols-2">
+    {% for job in jobs %}
+    <li class="aegov-card card-bordered mc-surface flex flex-col gap-3 bg-white p-6">
+      <div class="flex flex-wrap gap-2">
+        {% if job.department_label %}<span class="aegov-badge badge-sm">{{ job.department_label }}</span>{% endif %}
+        {% if job.employment_type %}<span class="aegov-badge badge-sm badge-info">{{ job.employment_type }}</span>{% endif %}
+      </div>
+      <h3 class="card-title font-heading text-xl font-semibold text-aeblack-900">
+        <a class="hover:text-primary-700" href="/careers/jobs/{{ job.name }}">{{ job.title }}</a>
+      </h3>
+      <p class="line-clamp-3 text-aeblack-700">{{ job.summary }}</p>
+      <div class="mt-auto flex flex-wrap items-center justify-between gap-3 pt-2 text-sm text-aeblack-600">
+        <span>{% if job.location %}{{ job.location }}{% endif %}{% if job.closes_label %}{{ ' · ' if job.location }}{{ t('Apply by', 'آخر موعد') }} {{ job.closes_label }}{% endif %}</span>
+        <a class="aegov-btn btn-sm btn-outline" href="/careers/jobs/{{ job.name }}" aria-label="{{ t('View', 'عرض') }} {{ job.title }}">{{ t('View job', 'عرض الوظيفة') }}</a>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+
+  {% if pages > 1 %}
+  <nav class="aegov-pagination mt-8" aria-label="{{ t('Pagination', 'التنقل بين الصفحات') }}">
+    <div class="pages">
+      {% for p in range(1, pages + 1) %}
+        {% if p == page %}
+          <span class="aegov-pagination-page aegov-pagination-current" aria-current="page">{{ p }}</span>
+        {% else %}
+          <a class="aegov-pagination-page" href="{{ page_url(p) }}">{{ p }}</a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </nav>
+  {% endif %}
+
+  {% else %}
+  <div class="aegov-alert alert-info">
+    <div class="alert-content">
+      <p class="alert-title">{{ t('No jobs match your search', 'لا توجد وظائف تطابق بحثك') }}</p>
+      <p>{{ t('Try other keywords or clear the filters. New roles are added regularly.', 'جرّب كلمات أخرى أو أزل عوامل التصفية. تتم إضافة وظائف جديدة باستمرار.') }}</p>
+    </div>
+  </div>
+  {% endif %}
+</section>
+{% endautoescape %}{% endblock %}

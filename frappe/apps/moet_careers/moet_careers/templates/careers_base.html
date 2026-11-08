@@ -1,0 +1,96 @@
+{% autoescape true %}<!doctype html>
+<html lang="{{ lang }}" dir="{{ dir }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ page_title }} | {{ entity_name }}</title>
+  <meta name="description" content="{{ t('Job opportunities at the ' ~ settings.name_en, 'فرص العمل في ' ~ (settings.name_ar or settings.name_en)) }}">
+  {% if csrf_token %}<meta name="csrf-token" content="{{ csrf_token }}">{% endif %}
+  <link rel="stylesheet" href="/assets/moet_careers/css/careers.css?v={{ asset_version }}">
+  {% block head %}{% endblock %}
+</head>
+<body class="bg-whitely-50 text-aeblack-800 font-body antialiased">
+  <a class="mc-skip aegov-btn btn-sm" href="#main">{{ t('Skip to content', 'انتقل إلى المحتوى') }}</a>
+
+  <header class="mc-surface border-b border-aeblack-100 bg-white">
+    <div class="border-b border-aeblack-100 bg-aeblack-50">
+      <div class="container mx-auto flex flex-wrap items-center justify-between gap-2 px-4 py-1.5 text-sm">
+        <a class="text-aeblack-700 hover:text-primary-700" href="{{ settings.main_site_url or '/' }}">{{ entity_name }}</a>
+        <div class="flex items-center gap-3" role="group" aria-label="{{ t('Accessibility tools', 'أدوات إمكانية الوصول') }}">
+          <button type="button" class="px-1 text-aeblack-700 hover:text-primary-700" data-mc-text="sm" aria-label="{{ t('Smaller text', 'تصغير النص') }}">A-</button>
+          <button type="button" class="px-1 text-aeblack-700 hover:text-primary-700" data-mc-text="md" aria-label="{{ t('Default text size', 'حجم النص الافتراضي') }}">A</button>
+          <button type="button" class="px-1 text-aeblack-700 hover:text-primary-700" data-mc-text="lg" aria-label="{{ t('Larger text', 'تكبير النص') }}">A+</button>
+          <button type="button" class="px-1 text-aeblack-700 hover:text-primary-700" data-mc-contrast aria-pressed="false">{{ t('High contrast', 'تباين عال') }}</button>
+          <span class="h-4 w-px bg-aeblack-200" aria-hidden="true"></span>
+          <a class="font-medium text-aeblack-800 hover:text-primary-700" href="{{ other_lang_url }}" lang="{{ other_lang }}" hreflang="{{ other_lang }}">{{ 'English' if lang == 'ar' else 'العربية' }}</a>
+        </div>
+      </div>
+    </div>
+    <div class="container mx-auto flex flex-wrap items-center justify-between gap-4 px-4 py-4">
+      <a href="/careers" class="flex items-center gap-3" aria-label="{{ entity_name }}, {{ portal_title }}">
+        {% if settings.logo %}
+          <img src="{{ settings.logo }}" alt="{{ entity_name }}" class="h-12 w-auto md:h-14">
+        {% else %}
+          <span class="font-heading text-lg font-bold leading-tight text-aeblack-900 md:text-xl">{{ entity_name }}</span>
+        {% endif %}
+        <span class="h-10 w-px bg-aeblack-200" aria-hidden="true"></span>
+        <span class="font-heading text-lg font-semibold text-primary-700">{{ portal_title }}</span>
+      </a>
+      <nav aria-label="{{ t('Main', 'الرئيسية') }}">
+        <ul class="flex flex-wrap items-center gap-2 text-base">
+          <li><a class="rounded-lg px-3 py-2 font-medium hover:bg-primary-50 {{ 'text-primary-700' if current_path == '/careers' else 'text-aeblack-800' }}" href="/careers">{{ t('Jobs', 'الوظائف') }}</a></li>
+          {% if is_guest %}
+            <li><a class="aegov-btn btn-outline btn-sm" href="/careers/login?redirect-to={{ current_path|urlencode }}">{{ t('Sign in', 'تسجيل الدخول') }}</a></li>
+            <li><a class="aegov-btn btn-sm" href="/careers/signup">{{ t('Create account', 'إنشاء حساب') }}</a></li>
+          {% else %}
+            <li><a class="rounded-lg px-3 py-2 font-medium hover:bg-primary-50 {{ 'text-primary-700' if current_path.startswith('/careers/applications') else 'text-aeblack-800' }}" href="/careers/applications">{{ t('My applications', 'طلباتي') }}</a></li>
+            <li class="text-sm text-aeblack-600">{{ user_name }}</li>
+            <li><button type="button" class="aegov-btn btn-outline btn-sm" data-mc-logout>{{ t('Sign out', 'تسجيل الخروج') }}</button></li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main" tabindex="-1">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="mc-surface mt-16 bg-aeblack-950 text-whitely-200">
+    <div class="container mx-auto grid gap-8 px-4 py-10 md:grid-cols-3">
+      <div>
+        {% if settings.logo_dark %}
+          <img src="{{ settings.logo_dark }}" alt="{{ entity_name }}" class="mb-3 h-12 w-auto">
+        {% else %}
+          <p class="mb-2 font-heading text-lg font-semibold text-white">{{ entity_name }}</p>
+        {% endif %}
+        <p class="text-sm leading-6">{{ t('Join us in building a diversified, competitive economy and a leading tourism sector.', 'انضم إلينا لبناء اقتصاد متنوع وتنافسي وقطاع سياحي رائد.') }}</p>
+      </div>
+      <nav aria-label="{{ t('Careers links', 'روابط الوظائف') }}">
+        <p class="mb-3 font-semibold text-white">{{ portal_title }}</p>
+        <ul class="space-y-2 text-sm">
+          <li><a class="hover:text-primary-300" href="/careers">{{ t('Open jobs', 'الوظائف المتاحة') }}</a></li>
+          <li><a class="hover:text-primary-300" href="/careers/applications">{{ t('My applications', 'طلباتي') }}</a></li>
+          <li><a class="hover:text-primary-300" href="/careers/privacy">{{ t('How we use AI and your data', 'كيف نستخدم الذكاء الاصطناعي وبياناتك') }}</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="{{ t('Ministry links', 'روابط الوزارة') }}">
+        <p class="mb-3 font-semibold text-white">{{ entity_name }}</p>
+        <ul class="space-y-2 text-sm">
+          {% if settings.privacy_url %}<li><a class="hover:text-primary-300" href="{{ settings.privacy_url }}">{{ t('Privacy policy', 'سياسة الخصوصية') }}</a></li>{% endif %}
+          {% if settings.terms_url %}<li><a class="hover:text-primary-300" href="{{ settings.terms_url }}">{{ t('Terms of use', 'شروط الاستخدام') }}</a></li>{% endif %}
+          {% if settings.accessibility_url %}<li><a class="hover:text-primary-300" href="{{ settings.accessibility_url }}">{{ t('Accessibility', 'إمكانية الوصول') }}</a></li>{% endif %}
+          {% if settings.contact_url %}<li><a class="hover:text-primary-300" href="{{ settings.contact_url }}">{{ t('Contact us', 'تواصل معنا') }}</a></li>{% endif %}
+        </ul>
+      </nav>
+    </div>
+    <div class="border-t border-aeblack-800">
+      <p class="container mx-auto px-4 py-4 text-xs text-aeblack-300">&copy; {{ year }} {{ entity_name }}. {{ t('All rights reserved.', 'جميع الحقوق محفوظة.') }}</p>
+    </div>
+  </footer>
+
+  <script>window.MC = {lang: "{{ lang }}"};</script>
+  <script src="/assets/moet_careers/js/careers.js?v={{ asset_version }}" defer></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>{% endautoescape %}

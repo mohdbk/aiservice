@@ -1,0 +1,69 @@
+{% extends "moet_careers/templates/careers_base.html" %}
+
+{% block content %}{% autoescape true %}
+<div class="container mx-auto max-w-3xl px-4 py-8">
+  {% set current = 2 %}{% include "moet_careers/templates/includes/steps.html" %}
+
+  <p class="text-primary-700">{{ t('Applying for', 'التقديم على وظيفة') }}</p>
+  <h1 class="mb-6 font-heading text-3xl font-bold text-aeblack-950">{{ job.title }}</h1>
+
+  <form id="apply-form" class="mc-surface space-y-6 rounded-xl border border-aeblack-100 bg-white p-6" novalidate
+        data-job="{{ job.name }}" data-max-mb="{{ settings.max_cv_mb or 5 }}">
+    <div class="grid gap-6 md:grid-cols-2">
+      <div class="aegov-form-control">
+        <label for="full_name">{{ t('Full name', 'الاسم الكامل') }}</label>
+        <div class="form-control-input"><input id="full_name" value="{{ user_name }}" readonly aria-readonly="true"></div>
+      </div>
+      <div class="aegov-form-control">
+        <label for="email">{{ t('Email', 'البريد الإلكتروني') }}</label>
+        <div class="form-control-input"><input id="email" value="{{ email }}" readonly aria-readonly="true" dir="ltr"></div>
+      </div>
+      <div class="aegov-form-control">
+        <label for="phone">{{ t('Mobile number (with country code)', 'رقم الهاتف المتحرك (مع رمز الدولة)') }}</label>
+        <div class="form-control-input"><input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" dir="ltr" placeholder="+971 5X XXX XXXX" required></div>
+      </div>
+      <div class="aegov-form-control">
+        <label for="country">{{ t('Country of residence', 'دولة الإقامة') }}</label>
+        <div class="form-control-input">
+          <select id="country" name="country" autocomplete="country-name">
+            <option value="">{{ t('Select', 'اختر') }}</option>
+            {% for c in countries %}<option value="{{ c }}" {{ 'selected' if c == 'United Arab Emirates' }}>{{ c }}</option>{% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="aegov-form-control">
+      <label for="cv">{{ t('CV', 'السيرة الذاتية') }}</label>
+      <div class="form-control-input"><input id="cv" name="cv" type="file" accept=".pdf,.docx,.jpg,.jpeg,.png" required aria-describedby="cv-help" class="w-full p-2"></div>
+      <p id="cv-help" class="mt-1 text-sm text-aeblack-600">{{ t('PDF, Word (.docx), JPG or PNG, up to', 'PDF أو Word (.docx) أو JPG أو PNG، بحد أقصى') }} {{ settings.max_cv_mb or 5 }} {{ t('MB. A scan or a phone photo is fine.', 'ميجابايت. يمكن رفع نسخة ممسوحة ضوئيا أو صورة من الهاتف.') }}</p>
+    </div>
+
+    <div class="aegov-form-control">
+      <label for="cover_note">{{ t('Message to the hiring team (optional)', 'رسالة إلى فريق التوظيف (اختياري)') }}</label>
+      <div class="form-control-input"><textarea id="cover_note" name="cover_note" rows="5" maxlength="4000"></textarea></div>
+    </div>
+
+    <div class="aegov-alert alert-info">
+      <div class="alert-content">
+        <p class="alert-title">{{ t('How your application is processed', 'كيف تتم معالجة طلبك') }}</p>
+        <p>{{ t('Your CV is read and summarised with the help of artificial intelligence to support the hiring team. Every decision is made by a person. Personal details such as your name, contact details, nationality, age, gender and religion are removed before the AI reads your CV.', 'تتم قراءة سيرتك الذاتية وتلخيصها بمساعدة الذكاء الاصطناعي لدعم فريق التوظيف، ويتخذ كل قرار شخص من الفريق. تتم إزالة بياناتك الشخصية مثل الاسم وبيانات التواصل والجنسية والعمر والجنس والديانة قبل أن يقرأ الذكاء الاصطناعي سيرتك الذاتية.') }}
+        <a class="underline" href="/careers/privacy" target="_blank" rel="noopener">{{ t('Read more', 'اقرأ المزيد') }}</a></p>
+      </div>
+    </div>
+
+    <div class="aegov-check-item">
+      <input id="consent" name="consent" type="checkbox" value="1" required>
+      <label for="consent">{{ t('I have read how my application is processed and agree to it.', 'اطلعت على طريقة معالجة طلبي وأوافق عليها.') }}</label>
+    </div>
+
+    <div id="apply-error" class="aegov-alert alert-error hidden" role="alert"><div class="alert-content"><p></p></div></div>
+
+    <div class="flex flex-wrap items-center gap-3">
+      <button type="submit" class="aegov-btn">{{ t('Submit application', 'إرسال الطلب') }}</button>
+      <a class="aegov-btn btn-outline" href="/careers/jobs/{{ job.name }}">{{ t('Back', 'رجوع') }}</a>
+      <span id="apply-busy" class="hidden text-aeblack-600" aria-live="polite">{{ t('Uploading...', 'جاري الرفع...') }}</span>
+    </div>
+  </form>
+</div>
+{% endautoescape %}{% endblock %}

@@ -11,7 +11,7 @@
 
 ## How it works
 ```
-Candidate ─► /jobs ─► Job Applicant ─after_insert─► background job ─► LLM ─► score + evidence on the record
+Candidate ─► /careers (moet_careers, UAE Design System) ─► Job Applicant ─after_insert─► background job ─► LLM ─► score + evidence on the record
 HR user ─► Desk "Ask AI" ─► ai_recruitment.api.chat (user's session & permissions) ─► LLM tool-calling
                                          └─ writes are proposals; the user clicks Approve to apply
 ```

@@ -1,4 +1,4 @@
-# Frappe HR + ai_recruitment image (Ministry of Economy & Tourism)
+# Frappe HR + ai_recruitment + moet_careers image (Ministry of Economy & Tourism)
 #
 # Base: the official frappe/erpnext image (frappe_docker). Frappe HR and our app are
 # built into the image the way frappe_docker custom images do it.
@@ -15,22 +15,33 @@ ARG TEMPLATE_REPO=https://github.com/two-workspaces/erpnext
 ARG TEMPLATE_REF=29c26472c4bd094b53a4b6e574ecb00d99bfd0d2
 RUN git clone "$TEMPLATE_REPO" /t && git -C /t checkout -q "$TEMPLATE_REF"
 
+# Careers portal stylesheet: Tailwind 4 + UAE Design System (@aegov/design-system), compiled once.
+FROM node:22-slim AS careers_css
+COPY apps/moet_careers /src
+RUN cd /src/frontend && npm install --no-audit --no-fund && npm run build \
+    && test -s /src/moet_careers/public/css/careers.css
+
 FROM ${ERPNEXT_IMAGE}
 ARG HRMS_VERSION=v16.53.1
 
-# Apps: Frappe HR (pinned tag) + ai_recruitment (from this repo).
+# Apps: Frappe HR (pinned tag) + ai_recruitment + moet_careers (from this repo).
 COPY --chown=frappe:frappe apps/ai_recruitment /home/frappe/src/ai_recruitment
-RUN cd /home/frappe/src/ai_recruitment \
-    && git init -q && git add -A \
-    && git -c user.name=build -c user.email=build@localhost commit -qm "build" \
+COPY --chown=frappe:frappe apps/moet_careers /home/frappe/src/moet_careers
+COPY --from=careers_css --chown=frappe:frappe /src/moet_careers/public/css/careers.css /home/frappe/src/moet_careers/moet_careers/public/css/careers.css
+RUN for a in ai_recruitment moet_careers; do \
+      (cd /home/frappe/src/$a && rm -rf frontend/node_modules && git init -q && git add -A -f \
+       && git -c user.name=build -c user.email=build@localhost commit -qm "build") || exit 1; \
+    done \
     && cd /home/frappe/frappe-bench \
     && ln -s ../assets sites/assets \
     && echo '{"socketio_port": 9000}' > sites/common_site_config.json \
     && bench get-app --branch "$HRMS_VERSION" https://github.com/frappe/hrms \
     && bench get-app /home/frappe/src/ai_recruitment \
     && (bench compile-po-to-mo --app ai_recruitment || echo "compile-po-to-mo unavailable; CSV translations used") \
+    && bench get-app /home/frappe/src/moet_careers \
+    && test -s apps/moet_careers/moet_careers/public/css/careers.css \
     && rm sites/assets \
-    && grep -qx ai_recruitment sites/apps.txt
+    && grep -qx ai_recruitment sites/apps.txt && grep -qx moet_careers sites/apps.txt
 
 USER root
 

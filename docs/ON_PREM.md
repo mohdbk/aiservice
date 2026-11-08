@@ -11,7 +11,8 @@ Nothing in the production setup depends on Railway or OpenRouter.
 
 | Component | What it is | Required? |
 |---|---|---|
-| **Frappe HR site** | Frappe Framework v16 + ERPNext v16 + Frappe HR (`hrms`) v16, with the public careers page at `/jobs` | Yes |
+| **Frappe HR site** | Frappe Framework v16 + ERPNext v16 + Frappe HR (`hrms`) v16, with Frappe's stock job page at `/jobs` (replaced for candidates by `/careers`) | Yes |
+| **`moet_careers` app** | Our careers portal in `frappe/apps/moet_careers`: bilingual `/careers` pages on the UAE Design System, applicant accounts, settings | Yes |
 | **`ai_recruitment` app** | Our Frappe app in `frappe/apps/ai_recruitment`: CV scoring, in-Desk assistant, settings | Yes |
 | **MariaDB 10.6+ / 11.x** | Database | Yes |
 | **Redis** | Cache, queue, realtime (frappe_docker runs 2 instances) | Yes |
@@ -24,7 +25,7 @@ Nothing in the production setup depends on Railway or OpenRouter.
 There are no other services. Scoring and the assistant run inside Frappe's own web and worker processes.
 
 ```
-Candidate ──► /jobs (Frappe web) ──► Job Applicant ──after_insert──► background job (long queue)
+Candidate ──► /careers (moet_careers) ──► Job Applicant ──after_insert──► background job (long queue)
                                                                       │
 HR user ──► Desk "Ask AI" panel ──► ai_recruitment.api.chat (session) ─┤
                                                                       ▼
@@ -37,6 +38,8 @@ HR user ──► Desk "Ask AI" panel ──► ai_recruitment.api.chat (session
 | ERPNext base image | `frappe/erpnext:v16.54.0` | `frappe/Dockerfile` (`ERPNEXT_IMAGE`) |
 | Frappe HR | `v16.53.1` | `frappe/Dockerfile` (`HRMS_VERSION`) |
 | ai_recruitment | `0.6.0` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
+| moet_careers | `0.1.0` | `frappe/apps/moet_careers/moet_careers/__init__.py` |
+| UAE Design System | `@aegov/design-system 3.0.7` + Tailwind `4.1.x` | `frappe/apps/moet_careers/frontend/package.json` |
 | Demo LLM | `qwen/qwen3.8-27b` (OpenRouter) | AI Recruitment Settings |
 
 Upgrade them deliberately and test in staging first. Every new image version runs `bench migrate`.
@@ -49,14 +52,15 @@ Production should use **[frappe_docker](https://github.com/frappe/frappe_docker)
 container setup, not the Railway Dockerfile in `frappe/`. The Railway one bundles everything into one
 container to suit Railway's single-volume limit, and pulls third-party Railway scripts.
 
-1. Publish `frappe/apps/ai_recruitment` as its own git repo on your internal Git server (GitLab, Gitea or
-   Azure DevOps), e.g. `https://git.moet.internal/digital/ai_recruitment.git`.
+1. Publish `frappe/apps/ai_recruitment` and `frappe/apps/moet_careers` as their own git repos on your
+   internal Git server (GitLab, Gitea or Azure DevOps), e.g. `https://git.moet.internal/digital/ai_recruitment.git`.
 2. Create `apps.json`:
    ```json
    [
      {"url": "https://github.com/frappe/erpnext", "branch": "v16.54.0"},
      {"url": "https://github.com/frappe/hrms", "branch": "v16.53.1"},
-     {"url": "https://git.moet.internal/digital/ai_recruitment.git", "branch": "main"}
+     {"url": "https://git.moet.internal/digital/ai_recruitment.git", "branch": "main"},
+     {"url": "https://git.moet.internal/digital/moet_careers.git", "branch": "main"}
    ]
    ```
 3. Build with frappe_docker's layered Containerfile:
@@ -90,6 +94,17 @@ container to suit Railway's single-volume limit, and pulls third-party Railway s
    USER frappe
    RUN bench compile-po-to-mo --app ai_recruitment || true   # Arabic UI strings
    ```
+   The careers portal stylesheet is compiled, not committed (`careers.css` is in `.gitignore`). Add a Node
+   stage in the same Dockerfile and copy the result in (this is what `frappe/Dockerfile` does):
+   ```dockerfile
+   FROM node:22-slim AS careers_css
+   COPY moet_careers /src           # a checkout of the moet_careers repo
+   RUN cd /src/frontend && npm ci || npm install; cd /src/frontend && npm run build
+   # ...then in the final stage:
+   COPY --from=careers_css --chown=frappe:frappe /src/moet_careers/public/css/careers.css \
+        /home/frappe/frappe-bench/apps/moet_careers/moet_careers/public/css/careers.css
+   ```
+   Without it the portal still works but has no styling.
    With a GPU on the Frappe workers, install `paddlepaddle-gpu` instead and set `PADDLEOCR_DEVICE=gpu:0`.
    Air-gapped: pre-download the models (`PP-OCRv5_mobile_det`, `arabic_PP-OCRv5_mobile_rec`,
    `en_PP-OCRv5_mobile_rec`) into `PADDLE_PDX_CACHE_HOME`.
@@ -100,8 +115,8 @@ container to suit Railway's single-volume limit, and pulls third-party Railway s
    between versions. A private Git server needs credentials in the URL or a build secret. Never bake
    tokens into the image.
 5. **Air-gapped builds:** mirror GitHub (frappe, erpnext, hrms), PyPI (`pypdf`, `python-docx` plus Frappe's
-   own dependencies) and npm (Frappe's asset build) internally, or build on a connected machine and
-   import the image.
+   own dependencies) and npm (Frappe's asset build, `@aegov/design-system`, `tailwindcss`,
+   `@tailwindcss/cli`) internally, or build on a connected machine and import the image.
 
 ---
 
@@ -248,6 +263,60 @@ Cost: each CV now uses 2 model calls (parse, then score) plus 1 vision call per 
 - **Vision input** (images in chat messages) for reading scanned and designed CVs. Serve a vision-language model
   (Qwen3.8 27B accepts images), or set a separate *Vision Model* in settings. With vLLM, set a sensible
   `--limit-mm-per-prompt image=5`.
+
+---
+
+## 4b. Careers portal (`moet_careers`)
+
+Candidates use `/careers`. It is Arabic by default (right to left) with an English toggle, and follows the
+UAE Design System 3.0.7 (TDRA, MIT): the national aegold/aeblack palette, Noto Kufi Arabic and Inter fonts,
+and the design system's buttons, forms, cards, alerts, badges, steps and pagination.
+
+| Page | Route | Who |
+|---|---|---|
+| Job search with filters | `/careers` | Everyone |
+| Job details | `/careers/jobs/<job opening>` | Everyone |
+| Sign in / Create account | `/careers/login`, `/careers/signup` | Guests |
+| Apply (CV, phone, country, note, consent) | `/careers/apply/<job opening>` | Signed-in applicants |
+| My applications / one application | `/careers/applications`, `/careers/applications/<id>` | The applicant only |
+| How we use AI and your data | `/careers/privacy` | Everyone |
+
+How it fits Frappe HR:
+- Applicants sign in with **email and password** (Website User accounts), since many apply from outside
+  the UAE. Applying creates a normal **Job Applicant**; the CV is a private file. `ai_recruitment` then
+  reads and scores it as before.
+- Applicants see a friendly status (Under review, Interview scheduled, Successful, Not selected), a
+  reference number, and **what was read from their CV** so they can report mistakes (saved as a comment on
+  the Job Applicant). They never see the AI score, summary or gaps.
+- Consent to AI screening is required to apply and is stored on the Job Applicant (`consent_ai_screening`,
+  `consent_at`) with the portal language.
+- Job Openings get two optional fields, **Job Title (Arabic)** and **Description (Arabic)**. Fill them so the
+  Arabic site is fully Arabic; English is shown when they are empty.
+- Accessibility: skip link, text size A-/A/A+, high contrast mode, keyboard focus, `lang`/`dir` per page.
+- Rate limits: sign up 5 per hour and apply 20 per hour per IP. CV types PDF, DOCX, JPG, PNG, checked by
+  extension and file signature; maximum size in settings (default 5 MB).
+
+**MoET Careers Settings** (Desk, search "MoET Careers Settings"):
+- **Logo** and **Logo (dark)**: upload the official MoET logo files from the ministry's brand team. Until
+  then the ministry name is shown as text. Do not redraw or trace the emblem.
+- Ministry and portal names in Arabic and English, and the footer links (privacy, accessibility, terms,
+  contact; they default to the pages on moet.gov.ae).
+- Allow sign up, maximum CV size.
+
+Before going live on-prem:
+1. **Email.** Configure an outgoing Email Account, then turn on email verification and password reset for
+   website users (Website Settings / System Settings). The demo creates accounts without verification
+   because it has no mail server.
+2. **Fonts.** The portal and the Desk theme load Inter and Noto Kufi Arabic from Google Fonts. For an
+   air-gapped network, download the font files, serve them from `moet_careers/public/fonts/` and replace
+   the `@import url("https://fonts.googleapis.com/...")` lines in `frontend/input.css` (the design system's
+   font import) and `moet_careers/public/css/desk_theme.css` with local `@font-face` rules.
+3. **Frappe's `/jobs` page** still exists. Point any old links to `/careers`, or hide `/jobs` with a
+   website redirect (Website Settings > Route Redirects: `/jobs` to `/careers`).
+4. **UAE PASS** is not wired in. When needed, add it as a Social Login Key (OpenID Connect) and a button on
+   `/careers/login`; email accounts can stay for applicants abroad.
+5. Rebuild the stylesheet after changing templates or `input.css`: `cd frontend && npm install && npm run build`.
+   Tailwind only keeps classes it finds in `templates/`, `www/` and `public/js/`.
 
 ---
 

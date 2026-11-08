@@ -1,0 +1,13 @@
+{
+  "name": "moet-careers-frontend",
+  "private": true,
+  "description": "Builds the careers portal CSS from the UAE Design System (TailwindCSS 4 plugin).",
+  "scripts": {
+    "build": "tailwindcss -i ./input.css -o ../moet_careers/public/css/careers.css --minify"
+  },
+  "devDependencies": {
+    "@aegov/design-system": "3.0.7",
+    "@tailwindcss/cli": "^4.1.17",
+    "tailwindcss": "^4.1.17"
+  }
+}
