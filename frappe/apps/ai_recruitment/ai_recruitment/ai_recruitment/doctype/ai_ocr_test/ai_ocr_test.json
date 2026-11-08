@@ -2,7 +2,7 @@
  "actions": [],
  "autoname": "format:AI-OCR-{#####}",
  "creation": "2026-11-08 01:00:00.000000",
- "description": "Compare OCR engines on a real sample CV. Upload a scanned, photographed or designed CV and paste its correct text. Reports content accuracy (word F1), character and word error rates and time for Tesseract, PaddleOCR, the vision model alone and the Auto hybrid (OCR draft corrected by the vision model).",
+ "description": "Check CV reading accuracy on a real sample CV. Upload a scanned, photographed or designed CV and paste its correct text. Reports content accuracy (word F1), character and word error rates and time for the PaddleOCR draft and for the final text after vision-model correction.",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -14,29 +14,17 @@
   "section_truth",
   "ground_truth",
   "section_results",
-  "tesseract_f1",
-  "tesseract_cer",
-  "tesseract_wer",
-  "tesseract_seconds",
-  "column_break_paddleocr",
   "paddleocr_f1",
   "paddleocr_cer",
   "paddleocr_wer",
   "paddleocr_seconds",
-  "column_break_vision",
-  "vision_f1",
-  "vision_cer",
-  "vision_wer",
-  "vision_seconds",
   "column_break_hybrid",
   "hybrid_f1",
   "hybrid_cer",
   "hybrid_wer",
   "hybrid_seconds",
   "section_output",
-  "tesseract_text",
   "paddleocr_text",
-  "vision_text",
   "hybrid_text",
   "error"
  ],
@@ -72,7 +60,7 @@
    "fieldname": "recommended",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Most Accurate",
+   "label": "Read As",
    "read_only": 1
   },
   {
@@ -93,94 +81,30 @@
    "label": "Results (word F1: higher is better; error rates: lower is better)"
   },
   {
-   "fieldname": "tesseract_f1",
-   "fieldtype": "Float",
-   "label": "Tesseract: Word F1",
-   "precision": "3",
-   "read_only": 1
-  },
-  {
-   "fieldname": "tesseract_cer",
-   "fieldtype": "Float",
-   "label": "Tesseract: Character Error Rate",
-   "precision": "3",
-   "read_only": 1
-  },
-  {
-   "fieldname": "tesseract_wer",
-   "fieldtype": "Float",
-   "label": "Tesseract: Word Error Rate",
-   "precision": "3",
-   "read_only": 1
-  },
-  {
-   "fieldname": "tesseract_seconds",
-   "fieldtype": "Float",
-   "label": "Tesseract: Seconds",
-   "precision": "1",
-   "read_only": 1
-  },
-  {
-   "fieldname": "column_break_paddleocr",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "paddleocr_f1",
    "fieldtype": "Float",
-   "label": "PaddleOCR: Word F1",
+   "label": "PaddleOCR Draft: Word F1",
    "precision": "3",
    "read_only": 1
   },
   {
    "fieldname": "paddleocr_cer",
    "fieldtype": "Float",
-   "label": "PaddleOCR: Character Error Rate",
+   "label": "PaddleOCR Draft: Character Error Rate",
    "precision": "3",
    "read_only": 1
   },
   {
    "fieldname": "paddleocr_wer",
    "fieldtype": "Float",
-   "label": "PaddleOCR: Word Error Rate",
+   "label": "PaddleOCR Draft: Word Error Rate",
    "precision": "3",
    "read_only": 1
   },
   {
    "fieldname": "paddleocr_seconds",
    "fieldtype": "Float",
-   "label": "PaddleOCR: Seconds",
-   "precision": "1",
-   "read_only": 1
-  },
-  {
-   "fieldname": "column_break_vision",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "vision_f1",
-   "fieldtype": "Float",
-   "label": "Vision Model: Word F1",
-   "precision": "3",
-   "read_only": 1
-  },
-  {
-   "fieldname": "vision_cer",
-   "fieldtype": "Float",
-   "label": "Vision Model: Character Error Rate",
-   "precision": "3",
-   "read_only": 1
-  },
-  {
-   "fieldname": "vision_wer",
-   "fieldtype": "Float",
-   "label": "Vision Model: Word Error Rate",
-   "precision": "3",
-   "read_only": 1
-  },
-  {
-   "fieldname": "vision_seconds",
-   "fieldtype": "Float",
-   "label": "Vision Model: Seconds",
+   "label": "PaddleOCR Draft: Seconds",
    "precision": "1",
    "read_only": 1
   },
@@ -191,28 +115,28 @@
   {
    "fieldname": "hybrid_f1",
    "fieldtype": "Float",
-   "label": "Hybrid (Auto): Word F1",
+   "label": "Final (PaddleOCR + Vision Model): Word F1",
    "precision": "3",
    "read_only": 1
   },
   {
    "fieldname": "hybrid_cer",
    "fieldtype": "Float",
-   "label": "Hybrid (Auto): Character Error Rate",
+   "label": "Final (PaddleOCR + Vision Model): Character Error Rate",
    "precision": "3",
    "read_only": 1
   },
   {
    "fieldname": "hybrid_wer",
    "fieldtype": "Float",
-   "label": "Hybrid (Auto): Word Error Rate",
+   "label": "Final (PaddleOCR + Vision Model): Word Error Rate",
    "precision": "3",
    "read_only": 1
   },
   {
    "fieldname": "hybrid_seconds",
    "fieldtype": "Float",
-   "label": "Hybrid (Auto): Seconds",
+   "label": "Final (PaddleOCR + Vision Model): Seconds",
    "precision": "1",
    "read_only": 1
   },
@@ -223,27 +147,15 @@
    "label": "Engine Output"
   },
   {
-   "fieldname": "tesseract_text",
-   "fieldtype": "Long Text",
-   "label": "Tesseract Output",
-   "read_only": 1
-  },
-  {
    "fieldname": "paddleocr_text",
    "fieldtype": "Long Text",
-   "label": "PaddleOCR Output",
-   "read_only": 1
-  },
-  {
-   "fieldname": "vision_text",
-   "fieldtype": "Long Text",
-   "label": "Vision Model Output",
+   "label": "PaddleOCR Draft Output",
    "read_only": 1
   },
   {
    "fieldname": "hybrid_text",
    "fieldtype": "Long Text",
-   "label": "Hybrid (Auto) Output",
+   "label": "Final (PaddleOCR + Vision Model) Output",
    "read_only": 1
   },
   {
@@ -255,7 +167,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-08 15:00:00.000000",
+ "modified": "2026-11-08 15:30:00.000000",
  "modified_by": "Administrator",
  "module": "AI Recruitment",
  "name": "AI OCR Test",

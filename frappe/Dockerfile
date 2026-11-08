@@ -35,15 +35,15 @@ RUN cd /home/frappe/src/ai_recruitment \
 USER root
 
 # Railway runs everything in one container: Redis for cache + queue.
-# OCR for scanned CVs: Tesseract with Arabic + English, and poppler for PDF pages.
+# poppler renders PDF pages for OCR; libgl/glib/gomp are PaddleOCR runtime libraries.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends redis-server \
-       tesseract-ocr tesseract-ocr-ara tesseract-ocr-eng poppler-utils libgl1 libglib2.0-0 libgomp1 \
+       poppler-utils libgl1 libglib2.0-0 libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 # PaddleOCR PP-OCRv5 (Arabic + English) in its own Python 3.12 environment: PaddleOCR supports
 # Python 3.8-3.12 and Frappe v16 runs a newer Python. Models are downloaded at build time.
-# If any step fails the image still builds and the app uses Tesseract for local OCR drafts.
+# If any step fails the image still builds and CVs are read by the vision model alone.
 ENV PADDLE_PDX_CACHE_HOME=/home/frappe/.paddlex PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=True
 RUN ( python3 -m venv /opt/uvtool && /opt/uvtool/bin/pip install --no-cache-dir "uv>=0.5" \
       && UV_PYTHON_INSTALL_DIR=/opt/python /opt/uvtool/bin/uv venv --python 3.12 /home/frappe/paddleocr-env \
@@ -53,7 +53,7 @@ RUN ( python3 -m venv /opt/uvtool && /opt/uvtool/bin/pip install --no-cache-dir 
       && /home/frappe/paddleocr-env/bin/python -c "import sys; sys.path.insert(0, '/home/frappe/frappe-bench/apps/ai_recruitment/ai_recruitment'); import paddle_runner as r; r._engine('ar'); r._engine('en'); print('PaddleOCR models ready')" \
       && mkdir -p /home/frappe/.paddlex && chown -R "$(id -u frappe):$(id -g frappe)" /home/frappe/paddleocr-env /home/frappe/.paddlex \
       && touch /home/frappe/paddleocr-env/.ready \
-    ) || (rm -f /home/frappe/paddleocr-env/.ready; echo "PaddleOCR not installed: local OCR drafts will use Tesseract")
+    ) || (rm -f /home/frappe/paddleocr-env/.ready; echo "PaddleOCR not installed: CVs will be read by the vision model alone")
 
 RUN sed -i -e 's/^worker_processes .*/worker_processes 2;/' \
       -e 's|^error_log .*|error_log stderr;|' \

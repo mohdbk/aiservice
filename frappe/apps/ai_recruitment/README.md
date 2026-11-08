@@ -8,10 +8,10 @@ By the **Ministry of Economy & Tourism**. AI CV screening and a recruitment assi
   name and labelled personal attributes are redacted. The weighted score is computed in code. It writes per-criterion
   evidence, must-have gaps and an English + Arabic summary, plus an audit comment.
 - **Any CV, Arabic or English, ATS-style or not.** ATS-style PDFs use the text layer. Designed PDFs, scans and
-  photos use the benchmark winner: a draft (PDF text layer, PaddleOCR PP-OCRv5 or Tesseract) corrected by the vision
-  model from the page images (see `benchmark/ocr`). DOCX tables
+  photos use the benchmark winner: a PaddleOCR PP-OCRv5 draft (or the PDF text layer) corrected by the vision model
+  from the page images (see `benchmark/ocr`). DOCX tables
   and text boxes are included. Every CV is parsed into a JSON Resume shaped profile with computed years of
-  experience, which can be downloaded as JSON Resume. **AI OCR Test** compares OCR engines on your own sample CVs.
+  experience, which can be downloaded as JSON Resume. **AI OCR Test** measures reading accuracy on your own sample CVs.
 - **Recruitment Assistant.** The **Ask AI** panel appears on every Desk page for allowed roles. Replies stream live
   and render Markdown, and the panel is translated into Arabic with RTL support. It calls whitelisted methods
   with the user's own session, so every tool obeys that user's permissions. It can:
@@ -42,7 +42,7 @@ bench get-app <git-url-of-this-app>
 bench --site <site> install-app ai_recruitment
 ```
 Requires `hrms`. Custom fields and settings defaults are applied on install and on every `bench migrate`.
-For OCR install `tesseract-ocr tesseract-ocr-ara tesseract-ocr-eng poppler-utils` on the server or image.
+For CV OCR install `poppler-utils` and PaddleOCR in its own Python 3.12 environment (see `frappe/Dockerfile`).
 
 ## Whitelisted API
 | Method | Who | Purpose |

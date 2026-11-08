@@ -165,22 +165,22 @@
   {
    "fieldname": "ocr_section",
    "fieldtype": "Section Break",
-   "label": "Reading CVs (ATS and non-ATS)"
+   "label": "Reading CVs"
   },
   {
    "default": "Auto",
-   "description": "Auto (recommended, best in benchmark/ocr): ATS-style PDFs use their text layer; designed PDFs, scans and photos use a local OCR draft (PaddleOCR, else Tesseract) or the PDF text layer, corrected by the vision model. Vision Model: vision model only. PaddleOCR / Tesseract: local OCR only, nothing sent to the model. Off: text layer only.",
+   "description": "Auto: ATS-style PDFs use their text layer; designed PDFs, scans and photos use a PaddleOCR PP-OCRv5 draft (or the PDF text layer) corrected by the vision model, the best option in benchmark/ocr. Off: text layer only, nothing is OCR'd.",
    "fieldname": "ocr_mode",
    "fieldtype": "Select",
    "label": "CV Reading Mode",
-   "options": "Auto\nVision Model\nPaddleOCR\nTesseract\nOff"
+   "options": "Auto\nOff"
   },
   {
    "fieldname": "column_break_ocr",
    "fieldtype": "Column Break"
   },
   {
-   "depends_on": "eval:doc.ocr_mode=='Auto' || doc.ocr_mode=='Vision Model'",
+   "depends_on": "eval:doc.ocr_mode=='Auto'",
    "description": "Empty uses the main model.",
    "fieldname": "vision_model",
    "fieldtype": "Data",
@@ -218,7 +218,7 @@
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-08 15:00:00.000000",
+ "modified": "2026-11-08 15:30:00.000000",
  "modified_by": "Administrator",
  "module": "AI Recruitment",
  "name": "AI Recruitment Settings",

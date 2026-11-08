@@ -16,8 +16,8 @@ Nothing in the production setup depends on Railway or OpenRouter.
 | **MariaDB 10.6+ / 11.x** | Database | Yes |
 | **Redis** | Cache, queue, realtime (frappe_docker runs 2 instances) | Yes |
 | **Socket.IO (websocket)** | Streams the assistant's replies and status to the browser | Yes (replies still arrive without it, just not live) |
-| **PaddleOCR PP-OCRv5** | Local OCR draft for scanned/photo CVs (own Python 3.12 environment in the image) | Recommended |
-| **Tesseract + poppler** | Fallback local OCR, Arabic + English, and PDF page rendering (OS packages) | Yes |
+| **PaddleOCR PP-OCRv5** | OCR draft for scanned/photo CVs (own Python 3.12 environment in the image) | Yes |
+| **poppler-utils** | Renders PDF pages to images for OCR (OS package) | Yes |
 | **Outgoing email account** | Interview invites and candidate emails sent from the assistant | For those features |
 | **LLM endpoint** | Any OpenAI-compatible server (vLLM recommended) | Yes |
 
@@ -36,7 +36,7 @@ HR user ──► Desk "Ask AI" panel ──► ai_recruitment.api.chat (session
 |---|---|---|
 | ERPNext base image | `frappe/erpnext:v16.54.0` | `frappe/Dockerfile` (`ERPNEXT_IMAGE`) |
 | Frappe HR | `v16.53.1` | `frappe/Dockerfile` (`HRMS_VERSION`) |
-| ai_recruitment | `0.5.0` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
+| ai_recruitment | `0.6.0` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
 | Demo LLM | `qwen/qwen3.8-27b` (OpenRouter) | AI Recruitment Settings |
 
 Upgrade them deliberately and test in staging first. Every new image version runs `bench migrate`.
@@ -67,16 +67,16 @@ container to suit Railway's single-volume limit, and pulls third-party Railway s
      --build-arg=FRAPPE_PATH=https://github.com/frappe/frappe \
      --build-arg=FRAPPE_BRANCH=v16.x.x \
      --build-arg=APPS_JSON_BASE64=$APPS_JSON_BASE64 \
-     --tag=registry.moet.internal/hr/frappe-hr-ai-base:0.5.0 \
+     --tag=registry.moet.internal/hr/frappe-hr-ai-base:0.6.0 \
      --file=images/layered/Containerfile .
    ```
-4. Add the OCR engines on top (frappe_docker images run as the `frappe` user). Copy the PaddleOCR block from
+4. Add PaddleOCR on top (frappe_docker images run as the `frappe` user). Copy the PaddleOCR block from
    `frappe/Dockerfile` in this repo; in short:
    ```dockerfile
-   FROM registry.moet.internal/hr/frappe-hr-ai-base:0.5.0
+   FROM registry.moet.internal/hr/frappe-hr-ai-base:0.6.0
    USER root
    RUN apt-get update && apt-get install -y --no-install-recommends \
-         tesseract-ocr tesseract-ocr-ara tesseract-ocr-eng poppler-utils libgl1 libglib2.0-0 libgomp1 \
+         poppler-utils libgl1 libglib2.0-0 libgomp1 \
        && rm -rf /var/lib/apt/lists/*
    # PaddleOCR needs Python 3.8-3.12, so it gets its own environment (Frappe v16 runs a newer Python)
    ENV PADDLE_PDX_CACHE_HOME=/home/frappe/.paddlex
@@ -94,7 +94,7 @@ container to suit Railway's single-volume limit, and pulls third-party Railway s
    Air-gapped: pre-download the models (`PP-OCRv5_mobile_det`, `arabic_PP-OCRv5_mobile_rec`,
    `en_PP-OCRv5_mobile_rec`) into `PADDLE_PDX_CACHE_HOME`.
    ```bash
-   docker build -t registry.moet.internal/hr/frappe-hr-ai:0.5.0 . && docker push registry.moet.internal/hr/frappe-hr-ai:0.5.0
+   docker build -t registry.moet.internal/hr/frappe-hr-ai:0.6.0 . && docker push registry.moet.internal/hr/frappe-hr-ai:0.6.0
    ```
    Check the frappe_docker README for the exact build arguments of the release you use. They change
    between versions. A private Git server needs credentials in the URL or a build secret. Never bake
@@ -144,7 +144,7 @@ Upgrades: build a new image tag, update `CUSTOM_TAG`, `docker compose up -d`, th
 | Tokens per Day | 300,000 per user (prompt + completion) |
 | Keep Chat Logs (days) | per the ministry's records retention policy (default 365) |
 | Evaluation Threshold | 5 points (max allowed score change in evaluation runs) |
-| CV Reading Mode | `Auto` (recommended, see section 4a). `Vision Model`, `Tesseract` or `Off` |
+| CV Reading Mode | `Auto` (PaddleOCR + vision model, see section 4a) or `Off` |
 | Send Interview Invites | on, once an outgoing Email Account is configured |
 | Working Day Starts / Ends | 09:00 / 17:00 (used to suggest free interview slots) |
 
@@ -173,8 +173,9 @@ on the demo's 8 vCPU / 8 GB server with no GPU.
 | Tesseract only | 0.818 | 0.711 | 0.770 | 0.552 | ~1 s |
 | PaddleOCR-VL 1.6 | not measurable: out of memory during model load on 8 GB CPU | | | | |
 
-**Decision:** Auto uses the PaddleOCR + vision-model hybrid, falls back to Tesseract + vision model, then the vision
-model alone, then local OCR alone. A good draft matters: with a broken draft the hybrid did worse than the vision model
+**Decision (8 November 2026):** only the PaddleOCR + vision-model hybrid is kept. Tesseract and the other
+modes were removed from the app. If one half is unavailable, the other is used alone: the vision model reads the page
+images directly, or PaddleOCR's text is used as is. A good draft matters: with a broken draft the hybrid did worse than the vision model
 alone, which matches published findings on Arabic OCR correction.
 
 **PaddleOCR-VL** is promising (strong vendor-reported Arabic results) but needs a GPU (about 7.5 GB VRAM at 16-bit).
@@ -187,8 +188,8 @@ Notes from the benchmark that matter for deployment:
   explicitly. Without that, Arabic CVs are read with the Chinese/English model (F1 about 0.1).
 - PaddleOCR-VL drops "aside" (sidebar), header and footer text from its Markdown by default
   (`markdown_ignore_labels`). Set it to an empty list for CVs.
-- These are synthetic pages in three fonts. Confirm on 10 to 20 real CVs with **AI OCR Test**, which now compares
-  Tesseract, PaddleOCR, the vision model and the Auto hybrid side by side.
+- These are synthetic pages in three fonts. Confirm on 10 to 20 real CVs with **AI OCR Test**, which reports the
+  accuracy of the PaddleOCR draft and of the final corrected text.
 
 Every CV, whatever its format, becomes the same structured profile (JSON Resume v1 shape: work with dates,
 education, skills, languages, certificates, projects, plus computed years of experience). Scoring uses that profile
@@ -198,7 +199,7 @@ and the text, so layout does not decide the score.
 |---|---|
 | ATS-style PDF (single column, real text) | PDF text layer |
 | Designed / multi-column PDF (sidebars, columns) | detected from text positions; the text layer (exact characters, scrambled order) is the draft and the **vision model** rewrites it in reading order from the page images |
-| Scanned PDF, photo or image CV | **PaddleOCR** draft (Tesseract if PaddleOCR is unavailable) corrected by the **vision model** |
+| Scanned PDF, photo or image CV | **PaddleOCR** draft corrected by the **vision model** |
 | DOCX, including tables and text boxes | DOCX XML in document order |
 
 The method and layout used are saved on each applicant (*CV Read As*). The parsed profile is in *Structured
@@ -209,8 +210,8 @@ HR Open Standards mapping can be added later if a system you integrate with need
 **Background (literature):** on KITAB-Bench, an Arabic OCR benchmark ([paper](https://arxiv.org/html/2502.14949v2)),
 Tesseract had about 0.54 character and 0.84 word error rate on Arabic text recognition and about 28% on tables, while
 vision-language models reduced character errors by roughly 60% on average. Small older Qwen-VL 7B models did worse than
-Tesseract there, so **measure your own model**: Desk → **AI OCR Test** → upload a sample CV and paste its correct text.
-It reports CER/WER for Tesseract and the vision model side by side. Test 10 to 20 real Arabic and English CVs before go-live.
+Tesseract there, so **measure on your own CVs**: Desk → **AI OCR Test** → upload a sample CV and paste its correct text.
+It reports accuracy for the PaddleOCR draft and the final text. Test 10 to 20 real Arabic and English CVs before go-live.
 
 ### Measuring parsing accuracy
 
