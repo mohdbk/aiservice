@@ -7,7 +7,7 @@ import { createToken, readToken } from "../src/session.js";
 import { createFrappe } from "../src/frappe.js";
 
 const cfg = { port: 0, mock: true, sessionSecret: "x".repeat(40), sessionHours: 8, cookieSecure: true, trustProxy: false,
-  webDist: new URL("./fixtures/dist", import.meta.url).pathname, maxBodyMb: 2, frappeTimeoutMs: 5000 };
+  webDist: new URL("./fixtures/web", import.meta.url).pathname, maxBodyMb: 2, frappeTimeoutMs: 5000 };
 let server, base;
 
 before(async () => {

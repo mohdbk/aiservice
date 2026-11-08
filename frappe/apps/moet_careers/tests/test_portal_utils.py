@@ -62,7 +62,7 @@ class TestPortalUtils(unittest.TestCase):
         self.assertEqual(set(EN), set(AR))
         for k in EN:
             self.assertEqual(set(re.findall(r"\{\w+\}", EN[k])), set(re.findall(r"\{\w+\}", AR[k])), k)
-            self.assertNotIn("—", EN[k] + AR[k])
+            self.assertNotIn("\u2014", EN[k] + AR[k])
             for word in ("AI", "artificial", "ذكاء"):
                 self.assertNotIn(word, EN[k] + AR[k], k)
 
