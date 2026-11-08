@@ -1,6 +1,14 @@
-"""OCR for scanned CVs: local Tesseract (Arabic + English) or the LLM's vision input."""
+"""OCR engines for CVs.
+
+- Tesseract (local, Arabic + English)
+- PaddleOCR PP-OCRv5 (local CPU, Arabic + English; runs in its own Python 3.12 environment)
+- Vision Model (the LLM reads page images)
+- Hybrid: an OCR draft (or a PDF's own text layer) plus the page images go to the vision model,
+  which corrects characters and reading order. Falls back to the draft if the model loops.
+"""
 import base64
 import glob
+import json
 import os
 import shutil
 import subprocess
@@ -8,13 +16,23 @@ import tempfile
 
 import frappe
 
+from ai_recruitment.utils import HYBRID_OCR_PROMPT, VISION_OCR_PROMPT, has_repetition_loop, hybrid_result
+
 MAX_PAGES = 5
+PADDLE_PYTHON = os.environ.get("PADDLEOCR_PYTHON", "/home/frappe/paddleocr-env/bin/python")
+RUNNER = os.path.join(os.path.dirname(__file__), "paddle_runner.py")
+
+
+def paddle_available() -> bool:
+    return os.path.exists(PADDLE_PYTHON) and os.path.exists(os.path.join(os.path.dirname(os.path.dirname(PADDLE_PYTHON)), ".ready"))
 
 
 def available_engines() -> dict:
-    return {"tesseract": bool(shutil.which("tesseract")), "pdftoppm": bool(shutil.which("pdftoppm"))}
+    return {"tesseract": bool(shutil.which("tesseract")), "pdftoppm": bool(shutil.which("pdftoppm")),
+            "paddle": paddle_available()}
 
 
+# ---------------- pages ----------------
 def _pdf_to_pngs(data: bytes, tmp: str) -> list:
     pdf = os.path.join(tmp, "in.pdf")
     with open(pdf, "wb") as f:
@@ -24,43 +42,104 @@ def _pdf_to_pngs(data: bytes, tmp: str) -> list:
     return sorted(glob.glob(os.path.join(tmp, "p*.png")))
 
 
-def _tesseract(path: str) -> str:
-    r = subprocess.run(["tesseract", path, "stdout", "-l", "ara+eng"], capture_output=True, timeout=180)
-    return r.stdout.decode("utf-8", "ignore")
+def _pages(data: bytes, kind: str, tmp: str) -> list:
+    if kind == "pdf":
+        if not shutil.which("pdftoppm"):
+            frappe.log_error(title="AI OCR: pdftoppm not installed")
+            return []
+        return _pdf_to_pngs(data, tmp)
+    path = os.path.join(tmp, f"img.{kind}")
+    with open(path, "wb") as f:
+        f.write(data)
+    return [path]
 
 
-def _vision(paths: list) -> str:
-    from ai_recruitment.llm import chat_completion
-    from ai_recruitment.setup import setting
+# ---------------- engines ----------------
+def _tesseract(pages: list) -> str:
+    out = []
+    for p in pages:
+        r = subprocess.run(["tesseract", p, "stdout", "-l", "ara+eng"], capture_output=True, timeout=180)
+        out.append(r.stdout.decode("utf-8", "ignore"))
+    return "\n\n".join(out)
 
-    parts = [{"type": "text", "text": "Transcribe all text on these CV pages exactly, in reading order. "
-                                      "Keep Arabic as Arabic. Output plain text only."}]
-    for p in paths[:MAX_PAGES]:
+
+def _paddle(pages: list) -> str:
+    """PaddleOCR PP-OCRv5 in its own Python environment (see paddle_runner.read_text)."""
+    r = subprocess.run([PADDLE_PYTHON, RUNNER, "text", *pages], capture_output=True, timeout=900,
+                       env={**os.environ, "PYTHONIOENCODING": "utf-8"})
+    out = r.stdout.decode("utf-8", "ignore")
+    if r.returncode != 0 or "@@JSON@@" not in out:
+        raise RuntimeError(f"PaddleOCR failed: {r.stderr.decode('utf-8', 'ignore')[-500:]}")
+    return json.loads(out.rsplit("@@JSON@@", 1)[1])["text"]
+
+
+def _images(pages: list) -> list:
+    parts = []
+    for p in pages[:MAX_PAGES]:
         with open(p, "rb") as f:
             parts.append({"type": "image_url",
                           "image_url": {"url": "data:image/png;base64," + base64.b64encode(f.read()).decode()}})
-    msg = chat_completion([{"role": "user", "content": parts}], temperature=0, timeout=300,
-                          model=setting("vision_model", None))
-    return msg.get("content") or ""
+    return parts
 
 
-def ocr(data: bytes, kind: str, mode: str) -> str:
-    """kind: 'pdf' or an image extension. mode: 'Tesseract' | 'Vision Model'."""
-    eng = available_engines()
+def _vision(pages: list) -> str:
+    from ai_recruitment.llm import chat_completion
+    from ai_recruitment.setup import setting
+
+    msg = chat_completion([{"role": "user", "content": [{"type": "text", "text": VISION_OCR_PROMPT}, *_images(pages)]}],
+                          temperature=0, timeout=300, model=setting("vision_model", None), max_tokens=8000)
+    text = msg.get("content") or ""
+    if has_repetition_loop(text):
+        raise RuntimeError("Vision model output repeated itself")
+    return text
+
+
+def _hybrid(pages: list, draft: str, source: str) -> str:
+    """OCR draft + images -> corrected text. Returns the draft unchanged if the model output is unusable."""
+    from ai_recruitment.llm import chat_completion
+    from ai_recruitment.setup import setting
+
+    draft = (draft or "").strip()
+    prompt = HYBRID_OCR_PROMPT.format(source=source, draft=draft[:20000] or "(empty)")
+    try:
+        msg = chat_completion([{"role": "user", "content": [{"type": "text", "text": prompt}, *_images(pages)]}],
+                              temperature=0, timeout=300, model=setting("vision_model", None), max_tokens=8000)
+    except Exception:
+        frappe.log_error(title="AI OCR: hybrid correction failed, using draft")
+        return draft
+    return hybrid_result(msg.get("content"), draft)
+
+
+def local_ocr(pages: list) -> tuple:
+    """Best available local OCR: (text, engine name)."""
+    if paddle_available():
+        try:
+            return _paddle(pages), "paddleocr"
+        except Exception:
+            frappe.log_error(title="AI OCR: PaddleOCR failed, trying Tesseract")
+    if shutil.which("tesseract"):
+        return _tesseract(pages), "tesseract"
+    return "", "none"
+
+
+def ocr(data: bytes, kind: str, mode: str, draft: str | None = None, draft_source: str = "") -> str:
+    """kind: 'pdf' or an image extension.
+    mode: 'Tesseract' | 'PaddleOCR' | 'Vision Model' | 'Hybrid'.
+    For Hybrid, pass `draft` (e.g. a PDF text layer) or leave it empty to use the best local OCR."""
     with tempfile.TemporaryDirectory() as tmp:
-        if kind == "pdf":
-            if not eng["pdftoppm"]:
-                frappe.log_error(title="AI OCR: pdftoppm not installed")
-                return ""
-            pages = _pdf_to_pngs(data, tmp)
-        else:
-            path = os.path.join(tmp, f"img.{kind}")
-            with open(path, "wb") as f:
-                f.write(data)
-            pages = [path]
+        pages = _pages(data, kind, tmp)
+        if not pages:
+            return ""
         if mode == "Vision Model":
             return _vision(pages)
-        if not eng["tesseract"]:
-            frappe.log_error(title="AI OCR: tesseract not installed")
-            return ""
-        return "\n\n".join(_tesseract(p) for p in pages)
+        if mode == "PaddleOCR":
+            return _paddle(pages) if paddle_available() else ""
+        if mode == "Tesseract":
+            return _tesseract(pages) if shutil.which("tesseract") else ""
+        if mode == "Hybrid":
+            if draft is None:
+                draft, engine = local_ocr(pages)
+                draft_source = {"paddleocr": "the PaddleOCR engine", "tesseract": "the Tesseract OCR engine"}.get(
+                    engine, "no OCR engine (empty)")
+            return _hybrid(pages, draft, draft_source or "an OCR engine")
+        raise ValueError(f"Unknown OCR mode {mode}")

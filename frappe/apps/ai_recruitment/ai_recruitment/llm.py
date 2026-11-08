@@ -32,7 +32,8 @@ def extract_json(text):
         frappe.throw(str(e))
 
 
-def _request(c, messages, tools=None, schema=None, schema_name="output", temperature=0.1, model=None, stream=False):
+def _request(c, messages, tools=None, schema=None, schema_name="output", temperature=0.1, model=None, stream=False,
+             max_tokens=None):
     headers = {"Content-Type": "application/json"}
     if c.key:
         headers["Authorization"] = f"Bearer {c.key}"
@@ -40,6 +41,8 @@ def _request(c, messages, tools=None, schema=None, schema_name="output", tempera
     if openrouter:
         headers["X-Title"] = "Frappe HR AI Recruitment"
     body = {"model": model or c.model, "messages": messages, "temperature": temperature}
+    if max_tokens:
+        body["max_tokens"] = int(max_tokens)
     if tools:
         body["tools"] = tools
         body["tool_choice"] = "auto"
@@ -71,13 +74,13 @@ def _post(c, headers, body, timeout, stream):
 
 
 def complete(messages, tools=None, schema=None, schema_name="output", temperature=0.1, timeout=180,
-             model=None, on_delta=None):
+             model=None, on_delta=None, max_tokens=None):
     """Returns (message_dict, usage_dict). With on_delta, streams and calls on_delta(text)."""
     c = config()
     if not is_configured(c):
         frappe.throw("The language model is not configured. Set it in AI Recruitment Settings.")
     stream = on_delta is not None
-    headers, body = _request(c, messages, tools, schema, schema_name, temperature, model, stream)
+    headers, body = _request(c, messages, tools, schema, schema_name, temperature, model, stream, max_tokens)
     r = _post(c, headers, body, timeout, stream)
 
     if not stream:
@@ -123,6 +126,7 @@ def complete(messages, tools=None, schema=None, schema_name="output", temperatur
     return msg, usage
 
 
-def chat_completion(messages, tools=None, schema=None, schema_name="output", temperature=0.1, timeout=180, model=None):
+def chat_completion(messages, tools=None, schema=None, schema_name="output", temperature=0.1, timeout=180, model=None,
+                    max_tokens=None):
     """Non-streaming helper returning only the message (used by scoring and OCR)."""
-    return complete(messages, tools, schema, schema_name, temperature, timeout, model)[0]
+    return complete(messages, tools, schema, schema_name, temperature, timeout, model, max_tokens=max_tokens)[0]

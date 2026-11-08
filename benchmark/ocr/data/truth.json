@@ -1,0 +1,192 @@
+{
+ "en_engineer__ats": {
+  "cv": "en_engineer",
+  "lang": "en",
+  "layout": "ats",
+  "image": "en_engineer__ats.png",
+  "truth": [
+   "Daniel Brooks\nSenior Software Engineer\nContact\ndaniel.brooks@example.com\n+971 50 555 0142\nDubai, United Arab Emirates\nProfile\nSoftware engineer with 8 years of experience building backend services and data platforms. Led a team of five engineers and delivered a citizen services API used by 1.2 million people.\nExperience\nLead Backend Engineer\nHarbor Digital Services\n2021 to Present\nDesigned Python and FastAPI microservices handling 3 million requests per day\nMoved 40 services to Kubernetes and cut hosting cost by 35 percent\nIntroduced automated testing with 85 percent coverage\nSoftware Engineer\nBlue Falcon Systems\n2017 to 2021\nBuilt payment integrations with three national banks\nMaintained PostgreSQL databases with 2 TB of data\nEducation\nBSc Computer Engineering\nGulf Technical University\n2017\nSkills\nPython\nExpert\nFastAPI\nAdvanced\nKubernetes\nAdvanced\nPostgreSQL\nAdvanced\nAWS\nIntermediate\nLanguages\nEnglish: Fluent\nArabic: Intermediate\nCertifications\nAWS Certified Solutions Architect Associate"
+  ]
+ },
+ "en_engineer__designed": {
+  "cv": "en_engineer",
+  "lang": "en",
+  "layout": "designed",
+  "image": "en_engineer__designed.png",
+  "truth": [
+   "Daniel Brooks\nSenior Software Engineer\nContact\ndaniel.brooks@example.com\n+971 50 555 0142\nDubai, United Arab Emirates\nSkills\nPython\nExpert\nFastAPI\nAdvanced\nKubernetes\nAdvanced\nPostgreSQL\nAdvanced\nAWS\nIntermediate\nLanguages\nEnglish: Fluent\nArabic: Intermediate\nCertifications\nAWS Certified Solutions Architect Associate\nProfile\nSoftware engineer with 8 years of experience building backend services and data platforms. Led a team of five engineers and delivered a citizen services API used by 1.2 million people.\nExperience\nLead Backend Engineer\nHarbor Digital Services\n2021 to Present\nDesigned Python and FastAPI microservices handling 3 million requests per day\nMoved 40 services to Kubernetes and cut hosting cost by 35 percent\nIntroduced automated testing with 85 percent coverage\nSoftware Engineer\nBlue Falcon Systems\n2017 to 2021\nBuilt payment integrations with three national banks\nMaintained PostgreSQL databases with 2 TB of data\nEducation\nBSc Computer Engineering\nGulf Technical University\n2017",
+   "Daniel Brooks\nSenior Software Engineer\nProfile\nSoftware engineer with 8 years of experience building backend services and data platforms. Led a team of five engineers and delivered a citizen services API used by 1.2 million people.\nExperience\nLead Backend Engineer\nHarbor Digital Services\n2021 to Present\nDesigned Python and FastAPI microservices handling 3 million requests per day\nMoved 40 services to Kubernetes and cut hosting cost by 35 percent\nIntroduced automated testing with 85 percent coverage\nSoftware Engineer\nBlue Falcon Systems\n2017 to 2021\nBuilt payment integrations with three national banks\nMaintained PostgreSQL databases with 2 TB of data\nEducation\nBSc Computer Engineering\nGulf Technical University\n2017\nContact\ndaniel.brooks@example.com\n+971 50 555 0142\nDubai, United Arab Emirates\nSkills\nPython\nExpert\nFastAPI\nAdvanced\nKubernetes\nAdvanced\nPostgreSQL\nAdvanced\nAWS\nIntermediate\nLanguages\nEnglish: Fluent\nArabic: Intermediate\nCertifications\nAWS Certified Solutions Architect Associate"
+  ]
+ },
+ "en_engineer__scanned": {
+  "cv": "en_engineer",
+  "lang": "en",
+  "layout": "scanned",
+  "image": "en_engineer__scanned.jpg",
+  "truth": [
+   "Daniel Brooks\nSenior Software Engineer\nContact\ndaniel.brooks@example.com\n+971 50 555 0142\nDubai, United Arab Emirates\nProfile\nSoftware engineer with 8 years of experience building backend services and data platforms. Led a team of five engineers and delivered a citizen services API used by 1.2 million people.\nExperience\nLead Backend Engineer\nHarbor Digital Services\n2021 to Present\nDesigned Python and FastAPI microservices handling 3 million requests per day\nMoved 40 services to Kubernetes and cut hosting cost by 35 percent\nIntroduced automated testing with 85 percent coverage\nSoftware Engineer\nBlue Falcon Systems\n2017 to 2021\nBuilt payment integrations with three national banks\nMaintained PostgreSQL databases with 2 TB of data\nEducation\nBSc Computer Engineering\nGulf Technical University\n2017\nSkills\nPython\nExpert\nFastAPI\nAdvanced\nKubernetes\nAdvanced\nPostgreSQL\nAdvanced\nAWS\nIntermediate\nLanguages\nEnglish: Fluent\nArabic: Intermediate\nCertifications\nAWS Certified Solutions Architect Associate"
+  ]
+ },
+ "en_engineer__photo": {
+  "cv": "en_engineer",
+  "lang": "en",
+  "layout": "photo",
+  "image": "en_engineer__photo.jpg",
+  "truth": [
+   "Daniel Brooks\nSenior Software Engineer\nContact\ndaniel.brooks@example.com\n+971 50 555 0142\nDubai, United Arab Emirates\nSkills\nPython\nExpert\nFastAPI\nAdvanced\nKubernetes\nAdvanced\nPostgreSQL\nAdvanced\nAWS\nIntermediate\nLanguages\nEnglish: Fluent\nArabic: Intermediate\nCertifications\nAWS Certified Solutions Architect Associate\nProfile\nSoftware engineer with 8 years of experience building backend services and data platforms. Led a team of five engineers and delivered a citizen services API used by 1.2 million people.\nExperience\nLead Backend Engineer\nHarbor Digital Services\n2021 to Present\nDesigned Python and FastAPI microservices handling 3 million requests per day\nMoved 40 services to Kubernetes and cut hosting cost by 35 percent\nIntroduced automated testing with 85 percent coverage\nSoftware Engineer\nBlue Falcon Systems\n2017 to 2021\nBuilt payment integrations with three national banks\nMaintained PostgreSQL databases with 2 TB of data\nEducation\nBSc Computer Engineering\nGulf Technical University\n2017",
+   "Daniel Brooks\nSenior Software Engineer\nProfile\nSoftware engineer with 8 years of experience building backend services and data platforms. Led a team of five engineers and delivered a citizen services API used by 1.2 million people.\nExperience\nLead Backend Engineer\nHarbor Digital Services\n2021 to Present\nDesigned Python and FastAPI microservices handling 3 million requests per day\nMoved 40 services to Kubernetes and cut hosting cost by 35 percent\nIntroduced automated testing with 85 percent coverage\nSoftware Engineer\nBlue Falcon Systems\n2017 to 2021\nBuilt payment integrations with three national banks\nMaintained PostgreSQL databases with 2 TB of data\nEducation\nBSc Computer Engineering\nGulf Technical University\n2017\nContact\ndaniel.brooks@example.com\n+971 50 555 0142\nDubai, United Arab Emirates\nSkills\nPython\nExpert\nFastAPI\nAdvanced\nKubernetes\nAdvanced\nPostgreSQL\nAdvanced\nAWS\nIntermediate\nLanguages\nEnglish: Fluent\nArabic: Intermediate\nCertifications\nAWS Certified Solutions Architect Associate"
+  ]
+ },
+ "en_analyst__ats": {
+  "cv": "en_analyst",
+  "lang": "en",
+  "layout": "ats",
+  "image": "en_analyst__ats.png",
+  "truth": [
+   "Priya Menon\nFinancial Data Analyst\nContact\npriya.menon@example.com\n+971 52 555 0187\nAbu Dhabi, UAE\nSummary\nData analyst with 5 years of experience in banking and public finance. Builds dashboards and forecasting models for senior management.\nWork Experience\nSenior Data Analyst\nEmirates Ledger Bank\n2022 to Present\nBuilt 25 Power BI dashboards for the executive committee\nForecast monthly deposits with Prophet and ARIMA models\nAutomated weekly reports with Python and SQL\nData Analyst\nCrescent Advisory Group\n2019 to 2022\nAnalysed budget data for 12 government clients\nCleaned and merged datasets with pandas\nEducation\nMSc Data Analytics\nNorthern Coast University\n2019\nBCom Finance\nCity Commerce College\n2017\nSkills\nSQL\nExpert\nPower BI\nExpert\nPython\nAdvanced\nExcel\nExpert\nStatistics\nAdvanced\nLanguages\nEnglish: Native\nHindi: Native\nArabic: Basic\nCertificates\nMicrosoft Certified Power BI Data Analyst"
+  ]
+ },
+ "en_analyst__designed": {
+  "cv": "en_analyst",
+  "lang": "en",
+  "layout": "designed",
+  "image": "en_analyst__designed.png",
+  "truth": [
+   "Priya Menon\nFinancial Data Analyst\nContact\npriya.menon@example.com\n+971 52 555 0187\nAbu Dhabi, UAE\nSkills\nSQL\nExpert\nPower BI\nExpert\nPython\nAdvanced\nExcel\nExpert\nStatistics\nAdvanced\nLanguages\nEnglish: Native\nHindi: Native\nArabic: Basic\nCertificates\nMicrosoft Certified Power BI Data Analyst\nSummary\nData analyst with 5 years of experience in banking and public finance. Builds dashboards and forecasting models for senior management.\nWork Experience\nSenior Data Analyst\nEmirates Ledger Bank\n2022 to Present\nBuilt 25 Power BI dashboards for the executive committee\nForecast monthly deposits with Prophet and ARIMA models\nAutomated weekly reports with Python and SQL\nData Analyst\nCrescent Advisory Group\n2019 to 2022\nAnalysed budget data for 12 government clients\nCleaned and merged datasets with pandas\nEducation\nMSc Data Analytics\nNorthern Coast University\n2019\nBCom Finance\nCity Commerce College\n2017",
+   "Priya Menon\nFinancial Data Analyst\nSummary\nData analyst with 5 years of experience in banking and public finance. Builds dashboards and forecasting models for senior management.\nWork Experience\nSenior Data Analyst\nEmirates Ledger Bank\n2022 to Present\nBuilt 25 Power BI dashboards for the executive committee\nForecast monthly deposits with Prophet and ARIMA models\nAutomated weekly reports with Python and SQL\nData Analyst\nCrescent Advisory Group\n2019 to 2022\nAnalysed budget data for 12 government clients\nCleaned and merged datasets with pandas\nEducation\nMSc Data Analytics\nNorthern Coast University\n2019\nBCom Finance\nCity Commerce College\n2017\nContact\npriya.menon@example.com\n+971 52 555 0187\nAbu Dhabi, UAE\nSkills\nSQL\nExpert\nPower BI\nExpert\nPython\nAdvanced\nExcel\nExpert\nStatistics\nAdvanced\nLanguages\nEnglish: Native\nHindi: Native\nArabic: Basic\nCertificates\nMicrosoft Certified Power BI Data Analyst"
+  ]
+ },
+ "en_analyst__scanned": {
+  "cv": "en_analyst",
+  "lang": "en",
+  "layout": "scanned",
+  "image": "en_analyst__scanned.jpg",
+  "truth": [
+   "Priya Menon\nFinancial Data Analyst\nContact\npriya.menon@example.com\n+971 52 555 0187\nAbu Dhabi, UAE\nSummary\nData analyst with 5 years of experience in banking and public finance. Builds dashboards and forecasting models for senior management.\nWork Experience\nSenior Data Analyst\nEmirates Ledger Bank\n2022 to Present\nBuilt 25 Power BI dashboards for the executive committee\nForecast monthly deposits with Prophet and ARIMA models\nAutomated weekly reports with Python and SQL\nData Analyst\nCrescent Advisory Group\n2019 to 2022\nAnalysed budget data for 12 government clients\nCleaned and merged datasets with pandas\nEducation\nMSc Data Analytics\nNorthern Coast University\n2019\nBCom Finance\nCity Commerce College\n2017\nSkills\nSQL\nExpert\nPower BI\nExpert\nPython\nAdvanced\nExcel\nExpert\nStatistics\nAdvanced\nLanguages\nEnglish: Native\nHindi: Native\nArabic: Basic\nCertificates\nMicrosoft Certified Power BI Data Analyst"
+  ]
+ },
+ "en_analyst__photo": {
+  "cv": "en_analyst",
+  "lang": "en",
+  "layout": "photo",
+  "image": "en_analyst__photo.jpg",
+  "truth": [
+   "Priya Menon\nFinancial Data Analyst\nContact\npriya.menon@example.com\n+971 52 555 0187\nAbu Dhabi, UAE\nSkills\nSQL\nExpert\nPower BI\nExpert\nPython\nAdvanced\nExcel\nExpert\nStatistics\nAdvanced\nLanguages\nEnglish: Native\nHindi: Native\nArabic: Basic\nCertificates\nMicrosoft Certified Power BI Data Analyst\nSummary\nData analyst with 5 years of experience in banking and public finance. Builds dashboards and forecasting models for senior management.\nWork Experience\nSenior Data Analyst\nEmirates Ledger Bank\n2022 to Present\nBuilt 25 Power BI dashboards for the executive committee\nForecast monthly deposits with Prophet and ARIMA models\nAutomated weekly reports with Python and SQL\nData Analyst\nCrescent Advisory Group\n2019 to 2022\nAnalysed budget data for 12 government clients\nCleaned and merged datasets with pandas\nEducation\nMSc Data Analytics\nNorthern Coast University\n2019\nBCom Finance\nCity Commerce College\n2017",
+   "Priya Menon\nFinancial Data Analyst\nSummary\nData analyst with 5 years of experience in banking and public finance. Builds dashboards and forecasting models for senior management.\nWork Experience\nSenior Data Analyst\nEmirates Ledger Bank\n2022 to Present\nBuilt 25 Power BI dashboards for the executive committee\nForecast monthly deposits with Prophet and ARIMA models\nAutomated weekly reports with Python and SQL\nData Analyst\nCrescent Advisory Group\n2019 to 2022\nAnalysed budget data for 12 government clients\nCleaned and merged datasets with pandas\nEducation\nMSc Data Analytics\nNorthern Coast University\n2019\nBCom Finance\nCity Commerce College\n2017\nContact\npriya.menon@example.com\n+971 52 555 0187\nAbu Dhabi, UAE\nSkills\nSQL\nExpert\nPower BI\nExpert\nPython\nAdvanced\nExcel\nExpert\nStatistics\nAdvanced\nLanguages\nEnglish: Native\nHindi: Native\nArabic: Basic\nCertificates\nMicrosoft Certified Power BI Data Analyst"
+  ]
+ },
+ "ar_network__ats": {
+  "cv": "ar_network",
+  "lang": "ar",
+  "layout": "ats",
+  "image": "ar_network__ats.png",
+  "truth": [
+   "خالد سعيد المنصوري\nمهندس شبكات أول\nمعلومات التواصل\nkhalid.mansouri@example.com\n+971 55 555 0193\nالشارقة، الإمارات العربية المتحدة\nنبذة مهنية\nمهندس شبكات بخبرة تسع سنوات في تصميم وتشغيل الشبكات الحكومية. قاد مشروع ربط اثنين وعشرين مبنى بشبكة ألياف ضوئية موحدة.\nالخبرات العملية\nمهندس شبكات أول\nهيئة الخدمات الرقمية\n2020 حتى الآن\nتصميم شبكة مركز البيانات الجديد بسعة عشرة جيجابت\nخفض أعطال الشبكة بنسبة أربعين بالمئة خلال عامين\nالإشراف على فريق من ستة فنيين\nمهندس شبكات\nشركة الواحة للاتصالات\n2016 إلى 2020\nتركيب وصيانة أجهزة سيسكو وجونيبر\nإعداد جدران الحماية والشبكات الافتراضية الخاصة\nالمؤهلات العلمية\nبكالوريوس هندسة الاتصالات\nجامعة الخليج التقنية\n2016\nالمهارات\nتصميم الشبكات\nخبير\nأمن المعلومات\nمتقدم\nCisco\nخبير\nالحوسبة السحابية\nمتوسط\nإدارة المشاريع\nمتقدم\nاللغات\nالعربية: اللغة الأم\nالإنجليزية: ممتاز\nالشهادات\nشهادة سيسكو المعتمدة CCNP"
+  ]
+ },
+ "ar_network__designed": {
+  "cv": "ar_network",
+  "lang": "ar",
+  "layout": "designed",
+  "image": "ar_network__designed.png",
+  "truth": [
+   "خالد سعيد المنصوري\nمهندس شبكات أول\nمعلومات التواصل\nkhalid.mansouri@example.com\n+971 55 555 0193\nالشارقة، الإمارات العربية المتحدة\nالمهارات\nتصميم الشبكات\nخبير\nأمن المعلومات\nمتقدم\nCisco\nخبير\nالحوسبة السحابية\nمتوسط\nإدارة المشاريع\nمتقدم\nاللغات\nالعربية: اللغة الأم\nالإنجليزية: ممتاز\nالشهادات\nشهادة سيسكو المعتمدة CCNP\nنبذة مهنية\nمهندس شبكات بخبرة تسع سنوات في تصميم وتشغيل الشبكات الحكومية. قاد مشروع ربط اثنين وعشرين مبنى بشبكة ألياف ضوئية موحدة.\nالخبرات العملية\nمهندس شبكات أول\nهيئة الخدمات الرقمية\n2020 حتى الآن\nتصميم شبكة مركز البيانات الجديد بسعة عشرة جيجابت\nخفض أعطال الشبكة بنسبة أربعين بالمئة خلال عامين\nالإشراف على فريق من ستة فنيين\nمهندس شبكات\nشركة الواحة للاتصالات\n2016 إلى 2020\nتركيب وصيانة أجهزة سيسكو وجونيبر\nإعداد جدران الحماية والشبكات الافتراضية الخاصة\nالمؤهلات العلمية\nبكالوريوس هندسة الاتصالات\nجامعة الخليج التقنية\n2016",
+   "خالد سعيد المنصوري\nمهندس شبكات أول\nنبذة مهنية\nمهندس شبكات بخبرة تسع سنوات في تصميم وتشغيل الشبكات الحكومية. قاد مشروع ربط اثنين وعشرين مبنى بشبكة ألياف ضوئية موحدة.\nالخبرات العملية\nمهندس شبكات أول\nهيئة الخدمات الرقمية\n2020 حتى الآن\nتصميم شبكة مركز البيانات الجديد بسعة عشرة جيجابت\nخفض أعطال الشبكة بنسبة أربعين بالمئة خلال عامين\nالإشراف على فريق من ستة فنيين\nمهندس شبكات\nشركة الواحة للاتصالات\n2016 إلى 2020\nتركيب وصيانة أجهزة سيسكو وجونيبر\nإعداد جدران الحماية والشبكات الافتراضية الخاصة\nالمؤهلات العلمية\nبكالوريوس هندسة الاتصالات\nجامعة الخليج التقنية\n2016\nمعلومات التواصل\nkhalid.mansouri@example.com\n+971 55 555 0193\nالشارقة، الإمارات العربية المتحدة\nالمهارات\nتصميم الشبكات\nخبير\nأمن المعلومات\nمتقدم\nCisco\nخبير\nالحوسبة السحابية\nمتوسط\nإدارة المشاريع\nمتقدم\nاللغات\nالعربية: اللغة الأم\nالإنجليزية: ممتاز\nالشهادات\nشهادة سيسكو المعتمدة CCNP"
+  ]
+ },
+ "ar_network__scanned": {
+  "cv": "ar_network",
+  "lang": "ar",
+  "layout": "scanned",
+  "image": "ar_network__scanned.jpg",
+  "truth": [
+   "خالد سعيد المنصوري\nمهندس شبكات أول\nمعلومات التواصل\nkhalid.mansouri@example.com\n+971 55 555 0193\nالشارقة، الإمارات العربية المتحدة\nنبذة مهنية\nمهندس شبكات بخبرة تسع سنوات في تصميم وتشغيل الشبكات الحكومية. قاد مشروع ربط اثنين وعشرين مبنى بشبكة ألياف ضوئية موحدة.\nالخبرات العملية\nمهندس شبكات أول\nهيئة الخدمات الرقمية\n2020 حتى الآن\nتصميم شبكة مركز البيانات الجديد بسعة عشرة جيجابت\nخفض أعطال الشبكة بنسبة أربعين بالمئة خلال عامين\nالإشراف على فريق من ستة فنيين\nمهندس شبكات\nشركة الواحة للاتصالات\n2016 إلى 2020\nتركيب وصيانة أجهزة سيسكو وجونيبر\nإعداد جدران الحماية والشبكات الافتراضية الخاصة\nالمؤهلات العلمية\nبكالوريوس هندسة الاتصالات\nجامعة الخليج التقنية\n2016\nالمهارات\nتصميم الشبكات\nخبير\nأمن المعلومات\nمتقدم\nCisco\nخبير\nالحوسبة السحابية\nمتوسط\nإدارة المشاريع\nمتقدم\nاللغات\nالعربية: اللغة الأم\nالإنجليزية: ممتاز\nالشهادات\nشهادة سيسكو المعتمدة CCNP"
+  ]
+ },
+ "ar_network__photo": {
+  "cv": "ar_network",
+  "lang": "ar",
+  "layout": "photo",
+  "image": "ar_network__photo.jpg",
+  "truth": [
+   "خالد سعيد المنصوري\nمهندس شبكات أول\nمعلومات التواصل\nkhalid.mansouri@example.com\n+971 55 555 0193\nالشارقة، الإمارات العربية المتحدة\nالمهارات\nتصميم الشبكات\nخبير\nأمن المعلومات\nمتقدم\nCisco\nخبير\nالحوسبة السحابية\nمتوسط\nإدارة المشاريع\nمتقدم\nاللغات\nالعربية: اللغة الأم\nالإنجليزية: ممتاز\nالشهادات\nشهادة سيسكو المعتمدة CCNP\nنبذة مهنية\nمهندس شبكات بخبرة تسع سنوات في تصميم وتشغيل الشبكات الحكومية. قاد مشروع ربط اثنين وعشرين مبنى بشبكة ألياف ضوئية موحدة.\nالخبرات العملية\nمهندس شبكات أول\nهيئة الخدمات الرقمية\n2020 حتى الآن\nتصميم شبكة مركز البيانات الجديد بسعة عشرة جيجابت\nخفض أعطال الشبكة بنسبة أربعين بالمئة خلال عامين\nالإشراف على فريق من ستة فنيين\nمهندس شبكات\nشركة الواحة للاتصالات\n2016 إلى 2020\nتركيب وصيانة أجهزة سيسكو وجونيبر\nإعداد جدران الحماية والشبكات الافتراضية الخاصة\nالمؤهلات العلمية\nبكالوريوس هندسة الاتصالات\nجامعة الخليج التقنية\n2016",
+   "خالد سعيد المنصوري\nمهندس شبكات أول\nنبذة مهنية\nمهندس شبكات بخبرة تسع سنوات في تصميم وتشغيل الشبكات الحكومية. قاد مشروع ربط اثنين وعشرين مبنى بشبكة ألياف ضوئية موحدة.\nالخبرات العملية\nمهندس شبكات أول\nهيئة الخدمات الرقمية\n2020 حتى الآن\nتصميم شبكة مركز البيانات الجديد بسعة عشرة جيجابت\nخفض أعطال الشبكة بنسبة أربعين بالمئة خلال عامين\nالإشراف على فريق من ستة فنيين\nمهندس شبكات\nشركة الواحة للاتصالات\n2016 إلى 2020\nتركيب وصيانة أجهزة سيسكو وجونيبر\nإعداد جدران الحماية والشبكات الافتراضية الخاصة\nالمؤهلات العلمية\nبكالوريوس هندسة الاتصالات\nجامعة الخليج التقنية\n2016\nمعلومات التواصل\nkhalid.mansouri@example.com\n+971 55 555 0193\nالشارقة، الإمارات العربية المتحدة\nالمهارات\nتصميم الشبكات\nخبير\nأمن المعلومات\nمتقدم\nCisco\nخبير\nالحوسبة السحابية\nمتوسط\nإدارة المشاريع\nمتقدم\nاللغات\nالعربية: اللغة الأم\nالإنجليزية: ممتاز\nالشهادات\nشهادة سيسكو المعتمدة CCNP"
+  ]
+ },
+ "ar_hr__ats": {
+  "cv": "ar_hr",
+  "lang": "ar",
+  "layout": "ats",
+  "image": "ar_hr__ats.png",
+  "truth": [
+   "نورة عبدالله الكعبي\nأخصائية موارد بشرية\nالتواصل\nnoura.kaabi@example.com\n+971 56 555 0128\nأبوظبي، الإمارات العربية المتحدة\nالملخص\nأخصائية موارد بشرية بخبرة ست سنوات في التوظيف وتطوير الموظفين في القطاع الحكومي. ساهمت في تقليص مدة التوظيف من ستين يوما إلى خمسة وثلاثين يوما.\nالخبرة المهنية\nأخصائية موارد بشرية\nدائرة التنمية الاقتصادية المحلية\n2021 حتى الآن\nإدارة دورة التوظيف الكاملة لأكثر من مئة وعشرين وظيفة سنويا\nتصميم برنامج تهيئة للموظفين الجدد\nإعداد تقارير شهرية عن مؤشرات التوطين\nمنسقة توظيف\nمجموعة النخيل القابضة\n2018 إلى 2021\nتنظيم معارض التوظيف في الجامعات\nفرز السير الذاتية وجدولة المقابلات\nالتعليم\nبكالوريوس إدارة الموارد البشرية\nكلية الإمارات للإدارة\n2018\nالمهارات\nالتوظيف والاستقطاب\nخبير\nعلاقات الموظفين\nمتقدم\nالتدريب والتطوير\nمتقدم\nأنظمة الموارد البشرية\nمتوسط\nالتواصل الفعال\nخبير\nاللغات\nالعربية: اللغة الأم\nالإنجليزية: جيد جدا\nالشهادات المهنية\nشهادة أخصائي موارد بشرية معتمد"
+  ]
+ },
+ "ar_hr__designed": {
+  "cv": "ar_hr",
+  "lang": "ar",
+  "layout": "designed",
+  "image": "ar_hr__designed.png",
+  "truth": [
+   "نورة عبدالله الكعبي\nأخصائية موارد بشرية\nالتواصل\nnoura.kaabi@example.com\n+971 56 555 0128\nأبوظبي، الإمارات العربية المتحدة\nالمهارات\nالتوظيف والاستقطاب\nخبير\nعلاقات الموظفين\nمتقدم\nالتدريب والتطوير\nمتقدم\nأنظمة الموارد البشرية\nمتوسط\nالتواصل الفعال\nخبير\nاللغات\nالعربية: اللغة الأم\nالإنجليزية: جيد جدا\nالشهادات المهنية\nشهادة أخصائي موارد بشرية معتمد\nالملخص\nأخصائية موارد بشرية بخبرة ست سنوات في التوظيف وتطوير الموظفين في القطاع الحكومي. ساهمت في تقليص مدة التوظيف من ستين يوما إلى خمسة وثلاثين يوما.\nالخبرة المهنية\nأخصائية موارد بشرية\nدائرة التنمية الاقتصادية المحلية\n2021 حتى الآن\nإدارة دورة التوظيف الكاملة لأكثر من مئة وعشرين وظيفة سنويا\nتصميم برنامج تهيئة للموظفين الجدد\nإعداد تقارير شهرية عن مؤشرات التوطين\nمنسقة توظيف\nمجموعة النخيل القابضة\n2018 إلى 2021\nتنظيم معارض التوظيف في الجامعات\nفرز السير الذاتية وجدولة المقابلات\nالتعليم\nبكالوريوس إدارة الموارد البشرية\nكلية الإمارات للإدارة\n2018",
+   "نورة عبدالله الكعبي\nأخصائية موارد بشرية\nالملخص\nأخصائية موارد بشرية بخبرة ست سنوات في التوظيف وتطوير الموظفين في القطاع الحكومي. ساهمت في تقليص مدة التوظيف من ستين يوما إلى خمسة وثلاثين يوما.\nالخبرة المهنية\nأخصائية موارد بشرية\nدائرة التنمية الاقتصادية المحلية\n2021 حتى الآن\nإدارة دورة التوظيف الكاملة لأكثر من مئة وعشرين وظيفة سنويا\nتصميم برنامج تهيئة للموظفين الجدد\nإعداد تقارير شهرية عن مؤشرات التوطين\nمنسقة توظيف\nمجموعة النخيل القابضة\n2018 إلى 2021\nتنظيم معارض التوظيف في الجامعات\nفرز السير الذاتية وجدولة المقابلات\nالتعليم\nبكالوريوس إدارة الموارد البشرية\nكلية الإمارات للإدارة\n2018\nالتواصل\nnoura.kaabi@example.com\n+971 56 555 0128\nأبوظبي، الإمارات العربية المتحدة\nالمهارات\nالتوظيف والاستقطاب\nخبير\nعلاقات الموظفين\nمتقدم\nالتدريب والتطوير\nمتقدم\nأنظمة الموارد البشرية\nمتوسط\nالتواصل الفعال\nخبير\nاللغات\nالعربية: اللغة الأم\nالإنجليزية: جيد جدا\nالشهادات المهنية\nشهادة أخصائي موارد بشرية معتمد"
+  ]
+ },
+ "ar_hr__scanned": {
+  "cv": "ar_hr",
+  "lang": "ar",
+  "layout": "scanned",
+  "image": "ar_hr__scanned.jpg",
+  "truth": [
+   "نورة عبدالله الكعبي\nأخصائية موارد بشرية\nالتواصل\nnoura.kaabi@example.com\n+971 56 555 0128\nأبوظبي، الإمارات العربية المتحدة\nالملخص\nأخصائية موارد بشرية بخبرة ست سنوات في التوظيف وتطوير الموظفين في القطاع الحكومي. ساهمت في تقليص مدة التوظيف من ستين يوما إلى خمسة وثلاثين يوما.\nالخبرة المهنية\nأخصائية موارد بشرية\nدائرة التنمية الاقتصادية المحلية\n2021 حتى الآن\nإدارة دورة التوظيف الكاملة لأكثر من مئة وعشرين وظيفة سنويا\nتصميم برنامج تهيئة للموظفين الجدد\nإعداد تقارير شهرية عن مؤشرات التوطين\nمنسقة توظيف\nمجموعة النخيل القابضة\n2018 إلى 2021\nتنظيم معارض التوظيف في الجامعات\nفرز السير الذاتية وجدولة المقابلات\nالتعليم\nبكالوريوس إدارة الموارد البشرية\nكلية الإمارات للإدارة\n2018\nالمهارات\nالتوظيف والاستقطاب\nخبير\nعلاقات الموظفين\nمتقدم\nالتدريب والتطوير\nمتقدم\nأنظمة الموارد البشرية\nمتوسط\nالتواصل الفعال\nخبير\nاللغات\nالعربية: اللغة الأم\nالإنجليزية: جيد جدا\nالشهادات المهنية\nشهادة أخصائي موارد بشرية معتمد"
+  ]
+ },
+ "ar_hr__photo": {
+  "cv": "ar_hr",
+  "lang": "ar",
+  "layout": "photo",
+  "image": "ar_hr__photo.jpg",
+  "truth": [
+   "نورة عبدالله الكعبي\nأخصائية موارد بشرية\nالتواصل\nnoura.kaabi@example.com\n+971 56 555 0128\nأبوظبي، الإمارات العربية المتحدة\nالمهارات\nالتوظيف والاستقطاب\nخبير\nعلاقات الموظفين\nمتقدم\nالتدريب والتطوير\nمتقدم\nأنظمة الموارد البشرية\nمتوسط\nالتواصل الفعال\nخبير\nاللغات\nالعربية: اللغة الأم\nالإنجليزية: جيد جدا\nالشهادات المهنية\nشهادة أخصائي موارد بشرية معتمد\nالملخص\nأخصائية موارد بشرية بخبرة ست سنوات في التوظيف وتطوير الموظفين في القطاع الحكومي. ساهمت في تقليص مدة التوظيف من ستين يوما إلى خمسة وثلاثين يوما.\nالخبرة المهنية\nأخصائية موارد بشرية\nدائرة التنمية الاقتصادية المحلية\n2021 حتى الآن\nإدارة دورة التوظيف الكاملة لأكثر من مئة وعشرين وظيفة سنويا\nتصميم برنامج تهيئة للموظفين الجدد\nإعداد تقارير شهرية عن مؤشرات التوطين\nمنسقة توظيف\nمجموعة النخيل القابضة\n2018 إلى 2021\nتنظيم معارض التوظيف في الجامعات\nفرز السير الذاتية وجدولة المقابلات\nالتعليم\nبكالوريوس إدارة الموارد البشرية\nكلية الإمارات للإدارة\n2018",
+   "نورة عبدالله الكعبي\nأخصائية موارد بشرية\nالملخص\nأخصائية موارد بشرية بخبرة ست سنوات في التوظيف وتطوير الموظفين في القطاع الحكومي. ساهمت في تقليص مدة التوظيف من ستين يوما إلى خمسة وثلاثين يوما.\nالخبرة المهنية\nأخصائية موارد بشرية\nدائرة التنمية الاقتصادية المحلية\n2021 حتى الآن\nإدارة دورة التوظيف الكاملة لأكثر من مئة وعشرين وظيفة سنويا\nتصميم برنامج تهيئة للموظفين الجدد\nإعداد تقارير شهرية عن مؤشرات التوطين\nمنسقة توظيف\nمجموعة النخيل القابضة\n2018 إلى 2021\nتنظيم معارض التوظيف في الجامعات\nفرز السير الذاتية وجدولة المقابلات\nالتعليم\nبكالوريوس إدارة الموارد البشرية\nكلية الإمارات للإدارة\n2018\nالتواصل\nnoura.kaabi@example.com\n+971 56 555 0128\nأبوظبي، الإمارات العربية المتحدة\nالمهارات\nالتوظيف والاستقطاب\nخبير\nعلاقات الموظفين\nمتقدم\nالتدريب والتطوير\nمتقدم\nأنظمة الموارد البشرية\nمتوسط\nالتواصل الفعال\nخبير\nاللغات\nالعربية: اللغة الأم\nالإنجليزية: جيد جدا\nالشهادات المهنية\nشهادة أخصائي موارد بشرية معتمد"
+  ]
+ },
+ "mix_datasci__ats": {
+  "cv": "mix_datasci",
+  "lang": "mixed",
+  "layout": "ats",
+  "image": "mix_datasci__ats.png",
+  "truth": [
+   "سارة محمد العلي\nعالمة بيانات Data Scientist\nالتواصل\nsara.alali@example.com\n+971 50 555 0176\nدبي، الإمارات\nنبذة\nعالمة بيانات بخبرة سبع سنوات في بناء نماذج التعلم الآلي باستخدام Python و TensorFlow. طورت نموذج تنبؤ بالطلب حقق دقة 92 بالمئة.\nالخبرات\nعالمة بيانات أولى\nمركز البيانات الوطني\n2021 حتى الآن\nبناء نماذج تصنيف باستخدام XGBoost و scikit-learn\nتطوير لوحات متابعة في Power BI للإدارة العليا\nنشر النماذج على Azure Machine Learning\nمحللة بيانات\nشركة رؤية للاستشارات\n2017 إلى 2021\nتحليل بيانات العملاء باستخدام SQL و pandas\nإعداد تقارير ربع سنوية للعملاء\nالتعليم\nماجستير علوم البيانات\nجامعة الخليج التقنية\n2017\nالمهارات التقنية\nPython\nخبير\nTensorFlow\nمتقدم\nSQL\nخبير\nPower BI\nمتقدم\nالتعلم الآلي\nخبير\nاللغات\nالعربية: اللغة الأم\nEnglish: Fluent\nالشهادات\nMicrosoft Certified Azure Data Scientist Associate"
+  ]
+ },
+ "mix_datasci__designed": {
+  "cv": "mix_datasci",
+  "lang": "mixed",
+  "layout": "designed",
+  "image": "mix_datasci__designed.png",
+  "truth": [
+   "سارة محمد العلي\nعالمة بيانات Data Scientist\nالتواصل\nsara.alali@example.com\n+971 50 555 0176\nدبي، الإمارات\nالمهارات التقنية\nPython\nخبير\nTensorFlow\nمتقدم\nSQL\nخبير\nPower BI\nمتقدم\nالتعلم الآلي\nخبير\nاللغات\nالعربية: اللغة الأم\nEnglish: Fluent\nالشهادات\nMicrosoft Certified Azure Data Scientist Associate\nنبذة\nعالمة بيانات بخبرة سبع سنوات في بناء نماذج التعلم الآلي باستخدام Python و TensorFlow. طورت نموذج تنبؤ بالطلب حقق دقة 92 بالمئة.\nالخبرات\nعالمة بيانات أولى\nمركز البيانات الوطني\n2021 حتى الآن\nبناء نماذج تصنيف باستخدام XGBoost و scikit-learn\nتطوير لوحات متابعة في Power BI للإدارة العليا\nنشر النماذج على Azure Machine Learning\nمحللة بيانات\nشركة رؤية للاستشارات\n2017 إلى 2021\nتحليل بيانات العملاء باستخدام SQL و pandas\nإعداد تقارير ربع سنوية للعملاء\nالتعليم\nماجستير علوم البيانات\nجامعة الخليج التقنية\n2017",
+   "سارة محمد العلي\nعالمة بيانات Data Scientist\nنبذة\nعالمة بيانات بخبرة سبع سنوات في بناء نماذج التعلم الآلي باستخدام Python و TensorFlow. طورت نموذج تنبؤ بالطلب حقق دقة 92 بالمئة.\nالخبرات\nعالمة بيانات أولى\nمركز البيانات الوطني\n2021 حتى الآن\nبناء نماذج تصنيف باستخدام XGBoost و scikit-learn\nتطوير لوحات متابعة في Power BI للإدارة العليا\nنشر النماذج على Azure Machine Learning\nمحللة بيانات\nشركة رؤية للاستشارات\n2017 إلى 2021\nتحليل بيانات العملاء باستخدام SQL و pandas\nإعداد تقارير ربع سنوية للعملاء\nالتعليم\nماجستير علوم البيانات\nجامعة الخليج التقنية\n2017\nالتواصل\nsara.alali@example.com\n+971 50 555 0176\nدبي، الإمارات\nالمهارات التقنية\nPython\nخبير\nTensorFlow\nمتقدم\nSQL\nخبير\nPower BI\nمتقدم\nالتعلم الآلي\nخبير\nاللغات\nالعربية: اللغة الأم\nEnglish: Fluent\nالشهادات\nMicrosoft Certified Azure Data Scientist Associate"
+  ]
+ },
+ "mix_datasci__scanned": {
+  "cv": "mix_datasci",
+  "lang": "mixed",
+  "layout": "scanned",
+  "image": "mix_datasci__scanned.jpg",
+  "truth": [
+   "سارة محمد العلي\nعالمة بيانات Data Scientist\nالتواصل\nsara.alali@example.com\n+971 50 555 0176\nدبي، الإمارات\nنبذة\nعالمة بيانات بخبرة سبع سنوات في بناء نماذج التعلم الآلي باستخدام Python و TensorFlow. طورت نموذج تنبؤ بالطلب حقق دقة 92 بالمئة.\nالخبرات\nعالمة بيانات أولى\nمركز البيانات الوطني\n2021 حتى الآن\nبناء نماذج تصنيف باستخدام XGBoost و scikit-learn\nتطوير لوحات متابعة في Power BI للإدارة العليا\nنشر النماذج على Azure Machine Learning\nمحللة بيانات\nشركة رؤية للاستشارات\n2017 إلى 2021\nتحليل بيانات العملاء باستخدام SQL و pandas\nإعداد تقارير ربع سنوية للعملاء\nالتعليم\nماجستير علوم البيانات\nجامعة الخليج التقنية\n2017\nالمهارات التقنية\nPython\nخبير\nTensorFlow\nمتقدم\nSQL\nخبير\nPower BI\nمتقدم\nالتعلم الآلي\nخبير\nاللغات\nالعربية: اللغة الأم\nEnglish: Fluent\nالشهادات\nMicrosoft Certified Azure Data Scientist Associate"
+  ]
+ },
+ "mix_datasci__photo": {
+  "cv": "mix_datasci",
+  "lang": "mixed",
+  "layout": "photo",
+  "image": "mix_datasci__photo.jpg",
+  "truth": [
+   "سارة محمد العلي\nعالمة بيانات Data Scientist\nالتواصل\nsara.alali@example.com\n+971 50 555 0176\nدبي، الإمارات\nالمهارات التقنية\nPython\nخبير\nTensorFlow\nمتقدم\nSQL\nخبير\nPower BI\nمتقدم\nالتعلم الآلي\nخبير\nاللغات\nالعربية: اللغة الأم\nEnglish: Fluent\nالشهادات\nMicrosoft Certified Azure Data Scientist Associate\nنبذة\nعالمة بيانات بخبرة سبع سنوات في بناء نماذج التعلم الآلي باستخدام Python و TensorFlow. طورت نموذج تنبؤ بالطلب حقق دقة 92 بالمئة.\nالخبرات\nعالمة بيانات أولى\nمركز البيانات الوطني\n2021 حتى الآن\nبناء نماذج تصنيف باستخدام XGBoost و scikit-learn\nتطوير لوحات متابعة في Power BI للإدارة العليا\nنشر النماذج على Azure Machine Learning\nمحللة بيانات\nشركة رؤية للاستشارات\n2017 إلى 2021\nتحليل بيانات العملاء باستخدام SQL و pandas\nإعداد تقارير ربع سنوية للعملاء\nالتعليم\nماجستير علوم البيانات\nجامعة الخليج التقنية\n2017",
+   "سارة محمد العلي\nعالمة بيانات Data Scientist\nنبذة\nعالمة بيانات بخبرة سبع سنوات في بناء نماذج التعلم الآلي باستخدام Python و TensorFlow. طورت نموذج تنبؤ بالطلب حقق دقة 92 بالمئة.\nالخبرات\nعالمة بيانات أولى\nمركز البيانات الوطني\n2021 حتى الآن\nبناء نماذج تصنيف باستخدام XGBoost و scikit-learn\nتطوير لوحات متابعة في Power BI للإدارة العليا\nنشر النماذج على Azure Machine Learning\nمحللة بيانات\nشركة رؤية للاستشارات\n2017 إلى 2021\nتحليل بيانات العملاء باستخدام SQL و pandas\nإعداد تقارير ربع سنوية للعملاء\nالتعليم\nماجستير علوم البيانات\nجامعة الخليج التقنية\n2017\nالتواصل\nsara.alali@example.com\n+971 50 555 0176\nدبي، الإمارات\nالمهارات التقنية\nPython\nخبير\nTensorFlow\nمتقدم\nSQL\nخبير\nPower BI\nمتقدم\nالتعلم الآلي\nخبير\nاللغات\nالعربية: اللغة الأم\nEnglish: Fluent\nالشهادات\nMicrosoft Certified Azure Data Scientist Associate"
+  ]
+ }
+}

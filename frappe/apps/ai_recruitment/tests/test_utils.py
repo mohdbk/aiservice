@@ -231,5 +231,39 @@ class TestParsingMetrics(unittest.TestCase):
         self.assertEqual(u.norm_text("\u0625\u062f\u0627\u0631\u0629"), u.norm_text("\u0627\u062f\u0627\u0631\u0647"))
 
 
+class TestOcrPostProcessing(unittest.TestCase):
+    AR = "\u0627\u0644\u0645\u0647\u0646\u062f\u0633\u0629 \u0627\u0644\u0628\u0631\u0645\u062c\u064a\u0627\u062a \u0641\u064a \u0627\u0644\u0648\u0632\u0627\u0631\u0629"  # المهندسة البرمجيات في الوزارة
+
+    def test_arabic_ratio(self):
+        self.assertGreater(u.arabic_ratio(self.AR), 0.9)
+        self.assertEqual(u.arabic_ratio("Python engineer"), 0.0)
+
+    def test_reversed_arabic_is_fixed(self):
+        reversed_text = " ".join(w[::-1] for w in self.AR.split())
+        self.assertEqual(u.fix_reversed_arabic(reversed_text), self.AR)
+
+    def test_normal_arabic_untouched(self):
+        self.assertEqual(u.fix_reversed_arabic(self.AR), self.AR)
+        self.assertEqual(u.fix_reversed_arabic("Python 2020 FastAPI"), "Python 2020 FastAPI")
+
+    def test_order_lines_ltr_and_rtl(self):
+        w1, w2 = "\u0645\u0647\u0646\u062f\u0633", "\u0628\u0631\u0645\u062c\u064a\u0627\u062a"
+        items = [
+            {"text": "Engineer", "box": [120, 10, 200, 30]}, {"text": "Senior", "box": [50, 12, 110, 30]},
+            {"text": w2, "box": [50, 50, 110, 70]}, {"text": w1, "box": [120, 50, 200, 70]},  # RTL: w1 is first
+        ]
+        self.assertEqual(u.order_ocr_lines(items, 600), f"Senior Engineer\n{w1} {w2}")
+
+    def test_columns_not_interleaved(self):
+        items = [{"text": "Skills", "box": [20, 10, 80, 30]}, {"text": "Experience", "box": [300, 10, 400, 30]},
+                 {"text": "Python", "box": [20, 40, 80, 60]}, {"text": "MoET 2020", "box": [300, 40, 400, 60]}]
+        self.assertEqual(u.order_ocr_lines(items, 600).splitlines(), ["Skills", "Experience", "Python", "MoET 2020"])
+
+    def test_repetition_loop(self):
+        self.assertTrue(u.has_repetition_loop("Senior engineer at MoET\n" * 12))
+        self.assertTrue(u.has_repetition_loop("Python Python Python " * 30))
+        self.assertFalse(u.has_repetition_loop("Senior engineer\nPython, FastAPI\nMoET 2020 to 2024\nBSc IT"))
+
+
 if __name__ == "__main__":
     unittest.main()

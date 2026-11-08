@@ -270,6 +270,151 @@ def to_json_resume(profile: dict, name: str = "", email: str = "", phone: str = 
     return out
 
 
+# ---------------- OCR prompts (shared by production and the benchmark) ----------------
+VISION_OCR_PROMPT = ("Transcribe all text on these CV pages exactly, in natural reading order (Arabic right to left, "
+                     "columns one after another). Keep Arabic as Arabic. Output plain text only.")
+
+HYBRID_OCR_PROMPT = """You are given images of the pages of a CV and a DRAFT transcription of the same pages.
+The draft came from {source}. It may have wrong characters, wrong reading order (multi-column layouts,
+Arabic right-to-left text) and missing parts.
+Produce the complete, correct transcription in natural reading order: Arabic right to left, each column or
+sidebar in full before the next. Treat the images as the authority for what is on the page and for order.
+Use the draft to get exact spellings, names of tools and organisations, numbers, dates and emails.
+Do not add, summarise or explain anything that is not visible on the page. Output plain text only.
+
+DRAFT:
+{draft}"""
+
+
+def hybrid_result(text: str, draft: str) -> str:
+    """Keep the model's correction unless it is unusable (empty, looping or far shorter than the draft)."""
+    text, draft = (text or "").strip(), (draft or "").strip()
+    if not text or has_repetition_loop(text) or (draft and len(text) < 0.3 * len(draft)):
+        return draft or text
+    return text
+
+
+def markdown_to_text(md: str) -> str:
+    """Plain text from document-parser Markdown/HTML output (tables, headings, emphasis, images)."""
+    s = re.sub(r"!\[[^\]]*\]\([^)]*\)", " ", md or "")
+    s = re.sub(r"<img[^>]*>", " ", s, flags=re.I)
+    s = re.sub(r"</(td|th)>", " ", s, flags=re.I)
+    s = re.sub(r"<br\s*/?>|</tr>|</p>|</div>|</li>", "\n", s, flags=re.I)
+    s = re.sub(r"<[^>]+>", " ", s)
+    s = html.unescape(s)
+    s = re.sub(r"^\s*\|?\s*:?-{3,}.*$", "", s, flags=re.M)        # table separator rows
+    s = s.replace("|", " ")
+    s = re.sub(r"^\s{0,3}#{1,6}\s*", "", s, flags=re.M)
+    s = re.sub(r"(\*\*|__|\*|`)", "", s)
+    s = re.sub(r"^\s*[-*+]\s+", "", s, flags=re.M)
+    s = re.sub(r"\$+", "", s)
+    return re.sub(r"[ \t]+", " ", s).strip()
+
+
+def word_f1(truth: str, hyp: str) -> dict:
+    """Order-insensitive content accuracy: multiset word overlap after normalisation."""
+    from collections import Counter
+
+    t, h = Counter(tokens(truth)), Counter(tokens(hyp))
+    match = sum((t & h).values())
+    rec = match / max(sum(t.values()), 1)
+    prec = match / max(sum(h.values()), 1)
+    f1 = 2 * rec * prec / (rec + prec) if rec + prec else 0.0
+    return {"recall": round(rec, 3), "precision": round(prec, 3), "f1": round(f1, 3)}
+
+
+# ---------------- OCR post-processing ----------------
+_AR_CHAR = re.compile(r"[؀-ۿ]")
+_AR_WORD = re.compile(r"[؀-ۿ]+")
+
+
+def arabic_ratio(text: str) -> float:
+    letters = [c for c in text or "" if c.isalpha()]
+    return sum(1 for c in letters if _AR_CHAR.match(c)) / len(letters) if letters else 0.0
+
+
+def _rev_score(words: list) -> int:
+    """Positive when words look reversed: definite article 'ال' at the end instead of the start,
+    or final-only letters (ة, ى) at the start."""
+    score = 0
+    for w in words:
+        if len(w) < 3:
+            continue
+        if w.endswith("لا"):          # 'لا' at the end = reversed 'ال'
+            score += 1
+        if w.startswith("ال"):        # 'ال' at the start = normal
+            score -= 1
+        if w[0] in "ةى":              # ة / ى can only end a word
+            score += 1
+        if w[-1] in "ةى":
+            score -= 1
+    return score
+
+
+def fix_reversed_arabic(text: str) -> str:
+    """Some OCR engines emit Arabic in visual (reversed) order. Detect it from word shapes over the
+    whole text and, if reversed, reverse each Arabic run back to logical order."""
+    words = _AR_WORD.findall(text or "")
+    if len(words) < 3 or _rev_score(words) <= max(1, len(words) // 10):
+        return text
+    return _AR_WORD.sub(lambda m: m.group(0)[::-1], text)
+
+
+def order_ocr_lines(items: list, page_width: float = 0) -> str:
+    """items: [{'text', 'box': [x0, y0, x1, y1]}]. Groups boxes into lines by vertical overlap,
+    orders each line right-to-left when it is mostly Arabic, and keeps far-apart segments
+    (separate columns) on separate lines instead of interleaving them."""
+    boxes = [i for i in items if (i.get("text") or "").strip() and i.get("box")]
+    boxes.sort(key=lambda i: (i["box"][1] + i["box"][3]) / 2)
+    lines = []
+    for b in boxes:
+        y0, y1 = b["box"][1], b["box"][3]
+        cy, h = (y0 + y1) / 2, max(y1 - y0, 1)
+        for line in lines:
+            if abs(line["cy"] - cy) <= 0.5 * max(h, line["h"]):
+                line["items"].append(b)
+                line["cy"] = (line["cy"] * (len(line["items"]) - 1) + cy) / len(line["items"])
+                break
+        else:
+            lines.append({"cy": cy, "h": h, "items": [b]})
+    width = page_width or max((i["box"][2] for i in boxes), default=0)
+    gap_limit = 0.12 * width if width else float("inf")
+    out = []
+    for line in sorted(lines, key=lambda l: l["cy"]):
+        rtl = arabic_ratio(" ".join(i["text"] for i in line["items"])) > 0.5
+        segs, cur = [], []
+        for it in sorted(line["items"], key=lambda i: i["box"][0]):
+            if cur and it["box"][0] - cur[-1]["box"][2] > gap_limit:
+                segs.append(cur)
+                cur = []
+            cur.append(it)
+        if cur:
+            segs.append(cur)
+        if rtl:
+            segs = [list(reversed(s)) for s in reversed(segs)]
+        out += [" ".join(i["text"].strip() for i in s) for s in segs]
+    return "\n".join(out)
+
+
+def has_repetition_loop(text: str, min_repeats: int = 4) -> bool:
+    """True when a model output degenerates into repeating the same line or phrase."""
+    lines = [l.strip() for l in (text or "").splitlines() if len(l.strip()) > 8]
+    if lines:
+        counts = {}
+        for l in lines:
+            counts[l] = counts.get(l, 0) + 1
+        if max(counts.values()) >= min_repeats and max(counts.values()) / len(lines) > 0.3:
+            return True
+    words = (text or "").split()
+    for n in (3, 5, 8):
+        grams = [" ".join(words[i:i + n]) for i in range(0, max(len(words) - n + 1, 0))]
+        if grams:
+            top = max(grams.count(g) for g in set(grams))
+            if top >= min_repeats * 2 and top * n / len(words) > 0.4:
+                return True
+    return False
+
+
 # ---------------- parsing accuracy ----------------
 _AR_NORMALISE = str.maketrans({
     "أ": "ا", "إ": "ا", "آ": "ا",  # alef forms -> alef
