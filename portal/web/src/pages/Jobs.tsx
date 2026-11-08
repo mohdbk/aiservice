@@ -64,7 +64,7 @@ export default function Jobs() {
     <>
       <section className="mc-hero border-b border-aeblack-100">
         <div className="container mx-auto px-4 py-12 md:py-16">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-primary-700">{t("jobs.hero_eyebrow")}</p>
+          <p className="mb-3 text-sm font-semibold text-primary-700">{t("jobs.hero_eyebrow")}</p>
           <h1 className="max-w-3xl font-heading text-3xl font-bold leading-tight text-aeblack-950 md:text-5xl">{t("jobs.hero_title")}</h1>
           <p className="mt-4 max-w-2xl text-lg text-aeblack-700">{t("jobs.hero_body")}</p>
 
