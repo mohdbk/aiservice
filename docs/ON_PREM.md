@@ -160,7 +160,7 @@ Alternatively set environment variables on the backend and worker containers: `L
 
 ### OCR benchmark result (November 2026)
 
-`benchmark/ocr` compares engines on 20 fictional CV pages with exact ground truth: 2 English, 2 Arabic, 1 mixed,
+An OCR benchmark (run once on the demo, code since removed) compared engines on 20 fictional CV pages with exact ground truth: 2 English, 2 Arabic, 1 mixed,
 each as ATS, designed two-column, scanned and phone photo. Content accuracy is word F1 (0 to 1). Times were measured
 on the demo's 8 vCPU / 8 GB server with no GPU.
 

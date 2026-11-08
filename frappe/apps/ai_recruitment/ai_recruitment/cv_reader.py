@@ -1,6 +1,6 @@
 """Read any CV, Arabic or English, ATS-style or not.
 
-Pipeline (the winner of benchmark/ocr: PaddleOCR draft corrected by the vision model):
+Pipeline (the OCR benchmark winner, see docs/ON_PREM.md: PaddleOCR draft corrected by the vision model):
 - ATS-style PDF (single column, real text layer): use the text layer.
 - Designed / multi-column PDF: the text layer has exact characters but scrambled order, so it is
   used as the draft and the vision model rewrites it in reading order from the page images.

@@ -9,7 +9,7 @@ By the **Ministry of Economy & Tourism**. AI CV screening and a recruitment assi
   evidence, must-have gaps and an English + Arabic summary, plus an audit comment.
 - **Any CV, Arabic or English, ATS-style or not.** ATS-style PDFs use the text layer. Designed PDFs, scans and
   photos use the benchmark winner: a PaddleOCR PP-OCRv5 draft (or the PDF text layer) corrected by the vision model
-  from the page images (see `benchmark/ocr`). DOCX tables
+  from the page images (see the OCR benchmark in `docs/ON_PREM.md`). DOCX tables
   and text boxes are included. Every CV is parsed into a JSON Resume shaped profile with computed years of
   experience, which can be downloaded as JSON Resume. **AI OCR Test** measures reading accuracy on your own sample CVs.
 - **Recruitment Assistant.** The **Ask AI** panel appears on every Desk page for allowed roles. Replies stream live

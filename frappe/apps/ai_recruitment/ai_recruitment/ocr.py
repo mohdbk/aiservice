@@ -1,4 +1,4 @@
-"""CV OCR: PaddleOCR PP-OCRv5 draft corrected by the vision model (the benchmark winner, see benchmark/ocr).
+"""CV OCR: PaddleOCR PP-OCRv5 draft corrected by the vision model (the OCR benchmark winner, see docs/ON_PREM.md).
 
 If one half is unavailable the other is used alone, so a CV is never left unread:
 - normal:              PaddleOCR draft (or a PDF's own text layer) + page images -> vision model

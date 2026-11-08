@@ -169,7 +169,7 @@
   },
   {
    "default": "Auto",
-   "description": "Auto: ATS-style PDFs use their text layer; designed PDFs, scans and photos use a PaddleOCR PP-OCRv5 draft (or the PDF text layer) corrected by the vision model, the best option in benchmark/ocr. Off: text layer only, nothing is OCR'd.",
+   "description": "Auto: ATS-style PDFs use their text layer; designed PDFs, scans and photos use a PaddleOCR PP-OCRv5 draft (or the PDF text layer) corrected by the vision model, the best option in the OCR benchmark (docs/ON_PREM.md). Off: text layer only, nothing is OCR'd.",
    "fieldname": "ocr_mode",
    "fieldtype": "Select",
    "label": "CV Reading Mode",
