@@ -10,7 +10,7 @@
  "nav.create_account": "Create account",
  "nav.my_applications": "My applications",
  "nav.sign_out": "Sign out",
- "nav.ministry_website": "Ministry website",
+ "nav.ministry_website": "Ministry Website",
  "nav.signed_in_as": "Signed in as {name}",
  "footer.portal_links": "Careers portal",
  "a11y.skip": "Skip to content",
@@ -173,7 +173,7 @@
  "error.connection": "Connection problem. Please check your internet and try again.",
  "auth.account_note": "Careers portal accounts are only for applying for jobs, tracking your applications and taking exams if required.",
  "site.official_note": "Official careers portal of the Ministry of Economy & Tourism",
- "nav.go_to_ministry": "Ministry website",
+ "nav.go_to_ministry": "Ministry Website",
  "nav.opens_new_tab": "opens in a new tab",
  "a11y.text_size": "Text size",
  "a11y.reset": "Reset to default"
