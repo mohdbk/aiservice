@@ -36,6 +36,9 @@ def _engine(lang):
         use_doc_unwarping=False,
         use_textline_orientation=False,
         device=os.environ.get("PADDLEOCR_DEVICE", "cpu"),
+        # oneDNN is off by default: PaddlePaddle 3.3 on CPU fails with
+        # "ConvertPirAttribute2RuntimeAttribute not support" when it is on.
+        enable_mkldnn=os.environ.get("PADDLEOCR_ENABLE_MKLDNN", "0") == "1",
         )
     return _ENGINES[lang]
 

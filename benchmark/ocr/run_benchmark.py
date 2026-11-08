@@ -8,8 +8,8 @@ Engines
   hybrid_paddle    PP-OCRv5 draft + image -> Qwen3.8 (production hybrid prompt and guard)
   hybrid_vl        PaddleOCR-VL draft + image -> Qwen3.8
 
-Metrics per page: word recall / precision / F1 (order-insensitive content), CER (order-sensitive,
-best of the allowed reading orders), seconds. Results are printed as lines starting with BENCH.
+Local Paddle engines run in worker subprocesses so a native crash only loses one page; API engines run
+in a thread pool and are recorded as they finish. Results are printed as lines starting with BENCH.
 """
 import base64
 import concurrent.futures as cf
@@ -20,10 +20,9 @@ import pathlib
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import traceback
-
-import requests
 
 HERE = pathlib.Path(__file__).parent
 sys.path.insert(0, str(HERE / "app"))
@@ -34,13 +33,15 @@ MODEL = os.environ.get("LLM_MODEL", "qwen/qwen3.8-27b")
 BASE = os.environ.get("LLM_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/")
 KEY = os.environ.get("LLM_API_KEY", "")
 ONLY = [e for e in os.environ.get("BENCH_ENGINES", "").split(",") if e]
+MARK = "@@R@@"
+os.environ.setdefault("FLAGS_use_mkldnn", "0")
 
 
 def log(*a):
     print(*a, flush=True)
 
 
-# ---------------- engines ----------------
+# ---------------- local engines (run inside worker processes) ----------------
 def tesseract(path):
     r = subprocess.run(["tesseract", path, "stdout", "-l", "ara+eng"], capture_output=True, timeout=300)
     return r.stdout.decode("utf-8", "ignore")
@@ -60,12 +61,14 @@ def paddleocr_vl(path):
     from paddleocr import PaddleOCRVL
 
     if _VL is None:
-        kwargs = {"device": "cpu"}
-        try:
-            _VL = PaddleOCRVL(markdown_ignore_labels=[], **kwargs)
-        except TypeError:
-            _VL = PaddleOCRVL(**kwargs)
-        log("BENCH-INFO paddleocr_vl ready")
+        base = {"device": "cpu", "enable_mkldnn": False}
+        for extra in ({"markdown_ignore_labels": []}, {}):
+            try:
+                _VL = PaddleOCRVL(**extra, **base)
+                break
+            except TypeError:
+                continue
+        print("BENCH-INFO paddleocr_vl ready", file=sys.stderr, flush=True)
     with tempfile.TemporaryDirectory() as tmp:
         for res in _VL.predict(path):
             res.save_to_markdown(save_path=tmp)
@@ -74,6 +77,42 @@ def paddleocr_vl(path):
     return U.markdown_to_text(md)
 
 
+def worker(engine, paths):
+    """Process pages one by one, emitting one result line per page."""
+    fn = globals()[engine]
+    for path in paths:
+        t0 = time.time()
+        try:
+            text, err = fn(path), None
+        except Exception as e:
+            traceback.print_exc()
+            text, err = "", f"{type(e).__name__}: {str(e)[:200]}"
+        sys.stdout.write(MARK + json.dumps({"path": path, "text": text, "seconds": round(time.time() - t0, 1),
+                                            "error": err}, ensure_ascii=False) + "\n")
+        sys.stdout.flush()
+
+
+def run_worker(engine, paths, on_result):
+    """Run a worker; if it dies, record the page it was on as failed and restart after it."""
+    remaining = list(paths)
+    while remaining:
+        proc = subprocess.Popen([sys.executable, __file__, "--worker", engine, *remaining],
+                                stdout=subprocess.PIPE, text=True, encoding="utf-8")
+        done = []
+        for line in proc.stdout:
+            if line.startswith(MARK):
+                r = json.loads(line[len(MARK):])
+                done.append(r["path"])
+                on_result(r)
+        proc.wait()
+        remaining = [p for p in remaining if p not in done]
+        if remaining:
+            on_result({"path": remaining[0], "text": "", "seconds": 0.0,
+                       "error": f"worker crashed (exit code {proc.returncode})"})
+            remaining = remaining[1:]
+
+
+# ---------------- API engines ----------------
 def _img_part(path):
     mime = "image/jpeg" if path.endswith(".jpg") else "image/png"
     with open(path, "rb") as f:
@@ -81,23 +120,26 @@ def _img_part(path):
 
 
 def _chat(prompt, path):
+    import requests
+
     body = {"model": MODEL, "temperature": 0, "max_tokens": 8000,
             "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}, _img_part(path)]}]}
     if "openrouter.ai" in BASE:
         body["provider"] = {"data_collection": "deny"}
         body["reasoning"] = {"enabled": False}
-    for attempt in range(3):
+    for attempt in range(4):
         r = requests.post(f"{BASE}/chat/completions", json=body, timeout=300,
                           headers={"Authorization": f"Bearer {KEY}", "X-Title": "MoET OCR benchmark"})
         if r.status_code == 400 and "reasoning" in body:
             body.pop("reasoning")
             continue
-        if r.status_code in (429, 500, 502, 503) and attempt < 2:
+        if r.status_code in (408, 429, 500, 502, 503, 504) and attempt < 3:
             time.sleep(10 * (attempt + 1))
             continue
-        r.raise_for_status()
+        if r.status_code >= 400:
+            raise RuntimeError(f"HTTP {r.status_code}: {r.text[:200]}")
         return r.json()["choices"][0]["message"].get("content") or ""
-    raise RuntimeError("LLM request failed")
+    raise RuntimeError("LLM request failed after retries")
 
 
 def qwen_vision(path):
@@ -110,21 +152,20 @@ def hybrid(path, draft, source):
     return U.hybrid_result(_chat(prompt, path), draft)
 
 
+def timed(fn, *a):
+    t0 = time.time()
+    try:
+        return fn(*a), round(time.time() - t0, 1), None
+    except Exception as e:
+        traceback.print_exc()
+        return "", round(time.time() - t0, 1), f"{type(e).__name__}: {str(e)[:200]}"
+
+
 # ---------------- scoring ----------------
 def score(text, truths):
     f1 = max((U.word_f1(t, text) for t in truths), key=lambda r: r["f1"])
     cer = min(U.error_rates(t, text)["cer"] for t in truths)
     return {**f1, "cer": cer}
-
-
-def timed(fn, *a):
-    t0 = time.time()
-    try:
-        out = fn(*a)
-        return out, round(time.time() - t0, 1), None
-    except Exception as e:
-        traceback.print_exc()
-        return "", round(time.time() - t0, 1), f"{type(e).__name__}: {str(e)[:200]}"
 
 
 def main():
@@ -137,71 +178,80 @@ def main():
         engines = [e for e in engines if not e.startswith(("qwen", "hybrid"))]
     log(f"BENCH-INFO pages={len(truth)} engines={engines} model={MODEL}")
 
-    results = {}  # (page, engine) -> dict
-    outputs = {}
+    pages = sorted(truth)
+    path_of = {p: str(DATA / truth[p]["image"]) for p in pages}
+    page_of = {v: k for k, v in path_of.items()}
+    results, outputs, lock = {}, {}, threading.Lock()
     pool = cf.ThreadPoolExecutor(max_workers=4)
-    futures = {}
+    futures = []
 
     def record(page, eng, text, secs, err):
         r = {"page": page, "engine": eng, "seconds": secs, "error": err, **score(text, truth[page]["truth"])}
-        results[(page, eng)] = r
-        outputs[(page, eng)] = text
+        with lock:
+            results[(page, eng)] = r
+            outputs[(page, eng)] = text
         log("BENCH " + json.dumps({k: r[k] for k in ("page", "engine", "f1", "recall", "precision", "cer", "seconds", "error")},
                                   ensure_ascii=False))
 
-    pages = sorted(truth)
-    # Local engines run sequentially (CPU-bound); API engines run in a thread pool meanwhile.
-    for page in pages:
-        path = str(DATA / truth[page]["image"])
-        if "qwen_vision" in engines:
-            futures[pool.submit(timed, qwen_vision, path)] = (page, "qwen_vision")
-        for eng in ("tesseract", "paddleocr"):
-            if eng in engines:
-                record(page, eng, *timed(globals()[eng], path))
-        if "hybrid_paddle" in engines:
-            draft = outputs.get((page, "paddleocr")) or outputs.get((page, "tesseract")) or ""
-            src = "the PaddleOCR engine" if outputs.get((page, "paddleocr")) else "the Tesseract OCR engine"
-            futures[pool.submit(timed, hybrid, path, draft, src)] = (page, "hybrid_paddle")
-    for page in pages:
-        path = str(DATA / truth[page]["image"])
-        if "paddleocr_vl" in engines:
-            record(page, "paddleocr_vl", *timed(paddleocr_vl, path))
-            if "hybrid_vl" in engines and outputs.get((page, "paddleocr_vl")):
-                futures[pool.submit(timed, hybrid, path, outputs[(page, "paddleocr_vl")],
-                                    "the PaddleOCR-VL document parser")] = (page, "hybrid_vl")
-    for fut in cf.as_completed(futures):
-        page, eng = futures[fut]
-        record(page, eng, *fut.result())
+    def submit(eng, fn, *args, page):
+        fut = pool.submit(timed, fn, *args)
+        fut.add_done_callback(lambda f: record(page, eng, *f.result()))
+        futures.append(fut)
+
+    if "qwen_vision" in engines:
+        for p in pages:
+            submit("qwen_vision", qwen_vision, path_of[p], page=p)
+
+    def local(eng, hybrid_name, source):
+        def on_result(r):
+            page = page_of[r["path"]]
+            record(page, eng, r["text"], r["seconds"], r["error"])
+            if hybrid_name in engines:
+                draft = r["text"] or outputs.get((page, "tesseract"), "")
+                src = source if r["text"] else "the Tesseract OCR engine"
+                submit(hybrid_name, hybrid, r["path"], draft, src, page=page)
+        run_worker(eng, [path_of[p] for p in pages], on_result)
+
+    if "tesseract" in engines:
+        run_worker("tesseract", [path_of[p] for p in pages],
+                   lambda r: record(page_of[r["path"]], "tesseract", r["text"], r["seconds"], r["error"]))
+    if "paddleocr" in engines:
+        local("paddleocr", "hybrid_paddle", "the PaddleOCR engine")
+    if "paddleocr_vl" in engines:
+        local("paddleocr_vl", "hybrid_vl", "the PaddleOCR-VL document parser")
+    cf.wait(futures)
     pool.shutdown()
 
     # ---------------- summary ----------------
     def agg(rows):
-        ok = [r for r in rows if not r["error"]]
         n = len(rows)
         if not n:
             return None
-        mean = lambda k: round(sum(r[k] for r in rows) / n, 3)  # errors count as zero-accuracy pages
-        return {"pages": n, "errors": n - len(ok), "f1": mean("f1"), "recall": mean("recall"),
-                "precision": mean("precision"), "cer": round(sum(r["cer"] for r in rows) / n, 3),
+        mean = lambda k: round(sum(r[k] for r in rows) / n, 3)  # failed pages count as zero accuracy
+        return {"pages": n, "errors": sum(1 for r in rows if r["error"]), "f1": mean("f1"), "recall": mean("recall"),
+                "precision": mean("precision"), "cer": mean("cer"),
                 "sec_per_page": round(sum(r["seconds"] for r in rows) / n, 1)}
 
     summary = {}
     for eng in engines:
         rows = [r for (p, e), r in results.items() if e == eng]
         summary[eng] = {"all": agg(rows)}
-        for seg_key in ("lang", "layout"):
-            for seg in sorted({truth[p][seg_key] for p in pages}):
-                summary[eng][f"{seg_key}:{seg}"] = agg([r for r in rows if truth[r["page"]][seg_key] == seg])
+        for key in ("lang", "layout"):
+            for seg in sorted({truth[p][key] for p in pages}):
+                summary[eng][f"{key}:{seg}"] = agg([r for r in rows if truth[r["page"]][key] == seg])
     for eng, segs in summary.items():
         log("BENCH-SUMMARY " + json.dumps({"engine": eng, **segs}, ensure_ascii=False))
     ranked = sorted((s["all"]["f1"], eng) for eng, s in summary.items() if s["all"])
     log("BENCH-RANKING " + " > ".join(f"{e} ({f:.3f})" for f, e in reversed(ranked)))
-    # A few worst outputs for inspection
     for (page, eng), text in sorted(outputs.items()):
         if results[(page, eng)]["f1"] < 0.6:
-            log("BENCH-SAMPLE " + json.dumps({"page": page, "engine": eng, "text": text[:600]}, ensure_ascii=False))
+            log("BENCH-SAMPLE " + json.dumps({"page": page, "engine": eng, "error": results[(page, eng)]["error"],
+                                              "text": text[:400]}, ensure_ascii=False))
     log("BENCH-DONE")
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 2 and sys.argv[1] == "--worker":
+        worker(sys.argv[2], sys.argv[3:])
+    else:
+        main()
