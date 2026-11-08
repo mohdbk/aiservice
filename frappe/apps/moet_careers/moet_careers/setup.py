@@ -1,3 +1,4 @@
+import json
 import os
 
 import frappe
@@ -9,16 +10,17 @@ SERVICE_USER = "careers-portal@service.invalid"
 
 CUSTOM_FIELDS = {
     "Job Opening": [
-        {"fieldname": "portal_translations_section", "fieldtype": "Section Break", "label": "Portal Translations",
-         "insert_after": "description", "collapsible": 1},
+        # Own tabs at the end of the form, so they are visible whatever the form's saved field order is.
+        {"fieldname": "portal_translations_tab", "fieldtype": "Tab Break", "label": "Translations",
+         "insert_after": "column_break_pfir"},
         {"fieldname": "portal_translations", "fieldtype": "Table", "options": "Job Opening Translation",
-         "label": "Translations", "insert_after": "portal_translations_section",
-         "description": "One row per portal language. Use Suggest Translations for drafts; only Approved rows are shown "
-                        "on the portal, otherwise the job is shown in its original language."},
-        {"fieldname": "assessment_stages_section", "fieldtype": "Section Break", "label": "Assessments",
-         "insert_after": "portal_translations", "collapsible": 1},
+         "label": "Translations", "insert_after": "portal_translations_tab",
+         "description": "One row per portal language. Use Portal > Suggest Translations for drafts; only Approved rows "
+                        "are shown on the portal, otherwise the job is shown in its original language."},
+        {"fieldname": "assessment_stages_tab", "fieldtype": "Tab Break", "label": "Assessments",
+         "insert_after": "portal_translations"},
         {"fieldname": "assessment_stages", "fieldtype": "Table", "options": "Job Assessment Stage", "label": "Assessments",
-         "insert_after": "assessment_stages_section",
+         "insert_after": "assessment_stages_tab",
          "description": "Tests for this job, in order. 'When They Apply' tests are sent automatically to every new applicant."},
     ],
     "User": [
@@ -47,8 +49,16 @@ CUSTOM_FIELDS = {
 }
 
 
+OLD_FIELDS = ("Job Opening-portal_translations_section", "Job Opening-assessment_stages_section")
+
+
 def after_migrate():
+    for name in OLD_FIELDS:
+        if frappe.db.exists("Custom Field", name):
+            frappe.delete_doc("Custom Field", name, ignore_permissions=True, force=True)
     create_custom_fields(CUSTOM_FIELDS, ignore_validate=True, update=True)
+    _fix_field_order("Job Opening", ["portal_translations_tab", "portal_translations", "assessment_stages_tab", "assessment_stages"])
+    frappe.clear_cache(doctype="Job Opening")
     _settings_defaults()
     _backfill_verified()
     ensure_service_user()
@@ -73,6 +83,18 @@ def _settings_defaults():
                 s.append("languages", {"language": code, "enabled": 1})
         s.flags.ignore_permissions = True
         s.save()
+
+
+def _fix_field_order(doctype: str, fields: list):
+    """If the form's field order was saved in Customize Form, put our fields at its end in the right order."""
+    ps = frappe.db.get_value("Property Setter", {"doc_type": doctype, "property": "field_order"}, ["name", "value"], as_dict=True)
+    if not ps:
+        return
+    try:
+        order = [f for f in json.loads(ps.value) if f not in fields] + fields
+    except ValueError:
+        return
+    frappe.db.set_value("Property Setter", ps.name, "value", json.dumps(order), update_modified=False)
 
 
 def _backfill_verified():

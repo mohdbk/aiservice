@@ -39,7 +39,7 @@ HR user ──► Desk "Ask AI" panel ──► ai_recruitment.api.chat (session
 | ERPNext base image | `frappe/erpnext:v16.54.0` | `frappe/Dockerfile` (`ERPNEXT_IMAGE`) |
 | Frappe HR | `v16.53.1` | `frappe/Dockerfile` (`HRMS_VERSION`) |
 | ai_recruitment | `0.6.1` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
-| moet_careers | `0.4.1` | `frappe/apps/moet_careers/moet_careers/__init__.py` |
+| moet_careers | `0.4.2` | `frappe/apps/moet_careers/moet_careers/__init__.py` |
 | Careers portal | `0.1.0` (Node 22, React 18.3, Vite 5.4) | `portal/web/package.json`, `portal/server/package.json` |
 | UAE Design System | `@aegov/design-system 3.0.7` + Tailwind `4.1.17` | `portal/web/package.json` |
 | Demo LLM | `qwen/qwen3.8-27b` (OpenRouter) | AI Recruitment Settings |
@@ -307,8 +307,7 @@ How it fits Frappe HR:
   and key; only **Approved** rows are used). For a new language, choose it in MoET Careers Settings and click
   **Suggest Portal Text**: the on-prem model drafts every string as **Suggested**. HR reviews them in Portal
   Text and sets them to Approved (editing a draft approves it). Until then the portal falls back to English.
-- **Job titles and descriptions:** each Job Opening has a **Portal Translations** table, one row per
-  language. HR can type a translation, or click **Portal > Suggest Translations** for drafts of the missing
+- **Job titles and descriptions:** each Job Opening has a **Translations** tab (one row per language). HR can type a translation, or click **Portal > Suggest Translations** for drafts of the missing
   languages. Drafts are **Suggested** and are not shown; HR checks or replaces the text and sets the row to
   Approved (editing approves it; the approver is recorded). Without an approved row the job is shown in its
   original language, marked with the right `lang` and direction.
@@ -321,7 +320,7 @@ account note). Nothing on the candidate side mentions AI.
 |---|---|
 | **Assessment Question** | The bank. Types: Single Choice, Multiple Choice, True or False, Short Answer, Number (marked automatically), Essay and File Upload (marked by people against a rubric). Category, job family, difficulty, points. |
 | **Assessment** | A test: type (Knowledge Test, Language Check, Situational Judgement, Case Study, Technical Task, Aptitude, Personality, Other), instructions, pass mark, attempts allowed, which score counts (highest or latest), shuffle settings, whether candidates see their score. **Sections**, each with its own time limit and optional pass mark. **Questions** per section: picked one by one or drawn at random from the bank (for example 10 medium Excel questions). |
-| **Job Opening > Assessments** | Several tests per job, in order, each sent **When They Apply** or **Manually**, with a deadline and a weight. |
+| **Job Opening > Assessments tab** | Several tests per job, in order, each sent **When They Apply** or **Manually**, with a deadline and a weight. |
 | **Assessment Invitation** | One candidate and one test: deadline, attempts allowed and used, extra time (accessibility), score and result. Buttons: **Allow Re-exam** (extra attempts and a new deadline, emails the candidate), **Cancel Invitation**. |
 | **Assessment Attempt** | One attempt, with its questions frozen when it started (later edits never change it), answers, a mark per question, section scores, and integrity counters (times the candidate left the page, pastes). |
 
