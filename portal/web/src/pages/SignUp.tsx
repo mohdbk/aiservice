@@ -1,3 +1,4 @@
+import { Envelope, LockSimple, SignIn as SignInIcon, UserCircle, UserPlus } from "@phosphor-icons/react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError } from "../api";
@@ -46,20 +47,20 @@ export default function SignUp() {
       ) : (
         <form onSubmit={submit} className="mc-surface space-y-5 rounded-2xl border border-aeblack-100 bg-white p-6" noValidate>
           <div ref={errRef}>{error ? <Alert tone="error" title={errorText(error)} /> : null}</div>
-          <Field id="full_name" label={t("auth.full_name")}>
+          <Field id="full_name" label={t("auth.full_name")} prefix={UserCircle}>
             <input id="full_name" value={form.full_name} onChange={(e) => set("full_name")(e.target.value)} autoComplete="name" required maxLength={140} />
           </Field>
-          <Field id="email" label={t("auth.email")}>
+          <Field id="email" label={t("auth.email")} prefix={Envelope}>
             <input id="email" type="email" value={form.email} onChange={(e) => set("email")(e.target.value)} autoComplete="email" required maxLength={200} inputMode="email" dir="ltr" />
           </Field>
-          <Field id="password" label={t("auth.password")} hint={t("auth.password_hint")}>
+          <Field id="password" label={t("auth.password")} hint={t("auth.password_hint")} prefix={LockSimple}>
             <PasswordInput id="password" value={form.password} onChange={set("password")} autoComplete="new-password" describedBy="password-hint" />
           </Field>
-          <button type="submit" className="aegov-btn btn-block" disabled={busy || !form.full_name || !form.email || !form.password}>{busy ? t("auth.working") : t("auth.signup_button")}</button>
+          <button type="submit" className="aegov-btn btn-block" disabled={busy || !form.full_name || !form.email || !form.password}><UserPlus size={20} aria-hidden="true" />{busy ? t("auth.working") : t("auth.signup_button")}</button>
         </form>
       )}
       <p className="mt-6 text-center text-aeblack-700">
-        {t("auth.have_account")} <Link className="font-semibold text-primary-700 underline" to={`${path("/sign-in")}?next=${encodeURIComponent(next)}`}>{t("auth.sign_in_link")}</Link>
+        {t("auth.have_account")} <Link className="font-semibold text-primary-700 underline" to={`${path("/sign-in")}?next=${encodeURIComponent(next)}`}><SignInIcon size={20} className="me-1 inline align-text-bottom rtl:-scale-x-100" aria-hidden="true" />{t("auth.sign_in_link")}</Link>
       </p>
     </div>
   );

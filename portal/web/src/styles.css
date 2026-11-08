@@ -64,3 +64,11 @@ footer a:hover, nav a.mc-underline-hover:hover { text-decoration: underline; }
 [dir="rtl"] .aegov-form-control .form-control-input > select { background-position: left .75rem center; }
 .aegov-form-control .form-control-input > textarea { min-height: 7rem; resize: vertical; }
 .aegov-form-control .form-control-input > input::placeholder { color: var(--color-aeblack-400); }
+
+/* Text in another language keeps its own font (for example "العربية" on English pages) */
+html:not([lang|="ar"]) [lang|="ar"] { font-family: var(--font-notokufi), "Noto Kufi Arabic", sans-serif; }
+html[lang|="ar"] [lang|="en"] { font-family: var(--font-inter), "Inter", sans-serif; }
+
+/* Input with a leading icon (design system .control-prefix) */
+.aegov-form-control .form-control-input > .control-prefix + input,
+.aegov-form-control .form-control-input > .control-prefix + select { padding-inline-start: .5rem; }

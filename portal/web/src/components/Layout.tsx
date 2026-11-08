@@ -1,4 +1,8 @@
-import { ReactNode, useEffect, useRef, useState } from "react";
+import {
+  ArrowCounterClockwise, ArrowSquareOut, Briefcase, CaretDown, CircleHalf, Files, Globe, List, PersonArmsSpread,
+  SignIn as SignInIcon, SignOut, TextAa, UserCircle, UserPlus, X,
+} from "@phosphor-icons/react";
+import { ReactNode, RefObject, useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
 import { useSite } from "../site";
@@ -28,6 +32,19 @@ function applyA11y(size: string, contrast: boolean) {
   html.classList.toggle("mc-contrast", contrast);
 }
 
+function usePopover(open: boolean, close: () => void, ref: RefObject<HTMLElement>, button: RefObject<HTMLElement>) {
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) close(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { close(); button.current?.focus(); } };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
+  }, [open, close, ref, button]);
+}
+
+const barBtn = "inline-flex items-center gap-1.5 rounded px-2 py-1 text-aeblack-700 hover:bg-aeblack-100 hover:text-primary-700";
+
 function A11yTools() {
   const { t } = useSite();
   const [size, setSize] = useState(() => store.get("mc-text") || "md");
@@ -40,47 +57,39 @@ function A11yTools() {
     store.set("mc-text", size);
     store.set("mc-contrast", contrast ? "1" : "0");
   }, [size, contrast]);
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { setOpen(false); buttonRef.current?.focus(); } };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
-  }, [open]);
+  usePopover(open, () => setOpen(false), ref, buttonRef);
   const idx = SIZES.indexOf(size as (typeof SIZES)[number]);
   const step = (d: number) => setSize(SIZES[Math.max(0, Math.min(3, idx + d))]);
-  const sizeBtn = "flex h-10 flex-1 items-center justify-center rounded-lg border font-semibold disabled:opacity-40";
+  const sizeBtn = "flex h-11 flex-1 items-center justify-center rounded-lg border font-semibold disabled:opacity-40";
   return (
     <div className="relative" ref={ref}>
-      <button ref={buttonRef} type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls="a11y-panel"
-        className="inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-aeblack-700 hover:bg-aeblack-100 hover:text-primary-700">
-        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <circle cx="12" cy="4.5" r="1.5" /><path d="M5 8l7 1.5L19 8M12 9.5V14m0 0-3 6m3-6 3 6" />
-        </svg>
+      <button ref={buttonRef} type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls="a11y-panel" className={barBtn}>
+        <PersonArmsSpread size={20} aria-hidden="true" />
         <span className="hidden sm:inline">{t("a11y.tools")}</span>
         <span className="sr-only sm:hidden">{t("a11y.tools")}</span>
-        <svg className={`h-3 w-3 transition ${open ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+        <CaretDown size={16} className={`transition ${open ? "rotate-180" : ""}`} aria-hidden="true" />
       </button>
       {open && (
         <div id="a11y-panel" role="group" aria-label={t("a11y.tools")}
-          className="absolute end-0 z-40 mt-2 w-64 rounded-xl border border-aeblack-100 bg-white p-4 text-aeblack-800 shadow-xl">
-          <p className="mb-2 text-sm font-semibold">{t("a11y.text_size")}</p>
+          className="absolute end-0 z-40 mt-2 w-72 rounded-xl border border-aeblack-100 bg-white p-4 text-aeblack-800 shadow-xl">
+          <p className="mb-3 flex items-center gap-2 text-sm font-semibold"><TextAa size={24} className="text-primary-600" aria-hidden="true" />{t("a11y.text_size")}</p>
           <div className="flex gap-2" dir="ltr">
             <button type="button" className={`${sizeBtn} border-aeblack-200 text-sm hover:bg-primary-50`} onClick={() => step(-1)} disabled={idx <= 0} aria-label={t("a11y.smaller")}>A-</button>
             <button type="button" className={`${sizeBtn} ${size === "md" ? "border-primary-600 bg-primary-50 text-primary-800" : "border-aeblack-200 hover:bg-primary-50"}`} onClick={() => setSize("md")} aria-pressed={size === "md"} aria-label={t("a11y.default")}>A</button>
             <button type="button" className={`${sizeBtn} border-aeblack-200 text-lg hover:bg-primary-50`} onClick={() => step(1)} disabled={idx >= 3} aria-label={t("a11y.larger")}>A+</button>
           </div>
-          <label className="mt-4 flex cursor-pointer items-center justify-between gap-3 border-t border-aeblack-100 pt-4">
-            <span className="text-sm font-semibold">{t("a11y.contrast")}</span>
-            <span className="relative inline-flex">
-              <input type="checkbox" role="switch" className="peer sr-only" checked={contrast} onChange={(e) => setContrast(e.target.checked)} />
-              <span className="h-6 w-11 rounded-full bg-aeblack-200 transition peer-checked:bg-primary-600 peer-focus-visible:ring-2 peer-focus-visible:ring-primary-600" aria-hidden="true" />
-              <span className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ltr:left-0.5 rtl:right-0.5 ltr:peer-checked:translate-x-5 rtl:peer-checked:-translate-x-5" aria-hidden="true" />
-            </span>
-          </label>
+          <div className="mt-4 flex items-center justify-between gap-3 border-t border-aeblack-100 pt-4">
+            <span className="flex items-center gap-2 text-sm font-semibold"><CircleHalf size={24} className="text-primary-600" aria-hidden="true" />{t("a11y.contrast")}</span>
+            {/* UAE Design System toggle */}
+            <label className="aegov-toggle">
+              <input type="checkbox" role="switch" className="peer sr-only" checked={contrast} onChange={(e) => setContrast(e.target.checked)} aria-label={t("a11y.contrast")} />
+              <span className="toggle-item" aria-hidden="true" />
+            </label>
+          </div>
           {(size !== "md" || contrast) && (
-            <button type="button" className="mt-4 w-full text-sm font-medium text-primary-700 underline" onClick={() => { setSize("md"); setContrast(false); }}>{t("a11y.reset")}</button>
+            <button type="button" className="aegov-btn btn-link btn-sm mt-3 w-full" onClick={() => { setSize("md"); setContrast(false); }}>
+              <ArrowCounterClockwise size={20} aria-hidden="true" />{t("a11y.reset")}
+            </button>
           )}
         </div>
       )}
@@ -91,30 +100,34 @@ function A11yTools() {
 function LanguageSwitcher() {
   const { config, lang, t } = useSite();
   const location = useLocation();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  usePopover(open, () => setOpen(false), ref, buttonRef);
   const others = config.languages.filter((l) => l.code !== lang);
   const to = (code: string) => `/${code}${location.pathname.slice(lang.length + 1)}${location.search}`;
   if (!others.length) return null;
   if (others.length === 1) {
     const o = others[0];
     return (
-      <Link to={to(o.code)} lang={o.code} hrefLang={o.code} className="rounded px-2 py-0.5 font-semibold text-aeblack-800 hover:bg-aeblack-100 hover:text-primary-700">
-        {o.label}
+      <Link to={to(o.code)} lang={o.code} hrefLang={o.code} className={`${barBtn} font-semibold text-aeblack-900`}>
+        <Globe size={20} aria-hidden="true" />{o.label}
       </Link>
     );
   }
   return (
-    <details className="relative">
-      <summary className="cursor-pointer list-none rounded px-2 py-0.5 font-semibold text-aeblack-800 hover:bg-aeblack-100" aria-label={t("a11y.language")}>
-        {config.languages.find((l) => l.code === lang)?.label} ▾
-      </summary>
-      <ul className="absolute end-0 z-30 mt-1 min-w-36 rounded-lg border border-aeblack-100 bg-white py-1 shadow-lg">
-        {others.map((o) => (
-          <li key={o.code}>
-            <Link to={to(o.code)} lang={o.code} hrefLang={o.code} className="block px-3 py-1.5 hover:bg-primary-50">{o.label}</Link>
-          </li>
-        ))}
-      </ul>
-    </details>
+    <div className="relative" ref={ref}>
+      <button ref={buttonRef} type="button" className={`${barBtn} font-semibold`} aria-expanded={open} aria-label={t("a11y.language")} onClick={() => setOpen((o) => !o)}>
+        <Globe size={20} aria-hidden="true" />{config.languages.find((l) => l.code === lang)?.label}<CaretDown size={16} aria-hidden="true" />
+      </button>
+      {open && (
+        <ul className="absolute end-0 z-40 mt-2 min-w-40 rounded-xl border border-aeblack-100 bg-white py-1 shadow-xl">
+          {others.map((o) => (
+            <li key={o.code}><Link to={to(o.code)} lang={o.code} hrefLang={o.code} className="block px-4 py-2 hover:bg-primary-50">{o.label}</Link></li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -131,10 +144,8 @@ function Brand() {
     <Link to={path()} className="flex min-w-0 items-center gap-2 sm:gap-3 md:gap-4" aria-label={`${t("site.portal")}, ${t("site.ministry")}`}>
       <img src={logoSrc(lang, config.logo)} alt={t("site.ministry")} className="h-9 w-auto max-w-[40vw] sm:h-14 sm:max-w-none md:h-[72px]" width={907} height={228} />
       <span className="hidden h-10 w-px shrink-0 bg-aeblack-200 sm:block md:h-12" aria-hidden="true" />
-      <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-primary-600 px-2.5 py-1 text-xs font-bold text-white shadow-sm sm:gap-2 sm:px-3 sm:py-1.5 sm:text-sm md:px-4 md:py-2 md:text-lg" dir={config.dir}>
-        <svg className="hidden h-4 w-4 sm:block md:h-5 md:w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M3 8h18v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8Z" /><path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18" />
-        </svg>
+      <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-primary-600 px-2.5 py-1 text-xs font-bold text-whitely-50 shadow-sm sm:gap-2 sm:px-3 sm:py-1.5 sm:text-sm md:px-4 md:py-2 md:text-lg" dir={config.dir}>
+        <Briefcase size={24} className="hidden sm:block" aria-hidden="true" />
         {t("site.portal")}
       </span>
     </Link>
@@ -146,24 +157,26 @@ function Nav({ onNavigate }: { onNavigate?: () => void }) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const link = ({ isActive }: { isActive: boolean }) =>
-    `block rounded-lg px-3 py-2 font-medium hover:bg-primary-50 ${isActive ? "text-primary-700 bg-primary-50" : "text-aeblack-800"}`;
+    `flex items-center gap-2 rounded-lg px-3 py-2 font-medium hover:bg-primary-50 ${isActive ? "bg-primary-50 text-primary-700" : "text-aeblack-800"}`;
   return (
     <ul className="flex flex-col gap-1 md:flex-row md:items-center md:gap-2">
-      <li><NavLink end to={path()} className={link} onClick={onNavigate}>{t("nav.jobs")}</NavLink></li>
+      <li><NavLink end to={path()} className={link} onClick={onNavigate}><Briefcase size={24} aria-hidden="true" />{t("nav.jobs")}</NavLink></li>
       {user ? (
         <>
-          <li><NavLink to={path("/applications")} className={link} onClick={onNavigate}>{t("nav.my_applications")}</NavLink></li>
-          <li className="px-3 py-2 text-sm text-aeblack-600 md:max-w-48 md:truncate" title={user.email}>{user.full_name || user.email}</li>
+          <li><NavLink to={path("/applications")} className={link} onClick={onNavigate}><Files size={24} aria-hidden="true" />{t("nav.my_applications")}</NavLink></li>
+          <li className="flex items-center gap-2 px-3 py-2 text-sm text-aeblack-600 md:max-w-56" title={user.email}>
+            <UserCircle size={24} className="shrink-0 text-primary-600" aria-hidden="true" /><span className="truncate">{user.full_name || user.email}</span>
+          </li>
           <li>
             <button type="button" className="aegov-btn btn-outline btn-sm" onClick={async () => { await signOut(); onNavigate?.(); navigate(path()); }}>
-              {t("nav.sign_out")}
+              <SignOut size={20} className="rtl:-scale-x-100" aria-hidden="true" />{t("nav.sign_out")}
             </button>
           </li>
         </>
       ) : (
         <>
-          <li><Link className="aegov-btn btn-outline btn-sm" to={path("/sign-in")} onClick={onNavigate}>{t("nav.sign_in")}</Link></li>
-          <li><Link className="aegov-btn btn-sm" to={path("/create-account")} onClick={onNavigate}>{t("nav.create_account")}</Link></li>
+          <li><Link className="aegov-btn btn-outline btn-sm" to={path("/sign-in")} onClick={onNavigate}><SignInIcon size={20} className="rtl:-scale-x-100" aria-hidden="true" />{t("nav.sign_in")}</Link></li>
+          <li><Link className="aegov-btn btn-sm" to={path("/create-account")} onClick={onNavigate}><UserPlus size={20} aria-hidden="true" />{t("nav.create_account")}</Link></li>
         </>
       )}
     </ul>
@@ -182,12 +195,13 @@ export default function Layout({ children }: { children: ReactNode }) {
         <div className="border-b border-aeblack-100 bg-aeblack-50">
           <div className="container mx-auto flex items-center justify-between gap-2 px-4 py-1 text-sm">
             <p className="hidden truncate font-medium text-aeblack-800 sm:block">{t("site.official_note")}</p>
-            <div className="flex shrink-0 items-center gap-2 sm:ms-auto">
+            <div className="flex shrink-0 items-center gap-1 sm:ms-auto">
               {config.main_site_url && (
                 <>
-                  <a className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-aeblack-700 hover:bg-aeblack-100 hover:text-primary-700" href={config.main_site_url} target="_blank" rel="noopener">
-                    {t("nav.go_to_ministry")}
-                    <svg className="h-3.5 w-3.5 rtl:-scale-x-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></svg>
+                  <a className={barBtn} href={config.main_site_url} target="_blank" rel="noopener">
+                    <ArrowSquareOut size={20} className="rtl:-scale-x-100" aria-hidden="true" />
+                    <span className="hidden sm:inline">{t("nav.go_to_ministry")}</span>
+                    <span className="sr-only sm:hidden">{t("nav.go_to_ministry")}</span>
                     <span className="sr-only">({t("nav.opens_new_tab")})</span>
                   </a>
                   <span className="h-4 w-px bg-aeblack-200" aria-hidden="true" />
@@ -203,9 +217,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <Brand />
           <nav aria-label={t("nav.main")} className="hidden md:block" dir={config.dir}><Nav /></nav>
           <button type="button" className="rounded-lg p-2 text-aeblack-800 hover:bg-aeblack-100 md:hidden" aria-expanded={open} aria-controls="mobile-nav" onClick={() => setOpen((o) => !o)}>
-            <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              {open ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
-            </svg>
+            {open ? <X size={28} aria-hidden="true" /> : <List size={28} aria-hidden="true" />}
             <span className="sr-only">{t("nav.menu")}</span>
           </button>
         </div>
@@ -225,11 +237,17 @@ export default function Layout({ children }: { children: ReactNode }) {
             <p className="max-w-md text-sm leading-6" dir={config.dir}>{t("site.tagline")}</p>
           </div>
           <nav aria-label={t("footer.portal_links")} dir={config.dir} className="md:justify-self-end">
-            <p className="mb-3 font-semibold text-white">{t("footer.portal_links")}</p>
+            <p className="mb-3 font-semibold text-whitely-50">{t("footer.portal_links")}</p>
             <ul className="space-y-2 text-sm">
-              <li><Link className="hover:text-primary-300" to={path()}>{t("nav.jobs")}</Link></li>
-              <li><Link className="hover:text-primary-300" to={path("/applications")}>{t("nav.my_applications")}</Link></li>
-              {config.main_site_url && <li><a className="hover:text-primary-300" href={config.main_site_url}>{t("nav.ministry_website")}</a></li>}
+              <li><Link className="inline-flex items-center gap-2 hover:text-primary-300" to={path()}><Briefcase size={20} aria-hidden="true" />{t("nav.jobs")}</Link></li>
+              <li><Link className="inline-flex items-center gap-2 hover:text-primary-300" to={path("/applications")}><Files size={20} aria-hidden="true" />{t("nav.my_applications")}</Link></li>
+              {config.main_site_url && (
+                <li>
+                  <a className="inline-flex items-center gap-2 hover:text-primary-300" href={config.main_site_url} target="_blank" rel="noopener">
+                    <ArrowSquareOut size={20} className="rtl:-scale-x-100" aria-hidden="true" />{t("nav.ministry_website")}<span className="sr-only">({t("nav.opens_new_tab")})</span>
+                  </a>
+                </li>
+              )}
             </ul>
           </nav>
         </div>

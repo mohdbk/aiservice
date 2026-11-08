@@ -1,12 +1,14 @@
+import { Check, LinkSimple, PaperPlaneTilt, SignIn as SignInIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, ApplicationSummary, Job } from "../api";
 import { useAuth } from "../auth";
-import { MetaIcon, useSalary } from "../components/Bits";
+import { IconBox, META_ICONS, useSalary } from "../components/Bits";
 import { Alert, Skeleton } from "../components/States";
 import { usePageTitle, useSite } from "../site";
 import { useAsync } from "../useAsync";
 import NotFound from "./NotFound";
+import { Breadcrumb } from "../components/Breadcrumb";
 
 export default function JobPage() {
   const { id = "" } = useParams();
@@ -26,7 +28,7 @@ export default function JobPage() {
   if (error) return <div className="container mx-auto px-4 py-10"><Alert tone="error" title={errorText(error)}><button type="button" className="aegov-btn btn-outline btn-sm mt-3" onClick={reload}>{t("common.retry")}</button></Alert></div>;
   if (!job) return <div className="container mx-auto space-y-4 px-4 py-10"><Skeleton className="h-8 w-2/3" /><Skeleton className="h-64" /></div>;
 
-  const meta: [Parameters<typeof MetaIcon>[0]["name"], string, string][] = [
+  const meta: [keyof typeof META_ICONS, string, string][] = [
     ["building", t("job.department"), job.department],
     ["pin", t("job.location"), job.location],
     ["clock", t("job.type"), job.employment_type],
@@ -47,12 +49,7 @@ export default function JobPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 md:py-10">
-      <nav aria-label="breadcrumb" className="mb-6 text-sm">
-        <Link to={path()} className="inline-flex items-center gap-1 text-primary-700 hover:underline">
-          <svg className="h-4 w-4 rtl:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
-          {t("common.back_to_jobs")}
-        </Link>
-      </nav>
+      <Breadcrumb items={[{ label: t("nav.jobs"), to: path() }, { label: job.title }]} back={t("common.back_to_jobs")} />
       <div className="grid gap-8 lg:grid-cols-3">
         <article className="lg:col-span-2">
           <h1 className="font-heading text-3xl font-bold leading-tight text-aeblack-950 md:text-4xl" lang={job.content_lang} dir={job.content_dir}>{job.title}</h1>
@@ -70,8 +67,8 @@ export default function JobPage() {
             <h2 className="mb-4 font-heading text-lg font-semibold text-aeblack-900">{t("job.details")}</h2>
             <dl className="space-y-3">
               {meta.filter(([, , v]) => v).map(([icon, label, value]) => (
-                <div key={label} className="flex items-start gap-3">
-                  <span className="mt-1"><MetaIcon name={icon} /></span>
+                <div key={label} className="flex items-center gap-3">
+                  <IconBox icon={META_ICONS[icon]} />
                   <div><dt className="text-sm text-aeblack-600">{label}</dt><dd className="font-medium text-aeblack-900">{value}</dd></div>
                 </div>
               ))}
@@ -85,16 +82,16 @@ export default function JobPage() {
               ) : !job.accepting ? (
                 <Alert tone="warning" title={t("job.closed")} />
               ) : user ? (
-                <Link className="aegov-btn btn-block" to={path(`/jobs/${encodeURIComponent(job.id)}/apply`)}>{t("job.apply_now")}</Link>
+                <Link className="aegov-btn btn-block" to={path(`/jobs/${encodeURIComponent(job.id)}/apply`)}><PaperPlaneTilt size={20} className="rtl:-scale-x-100" aria-hidden="true" />{t("job.apply_now")}</Link>
               ) : (
                 <>
-                  <Link className="aegov-btn btn-block" to={`${path("/sign-in")}?next=${encodeURIComponent(path(`/jobs/${job.id}/apply`))}`}>{t("job.sign_in_to_apply")}</Link>
+                  <Link className="aegov-btn btn-block" to={`${path("/sign-in")}?next=${encodeURIComponent(path(`/jobs/${job.id}/apply`))}`}><SignInIcon size={20} className="rtl:-scale-x-100" aria-hidden="true" />{t("job.sign_in_to_apply")}</Link>
                   <p className="text-center text-sm text-aeblack-600">
                     <Link className="text-primary-700 underline" to={`${path("/create-account")}?next=${encodeURIComponent(path(`/jobs/${job.id}/apply`))}`}>{t("job.new_here")}</Link>
                   </p>
                 </>
               )}
-              <button type="button" className="aegov-btn btn-link btn-sm btn-block" onClick={copy} aria-live="polite">{copied ? t("job.copied") : t("job.share")}</button>
+              <button type="button" className="aegov-btn btn-link btn-sm btn-block" onClick={copy} aria-live="polite">{copied ? <Check size={20} aria-hidden="true" /> : <LinkSimple size={20} aria-hidden="true" />}{copied ? t("job.copied") : t("job.share")}</button>
             </div>
           </div>
         </aside>

@@ -1,7 +1,9 @@
+import { Briefcase, Certificate, ChatText, Check, GraduationCap, Hourglass, Icon, PaperPlaneTilt, Toolbox, Translate } from "@phosphor-icons/react";
 import { FormEvent, ReactNode, useEffect, useState } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { api, ApiError, ApplicationDetail, Details } from "../api";
-import { StatusBadge, Steps } from "../components/Bits";
+import { IconBox, StatusBadge, Steps } from "../components/Bits";
+import { Breadcrumb } from "../components/Breadcrumb";
 import { Alert, Skeleton, Spinner } from "../components/States";
 import { usePageTitle, useSite } from "../site";
 import { useAsync } from "../useAsync";
@@ -16,7 +18,9 @@ function Progress({ code }: { code: string }) {
       {stages.map((s, i) => (
         <li key={s} className="flex flex-col gap-2" aria-current={i + 1 === reached ? "step" : undefined}>
           <span className={`h-1.5 rounded-full ${i < reached ? "bg-primary-600" : "bg-aeblack-100"}`} aria-hidden="true" />
-          <span className={`text-xs sm:text-sm ${i + 1 === reached ? "font-semibold text-aeblack-900" : "text-aeblack-600"}`}>{s}</span>
+          <span className={`flex items-center gap-1 text-xs sm:text-sm ${i + 1 === reached ? "font-semibold text-aeblack-900" : "text-aeblack-600"}`}>
+            {i + 1 < reached && <Check size={16} weight="bold" className="text-primary-600" aria-hidden="true" />}{s}
+          </span>
         </li>
       ))}
     </ol>
@@ -26,24 +30,24 @@ function Progress({ code }: { code: string }) {
 function DetailsView({ d }: { d: Details }) {
   const { t } = useSite();
   const none = <span className="text-aeblack-500">{t("app.not_found_in_cv")}</span>;
-  const row = (label: string, value: ReactNode) => (
-    <div className="grid gap-1 border-b border-aeblack-100 py-4 last:border-0 md:grid-cols-3">
-      <dt className="text-sm font-medium text-aeblack-600">{label}</dt>
+  const row = (icon: Icon, label: string, value: ReactNode) => (
+    <div className="grid gap-2 border-b border-aeblack-100 py-4 last:border-0 md:grid-cols-3 md:items-start">
+      <dt className="flex items-center gap-3 text-sm font-medium text-aeblack-700"><IconBox icon={icon} />{label}</dt>
       <dd className="md:col-span-2">{value}</dd>
     </div>
   );
   return (
     <dl className="mt-4">
-      {row(t("app.years"), d.years ? t("app.years_value", { years: d.years }) : none)}
-      {row(t("app.experience"), d.work.length ? (
+      {row(Hourglass, t("app.years"), d.years ? t("app.years_value", { years: d.years }) : none)}
+      {row(Briefcase, t("app.experience"), d.work.length ? (
         <ul className="space-y-2">{d.work.map((w, i) => (
           <li key={i}><bdi className="block font-medium">{[w.position, w.employer].filter(Boolean).join(", ")}</bdi>
             {w.start && <span className="block text-sm text-aeblack-600"><bdi>{w.start}</bdi> - <bdi>{w.end || t("app.present")}</bdi></span>}</li>
         ))}</ul>) : none)}
-      {row(t("app.education"), d.education.length ? <ul className="space-y-2">{d.education.map((e, i) => <li key={i}><bdi>{[e.degree, e.institution, e.end].filter(Boolean).join(", ")}</bdi></li>)}</ul> : none)}
-      {row(t("app.skills"), d.skills.length ? <div className="flex flex-wrap gap-2">{d.skills.map((s) => <span key={s} className="aegov-badge badge-sm">{s}</span>)}</div> : none)}
-      {row(t("app.languages"), d.languages.length ? <bdi>{d.languages.join(", ")}</bdi> : none)}
-      {row(t("app.certificates"), d.certificates.length ? <bdi>{d.certificates.join(", ")}</bdi> : none)}
+      {row(GraduationCap, t("app.education"), d.education.length ? <ul className="space-y-2">{d.education.map((e, i) => <li key={i}><bdi>{[e.degree, e.institution, e.end].filter(Boolean).join(", ")}</bdi></li>)}</ul> : none)}
+      {row(Toolbox, t("app.skills"), d.skills.length ? <div className="flex flex-wrap gap-2">{d.skills.map((s) => <span key={s} className="aegov-badge badge-sm">{s}</span>)}</div> : none)}
+      {row(Translate, t("app.languages"), d.languages.length ? <bdi>{d.languages.join(", ")}</bdi> : none)}
+      {row(Certificate, t("app.certificates"), d.certificates.length ? <bdi>{d.certificates.join(", ")}</bdi> : none)}
     </dl>
   );
 }
@@ -88,7 +92,7 @@ export default function Application() {
       {params.get("new") === "1" && (
         <div className="mb-6"><Alert tone="success" title={t("app.success_title")}>{t("app.success_body")}</Alert></div>
       )}
-      <nav className="mb-4 text-sm"><Link to={path("/applications")} className="text-primary-700 hover:underline">{t("apps.title")}</Link></nav>
+      <Breadcrumb items={[{ label: t("apps.title"), to: path("/applications") }, { label: data.title }]} />
       <h1 className="font-heading text-3xl font-bold text-aeblack-950">{data.title}</h1>
 
       <section className="mc-surface mt-6 rounded-2xl border border-aeblack-100 bg-white p-6" aria-labelledby="status-title">
@@ -113,11 +117,11 @@ export default function Application() {
         </div>
         <form onSubmit={sendNote} className="mt-6 space-y-3 border-t border-aeblack-100 pt-6" noValidate>
           <div className="aegov-form-control">
-            <label htmlFor="note">{t("app.correction_label")}</label>
+            <label htmlFor="note" className="flex items-center gap-2"><ChatText size={24} className="text-primary-600" aria-hidden="true" />{t("app.correction_label")}</label>
             <div className="form-control-input"><textarea id="note" rows={3} maxLength={2000} value={note} onChange={(e) => { setNote(e.target.value); setSent(false); }} /></div>
           </div>
           {noteError ? <Alert tone="error" title={errorText(noteError)} /> : null}
-          <button type="submit" className="aegov-btn btn-outline btn-sm" disabled={note.trim().length < 3}>{t("app.correction_send")}</button>
+          <button type="submit" className="aegov-btn btn-outline btn-sm" disabled={note.trim().length < 3}><PaperPlaneTilt size={20} className="rtl:-scale-x-100" aria-hidden="true" />{t("app.correction_send")}</button>
           {sent && <p className="text-aegreen-700" role="status">{t("app.correction_sent")}</p>}
         </form>
       </section>

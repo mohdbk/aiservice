@@ -1,6 +1,7 @@
+import { CaretRight, FileText, Files } from "@phosphor-icons/react";
 import { Link } from "react-router-dom";
 import { api, ApplicationSummary } from "../api";
-import { StatusBadge } from "../components/Bits";
+import { IconBox, StatusBadge } from "../components/Bits";
 import { Alert, EmptyState, Skeleton } from "../components/States";
 import { usePageTitle, useSite } from "../site";
 import { useAsync } from "../useAsync";
@@ -17,13 +18,15 @@ export default function Applications() {
       ) : !data ? (
         <div className="space-y-4">{[0, 1].map((i) => <Skeleton key={i} className="h-28" />)}</div>
       ) : data.applications.length === 0 ? (
-        <EmptyState title={t("apps.empty_title")} body={t("apps.empty_body")} action={<Link className="aegov-btn" to={path()}>{t("apps.browse")}</Link>} />
+        <EmptyState icon={Files} title={t("apps.empty_title")} body={t("apps.empty_body")} action={<Link className="aegov-btn" to={path()}>{t("apps.browse")}</Link>} />
       ) : (
         <ul className="space-y-4">
           {data.applications.map((a) => (
             <li key={a.id}>
               <article className="aegov-card card-bordered relative bg-white transition hover:shadow-md">
                 <div className="flex flex-col gap-3 p-5 md:flex-row md:items-center md:justify-between">
+                  <div className="flex items-start gap-4">
+                  <IconBox icon={FileText} />
                   <div>
                     <h2 className="font-heading text-lg font-semibold text-aeblack-900">
                       <Link to={path(`/applications/${encodeURIComponent(a.id)}`)} className="after:absolute after:inset-0 hover:text-primary-700">{a.title}</Link>
@@ -34,7 +37,8 @@ export default function Applications() {
                       <span dir="ltr">{t("apps.reference", { ref: a.reference })}</span>
                     </p>
                   </div>
-                  <StatusBadge status={a.status} />
+                  </div>
+                  <div className="flex items-center gap-3"><StatusBadge status={a.status} /><CaretRight size={20} className="text-primary-600 rtl:-scale-x-100" aria-hidden="true" /></div>
                 </div>
               </article>
             </li>

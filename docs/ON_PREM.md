@@ -39,7 +39,7 @@ HR user ──► Desk "Ask AI" panel ──► ai_recruitment.api.chat (session
 | ERPNext base image | `frappe/erpnext:v16.54.0` | `frappe/Dockerfile` (`ERPNEXT_IMAGE`) |
 | Frappe HR | `v16.53.1` | `frappe/Dockerfile` (`HRMS_VERSION`) |
 | ai_recruitment | `0.6.1` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
-| moet_careers | `0.2.5` | `frappe/apps/moet_careers/moet_careers/__init__.py` |
+| moet_careers | `0.2.6` | `frappe/apps/moet_careers/moet_careers/__init__.py` |
 | Careers portal | `0.1.0` (Node 22, React 18.3, Vite 5.4) | `portal/web/package.json`, `portal/server/package.json` |
 | UAE Design System | `@aegov/design-system 3.0.7` + Tailwind `4.1.17` | `portal/web/package.json` |
 | Demo LLM | `qwen/qwen3.8-27b` (OpenRouter) | AI Recruitment Settings |
@@ -502,3 +502,13 @@ AI output must never contain em dashes. The rule is in both system prompts (scor
 `utils.no_em_dash` / `utils.clean` remove any that slip through from every model reply and streamed chunk
 before it is saved or shown. Unit tests and CI enforce it. Keep this when changing models or prompts.
 The repo's own text follows the same rule.
+
+**Careers portal style (ministry decisions, November 2026):**
+- English headings, page names, field labels, navigation, buttons and status labels use **Title Case**
+  ("Create Your Account", "Country of Residence"). Body text, hints and notices use sentence case.
+- Candidate-facing text never mentions AI, a privacy notice or who reviews applications.
+- Icons are **Phosphor** (`@phosphor-icons/react`, regular weight), the UAE Design System icon set: 24 px by
+  default, 20 px only next to small text, primary colour on light backgrounds, set in rounded squares or
+  circles where they stand alone. Arrows and carets are mirrored in right-to-left pages.
+- Components come from the design system: buttons, form controls, alerts, badges, cards, toggle,
+  pagination and breadcrumb. The ministry logo always sits on the left of the header and footer.

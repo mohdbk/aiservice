@@ -1,3 +1,4 @@
+import { Briefcase, CheckCircle, Icon, Info, Warning, XCircle } from "@phosphor-icons/react";
 import { ReactNode } from "react";
 
 export function Spinner({ label }: { label?: string }) {
@@ -28,21 +29,13 @@ export function FullPageError({ onRetry }: { onRetry: () => void }) {
   );
 }
 
-const ALERT_ICONS: Record<string, string> = {
-  info: "M12 16v-5M12 8h.01",
-  success: "M8 12.5l2.5 2.5L16 9.5",
-  warning: "M12 8v5M12 16h.01",
-  error: "M9 9l6 6M15 9l-6 6",
-};
+const ALERT_ICONS: Record<string, Icon> = { info: Info, success: CheckCircle, warning: Warning, error: XCircle };
 
 export function Alert({ tone = "info", title, children, id }: { tone?: "info" | "success" | "warning" | "error"; title?: string; children?: ReactNode; id?: string }) {
   return (
     <div id={id} className={`aegov-alert alert-${tone}`} role={tone === "error" ? "alert" : "status"} tabIndex={-1}>
       <div className="flex items-start gap-3">
-        <svg className="mt-0.5 h-6 w-6 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="9.5" />
-          <path d={ALERT_ICONS[tone]} />
-        </svg>
+        {(() => { const I = ALERT_ICONS[tone]; return <I size={24} weight="regular" className="mt-0.5 shrink-0" aria-hidden="true" />; })()}
         <div className="alert-content min-w-0 flex-1">
           {title && <p className="alert-title">{title}</p>}
           {children && <div>{children}</div>}
@@ -52,13 +45,12 @@ export function Alert({ tone = "info", title, children, id }: { tone?: "info" | 
   );
 }
 
-export function EmptyState({ title, body, action }: { title: string; body?: string; action?: ReactNode }) {
+export function EmptyState({ title, body, action, icon: I = Briefcase }: { title: string; body?: string; action?: ReactNode; icon?: Icon }) {
   return (
     <div className="mc-surface rounded-2xl border border-dashed border-aeblack-200 bg-white px-6 py-12 text-center">
-      <svg className="mx-auto mb-4 h-12 w-12 text-primary-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-        <path d="M3 7h18v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
-        <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-      </svg>
+      <span className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary-50 text-primary-600" aria-hidden="true">
+        <I size={48} weight="duotone" />
+      </span>
       <h2 className="font-heading text-xl font-semibold text-aeblack-900">{title}</h2>
       {body && <p className="mx-auto mt-2 max-w-md text-aeblack-600">{body}</p>}
       {action && <div className="mt-6">{action}</div>}

@@ -1,3 +1,4 @@
+import { Envelope, Eye, EyeSlash, LockSimple, SignIn as SignInIcon, UserPlus } from "@phosphor-icons/react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
@@ -18,15 +19,7 @@ export function PasswordInput({ id, value, onChange, autoComplete, describedBy }
       <input id={id} type={show ? "text" : "password"} value={value} onChange={(e) => onChange(e.target.value)} autoComplete={autoComplete} required minLength={8} maxLength={128} aria-describedby={describedBy} />
       <button type="button" className="control-suffix rounded-lg px-3 text-aeblack-600 hover:text-primary-700 focus-visible:outline-2" onClick={() => setShow((s) => !s)}
         aria-pressed={show} aria-label={show ? t("auth.hide_password") : t("auth.show_password")} title={show ? t("auth.hide_password") : t("auth.show_password")}>
-        {show ? (
-          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.1A10.4 10.4 0 0 1 12 5c6 0 10 7 10 7a17.6 17.6 0 0 1-3.2 3.9M6.6 6.6A17.4 17.4 0 0 0 2 12s4 7 10 7a9.8 9.8 0 0 0 5.4-1.6" />
-          </svg>
-        ) : (
-          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" />
-          </svg>
-        )}
+        {show ? <EyeSlash size={24} aria-hidden="true" /> : <Eye size={24} aria-hidden="true" />}
       </button>
     </>
   );
@@ -67,16 +60,16 @@ export default function SignIn() {
       <div className="mb-6"><Alert tone="info">{t("auth.account_note")}</Alert></div>
       <form onSubmit={submit} className="mc-surface space-y-5 rounded-2xl border border-aeblack-100 bg-white p-6" noValidate>
         <div ref={errRef}>{error ? <Alert tone="error" title={errorText(error)} /> : null}</div>
-        <Field id="email" label={t("auth.email")}>
+        <Field id="email" label={t("auth.email")} prefix={Envelope}>
           <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required maxLength={200} inputMode="email" dir="ltr" />
         </Field>
-        <Field id="password" label={t("auth.password")}>
+        <Field id="password" label={t("auth.password")} prefix={LockSimple}>
           <PasswordInput id="password" value={password} onChange={setPassword} autoComplete="current-password" />
         </Field>
-        <button type="submit" className="aegov-btn btn-block" disabled={busy || !email || !password}>{busy ? t("auth.working") : t("auth.sign_in_button")}</button>
+        <button type="submit" className="aegov-btn btn-block" disabled={busy || !email || !password}><SignInIcon size={20} className="rtl:-scale-x-100" aria-hidden="true" />{busy ? t("auth.working") : t("auth.sign_in_button")}</button>
       </form>
       <p className="mt-6 text-center text-aeblack-700">
-        {t("auth.no_account")} <Link className="font-semibold text-primary-700 underline" to={`${path("/create-account")}?next=${encodeURIComponent(next)}`}>{t("auth.create_link")}</Link>
+        {t("auth.no_account")} <Link className="font-semibold text-primary-700 underline" to={`${path("/create-account")}?next=${encodeURIComponent(next)}`}><UserPlus size={20} className="me-1 inline align-text-bottom" aria-hidden="true" />{t("auth.create_link")}</Link>
       </p>
     </div>
   );

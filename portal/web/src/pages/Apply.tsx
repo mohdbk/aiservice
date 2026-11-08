@@ -1,8 +1,9 @@
+import { Briefcase, Envelope, FileText, GlobeHemisphereEast, PaperPlaneTilt, Phone, UploadSimple, UserCircle } from "@phosphor-icons/react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, ApiError, fileToBase64, Job } from "../api";
 import { useAuth } from "../auth";
-import { Field, Steps } from "../components/Bits";
+import { Field, IconBox, Steps } from "../components/Bits";
 import { Alert, Skeleton, Spinner } from "../components/States";
 import { usePageTitle, useSite } from "../site";
 import { useAsync } from "../useAsync";
@@ -56,9 +57,12 @@ export default function Apply() {
     <div className="container mx-auto max-w-3xl px-4 py-10">
       <Steps current={2} />
       <h1 className="font-heading text-3xl font-bold text-aeblack-950">{t("apply.title")}</h1>
-      <div className="mc-surface mt-4 rounded-xl border border-primary-200 bg-primary-50 px-5 py-4">
-        <p className="text-sm text-aeblack-600">{t("apply.for")}</p>
-        <p className="font-heading text-lg font-semibold text-aeblack-900" lang={job.content_lang} dir={job.content_dir}>{job.title}</p>
+      <div className="mc-surface mt-4 flex items-center gap-4 rounded-xl border border-primary-200 bg-primary-50 px-5 py-4">
+        <span className="inline-flex shrink-0 items-center justify-center rounded-lg bg-primary-600 p-2 text-whitely-50" aria-hidden="true"><Briefcase size={28} /></span>
+        <div>
+          <p className="text-sm text-aeblack-600">{t("apply.for")}</p>
+          <p className="font-heading text-lg font-semibold text-aeblack-900" lang={job.content_lang} dir={job.content_dir}>{job.title}</p>
+        </div>
       </div>
 
       {!job.accepting ? (
@@ -67,14 +71,14 @@ export default function Apply() {
         <form onSubmit={submit} className="mc-surface mt-6 space-y-6 rounded-2xl border border-aeblack-100 bg-white p-6 md:p-8" noValidate aria-busy={busy}>
           <h2 className="font-heading text-xl font-semibold text-aeblack-900">{t("apply.your_details")}</h2>
           <dl className="grid gap-4 rounded-xl bg-whitely-100 p-4 sm:grid-cols-2">
-            <div><dt className="text-sm text-aeblack-600">{t("apply.name")}</dt><dd className="font-medium text-aeblack-900">{user?.full_name}</dd></div>
-            <div><dt className="text-sm text-aeblack-600">{t("apply.email")}</dt><dd className="font-medium text-aeblack-900"><bdi>{user?.email}</bdi></dd></div>
+            <div className="flex items-center gap-3"><IconBox icon={UserCircle} /><div><dt className="text-sm text-aeblack-600">{t("apply.name")}</dt><dd className="font-medium text-aeblack-900">{user?.full_name}</dd></div></div>
+            <div className="flex items-center gap-3"><IconBox icon={Envelope} /><div className="min-w-0"><dt className="text-sm text-aeblack-600">{t("apply.email")}</dt><dd className="truncate font-medium text-aeblack-900"><bdi>{user?.email}</bdi></dd></div></div>
           </dl>
           <div className="grid gap-5 md:grid-cols-2">
-            <Field id="phone" label={t("apply.phone")} hint={t("apply.phone_hint")}>
+            <Field id="phone" label={t("apply.phone")} hint={t("apply.phone_hint")} prefix={Phone}>
               <input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" required maxLength={30} dir="ltr" aria-describedby="phone-hint" />
             </Field>
-            <Field id="country" label={t("apply.country")}>
+            <Field id="country" label={t("apply.country")} prefix={GlobeHemisphereEast}>
               <select id="country" value={country} onChange={(e) => setCountry(e.target.value)} autoComplete="country-name">
                 <option value="">{t("apply.country_choose")}</option>
                 {config.countries.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -87,11 +91,9 @@ export default function Apply() {
             <input id="cv" type="file" className="peer sr-only" accept=".pdf,.docx,.jpg,.jpeg,.png" aria-labelledby="cv-label cv-choose" aria-describedby="cv-hint"
               onChange={(e) => setFile(e.target.files?.[0] || null)} />
             <label htmlFor="cv" className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-8 text-center transition peer-focus-visible:ring-2 peer-focus-visible:ring-primary-600 ${file ? "border-aegreen-500 bg-aegreen-50" : "border-primary-300 bg-whitely-50 hover:border-primary-500 hover:bg-primary-50"}`}>
-              {file ? (
-                <svg className="h-9 w-9 text-aegreen-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" /><path d="M14 3v5h5M9 14l2 2 4-4" /></svg>
-              ) : (
-                <svg className="h-9 w-9 text-primary-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" /></svg>
-              )}
+              <span className={`flex h-16 w-16 items-center justify-center rounded-full ${file ? "bg-aegreen-100 text-aegreen-700" : "bg-primary-100 text-primary-700"}`} aria-hidden="true">
+                {file ? <FileText size={40} weight="duotone" /> : <UploadSimple size={40} weight="duotone" />}
+              </span>
               <span id="cv-choose" className="font-semibold text-primary-800"><bdi>{file ? t("apply.cv_selected", { name: file.name }) : t("apply.cv_choose")}</bdi></span>
               <span className="text-sm text-aeblack-600" id="cv-hint">{t("apply.cv_hint", { max: config.max_cv_mb })}</span>
             </label>
@@ -109,7 +111,7 @@ export default function Apply() {
           <div ref={errRef}>{error ? <Alert tone="error" title={errorText(error)} /> : null}</div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <button type="submit" className="aegov-btn" disabled={busy}>{t("apply.submit")}</button>
+            <button type="submit" className="aegov-btn" disabled={busy}><PaperPlaneTilt size={20} className="rtl:-scale-x-100" aria-hidden="true" />{t("apply.submit")}</button>
             <Link to={path(`/jobs/${encodeURIComponent(job.id)}`)} className="aegov-btn btn-link">{t("apply.cancel")}</Link>
             {busy && <Spinner label={t("apply.submitting")} />}
           </div>

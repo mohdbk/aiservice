@@ -1,3 +1,4 @@
+import { ArrowCounterClockwise, CaretLeft, CaretRight, MagnifyingGlass } from "@phosphor-icons/react";
 import { FormEvent, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api, Job, JobList, qs } from "../api";
@@ -25,7 +26,7 @@ function JobCard({ job }: { job: Job }) {
             {job.closes_on && <span className="inline-flex items-center gap-1.5"><MetaIcon name="calendar" />{t("jobs.closes", { date: formatDate(job.closes_on) })}</span>}
             <span className="ms-auto inline-flex items-center gap-1 font-semibold text-primary-700" aria-hidden="true">
               {t("jobs.view")}
-              <svg className="h-4 w-4 rtl:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 6l6 6-6 6" /></svg>
+              <CaretRight size={20} className="rtl:-scale-x-100" />
             </span>
           </div>
         </div>
@@ -72,6 +73,7 @@ export default function Jobs() {
               <div className="aegov-form-control md:col-span-5">
                 <label htmlFor="q">{t("jobs.search_label")}</label>
                 <div className="form-control-input">
+                  <span className="control-prefix" aria-hidden="true"><MagnifyingGlass size={24} /></span>
                   <input id="q" type="search" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={t("jobs.search_placeholder")} maxLength={100} />
                 </div>
               </div>
@@ -94,7 +96,7 @@ export default function Jobs() {
                 </div>
               </div>
               <div className="md:col-span-2">
-                <button type="submit" className="aegov-btn btn-block">{t("jobs.search_button")}</button>
+                <button type="submit" className="aegov-btn btn-block"><MagnifyingGlass size={20} aria-hidden="true" />{t("jobs.search_button")}</button>
               </div>
             </div>
           </form>
@@ -108,7 +110,7 @@ export default function Jobs() {
           </h2>
           {filtered && (
             <button type="button" className="aegov-btn btn-link btn-sm" onClick={() => { setDraft(""); setParams(new URLSearchParams()); }}>
-              {t("jobs.clear")}
+              <ArrowCounterClockwise size={20} aria-hidden="true" />{t("jobs.clear")}
             </button>
           )}
         </div>
@@ -122,17 +124,33 @@ export default function Jobs() {
             {[0, 1, 2, 3].map((i) => <li key={i}><Skeleton className="h-52" /></li>)}
           </ul>
         ) : data.jobs.length === 0 ? (
-          filtered ? <EmptyState title={t("jobs.none_title")} body={t("jobs.none_body")} /> : <EmptyState title={t("jobs.no_jobs_title")} body={t("jobs.no_jobs_body")} />
+          filtered ? <EmptyState icon={MagnifyingGlass} title={t("jobs.none_title")} body={t("jobs.none_body")} /> : <EmptyState title={t("jobs.no_jobs_title")} body={t("jobs.no_jobs_body")} />
         ) : (
           <>
             <ul className={`grid gap-5 md:grid-cols-2 ${loading ? "opacity-60" : ""}`}>
               {data.jobs.map((j) => <JobCard key={j.id} job={j} />)}
             </ul>
             {data.pages > 1 && (
-              <nav className="mt-10 flex items-center justify-center gap-3" aria-label={t("jobs.pagination")}>
-                <button type="button" className="aegov-btn btn-outline btn-sm" disabled={page <= 1} onClick={() => update({ page: String(page - 1) })}>{t("jobs.previous")}</button>
-                <span className="text-sm text-aeblack-700">{t("jobs.page", { page, pages: data.pages })}</span>
-                <button type="button" className="aegov-btn btn-outline btn-sm" disabled={page >= data.pages} onClick={() => update({ page: String(page + 1) })}>{t("jobs.next")}</button>
+              <nav className="mt-10 flex justify-center" aria-label={t("jobs.pagination")}>
+                {/* UAE Design System pagination */}
+                <div className="aegov-pagination">
+                  <button type="button" className="aegov-pagination-previous disabled:opacity-40" disabled={page <= 1} onClick={() => update({ page: String(page - 1) })}>
+                    <CaretLeft size={20} className="rtl:-scale-x-100" aria-hidden="true" />{t("jobs.previous")}
+                  </button>
+                  <span className="pages">
+                    {Array.from({ length: data.pages }, (_, i) => i + 1).filter((n) => n === 1 || n === data.pages || Math.abs(n - page) <= 1).map((n, i, arr) => (
+                      <span key={n} className="inline-flex items-center">
+                        {i > 0 && n - arr[i - 1] > 1 && <span className="aegov-pagination-extend">...</span>}
+                        {n === page
+                          ? <span className="aegov-pagination-current" aria-current="page">{n}</span>
+                          : <button type="button" className="aegov-pagination-page" onClick={() => update({ page: String(n) })} aria-label={t("jobs.page", { page: n, pages: data.pages })}>{n}</button>}
+                      </span>
+                    ))}
+                  </span>
+                  <button type="button" className="aegov-pagination-next disabled:opacity-40" disabled={page >= data.pages} onClick={() => update({ page: String(page + 1) })}>
+                    {t("jobs.next")}<CaretRight size={20} className="rtl:-scale-x-100" aria-hidden="true" />
+                  </button>
+                </div>
               </nav>
             )}
           </>
