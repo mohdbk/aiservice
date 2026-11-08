@@ -57,7 +57,7 @@
   </main>
 
   <footer class="mc-surface mt-16 bg-aeblack-950 text-whitely-200">
-    <div class="container mx-auto grid gap-8 px-4 py-10 md:grid-cols-3">
+    <div class="container mx-auto grid gap-8 px-4 py-10 md:grid-cols-2">
       <div>
         {% if settings.logo_dark %}
           <img src="{{ settings.logo_dark }}" alt="{{ entity_name }}" class="mb-3 h-12 w-auto">
@@ -71,14 +71,7 @@
         <ul class="space-y-2 text-sm">
           <li><a class="hover:text-primary-300" href="/careers">{{ t('Open jobs', 'الوظائف المتاحة') }}</a></li>
           <li><a class="hover:text-primary-300" href="/careers/applications">{{ t('My applications', 'طلباتي') }}</a></li>
-        </ul>
-      </nav>
-      <nav aria-label="{{ t('Ministry links', 'روابط الوزارة') }}">
-        <p class="mb-3 font-semibold text-white">{{ entity_name }}</p>
-        <ul class="space-y-2 text-sm">
-          {% if settings.terms_url %}<li><a class="hover:text-primary-300" href="{{ settings.terms_url }}">{{ t('Terms of use', 'شروط الاستخدام') }}</a></li>{% endif %}
-          {% if settings.accessibility_url %}<li><a class="hover:text-primary-300" href="{{ settings.accessibility_url }}">{{ t('Accessibility', 'إمكانية الوصول') }}</a></li>{% endif %}
-          {% if settings.contact_url %}<li><a class="hover:text-primary-300" href="{{ settings.contact_url }}">{{ t('Contact us', 'تواصل معنا') }}</a></li>{% endif %}
+          {% if settings.main_site_url %}<li><a class="hover:text-primary-300" href="{{ settings.main_site_url }}">{{ t('Ministry website', 'الموقع الرسمي للوزارة') }}</a></li>{% endif %}
         </ul>
       </nav>
     </div>
