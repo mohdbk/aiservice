@@ -71,7 +71,7 @@ function A11yTools() {
       </button>
       {open && (
         <div id="a11y-panel" role="group" aria-label={t("a11y.tools")}
-          className="absolute end-0 z-40 mt-2 w-72 rounded-xl border border-aeblack-100 bg-white p-4 text-aeblack-800 shadow-xl">
+          className="fixed inset-x-4 top-12 z-40 rounded-xl border border-aeblack-100 bg-white p-4 text-aeblack-800 shadow-xl sm:absolute sm:inset-x-auto sm:end-0 sm:top-auto sm:mt-2 sm:w-72">
           <p className="mb-3 flex items-center gap-2 text-sm font-semibold"><TextAa size={24} className="text-primary-600" aria-hidden="true" />{t("a11y.text_size")}</p>
           <div className="flex gap-2" dir="ltr">
             <button type="button" className={`${sizeBtn} border-aeblack-200 text-sm hover:bg-primary-50`} onClick={() => step(-1)} disabled={idx <= 0} aria-label={t("a11y.smaller")}>A-</button>
@@ -121,7 +121,7 @@ function LanguageSwitcher() {
         <Globe size={20} aria-hidden="true" />{config.languages.find((l) => l.code === lang)?.label}<CaretDown size={16} aria-hidden="true" />
       </button>
       {open && (
-        <ul className="absolute end-0 z-40 mt-2 min-w-40 rounded-xl border border-aeblack-100 bg-white py-1 shadow-xl">
+        <ul className="fixed inset-x-4 top-12 z-40 rounded-xl border border-aeblack-100 bg-white py-1 shadow-xl sm:absolute sm:inset-x-auto sm:end-0 sm:top-auto sm:mt-2 sm:min-w-40">
           {others.map((o) => (
             <li key={o.code}><Link to={to(o.code)} lang={o.code} hrefLang={o.code} className="block px-4 py-2 hover:bg-primary-50">{o.label}</Link></li>
           ))}
@@ -195,7 +195,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         <div className="border-b border-aeblack-100 bg-aeblack-50">
           <div className="container mx-auto flex items-center justify-between gap-2 px-4 py-1 text-sm">
             <p className="hidden truncate font-medium text-aeblack-800 sm:block">{t("site.official_note")}</p>
-            <div className="flex shrink-0 items-center gap-1 sm:ms-auto">
+            <div className="ms-auto flex shrink-0 items-center gap-1">
               {config.main_site_url && (
                 <>
                   <a className={barBtn} href={config.main_site_url} target="_blank" rel="noopener">
