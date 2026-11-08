@@ -1,10 +1,12 @@
 """Read any CV, Arabic or English, ATS-style or not.
 
-Auto mode:
-- ATS-style PDF/DOCX (single column, real text layer): use the text layer.
-- Scanned PDF or image: OCR (vision model first, Tesseract as fallback).
-- Designed / multi-column PDF: the text layer scrambles reading order, so read the
-  rendered pages with the vision model (fallback: text layer).
+Auto mode (the winner of benchmark/ocr: hybrid OCR draft + vision model correction):
+- ATS-style PDF (single column, real text layer): use the text layer.
+- Designed / multi-column PDF: the text layer has exact characters but scrambled order, so it is
+  used as the draft and the vision model rewrites it in reading order from the page images.
+- Scanned PDF or image: a local OCR draft (PaddleOCR PP-OCRv5, else Tesseract) corrected by the
+  vision model.
+Fallbacks: vision model alone, then local OCR alone, then the text layer.
 DOCX: reads paragraphs, tables and text boxes in document order.
 """
 import io
@@ -78,19 +80,28 @@ def _docx_text(data: bytes) -> str:
     return "\n".join(uniq)
 
 
-def _ocr(data: bytes, kind: str, prefer_vision: bool) -> tuple[str, str]:
-    from ai_recruitment.llm import is_configured
-    from ai_recruitment.ocr import available_engines, ocr
+TEXT_LAYER_SOURCE = "the PDF's embedded text layer (exact characters, but the reading order may be scrambled)"
 
-    if prefer_vision and is_configured():
+
+def _ocr(data: bytes, kind: str, mode: str, text_layer: str | None = None) -> tuple:
+    """Read rendered pages according to the mode, with fallbacks. Returns (text, method)."""
+    from ai_recruitment.llm import is_configured
+    from ai_recruitment.ocr import read
+
+    chain = {"Auto": ["Hybrid", "Vision Model", "Local"], "Vision Model": ["Vision Model", "Local"],
+             "PaddleOCR": ["PaddleOCR", "Tesseract"], "Tesseract": ["Tesseract"]}.get(mode, [])
+    for step in chain:
+        if step in ("Hybrid", "Vision Model") and not is_configured():
+            continue
         try:
-            text = ocr(data, kind, "Vision Model")
+            if step == "Hybrid" and text_layer and len(text_layer.strip()) >= 50:
+                text, how = read(data, kind, "Hybrid", draft=text_layer, draft_source=TEXT_LAYER_SOURCE)
+            else:
+                text, how = read(data, kind, step)
             if len(text.strip()) >= 50:
-                return text, "vision"
+                return text, how
         except Exception:
-            frappe.log_error(title="AI CV vision read failed; trying Tesseract")
-    if available_engines()["tesseract"]:
-        return ocr(data, kind, "Tesseract"), "tesseract"
+            frappe.log_error(title=f"AI CV reading step failed: {step}")
     return "", "none"
 
 
@@ -114,13 +125,11 @@ def read_cv(app) -> dict:
                     layout = "ats"
                 method = "text layer"
                 if mode != "Off" and layout in ("scanned", "designed"):
-                    if mode == "Tesseract" and layout == "scanned":
-                        ocr_text, how = _ocr(data, "pdf", prefer_vision=False)
-                    elif mode in ("Auto", "Vision Model"):
-                        ocr_text, how = _ocr(data, "pdf", prefer_vision=True)
+                    if layout == "designed" and mode in ("PaddleOCR", "Tesseract"):
+                        ocr_text, how = "", "none"  # local OCR cannot beat a real text layer
                     else:
-                        ocr_text, how = "", "none"
-                    # For designed CVs keep the text layer if the vision read failed.
+                        ocr_text, how = _ocr(data, "pdf", mode, text_layer=text if layout == "designed" else None)
+                    # Keep the text layer if every reading step failed.
                     if len(ocr_text.strip()) >= 50:
                         text, method = ocr_text, how
             elif ext == "docx":
@@ -128,7 +137,7 @@ def read_cv(app) -> dict:
             elif ext in ("txt", "md"):
                 text, method, layout = data.decode("utf-8", "ignore"), "text", "text"
             elif ext in IMAGE_EXT and mode != "Off":
-                text, method = _ocr(data, ext, prefer_vision=mode in ("Auto", "Vision Model"))
+                text, method = _ocr(data, ext, mode)
                 layout = "image"
         except Exception:
             frappe.log_error(title=f"CV reading failed: {app.get('name')}")

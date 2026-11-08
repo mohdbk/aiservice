@@ -169,11 +169,11 @@
   },
   {
    "default": "Auto",
-   "description": "Auto: text layer for ATS-style CVs; the vision model for scanned, image and designed multi-column CVs, with Tesseract (Arabic + English) as fallback. Vision Model: same but always prefer the vision model for OCR. Tesseract: local OCR only (scanned CVs). Off: text layer only.",
+   "description": "Auto (recommended, best in benchmark/ocr): ATS-style PDFs use their text layer; designed PDFs, scans and photos use a local OCR draft (PaddleOCR, else Tesseract) or the PDF text layer, corrected by the vision model. Vision Model: vision model only. PaddleOCR / Tesseract: local OCR only, nothing sent to the model. Off: text layer only.",
    "fieldname": "ocr_mode",
    "fieldtype": "Select",
    "label": "CV Reading Mode",
-   "options": "Auto\nVision Model\nTesseract\nOff"
+   "options": "Auto\nVision Model\nPaddleOCR\nTesseract\nOff"
   },
   {
    "fieldname": "column_break_ocr",
@@ -218,7 +218,7 @@
  "index_web_pages_for_search": 0,
  "issingle": 1,
  "links": [],
- "modified": "2026-11-08 01:00:00.000000",
+ "modified": "2026-11-08 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "AI Recruitment",
  "name": "AI Recruitment Settings",

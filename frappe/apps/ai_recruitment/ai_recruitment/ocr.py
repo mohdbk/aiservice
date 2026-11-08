@@ -122,24 +122,31 @@ def local_ocr(pages: list) -> tuple:
     return "", "none"
 
 
-def ocr(data: bytes, kind: str, mode: str, draft: str | None = None, draft_source: str = "") -> str:
-    """kind: 'pdf' or an image extension.
-    mode: 'Tesseract' | 'PaddleOCR' | 'Vision Model' | 'Hybrid'.
+def read(data: bytes, kind: str, mode: str, draft: str | None = None, draft_source: str = "") -> tuple:
+    """Returns (text, method). kind: 'pdf' or an image extension.
+    mode: 'Hybrid' | 'Vision Model' | 'PaddleOCR' | 'Tesseract' | 'Local' (best local engine).
     For Hybrid, pass `draft` (e.g. a PDF text layer) or leave it empty to use the best local OCR."""
     with tempfile.TemporaryDirectory() as tmp:
         pages = _pages(data, kind, tmp)
         if not pages:
-            return ""
+            return "", "none"
         if mode == "Vision Model":
-            return _vision(pages)
+            return _vision(pages), "vision model"
         if mode == "PaddleOCR":
-            return _paddle(pages) if paddle_available() else ""
+            return (_paddle(pages), "paddleocr") if paddle_available() else ("", "none")
         if mode == "Tesseract":
-            return _tesseract(pages) if shutil.which("tesseract") else ""
+            return (_tesseract(pages), "tesseract") if shutil.which("tesseract") else ("", "none")
+        if mode == "Local":
+            return local_ocr(pages)
         if mode == "Hybrid":
+            label = "text layer"
             if draft is None:
-                draft, engine = local_ocr(pages)
+                draft, label = local_ocr(pages)
                 draft_source = {"paddleocr": "the PaddleOCR engine", "tesseract": "the Tesseract OCR engine"}.get(
-                    engine, "no OCR engine (empty)")
-            return _hybrid(pages, draft, draft_source or "an OCR engine")
+                    label, "no OCR engine (empty)")
+            return _hybrid(pages, draft, draft_source or "an OCR engine"), f"hybrid ({label} + vision model)"
         raise ValueError(f"Unknown OCR mode {mode}")
+
+
+def ocr(data: bytes, kind: str, mode: str, draft: str | None = None, draft_source: str = "") -> str:
+    return read(data, kind, mode, draft, draft_source)[0]
