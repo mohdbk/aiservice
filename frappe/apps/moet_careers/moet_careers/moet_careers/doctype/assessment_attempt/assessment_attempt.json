@@ -1,0 +1,231 @@
+{
+ "actions": [],
+ "creation": "2026-11-08 19:10:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "invitation",
+  "applicant_name",
+  "assessment",
+  "attempt_no",
+  "status",
+  "column_break_t",
+  "started_at",
+  "submitted_at",
+  "current_section",
+  "section_started_at",
+  "section_ends_at",
+  "results_section",
+  "earned",
+  "total",
+  "percent",
+  "passed",
+  "column_break_r",
+  "section_summary",
+  "tab_switches",
+  "pastes",
+  "marks_section",
+  "marks",
+  "snapshot",
+  "answers"
+ ],
+ "fields": [
+  {
+   "fieldname": "invitation",
+   "fieldtype": "Link",
+   "options": "Assessment Invitation",
+   "label": "Invitation",
+   "reqd": 1,
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "applicant_name",
+   "fieldtype": "Data",
+   "label": "Applicant Name",
+   "fetch_from": "invitation.applicant_name",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "assessment",
+   "fieldtype": "Link",
+   "options": "Assessment",
+   "label": "Assessment",
+   "fetch_from": "invitation.assessment",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "attempt_no",
+   "fieldtype": "Int",
+   "label": "Attempt",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "options": "In Progress\nSubmitted\nMarked",
+   "label": "Status",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_t",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "started_at",
+   "fieldtype": "Datetime",
+   "label": "Started",
+   "read_only": 1
+  },
+  {
+   "fieldname": "submitted_at",
+   "fieldtype": "Datetime",
+   "label": "Submitted",
+   "read_only": 1
+  },
+  {
+   "fieldname": "current_section",
+   "fieldtype": "Int",
+   "label": "Current Section",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "section_started_at",
+   "fieldtype": "Datetime",
+   "label": "Section Started",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "section_ends_at",
+   "fieldtype": "Datetime",
+   "label": "Section Ends",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "results_section",
+   "fieldtype": "Section Break",
+   "label": "Result"
+  },
+  {
+   "fieldname": "earned",
+   "fieldtype": "Float",
+   "label": "Points",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total",
+   "fieldtype": "Float",
+   "label": "Out Of",
+   "read_only": 1
+  },
+  {
+   "fieldname": "percent",
+   "fieldtype": "Percent",
+   "label": "Score",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "passed",
+   "fieldtype": "Check",
+   "label": "Passed",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_r",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "section_summary",
+   "fieldtype": "Small Text",
+   "label": "Sections",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tab_switches",
+   "fieldtype": "Int",
+   "label": "Left the Page",
+   "read_only": 1
+  },
+  {
+   "fieldname": "pastes",
+   "fieldtype": "Int",
+   "label": "Pasted Text",
+   "read_only": 1
+  },
+  {
+   "fieldname": "marks_section",
+   "fieldtype": "Section Break",
+   "label": "Answers and Marking"
+  },
+  {
+   "fieldname": "marks",
+   "fieldtype": "Table",
+   "options": "Assessment Mark",
+   "label": "Answers"
+  },
+  {
+   "fieldname": "snapshot",
+   "fieldtype": "Long Text",
+   "label": "Snapshot",
+   "hidden": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "answers",
+   "fieldtype": "Long Text",
+   "label": "Raw Answers",
+   "hidden": 1,
+   "read_only": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-08 19:10:00.000000",
+ "modified_by": "Administrator",
+ "module": "MoET Careers",
+ "name": "Assessment Attempt",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "export": 1,
+   "role": "System Manager"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "export": 1,
+   "role": "HR Manager"
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "role": "HR User"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "format:AATT-{#####}",
+ "title_field": "applicant_name",
+ "in_create": 1,
+ "description": "One attempt at an assessment. Questions are frozen when it starts."
+}

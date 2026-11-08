@@ -92,3 +92,34 @@ export type Details = {
   certificates: string[];
 };
 export type ApplicationDetail = ApplicationSummary & { details_state: "ready" | "preparing" | "unavailable"; details: Details | null };
+
+// ---------- assessments ----------
+export type AsmStatus = "to_do" | "in_progress" | "submitted" | "completed" | "expired" | "cancelled";
+export type AssessmentSummary = {
+  id: string;
+  title: string;
+  type: string;
+  status: AsmStatus;
+  deadline: string;
+  attempts_allowed: number;
+  attempts_used: number;
+  can_start: boolean;
+  reason: string;
+  minutes: number;
+  extra_time_percent: number;
+  sections: { title: string; minutes: number }[];
+  instructions: string;
+  score: number | null;
+  result: string;
+  job_title: string;
+};
+export type AsmQuestion = { key: string; type: string; text: string; points: number; max_words: number; options: { key: string; text: string }[] };
+export type AsmState = {
+  finished?: boolean;
+  attempt: number;
+  section_index: number;
+  section_count: number;
+  sections: { title: string; minutes: number; questions: number }[];
+  section: { title: string; instructions: string; remaining_seconds: number | null; questions: AsmQuestion[] };
+  answers: Record<string, unknown>;
+};

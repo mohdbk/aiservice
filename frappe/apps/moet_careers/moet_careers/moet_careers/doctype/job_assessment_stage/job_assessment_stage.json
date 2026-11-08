@@ -1,0 +1,69 @@
+{
+ "actions": [],
+ "creation": "2026-11-08 19:10:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "assessment",
+  "send",
+  "deadline_days",
+  "weight",
+  "required"
+ ],
+ "fields": [
+  {
+   "fieldname": "assessment",
+   "fieldtype": "Link",
+   "options": "Assessment",
+   "label": "Assessment",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 4
+  },
+  {
+   "fieldname": "send",
+   "fieldtype": "Select",
+   "options": "When They Apply\nManually",
+   "default": "Manually",
+   "label": "Send",
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "deadline_days",
+   "fieldtype": "Int",
+   "label": "Deadline (Days)",
+   "default": "7",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "weight",
+   "fieldtype": "Float",
+   "label": "Weight",
+   "default": "1",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "required",
+   "fieldtype": "Check",
+   "label": "Required",
+   "default": "1",
+   "in_list_view": 1,
+   "columns": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-08 19:10:00.000000",
+ "modified_by": "Administrator",
+ "module": "MoET Careers",
+ "name": "Job Assessment Stage",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1,
+ "editable_grid": 1
+}

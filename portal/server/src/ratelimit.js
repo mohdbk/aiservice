@@ -31,4 +31,5 @@ export const LIMITS = {
   account_ip: [10, 3600],
   verify: [20, 3600],
   reset: [10, 3600],
+  assessment_write: [1200, 3600],
 };

@@ -1,0 +1,54 @@
+{
+ "actions": [],
+ "creation": "2026-11-08 19:10:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_title",
+  "minutes",
+  "pass_mark",
+  "instructions"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_title",
+   "fieldtype": "Data",
+   "label": "Section Title",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 3
+  },
+  {
+   "fieldname": "minutes",
+   "fieldtype": "Int",
+   "label": "Time Limit (Minutes)",
+   "in_list_view": 1,
+   "columns": 2,
+   "description": "0 means no time limit for this section."
+  },
+  {
+   "fieldname": "pass_mark",
+   "fieldtype": "Percent",
+   "label": "Section Pass Mark",
+   "in_list_view": 1,
+   "columns": 2,
+   "description": "Optional. Candidates must also reach this in the section."
+  },
+  {
+   "fieldname": "instructions",
+   "fieldtype": "Small Text",
+   "label": "Instructions"
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-08 19:15:00.000000",
+ "modified_by": "Administrator",
+ "module": "MoET Careers",
+ "name": "Assessment Section",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1
+}

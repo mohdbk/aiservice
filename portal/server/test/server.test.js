@@ -180,3 +180,31 @@ test("Frappe client sends the API key and site header and maps error codes", asy
   assert.equal(seen[0].init.headers["X-Frappe-Site-Name"], "hr.local");
   assert.match(seen[0].url, /moet_careers\.portal_api\.job\?lang=en&name=X/);
 });
+
+test("assessments: start, timed sections, answers, finish", async () => {
+  const cookie = cookieOf(await post("/api/login", { email: "layla@example.com", password: "password123" }));
+  const list = await (await fetch(base + "/api/assessments?lang=ar", { headers: { cookie } })).json();
+  assert.equal(list.assessments.length, 2);
+  assert.equal(list.assessments[0].title, "مهارات البيانات وإكسل");
+  let st = await (await post("/api/assessments/AINV-00001/start", { lang: "en" }, { cookie })).json();
+  assert.equal(st.section_index, 0);
+  assert.equal(st.section_count, 2);
+  assert.ok(st.section.remaining_seconds > 500);
+  assert.equal(JSON.stringify(st).includes("correct"), false);
+  let r = await post("/api/assessments/AINV-00001/answer", { key: "q1", answer: "a", section: 0 }, { cookie });
+  assert.equal(r.status, 200);
+  r = await post("/api/assessments/AINV-00001/answer", { key: "q4", answer: "text", section: 0 }, { cookie });
+  assert.equal((await r.json()).error.code, "question_closed");
+  st = await (await post("/api/assessments/AINV-00001/next", { section: 0, lang: "en" }, { cookie })).json();
+  assert.equal(st.section_index, 1);
+  r = await post("/api/assessments/AINV-00001/answer", { key: "q1", answer: "b", section: 0 }, { cookie });
+  assert.equal((await r.json()).error.code, "section_closed");                   // a closed section cannot be changed
+  r = await post("/api/assessments/AINV-00001/file", { key: "q5", section: 1, file: { name: "chart.pdf", data: Buffer.from("%PDF").toString("base64") } }, { cookie });
+  assert.equal(r.status, 200);
+  st = await (await post("/api/assessments/AINV-00001/next", { section: 1, lang: "en" }, { cookie })).json();
+  assert.equal(st.finished, true);
+  const again = await post("/api/assessments/AINV-00001/start", { lang: "en" }, { cookie });
+  assert.equal((await again.json()).error.code, "no_attempts_left");
+  const other = await fetch(base + "/api/assessments/AINV-00001?lang=en");
+  assert.equal(other.status, 401);
+});

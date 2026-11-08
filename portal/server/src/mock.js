@@ -31,7 +31,72 @@ const JOBS = [
   },
 ];
 
+const T = (en, ar) => ({ en, ar });
+function sampleAssessments() {
+  return [
+    { id: "AINV-00001", email: "layla@example.com", job: "HR-OPN-2026-0001", type: "Knowledge Test", status: "to_do", used: 0, allowed: 1,
+      deadline: "2026-11-20 17:00", title: T("Data and Excel Skills", "مهارات البيانات وإكسل"), extra: 0, showScore: false,
+      instructions: T("<p>This test has two timed sections. Read each question carefully.</p>", "<p>يتكون هذا الاختبار من قسمين لكل منهما وقت محدد. اقرأ كل سؤال بعناية.</p>"),
+      sections: [
+        { title: T("Excel Basics", "أساسيات إكسل"), minutes: 10, instructions: T("Choose the best answer.", "اختر الإجابة الأفضل."), questions: [
+          { key: "q1", type: "Single Choice", points: 1, text: T("Which function adds a range of cells?", "ما الدالة التي تجمع نطاقا من الخلايا؟"),
+            options: [{ key: "a", text: T("SUM", "SUM") }, { key: "b", text: T("COUNT", "COUNT") }, { key: "c", text: T("AVERAGE", "AVERAGE") }] },
+          { key: "q2", type: "Multiple Choice", points: 2, text: T("Which of these are lookup functions?", "أي مما يلي من دوال البحث؟"),
+            options: [{ key: "a", text: T("XLOOKUP", "XLOOKUP") }, { key: "b", text: T("VLOOKUP", "VLOOKUP") }, { key: "c", text: T("TRIM", "TRIM") }] },
+          { key: "q3", type: "Number", points: 1, text: T("A value grows from 200 to 250. What is the growth in percent?", "ارتفعت قيمة من 200 إلى 250. ما نسبة النمو المئوية؟"), options: [] },
+        ] },
+        { title: T("Written Task", "مهمة كتابية"), minutes: 15, instructions: T("Answer in Arabic or English.", "أجب بالعربية أو الإنجليزية."), questions: [
+          { key: "q4", type: "Essay", points: 5, max_words: 200, options: [],
+            text: T("In up to 200 words, explain how you would present quarterly licensing data to senior leaders.", "في حدود 200 كلمة، اشرح كيف ستعرض بيانات التراخيص الربعية على القيادات العليا.") },
+          { key: "q5", type: "File Upload", points: 3, options: [], text: T("Upload a one-page chart or table that supports your answer (optional).", "ارفع رسما بيانيا أو جدولا من صفحة واحدة يدعم إجابتك (اختياري).") },
+        ] },
+      ] },
+    { id: "AINV-00002", email: "layla@example.com", job: "HR-OPN-2026-0002", type: "Language Check", status: "completed", used: 1, allowed: 1,
+      deadline: "2026-11-06 17:00", title: T("Arabic and English Writing Check", "اختبار الكتابة بالعربية والإنجليزية"), extra: 0, showScore: true, score: 85, result: "Pass",
+      instructions: T("", ""), sections: [{ title: T("Writing", "الكتابة"), minutes: 20, questions: [] }] },
+  ];
+}
+
 export function createMockFrappe() {
+  const ASM = sampleAssessments();
+  const pick = (t, l) => (t && (t[l] || t.en)) || "";
+  const ownAsm = (u, id) => {
+    current(u);
+    const a = ASM.find((x) => x.id === id && x.email === u.email);
+    if (!a) throw new FrappeError("assessment_not_found", 404);
+    return a;
+  };
+  const advance = (a) => {
+    a.attempt.section += 1;
+    if (a.attempt.section >= a.sections.length) {
+      a.attempt = null;
+      a.status = "submitted";
+    } else {
+      a.attempt.ends = Date.now() + a.sections[a.attempt.section].minutes * 60_000;
+    }
+  };
+  const tick = (a) => {
+    while (a.attempt && a.attempt.ends && a.attempt.ends <= Date.now()) advance(a);
+  };
+  const asmSummary = (a, l) => {
+    const job = JOBS.find((j) => j.id === a.job);
+    return { id: a.id, title: pick(a.title, l), type: a.type, status: a.attempt ? "in_progress" : a.status, deadline: a.deadline,
+      attempts_allowed: a.allowed, attempts_used: a.used, can_start: Boolean(a.attempt) || (a.used < a.allowed && a.status === "to_do"),
+      reason: a.used >= a.allowed && !a.attempt ? "no_attempts_left" : "", minutes: a.sections.reduce((n, s) => n + s.minutes, 0),
+      extra_time_percent: a.extra, sections: a.sections.map((s) => ({ title: pick(s.title, l), minutes: s.minutes })),
+      instructions: pick(a.instructions, l), score: a.showScore && a.status === "completed" ? a.score : null,
+      result: a.showScore && a.status === "completed" ? a.result : "", job_title: job ? (job[l] || job.en).title : "" };
+  };
+  const asmState = (a, l) => {
+    const sec = a.sections[a.attempt.section];
+    return { attempt: a.used, section_index: a.attempt.section, section_count: a.sections.length,
+      sections: a.sections.map((s) => ({ title: pick(s.title, l), minutes: s.minutes, questions: s.questions.length })),
+      section: { title: pick(sec.title, l), instructions: pick(sec.instructions, l),
+        remaining_seconds: Math.max(0, Math.round((a.attempt.ends - Date.now()) / 1000)),
+        questions: sec.questions.map((q) => ({ key: q.key, type: q.type, points: q.points, max_words: q.max_words || 0, text: pick(q.text, l),
+          options: q.options.map((o) => ({ key: o.key, text: pick(o.text, l) })) })) },
+      answers: Object.fromEntries(Object.entries(a.attempt.answers).filter(([k]) => sec.questions.some((q) => q.key === k))) };
+  };
   const users = new Map([["layla@example.com", { email: "layla@example.com", full_name: "Layla Haddad", password: "password123", verified: true, epoch: 0 }]]);
   // Emails the mock would have sent: [{ to, purpose, token, link }]. Links are also printed to the console.
   const outbox = [];
@@ -174,6 +239,53 @@ export function createMockFrappe() {
       const id = `HR-APP-2026-${String(100 + apps.length).padStart(5, "0")}`;
       apps.unshift({ id, job: fields.job, email: u.email, submitted: new Date().toISOString().slice(0, 10), status: { code: "under_review", tone: "info" }, ready: false });
       return { application: id, reference: reference(id) };
+    },
+    // ---- assessments (in-memory sample: a two-section timed test and a completed language check)
+    async assessments(u, l) {
+      lang(l);
+      current(u);
+      return { assessments: ASM.filter((a) => a.email === u.email).map((a) => asmSummary(a, l)) };
+    },
+    async assessment(u, id, l) {
+      lang(l);
+      return asmSummary(ownAsm(u, id), l);
+    },
+    async startAssessment(u, id, l) {
+      const a = ownAsm(u, id);
+      if (!a.attempt) {
+        if (a.used >= a.allowed) throw new FrappeError("no_attempts_left", 409);
+        a.used += 1;
+        a.status = "in_progress";
+        a.attempt = { section: 0, answers: {}, ends: Date.now() + a.sections[0].minutes * 60_000 };
+      }
+      return asmState(a, l);
+    },
+    async assessmentState(u, id, l) {
+      const a = ownAsm(u, id);
+      tick(a);
+      return a.attempt ? asmState(a, l) : { finished: true };
+    },
+    async saveAnswer(u, id, key, answer, section) {
+      const a = ownAsm(u, id);
+      tick(a);
+      if (!a.attempt || section !== a.attempt.section) throw new FrappeError("section_closed", 409);
+      if (!a.sections[section].questions.some((q) => q.key === key)) throw new FrappeError("question_closed", 409);
+      if (answer === null || answer === "") delete a.attempt.answers[key];
+      else a.attempt.answers[key] = answer;
+      return { saved: true };
+    },
+    async uploadAnswer(u, id, key, section, file) {
+      await this.saveAnswer(u, id, key, { file_url: `/private/files/${file.name}`, name: file.name }, section);
+      return { saved: true, name: file.name };
+    },
+    async nextSection(u, id, section, l) {
+      const a = ownAsm(u, id);
+      tick(a);
+      if (a.attempt && section === a.attempt.section) advance(a);
+      return a.attempt ? asmState(a, l) : { finished: true };
+    },
+    async assessmentEvent() {
+      return { ok: true };
     },
     async logo() {
       throw new FrappeError("not_found", 404);

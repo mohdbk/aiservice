@@ -1,5 +1,5 @@
 import {
-  ArrowCounterClockwise, ArrowSquareOut, Briefcase, CaretDown, CircleHalf, Files, Globe, List, PersonArmsSpread,
+  ArrowCounterClockwise, ArrowSquareOut, Briefcase, CaretDown, CircleHalf, Exam, Files, Globe, List, PersonArmsSpread,
   SignIn as SignInIcon, SignOut, TextAa, UserCircle, UserPlus, X,
 } from "@phosphor-icons/react";
 import { ReactNode, RefObject, useEffect, useRef, useState } from "react";
@@ -180,6 +180,7 @@ function AccountMenu() {
                 <p className="m-0 mt-0.5 truncate text-sm text-aeblack-600"><bdi>{user.email}</bdi></p>
               </div>
               <Link to={path("/applications")} className={item}><Files size={24} className="text-primary-600" aria-hidden="true" />{t("nav.my_applications")}</Link>
+              <Link to={path("/assessments")} className={item}><Exam size={24} className="text-primary-600" aria-hidden="true" />{t("nav.my_assessments")}</Link>
               <button type="button" className={item} onClick={async () => { setOpen(false); await signOut(); navigate(path()); }}>
                 <SignOut size={24} className="text-primary-600 rtl:-scale-x-100" aria-hidden="true" />{t("nav.sign_out")}
               </button>
@@ -206,6 +207,7 @@ function Nav({ onNavigate, mobile }: { onNavigate?: () => void; mobile?: boolean
     <ul className="flex flex-col gap-1 md:flex-row md:items-center md:gap-2">
       <li><NavLink end to={path()} className={link} onClick={onNavigate}><Briefcase size={24} aria-hidden="true" />{t("nav.jobs")}</NavLink></li>
       {user && <li><NavLink to={path("/applications")} className={link} onClick={onNavigate}><Files size={24} aria-hidden="true" />{t("nav.my_applications")}</NavLink></li>}
+      {user && <li><NavLink to={path("/assessments")} className={link} onClick={onNavigate}><Exam size={24} aria-hidden="true" />{t("nav.my_assessments")}</NavLink></li>}
       {!mobile ? (
         <li className="ms-1"><AccountMenu /></li>
       ) : user ? (

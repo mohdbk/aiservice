@@ -456,3 +456,162 @@ def logo(dark: int = 0):
     frappe.local.response.filecontent = file_doc.get_content()
     frappe.local.response.type = "download"
     frappe.local.response.display_content_as = "inline"
+
+
+# ---------------- assessments ----------------
+ANSWER_FILE_TYPES = {"pdf": b"%PDF", "docx": b"PK\x03\x04", "xlsx": b"PK\x03\x04", "pptx": b"PK\x03\x04",
+                     "png": b"\x89PNG", "jpg": b"\xff\xd8\xff", "jpeg": b"\xff\xd8\xff", "zip": b"PK\x03\x04"}
+
+
+def _own_invitation(email: str, epoch: str, name: str):
+    user = _applicant_user(email, epoch)
+    inv = frappe.get_doc("Assessment Invitation", name) if name and frappe.db.exists("Assessment Invitation", name) else None
+    if not inv or (frappe.db.get_value("Job Applicant", inv.job_applicant, "email_id") or "").lower() != user.name \
+            or inv.status == "Cancelled":
+        raise Fail("assessment_not_found", 404)
+    return inv
+
+
+def _assessment_fail(e: ValueError):
+    code = str(e)
+    raise Fail(code if code else "invalid_answer", 409 if code in ("no_attempts_left", "assessment_expired",
+                                                                    "assessment_cancelled", "question_closed") else 400)
+
+
+@endpoint()
+def assessments(email: str, lang: str, epoch: str = ""):
+    from moet_careers.assessments import summary_for_candidate
+
+    lang = _lang(lang)
+    user = _applicant_user(email, epoch)
+    apps_ = frappe.get_all("Job Applicant", filters={"email_id": user.name}, fields=["name", "job_title"])
+    by_app = {a.name: a.job_title for a in apps_}
+    invs = frappe.get_all("Assessment Invitation", filters={"job_applicant": ["in", list(by_app) or ["-"]],
+                                                            "status": ["!=", "Cancelled"]},
+                          pluck="name", order_by="creation desc", limit_page_length=100)
+    titles = _job_titles([j for j in by_app.values() if j], lang)
+    out = []
+    for n in invs:
+        inv = frappe.get_doc("Assessment Invitation", n)
+        row = summary_for_candidate(inv, lang)
+        row["job_title"] = titles.get(by_app.get(inv.job_applicant), "")
+        out.append(row)
+    return {"assessments": out}
+
+
+@endpoint()
+def assessment(email: str, name: str, lang: str, epoch: str = ""):
+    from moet_careers.assessments import summary_for_candidate
+
+    lang = _lang(lang)
+    inv = _own_invitation(email, epoch, name)
+    row = summary_for_candidate(inv, lang)
+    row["job_title"] = _job_titles([frappe.db.get_value("Job Applicant", inv.job_applicant, "job_title")], lang)
+    row["job_title"] = next(iter(row["job_title"].values()), "")
+    return row
+
+
+@endpoint(methods=("POST",))
+def start_assessment(email: str, name: str, lang: str, epoch: str = ""):
+    from moet_careers import assessments as A
+
+    lang = _lang(lang)
+    inv = _own_invitation(email, epoch, name)
+    try:
+        a = A.start(inv)
+    except ValueError as e:
+        _assessment_fail(e)
+    if inv.lang != lang:
+        frappe.db.set_value("Assessment Invitation", inv.name, "lang", lang, update_modified=False)
+    return A.state(inv, a, lang)
+
+
+@endpoint()
+def assessment_state(email: str, name: str, lang: str, epoch: str = ""):
+    from moet_careers import assessments as A
+
+    lang = _lang(lang)
+    inv = _own_invitation(email, epoch, name)
+    a = A.open_attempt(inv)
+    if not a:
+        return {"finished": True}
+    return A.state(inv, a, lang)
+
+
+def _current_attempt(email, epoch, name):
+    from moet_careers import assessments as A
+
+    inv = _own_invitation(email, epoch, name)
+    a = A.open_attempt(inv)
+    if not a:
+        raise Fail("section_closed", 409)
+    return inv, a
+
+
+@endpoint(methods=("POST",))
+def save_assessment_answer(email: str, name: str, key: str, answer: str = "", section: int = -1, epoch: str = ""):
+    """answer is JSON (a string, a list of option keys, or a file reference). section guards against a stale page."""
+    from moet_careers import assessments as A
+
+    inv, a = _current_attempt(email, epoch, name)
+    if int(section) != int(a.current_section or 0):
+        raise Fail("section_closed", 409)
+    try:
+        value = json.loads(answer) if answer else None
+    except ValueError:
+        raise Fail("invalid_answer")
+    try:
+        A.save_answer(inv, a, key, value)
+    except ValueError as e:
+        _assessment_fail(e)
+    return {"saved": True}
+
+
+@endpoint(methods=("POST",))
+def upload_assessment_file(email: str, name: str, key: str, section: int = -1, epoch: str = ""):
+    from moet_careers import assessments as A
+
+    inv, a = _current_attempt(email, epoch, name)
+    if int(section) != int(a.current_section or 0):
+        raise Fail("section_closed", 409)
+    f = frappe.request.files.get("file") if frappe.request else None
+    if not f:
+        raise Fail("file_required")
+    content = f.stream.read()
+    ext = (f.filename or "").rsplit(".", 1)[-1].lower() if "." in (f.filename or "") else ""
+    if ext not in ANSWER_FILE_TYPES or not content.startswith(ANSWER_FILE_TYPES[ext]):
+        raise Fail("file_type")
+    if len(content) > 10 * 1024 * 1024:
+        raise Fail("file_too_large", max_mb=10)
+    doc = frappe.get_doc({"doctype": "File", "file_name": f"{a.name}-{key}.{ext}", "content": content, "is_private": 1,
+                          "attached_to_doctype": "Assessment Attempt", "attached_to_name": a.name}).insert(ignore_permissions=True)
+    try:
+        A.save_answer(inv, a, key, {"file_url": doc.file_url, "name": f.filename[:200]})
+    except ValueError as e:
+        _assessment_fail(e)
+    return {"saved": True, "name": f.filename[:200]}
+
+
+@endpoint(methods=("POST",))
+def next_assessment_section(email: str, name: str, lang: str, section: int = -1, epoch: str = ""):
+    """Locks the current section and opens the next one (or submits the test after the last section)."""
+    from moet_careers import assessments as A
+
+    lang = _lang(lang)
+    inv, a = _current_attempt(email, epoch, name)
+    if int(section) == int(a.current_section or 0):
+        A.next_section(inv, a)
+    a = A.open_attempt(frappe.get_doc("Assessment Invitation", inv.name))
+    return A.state(inv, a, lang) if a else {"finished": True}
+
+
+@endpoint(methods=("POST",))
+def assessment_event(email: str, name: str, kind: str, epoch: str = ""):
+    from moet_careers import assessments as A
+
+    try:
+        _, a = _current_attempt(email, epoch, name)
+    except Fail:
+        return {"ok": True}
+    A.log_event(a, kind)
+    return {"ok": True}

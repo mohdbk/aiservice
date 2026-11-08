@@ -14,6 +14,9 @@ import Jobs from "./pages/Jobs";
 import NotFound from "./pages/NotFound";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
+import AssessmentIntro from "./pages/AssessmentIntro";
+import Assessments from "./pages/Assessments";
+import TakeAssessment from "./pages/TakeAssessment";
 import { CheckEmail, ForgotPassword, ResetPassword, VerifyEmail } from "./pages/AccountPages";
 
 const LANG_RE = /^[a-z]{2,3}(-[A-Za-z]{2,4})?$/;
@@ -57,6 +60,9 @@ function LangShell() {
           <Route path="reset-password" element={<ResetPassword />} />
           <Route path="applications" element={<RequireAuth><Applications /></RequireAuth>} />
           <Route path="applications/:id" element={<RequireAuth><Application /></RequireAuth>} />
+          <Route path="assessments" element={<RequireAuth><Assessments /></RequireAuth>} />
+          <Route path="assessments/:id" element={<RequireAuth><AssessmentIntro /></RequireAuth>} />
+          <Route path="assessments/:id/take" element={<RequireAuth><TakeAssessment /></RequireAuth>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Layout>

@@ -82,8 +82,7 @@ class TestPortalUtils(unittest.TestCase):
     def test_every_api_error_code_has_text(self):
         src = (ROOT / "portal_api.py").read_text()
         codes = (set(re.findall(r'Fail\(\s*"(\w+)"', src)) | set(re.findall(r'"(cv_\w+)"', src)) | {"forbidden", "token_invalid", "token_expired"}) - {"no_logo"}  # no_logo is internal (logo proxy)
-        for c in codes:
-            self.assertIn(f"error.{c}", EN, c)
+        self.assertEqual(sorted(c for c in codes if f"error.{c}" not in EN), [])
 
 
 if __name__ == "__main__":

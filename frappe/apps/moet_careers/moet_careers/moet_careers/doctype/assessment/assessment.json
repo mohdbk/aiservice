@@ -1,0 +1,215 @@
+{
+ "actions": [],
+ "creation": "2026-11-08 19:10:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "assessment_type",
+  "column_break_head",
+  "status",
+  "pass_mark",
+  "max_attempts",
+  "score_policy",
+  "settings_section",
+  "shuffle_questions",
+  "shuffle_options",
+  "column_break_settings",
+  "show_score",
+  "default_deadline_days",
+  "instructions_section",
+  "instructions",
+  "sections_section",
+  "sections",
+  "items_section",
+  "items",
+  "summary",
+  "translations_section",
+  "translations",
+  "section_translations"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "assessment_type",
+   "fieldtype": "Select",
+   "options": "Knowledge Test\nLanguage Check\nSituational Judgement\nCase Study\nTechnical Task\nAptitude\nPersonality\nOther",
+   "label": "Type",
+   "default": "Knowledge Test",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_head",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "options": "Draft\nPublished",
+   "default": "Draft",
+   "label": "Status",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "pass_mark",
+   "fieldtype": "Percent",
+   "label": "Pass Mark",
+   "default": "60"
+  },
+  {
+   "fieldname": "max_attempts",
+   "fieldtype": "Int",
+   "label": "Attempts Allowed",
+   "default": "1",
+   "description": "HR can grant more to one candidate with Allow Re-exam."
+  },
+  {
+   "fieldname": "score_policy",
+   "fieldtype": "Select",
+   "options": "Highest\nLatest",
+   "default": "Highest",
+   "label": "Score That Counts"
+  },
+  {
+   "fieldname": "settings_section",
+   "fieldtype": "Section Break",
+   "label": "Settings"
+  },
+  {
+   "fieldname": "shuffle_questions",
+   "fieldtype": "Check",
+   "label": "Shuffle Questions",
+   "default": "1"
+  },
+  {
+   "fieldname": "shuffle_options",
+   "fieldtype": "Check",
+   "label": "Shuffle Options",
+   "default": "1"
+  },
+  {
+   "fieldname": "column_break_settings",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "show_score",
+   "fieldtype": "Check",
+   "label": "Show Score to Candidate",
+   "default": "0"
+  },
+  {
+   "fieldname": "default_deadline_days",
+   "fieldtype": "Int",
+   "label": "Deadline (Days After Invitation)",
+   "default": "7"
+  },
+  {
+   "fieldname": "instructions_section",
+   "fieldtype": "Section Break",
+   "label": "Instructions"
+  },
+  {
+   "fieldname": "instructions",
+   "fieldtype": "Text Editor",
+   "label": "Instructions"
+  },
+  {
+   "fieldname": "sections_section",
+   "fieldtype": "Section Break",
+   "label": "Sections"
+  },
+  {
+   "fieldname": "sections",
+   "fieldtype": "Table",
+   "options": "Assessment Section",
+   "label": "Sections",
+   "reqd": 1,
+   "description": "Candidates take sections in order. Each section has its own time limit and locks when it ends."
+  },
+  {
+   "fieldname": "items_section",
+   "fieldtype": "Section Break",
+   "label": "Questions"
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "options": "Assessment Item",
+   "label": "Questions",
+   "reqd": 1
+  },
+  {
+   "fieldname": "summary",
+   "fieldtype": "Small Text",
+   "label": "Summary",
+   "read_only": 1
+  },
+  {
+   "fieldname": "translations_section",
+   "fieldtype": "Section Break",
+   "label": "Translations",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "translations",
+   "fieldtype": "Table",
+   "options": "Assessment Translation",
+   "label": "Title and Instructions"
+  },
+  {
+   "fieldname": "section_translations",
+   "fieldtype": "Table",
+   "options": "Assessment Section Translation",
+   "label": "Sections"
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-08 19:15:00.000000",
+ "modified_by": "Administrator",
+ "module": "MoET Careers",
+ "name": "Assessment",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "export": 1,
+   "role": "System Manager"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "export": 1,
+   "role": "HR Manager"
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "role": "HR User"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "format:ASM-{####}",
+ "title_field": "title",
+ "search_fields": "title,assessment_type",
+ "show_title_field_in_link": 1,
+ "description": "A test for candidates: sections with time limits and questions from the bank."
+}

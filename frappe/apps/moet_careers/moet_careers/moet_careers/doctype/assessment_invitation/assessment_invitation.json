@@ -1,0 +1,186 @@
+{
+ "actions": [],
+ "creation": "2026-11-08 19:10:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "job_applicant",
+  "applicant_name",
+  "email",
+  "job_opening",
+  "column_break_a",
+  "assessment",
+  "status",
+  "deadline",
+  "section_attempts",
+  "attempts_allowed",
+  "attempts_used",
+  "extra_time_percent",
+  "column_break_b",
+  "score",
+  "result",
+  "lang",
+  "last_attempt"
+ ],
+ "fields": [
+  {
+   "fieldname": "job_applicant",
+   "fieldtype": "Link",
+   "options": "Job Applicant",
+   "label": "Job Applicant",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "applicant_name",
+   "fieldtype": "Data",
+   "label": "Applicant Name",
+   "fetch_from": "job_applicant.applicant_name",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email",
+   "fetch_from": "job_applicant.email_id",
+   "read_only": 1
+  },
+  {
+   "fieldname": "job_opening",
+   "fieldtype": "Link",
+   "options": "Job Opening",
+   "label": "Job Opening",
+   "fetch_from": "job_applicant.job_title",
+   "read_only": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_a",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "assessment",
+   "fieldtype": "Link",
+   "options": "Assessment",
+   "label": "Assessment",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "options": "Invited\nIn Progress\nSubmitted\nMarked\nExpired\nCancelled",
+   "default": "Invited",
+   "label": "Status",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "deadline",
+   "fieldtype": "Datetime",
+   "label": "Deadline",
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_attempts",
+   "fieldtype": "Section Break",
+   "label": "Attempts"
+  },
+  {
+   "fieldname": "attempts_allowed",
+   "fieldtype": "Int",
+   "label": "Attempts Allowed",
+   "default": "1",
+   "read_only": 1
+  },
+  {
+   "fieldname": "attempts_used",
+   "fieldtype": "Int",
+   "label": "Attempts Used",
+   "read_only": 1
+  },
+  {
+   "fieldname": "extra_time_percent",
+   "fieldtype": "Int",
+   "label": "Extra Time (%)",
+   "description": "Accessibility adjustment, applied to every timed section."
+  },
+  {
+   "fieldname": "column_break_b",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "score",
+   "fieldtype": "Percent",
+   "label": "Score",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "result",
+   "fieldtype": "Select",
+   "options": "\nPass\nFail\nAwaiting Marking",
+   "label": "Result",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "lang",
+   "fieldtype": "Data",
+   "label": "Language",
+   "read_only": 1
+  },
+  {
+   "fieldname": "last_attempt",
+   "fieldtype": "Link",
+   "options": "Assessment Attempt",
+   "label": "Last Attempt",
+   "read_only": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-08 19:10:00.000000",
+ "modified_by": "Administrator",
+ "module": "MoET Careers",
+ "name": "Assessment Invitation",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "export": 1,
+   "role": "System Manager"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "export": 1,
+   "role": "HR Manager"
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "role": "HR User"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "format:AINV-{#####}",
+ "title_field": "applicant_name",
+ "search_fields": "applicant_name,assessment",
+ "description": "An invitation for one candidate to take one assessment."
+}

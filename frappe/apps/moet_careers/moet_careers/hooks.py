@@ -9,15 +9,21 @@ required_apps = ["hrms", "ai_recruitment"]
 
 # Light MoET / UAE Design System theme for the HR back office (Desk). Desk itself is not restyled.
 app_include_css = ["/assets/moet_careers/css/desk_theme.css"]
-doctype_js = {"Job Opening": "public/js/job_opening.js"}
+doctype_js = {
+    "Job Opening": "public/js/job_opening.js",
+    "Job Applicant": "public/js/job_applicant.js",
+}
 
 after_install = "moet_careers.setup.after_migrate"
 after_migrate = "moet_careers.setup.after_migrate"
 
 doc_events = {
     "Job Opening": {"validate": "moet_careers.i18n.on_job_validate"},
+    "Job Applicant": {"after_insert": "moet_careers.assessments.on_applicant_insert"},
+    "Assessment Attempt": {"validate": "moet_careers.assessments.on_attempt_validate"},
 }
 
 scheduler_events = {
     "daily": ["moet_careers.accounts.purge_old_tokens"],
+    "hourly": ["moet_careers.assessments.expire_invitations"],
 }

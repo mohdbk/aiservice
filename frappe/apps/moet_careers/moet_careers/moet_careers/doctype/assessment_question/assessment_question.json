@@ -1,0 +1,200 @@
+{
+ "actions": [],
+ "creation": "2026-11-08 19:10:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "question_type",
+  "category",
+  "job_family",
+  "column_break_meta",
+  "difficulty",
+  "points",
+  "active",
+  "question_section",
+  "text",
+  "options_section",
+  "options",
+  "answer_section",
+  "accepted_answers",
+  "tolerance",
+  "marking_section",
+  "rubric",
+  "max_words",
+  "title",
+  "translations_section",
+  "translations"
+ ],
+ "fields": [
+  {
+   "fieldname": "question_type",
+   "fieldtype": "Select",
+   "options": "Single Choice\nMultiple Choice\nTrue or False\nShort Answer\nNumber\nEssay\nFile Upload",
+   "label": "Question Type",
+   "reqd": 1,
+   "default": "Single Choice",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "category",
+   "fieldtype": "Data",
+   "label": "Category",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "description": "Used to draw random questions, for example Excel, Policy, Arabic Writing."
+  },
+  {
+   "fieldname": "job_family",
+   "fieldtype": "Data",
+   "label": "Job Family",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "column_break_meta",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "difficulty",
+   "fieldtype": "Select",
+   "options": "Easy\nMedium\nHard",
+   "default": "Medium",
+   "label": "Difficulty",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "points",
+   "fieldtype": "Float",
+   "label": "Points",
+   "default": "1"
+  },
+  {
+   "fieldname": "active",
+   "fieldtype": "Check",
+   "label": "Active",
+   "default": "1",
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "question_section",
+   "fieldtype": "Section Break",
+   "label": "Question"
+  },
+  {
+   "fieldname": "text",
+   "fieldtype": "Text Editor",
+   "label": "Question",
+   "reqd": 1
+  },
+  {
+   "fieldname": "options_section",
+   "fieldtype": "Section Break",
+   "label": "Options",
+   "depends_on": "eval:['Single Choice','Multiple Choice','True or False'].includes(doc.question_type)"
+  },
+  {
+   "fieldname": "options",
+   "fieldtype": "Table",
+   "options": "Assessment Question Option",
+   "label": "Options"
+  },
+  {
+   "fieldname": "answer_section",
+   "fieldtype": "Section Break",
+   "label": "Answer",
+   "depends_on": "eval:['Short Answer','Number'].includes(doc.question_type)"
+  },
+  {
+   "fieldname": "accepted_answers",
+   "fieldtype": "Small Text",
+   "label": "Accepted Answers",
+   "description": "One per line. Short answers ignore case, spaces and Arabic diacritics. For a number, put the value on the first line."
+  },
+  {
+   "fieldname": "tolerance",
+   "fieldtype": "Float",
+   "label": "Number Tolerance",
+   "depends_on": "eval:doc.question_type=='Number'"
+  },
+  {
+   "fieldname": "marking_section",
+   "fieldtype": "Section Break",
+   "label": "Marking Guide",
+   "depends_on": "eval:['Essay','File Upload','Short Answer'].includes(doc.question_type)"
+  },
+  {
+   "fieldname": "rubric",
+   "fieldtype": "Small Text",
+   "label": "Rubric",
+   "description": "What a full-mark answer contains. Shown to markers only."
+  },
+  {
+   "fieldname": "max_words",
+   "fieldtype": "Int",
+   "label": "Word Limit",
+   "depends_on": "eval:doc.question_type=='Essay'"
+  },
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "hidden": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "translations_section",
+   "fieldtype": "Section Break",
+   "label": "Translations",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "translations",
+   "fieldtype": "Table",
+   "options": "Assessment Question Translation",
+   "label": "Translations",
+   "description": "One row per portal language. Use Suggest Translations for drafts, then check and approve them."
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-08 19:15:00.000000",
+ "modified_by": "Administrator",
+ "module": "MoET Careers",
+ "name": "Assessment Question",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "export": 1,
+   "role": "System Manager"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "export": 1,
+   "role": "HR Manager"
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "write": 1,
+   "report": 1,
+   "role": "HR User"
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "autoname": "format:AQ-{#####}",
+ "title_field": "title",
+ "search_fields": "title,category",
+ "show_title_field_in_link": 1,
+ "description": "Question bank for careers portal assessments."
+}

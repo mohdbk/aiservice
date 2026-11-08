@@ -66,6 +66,14 @@ jobs:
               await shoot(desk, `${l}_07_application`, `/${l}/applications/HR-APP-2026-00012?new=1`);
             }
             await shoot(desk, 'ar_08_application_preparing', '/ar/applications/HR-APP-2026-00007');
+            await shoot(desk, 'ar_16_assessments', '/ar/assessments');
+            await shoot(desk, 'en_17_assessment_intro', '/en/assessments/AINV-00001');
+            await shoot(desk, 'ar_18_assessment_done', '/ar/assessments/AINV-00002');
+            { const r = await desk.request.post(B + '/api/assessments/AINV-00001/start', { headers: { 'X-Portal': '1' }, data: { lang: 'ar' } });
+              if (!r.ok()) throw new Error('start failed ' + r.status()); }
+            await shoot(desk, 'ar_19_assessment_take', '/ar/assessments/AINV-00001/take');
+            await shoot(desk, 'en_20_assessment_take', '/en/assessments/AINV-00001/take');
+            await shoot(phone, 'phone_ar_assessment_take', '/ar/assessments/AINV-00001/take');
             await shoot(desk, 'ar_09_not_found', '/ar/nothing-here');
           { const g = await b.newContext({ viewport: { width: 1366, height: 900 } }); const p = await g.newPage();
             await p.goto(B + '/en', { waitUntil: 'networkidle' }); await p.click('button[aria-controls="account-menu"]'); await p.waitForTimeout(300);

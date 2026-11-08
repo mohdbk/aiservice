@@ -236,6 +236,38 @@ export function createApp(cfg = loadConfig(), deps = {}) {
       { name, data, type: str(cv.type, 100) });
       return send(res, 200, result);
     }
+    // Assessments (candidate side). The server times every section; answers are saved one by one.
+    if (m === "GET" && pathname === "/api/assessments") {
+      const u = requireUser(req);
+      return send(res, 200, await frappe.assessments(u, langParam(url)));
+    }
+    mm = pathname.match(/^\/api\/assessments\/([A-Za-z0-9._-]{1,140})(?:\/(state|start|answer|file|next|event))?$/);
+    if (mm) {
+      const u = requireUser(req);
+      const [, id, action] = mm;
+      if (m === "GET" && !action) return send(res, 200, await frappe.assessment(u, id, langParam(url)));
+      if (m === "GET" && action === "state") return send(res, 200, await frappe.assessmentState(u, id, langParam(url)));
+      if (m === "POST" && action) {
+        checkCsrf(req);
+        limit(`asm:${u.email}`, LIMITS.assessment_write);
+        const b = await readJson(req, action === "file" ? 15 * 1024 * 1024 : 256 * 1024);
+        const lang = str(b.lang, 10);
+        const section = Number.isInteger(b.section) ? b.section : -1;
+        if (action === "start") return send(res, 200, await frappe.startAssessment(u, id, lang));
+        if (action === "answer") return send(res, 200, await frappe.saveAnswer(u, id, str(b.key, 20), b.answer ?? null, section));
+        if (action === "next") return send(res, 200, await frappe.nextSection(u, id, section, lang));
+        if (action === "event") return send(res, 200, await frappe.assessmentEvent(u, id, ["hidden", "paste"].includes(b.kind) ? b.kind : ""));
+        if (action === "file") {
+          const f = b.file && typeof b.file === "object" ? b.file : null;
+          const name = str(f?.name, 200).replace(/[\\/\r\n"]/g, "_");
+          if (!f || !name || typeof f.data !== "string") throw new HttpError(400, "file_required");
+          const data = Buffer.from(f.data, "base64");
+          if (!data.length) throw new HttpError(400, "file_required");
+          if (data.length > 10 * 1024 * 1024) throw new HttpError(413, "file_too_large", { max_mb: 10 });
+          return send(res, 200, await frappe.uploadAnswer(u, id, str(b.key, 20), section, { name, data, type: str(f.type, 100) }));
+        }
+      }
+    }
     mm = pathname.match(/^\/api\/applications\/([A-Za-z0-9._-]{1,140})\/corrections$/);
     if (m === "POST" && mm) {
       checkCsrf(req);
@@ -301,6 +333,7 @@ export function createApp(cfg = loadConfig(), deps = {}) {
       if (e instanceof HttpError || e instanceof FrappeError) {
         const status = e.code === "server" ? 502 : e.status;
         const extra = e.code === "signed_out" && url.pathname !== "/api/login" ? { "Set-Cookie": clearCookie() } : {};
+        if (e.status === 413) extra.Connection = "close";   // the rest of the oversized body is not read
         return send(res, status, { error: { code: e.code, params: e.params || {} } }, extra);
       }
       console.error("portal error", e && e.stack ? e.stack.split("\n").slice(0, 3).join(" | ") : e);

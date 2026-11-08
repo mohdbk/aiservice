@@ -70,6 +70,20 @@ export function createFrappe(cfg, fetchImpl = globalThis.fetch) {
       form.append("cv", new Blob([file.data], { type: file.type || "application/octet-stream" }), file.name);
       return call("apply", { form, timeoutMs: 120_000 });
     },
+    assessments: (u, lang) => call("assessments", { query: { email: u.email, epoch: u.epoch || 0, lang } }),
+    assessment: (u, name, lang) => call("assessment", { query: { email: u.email, epoch: u.epoch || 0, name, lang } }),
+    startAssessment: (u, name, lang) => call("start_assessment", { json: { email: u.email, epoch: u.epoch || 0, name, lang } }),
+    assessmentState: (u, name, lang) => call("assessment_state", { query: { email: u.email, epoch: u.epoch || 0, name, lang } }),
+    saveAnswer: (u, name, key, answer, section) =>
+      call("save_assessment_answer", { json: { email: u.email, epoch: u.epoch || 0, name, key, section, answer: JSON.stringify(answer ?? null) } }),
+    uploadAnswer: (u, name, key, section, file) => {
+      const form = new FormData();
+      for (const [k, v] of Object.entries({ email: u.email, epoch: u.epoch || 0, name, key, section })) form.append(k, String(v));
+      form.append("file", new Blob([file.data], { type: file.type || "application/octet-stream" }), file.name);
+      return call("upload_assessment_file", { form, timeoutMs: 120_000 });
+    },
+    nextSection: (u, name, section, lang) => call("next_assessment_section", { json: { email: u.email, epoch: u.epoch || 0, name, section, lang } }),
+    assessmentEvent: (u, name, kind) => call("assessment_event", { json: { email: u.email, epoch: u.epoch || 0, name, kind } }),
     logo: (dark) => call("logo", { query: { dark: dark ? 1 : 0 }, raw: true }),
   };
 }

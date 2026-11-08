@@ -58,37 +58,56 @@ def consume(token: str, purpose: str):
     return row
 
 
-def send(user: str, purpose: str, lang: str, next_path: str = "") -> bool:
-    """Issues a link and queues the email. Returns False when no portal address or mail account is set."""
-    from moet_careers.i18n import portal_languages, portal_text
+def portal_lang(lang: str) -> str:
+    from moet_careers.i18n import portal_languages
 
-    s = frappe.get_cached_doc(SETTINGS)
-    base = (s.portal_url or "").rstrip("/")
-    if not base or not mail_configured():
+    langs, default = portal_languages()
+    return lang if lang in [l["code"] for l in langs] else default
+
+
+def send_portal_email(user: str, lang: str, subject_key: str, body_key: str, link: str, params: dict | None = None) -> bool:
+    """Queues a bilingual-ready portal email built from Portal Text keys. {name}, {link} and params are filled in."""
+    from moet_careers.i18n import portal_text
+
+    if not mail_configured():
+        frappe.log_error(f"Careers portal email not sent ({subject_key}): no outgoing Email Account", "Careers portal email")
+        return False
+    text = portal_text(lang)
+    values = {"name": frappe.utils.get_fullname(user) or user, "link": link, **(params or {})}
+    body, subject = text[body_key], text[subject_key]
+    for k, v in values.items():
+        body, subject = body.replace("{" + k + "}", str(v)), subject.replace("{" + k + "}", str(v))
+    rtl = lang.split("-")[0] in ("ar", "fa", "ur", "he")
+    parts = []
+    for para in body.split("\n\n"):
+        if link and para.strip() == link:
+            parts.append(f'<p style="margin:0 0 16px"><a href="{link}" style="display:inline-block;background:#92722a;color:#ffffff;'
+                         f'padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:bold">{escape_html(subject)}</a></p>'
+                         f'<p style="margin:0 0 16px;font-size:12px;color:#555;word-break:break-all">{escape_html(link)}</p>')
+        else:
+            parts.append(f'<p style="margin:0 0 16px">{escape_html(para).replace(chr(10), "<br>")}</p>')
+    html = (f'<div dir="{"rtl" if rtl else "ltr"}" style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;'
+            f'color:#232528;max-width:560px">{"".join(parts)}<p style="margin:24px 0 0;color:#555">'
+            f'{escape_html(text["email.signature"])}</p></div>')
+    frappe.sendmail(recipients=[user], subject=subject, message=html, delayed=True, reference_doctype="User", reference_name=user)
+    return True
+
+
+def portal_link(lang: str, path: str) -> str:
+    base = (frappe.get_cached_doc(SETTINGS).portal_url or "").rstrip("/")
+    return f"{base}/{lang}{path}" if base else ""
+
+
+def send(user: str, purpose: str, lang: str, next_path: str = "") -> bool:
+    """Issues an account link and queues the email. Returns False when no portal address or mail account is set."""
+    lang = portal_lang(lang)
+    if not portal_link(lang, "") or not mail_configured():
         frappe.log_error(f"Careers portal email not sent ({purpose}): set Portal Address and an outgoing Email Account",
                          "Careers portal email")
         return False
-    codes = [l["code"] for l in portal_languages()[0]]
-    lang = lang if lang in codes else portal_languages()[1]
     token = issue(user, purpose, lang, next_path)
-    link = f"{base}/{lang}/{PAGE[purpose]}?token={token}"
-    text = portal_text(lang)
-    name = frappe.utils.get_fullname(user) or user
     subject_key, body_key = MAIL[purpose]
-    body = text[body_key].replace("{name}", name).replace("{link}", link)
-    rtl = lang.split("-")[0] in ("ar", "fa", "ur", "he")
-    paragraphs = "".join(
-        f'<p style="margin:0 0 16px">{escape_html(p).replace(chr(10), "<br>")}</p>' if link not in p else
-        f'<p style="margin:0 0 16px"><a href="{link}" style="display:inline-block;background:#92722a;color:#ffffff;'
-        f'padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:bold">{escape_html(text[subject_key])}</a></p>'
-        f'<p style="margin:0 0 16px;font-size:12px;color:#555;word-break:break-all">{escape_html(link)}</p>'
-        for p in body.split("\n\n"))
-    html = (f'<div dir="{"rtl" if rtl else "ltr"}" style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;'
-            f'color:#232528;max-width:560px">{paragraphs}<p style="margin:24px 0 0;color:#555">'
-            f'{escape_html(text["email.signature"])}</p></div>')
-    frappe.sendmail(recipients=[user], subject=text[subject_key], message=html, delayed=True,
-                    reference_doctype="User", reference_name=user)
-    return True
+    return send_portal_email(user, lang, subject_key, body_key, portal_link(lang, f"/{PAGE[purpose]}?token={token}"))
 
 
 def purge_old_tokens():

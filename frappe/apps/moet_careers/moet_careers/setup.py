@@ -15,6 +15,11 @@ CUSTOM_FIELDS = {
          "label": "Translations", "insert_after": "portal_translations_section",
          "description": "One row per portal language. Use Suggest Translations for drafts; only Approved rows are shown "
                         "on the portal, otherwise the job is shown in its original language."},
+        {"fieldname": "assessment_stages_section", "fieldtype": "Section Break", "label": "Assessments",
+         "insert_after": "portal_translations", "collapsible": 1},
+        {"fieldname": "assessment_stages", "fieldtype": "Table", "options": "Job Assessment Stage", "label": "Assessments",
+         "insert_after": "assessment_stages_section",
+         "description": "Tests for this job, in order. 'When They Apply' tests are sent automatically to every new applicant."},
     ],
     "User": [
         {"fieldname": "portal_account_section", "fieldtype": "Section Break", "label": "Careers Portal",
@@ -36,6 +41,8 @@ CUSTOM_FIELDS = {
          "insert_after": "consent_ai_screening"},
         {"fieldname": "portal_language", "fieldtype": "Data", "label": "Portal Language", "read_only": 1,
          "insert_after": "consent_at"},
+        {"fieldname": "assessment_summary", "fieldtype": "Small Text", "label": "Assessments", "read_only": 1,
+         "insert_after": "portal_language"},
     ],
 }
 

@@ -119,16 +119,20 @@ def source_language(title: str, description: str) -> str:
     return "ar" if arabic_ratio(f"{title} {strip_html(description or '')}") > 0.3 else "en"
 
 
-def on_job_validate(doc, method=None):
-    """Editing a suggested translation approves it; record who approved."""
-    for row in doc.get("portal_translations") or []:
+def approve_rows(rows, fields: tuple):
+    """Shared approval rule for translation rows: editing a suggestion approves it; record who approved."""
+    for row in rows or []:
         if row.status == "Suggested" and row.suggested_hash and \
-                content_hash(row.job_title, row.description) != row.suggested_hash:
+                content_hash(*[row.get(f) for f in fields]) != row.suggested_hash:
             row.status = "Approved"
         if row.status == "Approved" and not row.approved_by:
             row.approved_by = frappe.session.user
         if row.status != "Approved":
             row.approved_by = None
+
+
+def on_job_validate(doc, method=None):
+    approve_rows(doc.get("portal_translations"), ("job_title", "description"))
 
 
 @frappe.whitelist(methods=["POST"])
@@ -182,6 +186,72 @@ def _suggest_job_job(job: str, user: str | None = None):
         msg = f"Translation suggestions ready for {', '.join(done)}. Review and approve them." if done else \
             "No translation suggestions were added."
         frappe.publish_realtime("moet_translations_ready", {"job": job, "message": msg}, user=user)
+    return done
+
+
+# ---------------- assessment translations ----------------
+@frappe.whitelist(methods=["POST"])
+def suggest_assessment_translations(doctype: str, name: str):
+    if doctype not in ("Assessment Question", "Assessment"):
+        frappe.throw("Not supported.")
+    doc = frappe.get_doc(doctype, name)
+    doc.check_permission("write")
+    frappe.enqueue("moet_careers.i18n._suggest_assessment_job", queue="long", timeout=1800, doctype=doctype, name=name,
+                   user=frappe.session.user, job_id=f"moet-asm-translate-{name}", deduplicate=True)
+    return "Drafting translations for every portal language that has none yet. The form refreshes when they are ready."
+
+
+def _suggest_assessment_job(doctype: str, name: str, user: str | None = None):
+    from frappe.utils import strip_html_tags
+
+    doc = frappe.get_doc(doctype, name)
+    langs, _ = portal_languages()
+    if doctype == "Assessment Question":
+        src = source_language(strip_html_tags(doc.text or ""), "")
+        have = {t.language for t in doc.get("translations") or []}
+        payload = {"question_html": doc.text or "", "options": [o.option for o in doc.options]}
+        schema = {"type": "object", "additionalProperties": False, "required": ["question_html", "options"],
+                  "properties": {"question_html": {"type": "string"}, "options": {"type": "array", "items": {"type": "string"}}}}
+    else:
+        src = source_language(doc.title or "", doc.instructions or "")
+        have = {t.language for t in doc.get("translations") or []}
+        payload = {"title": doc.title or "", "instructions_html": doc.instructions or "",
+                   "sections": [{"title": s.section_title or "", "instructions": s.instructions or ""} for s in doc.sections]}
+        schema = {"type": "object", "additionalProperties": False, "required": ["title", "instructions_html", "sections"],
+                  "properties": {"title": {"type": "string"}, "instructions_html": {"type": "string"},
+                                 "sections": {"type": "array", "items": {"type": "object", "additionalProperties": False,
+                                              "required": ["title", "instructions"],
+                                              "properties": {"title": {"type": "string"}, "instructions": {"type": "string"}}}}}}
+    done = []
+    for lang in [l["code"] for l in langs if l["code"] != src and l["code"] not in have]:
+        out = _llm_json(
+            "You translate recruitment test content for a UAE government ministry. Translate from "
+            f"{language_name_en(src)} into {language_name_en(lang)} ({lang}). Keep HTML tags, numbers, names, formulas, "
+            "code and technical terms; keep the same number and order of options and sections. Do not change the "
+            "meaning or make any option more or less obviously correct. Never use em dashes.",
+            json.dumps(payload, ensure_ascii=False), schema, "assessment_translation")
+        if doctype == "Assessment Question":
+            text = clean_html(out.get("question_html") or "")
+            opts = "\n".join((o or "").strip() for o in (out.get("options") or [])[:len(doc.options)])
+            doc.append("translations", {"language": lang, "status": "Suggested", "text": text, "options": opts,
+                                        "suggested_hash": content_hash(text, opts)})
+        else:
+            title, instr = (out.get("title") or "").strip()[:140], clean_html(out.get("instructions_html") or "")
+            doc.append("translations", {"language": lang, "status": "Suggested", "title": title, "instructions": instr,
+                                        "suggested_hash": content_hash(title, instr)})
+            for i, sec in enumerate((out.get("sections") or [])[:len(doc.sections)], 1):
+                st, si = (sec.get("title") or "").strip()[:140], (sec.get("instructions") or "").strip()
+                doc.append("section_translations", {"language": lang, "section": i, "status": "Suggested", "title": st,
+                                                    "instructions": si, "suggested_hash": content_hash(st, si)})
+        done.append(lang)
+    if done:
+        doc.flags.ignore_permissions = True
+        doc.save()
+        doc.notify_update()
+    if user:
+        frappe.publish_realtime("moet_translations_ready", {"job": name, "message":
+                                f"Translation suggestions ready for {', '.join(done)}. Review and approve them." if done
+                                else "No translation suggestions were added."}, user=user)
     return done
 
 

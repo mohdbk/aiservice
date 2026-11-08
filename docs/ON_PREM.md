@@ -39,7 +39,7 @@ HR user ──► Desk "Ask AI" panel ──► ai_recruitment.api.chat (session
 | ERPNext base image | `frappe/erpnext:v16.54.0` | `frappe/Dockerfile` (`ERPNEXT_IMAGE`) |
 | Frappe HR | `v16.53.1` | `frappe/Dockerfile` (`HRMS_VERSION`) |
 | ai_recruitment | `0.6.1` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
-| moet_careers | `0.3.1` | `frappe/apps/moet_careers/moet_careers/__init__.py` |
+| moet_careers | `0.4.0` | `frappe/apps/moet_careers/moet_careers/__init__.py` |
 | Careers portal | `0.1.0` (Node 22, React 18.3, Vite 5.4) | `portal/web/package.json`, `portal/server/package.json` |
 | UAE Design System | `@aegov/design-system 3.0.7` + Tailwind `4.1.17` | `portal/web/package.json` |
 | Demo LLM | `qwen/qwen3.8-27b` (OpenRouter) | AI Recruitment Settings |
@@ -313,7 +313,36 @@ How it fits Frappe HR:
   Approved (editing approves it; the approver is recorded). Without an approved row the job is shown in its
   original language, marked with the right `lang` and direction.
 
-### Configure the portal
+### Assessments (tests for candidates)
+HR builds tests in Desk; candidates take them in the portal under **My Assessments** (the "exams" in the
+account note). Nothing on the candidate side mentions AI.
+
+| Doctype | What it holds |
+|---|---|
+| **Assessment Question** | The bank. Types: Single Choice, Multiple Choice, True or False, Short Answer, Number (marked automatically), Essay and File Upload (marked by people against a rubric). Category, job family, difficulty, points. |
+| **Assessment** | A test: type (Knowledge Test, Language Check, Situational Judgement, Case Study, Technical Task, Aptitude, Personality, Other), instructions, pass mark, attempts allowed, which score counts (highest or latest), shuffle settings, whether candidates see their score. **Sections**, each with its own time limit and optional pass mark. **Questions** per section: picked one by one or drawn at random from the bank (for example 10 medium Excel questions). |
+| **Job Opening > Assessments** | Several tests per job, in order, each sent **When They Apply** or **Manually**, with a deadline and a weight. |
+| **Assessment Invitation** | One candidate and one test: deadline, attempts allowed and used, extra time (accessibility), score and result. Buttons: **Allow Re-exam** (extra attempts and a new deadline, emails the candidate), **Cancel Invitation**. |
+| **Assessment Attempt** | One attempt, with its questions frozen when it started (later edits never change it), answers, a mark per question, section scores, and integrity counters (times the candidate left the page, pastes). |
+
+How it works:
+- Invite from a Job Applicant (**Assessments > Invite to Assessment**) or automatically when they apply.
+  Candidates get an email with the link (Portal Text keys `email.assessment_*`, `email.reexam_*`).
+- Sections are taken in order. The server times each section; when the time is up or the candidate finishes
+  it, the section locks and the next one starts. Answers are saved one by one, so a lost connection loses
+  nothing. Correct answers and rubrics never leave Frappe.
+- Every attempt draws its own questions (random draws and shuffling), so a re-exam is a different paper.
+- Automatic marks are instant. Essays and files show **Needs Marking**: open the attempt, enter Marker's
+  Points, then **Save Marks and Recalculate**. **Suggest Marks** asks the on-prem model for suggested points
+  from the rubric, shown to markers only. A candidate passes when the overall pass mark and every section
+  pass mark are met. Results appear on the Job Applicant (**Assessments** field).
+- Translations: questions (with their options), test titles, instructions and sections have translation
+  tables. **Suggest Translations** drafts every portal language; HR approves (editing approves). Candidates
+  only see approved text, otherwise the original.
+- Invitations past their deadline expire hourly. Answer files: PDF, Office, images or ZIP, up to 10 MB, stored
+  as private files on the attempt.
+
+
 Environment variables of the portal container:
 
 | Variable | Value |
