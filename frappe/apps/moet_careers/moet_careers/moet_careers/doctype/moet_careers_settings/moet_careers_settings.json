@@ -27,6 +27,9 @@
   "suggest_language",
   "suggest_portal_text",
   "suggest_help",
+  "accounts_section",
+  "portal_url",
+  "require_email_verification",
   "applications_section",
   "allow_signup",
   "max_cv_mb"
@@ -171,6 +174,24 @@
    "options": "<p class='text-muted small'>Drafts the portal wording for a new language with the language model. Review the drafts in <a href='/app/portal-text?status=Suggested'>Portal Text</a> and set them to Approved. Only approved text is shown.</p>"
   },
   {
+   "fieldname": "accounts_section",
+   "fieldtype": "Section Break",
+   "label": "Applicant Accounts"
+  },
+  {
+   "fieldname": "portal_url",
+   "fieldtype": "Data",
+   "label": "Portal Address",
+   "description": "Public address of the careers portal, used in email links, for example https://careers.moet.gov.ae"
+  },
+  {
+   "fieldname": "require_email_verification",
+   "fieldtype": "Check",
+   "label": "Require Email Verification",
+   "default": "1",
+   "description": "New applicants must open an activation link before signing in. Applies only while an outgoing Email Account is set up; without one, accounts are activated straight away."
+  },
+  {
    "fieldname": "applications_section",
    "fieldtype": "Section Break",
    "label": "Applications"
@@ -191,7 +212,7 @@
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-11-08 17:45:00.000000",
+ "modified": "2026-11-08 18:50:00.000000",
  "modified_by": "Administrator",
  "module": "MoET Careers",
  "name": "MoET Careers Settings",

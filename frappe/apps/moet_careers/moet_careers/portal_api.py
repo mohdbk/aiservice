@@ -13,6 +13,7 @@ from frappe.utils import getdate, now_datetime, today, validate_email_address
 from frappe.utils.html_utils import clean_html
 
 from moet_careers import __version__
+from moet_careers import accounts
 from moet_careers.i18n import portal_languages, portal_text, source_language
 from moet_careers.portal_utils import (candidate_status, clean_department, is_rtl, pick_translation, reference, summary_text,
                                        valid_phone, validate_cv)
@@ -193,8 +194,12 @@ def job(lang: str, name: str):
 
 
 # ---------------- accounts ----------------
+def _epoch(user: str) -> int:
+    return int(frappe.db.get_value("User", user, "portal_session_epoch") or 0)
+
+
 @endpoint(methods=("POST",))
-def signup(full_name: str, email: str, password: str, lang: str = "ar"):
+def signup(full_name: str, email: str, password: str, lang: str = "ar", next_path: str = ""):
     if not _settings().allow_signup:
         raise Fail("signup_closed", 403)
     full_name, email = (full_name or "").strip(), (email or "").strip().lower()
@@ -216,7 +221,12 @@ def signup(full_name: str, email: str, password: str, lang: str = "ar"):
         if "password" in str(e).lower():
             raise Fail("password_weak")
         raise
-    return {"email": email, "full_name": full_name}
+    if accounts.verification_required():
+        frappe.db.set_value("User", email, "portal_email_verified", 0, update_modified=False)
+        accounts.send(email, "Verify Email", lang, next_path)
+        return {"email": email, "full_name": full_name, "verification_sent": True}
+    frappe.db.set_value("User", email, "portal_email_verified", 1, update_modified=False)
+    return {"email": email, "full_name": full_name, "epoch": 0}
 
 
 @endpoint(methods=("POST",))
@@ -232,22 +242,84 @@ def authenticate(email: str, password: str):
         check_password(user.name, password or "", delete_tracker_cache=False)
     except frappe.AuthenticationError:
         raise Fail("bad_credentials", 401)
-    return {"email": user.name, "full_name": user.full_name or user.name}
+    if accounts.verification_required() and not frappe.db.get_value("User", user.name, "portal_email_verified"):
+        raise Fail("email_not_verified", 403)
+    return {"email": user.name, "full_name": user.full_name or user.name, "epoch": _epoch(user.name)}
 
 
-def _applicant_user(email: str):
+def _applicant_user(email: str, epoch: str = ""):
+    """The signed-in applicant. A password reset raises the user's session epoch, which signs out every
+    existing portal session (the portal sends the epoch it was given at sign-in)."""
     email = (email or "").strip().lower()
-    user = frappe.db.get_value("User", email, ["name", "enabled", "user_type", "full_name"], as_dict=True) if email else None
+    user = frappe.db.get_value("User", email, ["name", "enabled", "user_type", "full_name", "portal_session_epoch"],
+                               as_dict=True) if email else None
     if not user or not user.enabled or user.user_type != "Website User":
         raise Fail("signed_out", 401)
+    if str(epoch) != str(int(user.portal_session_epoch or 0)):
+        raise Fail("signed_out", 401)
     return user
+
+
+# ---------------- activation and password reset ----------------
+@endpoint(methods=("POST",))
+def resend_verification(email: str, lang: str = "ar", next_path: str = ""):
+    """Always answers the same way, so it cannot be used to find out which emails have accounts."""
+    email = (email or "").strip().lower()
+    u = frappe.db.get_value("User", email, ["name", "enabled", "user_type", "portal_email_verified"], as_dict=True) if email else None
+    if u and u.enabled and u.user_type == "Website User" and not u.portal_email_verified and \
+            SERVICE_ROLE not in frappe.get_roles(u.name) and accounts.verification_required():
+        accounts.send(u.name, "Verify Email", lang, next_path)
+    return {"sent": True}
+
+
+@endpoint(methods=("POST",))
+def verify_email(token: str):
+    try:
+        row = accounts.consume(token, "Verify Email")
+    except ValueError as e:
+        raise Fail(f"token_{e}", 400)
+    frappe.db.set_value("User", row.user, "portal_email_verified", 1, update_modified=False)
+    return {"email": row.user, "full_name": frappe.utils.get_fullname(row.user) or row.user,
+            "epoch": _epoch(row.user), "next": row.next_path or "", "lang": row.lang or ""}
+
+
+@endpoint(methods=("POST",))
+def request_password_reset(email: str, lang: str = "ar"):
+    """Always answers the same way, so it cannot be used to find out which emails have accounts."""
+    email = (email or "").strip().lower()
+    u = frappe.db.get_value("User", email, ["name", "enabled", "user_type"], as_dict=True) if email else None
+    if u and u.enabled and u.user_type == "Website User" and SERVICE_ROLE not in frappe.get_roles(u.name):
+        accounts.send(u.name, "Reset Password", lang)
+    return {"sent": True}
+
+
+@endpoint(methods=("POST",))
+def reset_password(token: str, password: str):
+    if not (8 <= len(password or "") <= 128):
+        raise Fail("password_short")
+    try:
+        row = accounts.consume(token, "Reset Password")
+    except ValueError as e:
+        raise Fail(f"token_{e}", 400)
+    user = frappe.get_doc("User", row.user)
+    user.new_password = password
+    try:
+        user.save(ignore_permissions=True)
+    except frappe.exceptions.ValidationError as e:
+        if "password" in str(e).lower():
+            raise Fail("password_weak")
+        raise
+    # The link proves the applicant owns the inbox; every existing session is signed out.
+    frappe.db.set_value("User", row.user, {"portal_email_verified": 1,
+                                           "portal_session_epoch": _epoch(row.user) + 1}, update_modified=False)
+    return {"ok": True}
 
 
 # ---------------- applications ----------------
 @endpoint(methods=("POST",))
 def apply(email: str, job: str, phone: str = "", country: str = "", cover_note: str = "", declaration: str = "0",
-          lang: str = "ar"):
-    user = _applicant_user(email)
+          lang: str = "ar", epoch: str = ""):
+    user = _applicant_user(email, epoch)
     s = _settings()
     opening = _published_job(job)
     if not _is_open(opening):
@@ -300,9 +372,9 @@ def _job_titles(job_names: list, lang: str) -> dict:
 
 
 @endpoint()
-def applications(email: str, lang: str):
+def applications(email: str, lang: str, epoch: str = ""):
     lang = _lang(lang)
-    user = _applicant_user(email)
+    user = _applicant_user(email, epoch)
     rows = frappe.get_all("Job Applicant", filters={"email_id": user.name},
                           fields=["name", "job_title", "status", "creation"], order_by="creation desc", limit_page_length=100)
     titles = _job_titles([r.job_title for r in rows if r.job_title], lang)
@@ -311,8 +383,8 @@ def applications(email: str, lang: str):
                               "status": candidate_status(r.status, _has_interview(r.name))} for r in rows]}
 
 
-def _own(email: str, name: str):
-    user = _applicant_user(email)
+def _own(email: str, name: str, epoch: str = ""):
+    user = _applicant_user(email, epoch)
     a = frappe.db.get_value("Job Applicant", name, ["name", "email_id", "job_title", "status", "creation"], as_dict=True) \
         if name else None
     if not a or (a.email_id or "").lower() != user.name:
@@ -321,9 +393,9 @@ def _own(email: str, name: str):
 
 
 @endpoint()
-def application(email: str, name: str, lang: str):
+def application(email: str, name: str, lang: str, epoch: str = ""):
     lang = _lang(lang)
-    a = _own(email, name)
+    a = _own(email, name, epoch)
     extra = frappe.db.get_value("Job Applicant", a.name, ["ai_status", "ai_profile"], as_dict=True) \
         if frappe.get_meta("Job Applicant").has_field("ai_status") else {}
     state = (extra or {}).get("ai_status")
@@ -357,8 +429,8 @@ def _details(raw):
 
 
 @endpoint(methods=("POST",))
-def add_correction(email: str, name: str, note: str):
-    a = _own(email, name)
+def add_correction(email: str, name: str, note: str, epoch: str = ""):
+    a = _own(email, name, epoch)
     note = (note or "").strip()
     if not (3 <= len(note) <= 2000):
         raise Fail("note_length")

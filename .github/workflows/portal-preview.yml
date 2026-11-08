@@ -52,6 +52,10 @@ jobs:
               await shoot(desk, `${l}_04_create_account`, `/${l}/create-account`);
             }
             await shoot(desk, 'ar_02b_job_untranslated', '/ar/jobs/HR-OPN-2026-0003');
+            await shoot(desk, 'ar_11_check_email', '/ar/check-email?email=sara%40example.com');
+            await shoot(desk, 'en_12_forgot_password', '/en/forgot-password');
+            await shoot(desk, 'ar_13_reset_password', '/ar/reset-password?token=preview');
+            await shoot(phone, 'phone_ar_sign_in', '/ar/sign-in');
             for (const ctx of [desk, phone]) {
               const r = await ctx.request.post(B + '/api/login', { headers: { 'X-Portal': '1' }, data: { email: 'layla@example.com', password: 'password123' } });
               if (!r.ok()) throw new Error('login failed ' + r.status());

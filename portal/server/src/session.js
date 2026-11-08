@@ -7,7 +7,7 @@ const b64 = (s) => Buffer.from(s).toString("base64url");
 const sign = (data, secret) => createHmac("sha256", secret).update(data).digest("base64url");
 
 export function createToken(user, secret, hours, now = Date.now()) {
-  const data = b64(JSON.stringify({ e: user.email, n: user.full_name || "", x: now + hours * 3600_000 }));
+  const data = b64(JSON.stringify({ e: user.email, n: user.full_name || "", v: Number(user.epoch || 0), x: now + hours * 3600_000 }));
   return `${data}.${sign(data, secret)}`;
 }
 
@@ -21,7 +21,7 @@ export function readToken(token, secret, now = Date.now()) {
   try {
     const p = JSON.parse(Buffer.from(data, "base64url").toString());
     if (!p.e || typeof p.x !== "number" || p.x < now) return null;
-    return { email: p.e, full_name: p.n || "" };
+    return { email: p.e, full_name: p.n || "", epoch: Number(p.v || 0) };
   } catch {
     return null;
   }

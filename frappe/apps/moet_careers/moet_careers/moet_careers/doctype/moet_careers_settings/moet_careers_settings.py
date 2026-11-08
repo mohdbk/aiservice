@@ -8,9 +8,11 @@ class MoETCareersSettings(Document):
     def validate(self):
         if self.max_cv_mb and not (1 <= self.max_cv_mb <= 20):
             frappe.throw("Max CV size must be between 1 and 20 MB.")
-        url = (self.main_site_url or "").strip()
-        if url and not url.startswith(("https://", "http://")):
-            frappe.throw("Ministry Website must start with https://")
+        for field, label in (("main_site_url", "Ministry Website"), ("portal_url", "Portal Address")):
+            url = (self.get(field) or "").strip().rstrip("/")
+            if url and not url.startswith(("https://", "http://")):
+                frappe.throw(f"{label} must start with https://")
+            self.set(field, url)
         seen = set()
         for row in self.languages or []:
             if not valid_lang(row.language):

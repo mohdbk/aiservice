@@ -16,6 +16,15 @@ CUSTOM_FIELDS = {
          "description": "One row per portal language. Use Suggest Translations for drafts; only Approved rows are shown "
                         "on the portal, otherwise the job is shown in its original language."},
     ],
+    "User": [
+        {"fieldname": "portal_account_section", "fieldtype": "Section Break", "label": "Careers Portal",
+         "insert_after": "user_type", "collapsible": 1},
+        {"fieldname": "portal_email_verified", "fieldtype": "Check", "label": "Portal Email Verified", "read_only": 1,
+         "insert_after": "portal_account_section"},
+        {"fieldname": "portal_session_epoch", "fieldtype": "Int", "label": "Portal Session Version", "read_only": 1,
+         "insert_after": "portal_email_verified",
+         "description": "Raised by a password reset; signs the applicant out of every portal session."},
+    ],
     "Job Applicant": [
         {"fieldname": "portal_section", "fieldtype": "Section Break", "label": "Careers Portal",
          "insert_after": "cover_letter", "collapsible": 1},
@@ -34,6 +43,7 @@ CUSTOM_FIELDS = {
 def after_migrate():
     create_custom_fields(CUSTOM_FIELDS, ignore_validate=True, update=True)
     _settings_defaults()
+    _backfill_verified()
     ensure_service_user()
     frappe.db.commit()
 
@@ -45,12 +55,25 @@ def _settings_defaults():
             frappe.db.set_single_value(SETTINGS, df.fieldname, df.default)
     frappe.clear_document_cache(SETTINGS, SETTINGS)
     s = frappe.get_doc(SETTINGS)
+    env_url = os.environ.get("CAREERS_PORTAL_URL", "").strip().rstrip("/")
+    if env_url and not s.portal_url:
+        s.portal_url = env_url
+        s.flags.ignore_permissions = True
+        s.save()
     if not s.get("languages"):
         for code in ("ar", "en"):
             if frappe.db.exists("Language", code):
                 s.append("languages", {"language": code, "enabled": 1})
         s.flags.ignore_permissions = True
         s.save()
+
+
+def _backfill_verified():
+    """Accounts created before email verification existed count as verified (runs once)."""
+    if frappe.db.get_default("moet_careers_verified_backfill"):
+        return
+    frappe.db.sql("update `tabUser` set portal_email_verified=1 where user_type='Website User'")
+    frappe.db.set_default("moet_careers_verified_backfill", "1")
 
 
 def ensure_service_user():

@@ -29,7 +29,8 @@ export default function SignUp() {
     setBusy(true);
     setError(null);
     try {
-      await signUp(form.full_name.trim(), form.email.trim(), form.password, lang);
+      const r = await signUp(form.full_name.trim(), form.email.trim(), form.password, lang, next);
+      if (r.verification_sent) navigate(`${path("/check-email")}?${new URLSearchParams({ email: form.email.trim(), next })}`, { replace: true });
     } catch (err) {
       setError(err);
       setBusy(false);

@@ -27,4 +27,8 @@ export const LIMITS = {
   signup: [5, 3600],
   apply: [20, 3600],
   correction: [10, 3600],
+  account_email: [3, 3600],
+  account_ip: [10, 3600],
+  verify: [20, 3600],
+  reset: [10, 3600],
 };

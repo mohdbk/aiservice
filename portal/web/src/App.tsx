@@ -14,6 +14,7 @@ import Jobs from "./pages/Jobs";
 import NotFound from "./pages/NotFound";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
+import { CheckEmail, ForgotPassword, ResetPassword, VerifyEmail } from "./pages/AccountPages";
 
 const LANG_RE = /^[a-z]{2,3}(-[A-Za-z]{2,4})?$/;
 
@@ -50,6 +51,10 @@ function LangShell() {
           <Route path="jobs/:id/apply" element={<RequireAuth><Apply /></RequireAuth>} />
           <Route path="sign-in" element={<SignIn />} />
           <Route path="create-account" element={<SignUp />} />
+          <Route path="check-email" element={<CheckEmail />} />
+          <Route path="verify-email" element={<VerifyEmail />} />
+          <Route path="forgot-password" element={<ForgotPassword />} />
+          <Route path="reset-password" element={<ResetPassword />} />
           <Route path="applications" element={<RequireAuth><Applications /></RequireAuth>} />
           <Route path="applications/:id" element={<RequireAuth><Application /></RequireAuth>} />
           <Route path="*" element={<NotFound />} />

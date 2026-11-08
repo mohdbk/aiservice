@@ -1,4 +1,5 @@
-import { Envelope, Eye, EyeSlash, LockSimple, SignIn as SignInIcon, UserPlus } from "@phosphor-icons/react";
+import { Envelope, Eye, EyeSlash, LockSimple, PaperPlaneTilt, SignIn as SignInIcon, UserPlus } from "@phosphor-icons/react";
+import { api, ApiError } from "../api";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../auth";
@@ -26,7 +27,7 @@ export function PasswordInput({ id, value, onChange, autoComplete, describedBy }
 }
 
 export default function SignIn() {
-  const { t, path, errorText } = useSite();
+  const { t, lang, path, errorText } = useSite();
   usePageTitle(t("auth.sign_in_title"));
   const { user, signIn } = useAuth();
   const navigate = useNavigate();
@@ -37,6 +38,12 @@ export default function SignIn() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const errRef = useRef<HTMLDivElement>(null);
+  const [resent, setResent] = useState(false);
+  const notVerified = error instanceof ApiError && error.code === "email_not_verified";
+  const resend = async () => {
+    try { await api("/api/resend-verification", { body: { email: email.trim(), lang, next } }); } catch { /* same answer either way */ }
+    setResent(true);
+  };
   useEffect(() => { if (user) navigate(next, { replace: true }); }, [user, next, navigate]);
   useEffect(() => { if (error) errRef.current?.querySelector<HTMLElement>("[role=alert]")?.focus(); }, [error]);
 
@@ -59,13 +66,21 @@ export default function SignIn() {
       <p className="mb-6 mt-2 text-aeblack-600">{t("auth.sign_in_intro")}</p>
       <div className="mb-6"><Alert tone="info">{t("auth.account_note")}</Alert></div>
       <form onSubmit={submit} className="mc-surface space-y-5 rounded-2xl border border-aeblack-100 bg-white p-6" noValidate>
-        <div ref={errRef}>{error ? <Alert tone="error" title={errorText(error)} /> : null}</div>
+        {params.get("reset") === "1" && !error && <Alert tone="success" title={t("auth.reset_done")} />}
+        <div ref={errRef}>{error ? (
+          <Alert tone={notVerified ? "warning" : "error"} title={errorText(error)}>
+            {notVerified && (resent ? <p className="mt-2">{t("auth.resend_done")}</p> : (
+              <button type="button" className="aegov-btn btn-outline btn-sm mt-3" onClick={resend}><PaperPlaneTilt size={20} className="rtl:-scale-x-100" aria-hidden="true" />{t("auth.resend_button")}</button>
+            ))}
+          </Alert>
+        ) : null}</div>
         <Field id="email" label={t("auth.email")} prefix={Envelope}>
           <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required maxLength={200} inputMode="email" dir="ltr" />
         </Field>
         <Field id="password" label={t("auth.password")} prefix={LockSimple}>
           <PasswordInput id="password" value={password} onChange={setPassword} autoComplete="current-password" />
         </Field>
+        <p className="-mt-2 text-end text-sm"><Link className="font-medium text-primary-700 underline" to={`${path("/forgot-password")}${email ? `?email=${encodeURIComponent(email.trim())}` : ""}`}>{t("auth.forgot_link")}</Link></p>
         <button type="submit" className="aegov-btn btn-block" disabled={busy || !email || !password}><SignInIcon size={20} className="rtl:-scale-x-100" aria-hidden="true" />{busy ? t("auth.working") : t("auth.sign_in_button")}</button>
       </form>
       <p className="mt-6 text-center text-aeblack-700">

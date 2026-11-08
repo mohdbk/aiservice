@@ -5,7 +5,8 @@ type Auth = {
   user: User | null;
   ready: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (full_name: string, email: string, password: string, lang: string) => Promise<void>;
+  signUp: (full_name: string, email: string, password: string, lang: string, next?: string) => Promise<{ verification_sent?: boolean }>;
+  adopt: (user: User) => void;
   signOut: () => Promise<void>;
   clear: () => void;
 };
@@ -25,10 +26,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const r = await api<{ user: User }>("/api/login", { body: { email, password } });
     setUser(r.user);
   }, []);
-  const signUp = useCallback(async (full_name: string, email: string, password: string, lang: string) => {
-    const r = await api<{ user: User }>("/api/signup", { body: { full_name, email, password, lang } });
-    setUser(r.user);
+  const signUp = useCallback(async (full_name: string, email: string, password: string, lang: string, next = "") => {
+    const r = await api<{ user?: User; verification_sent?: boolean }>("/api/signup", { body: { full_name, email, password, lang, next } });
+    if (r.user) setUser(r.user);
+    return { verification_sent: r.verification_sent };
   }, []);
+  const adopt = useCallback((u: User) => setUser(u), []);
   const signOut = useCallback(async () => {
     try {
       await api("/api/logout", { body: {} });
@@ -37,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
   const clear = useCallback(() => setUser(null), []);
-  return <AuthContext.Provider value={{ user, ready, signIn, signUp, signOut, clear }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, ready, signIn, signUp, signOut, clear, adopt }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): Auth {

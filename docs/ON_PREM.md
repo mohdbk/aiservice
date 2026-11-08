@@ -39,7 +39,7 @@ HR user ──► Desk "Ask AI" panel ──► ai_recruitment.api.chat (session
 | ERPNext base image | `frappe/erpnext:v16.54.0` | `frappe/Dockerfile` (`ERPNEXT_IMAGE`) |
 | Frappe HR | `v16.53.1` | `frappe/Dockerfile` (`HRMS_VERSION`) |
 | ai_recruitment | `0.6.1` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
-| moet_careers | `0.2.6` | `frappe/apps/moet_careers/moet_careers/__init__.py` |
+| moet_careers | `0.3.0` | `frappe/apps/moet_careers/moet_careers/__init__.py` |
 | Careers portal | `0.1.0` (Node 22, React 18.3, Vite 5.4) | `portal/web/package.json`, `portal/server/package.json` |
 | UAE Design System | `@aegov/design-system 3.0.7` + Tailwind `4.1.17` | `portal/web/package.json` |
 | Demo LLM | `qwen/qwen3.8-27b` (OpenRouter) | AI Recruitment Settings |
@@ -356,6 +356,22 @@ and the account `layla@example.com` / `password123`) and `cd portal/web && npm i
 open http://localhost:5173/ar. `npm test` in `portal/server` runs the backend tests. The **Portal preview**
 GitHub workflow builds everything and screenshots every page in Arabic and English.
 
+### Applicant accounts: activation and password reset
+- **Activation:** with **Require Email Verification** on (default) and an outgoing Email Account set up, a new
+  account gets an activation link (48 hours) and cannot sign in until it is opened. Opening it signs the
+  applicant in and returns them to the job they were applying for. The sign-in page offers to resend it.
+  Without an outgoing Email Account, accounts are activated straight away (so the portal keeps working).
+- **Password reset:** "Forgot Your Password?" sends a one-hour, single-use link. The answer is the same whether
+  or not the email has an account (no account discovery). Saving a new password signs the applicant out of
+  every portal session (the user's *Portal Session Version* is raised and old sessions are refused).
+- Links are 256-bit random tokens; only their SHA-256 hash is stored (**Portal Account Token**, System
+  Manager only), older links stop working when a new one is sent, and expired rows are purged daily.
+- Rate limits on the portal: resend and forgot 3 per hour per email and 10 per hour per IP, link use 20 per
+  hour per IP, password reset 10 per hour per IP.
+- Emails are bilingual (the applicant's portal language) and use the Portal Text keys `email.*`, so HR can
+  edit them. They go through Frappe's email queue (Email Queue in Desk shows what was sent).
+- Accounts that existed before this feature are treated as verified.
+
 **Logos:** the official ministry logos ship with the portal (`portal/web/public/logo-ar.png` for Arabic,
 `logo-en.png` for every other language) and always sit on the left of the header and footer, in both
 directions. To replace them, swap those files or upload a **Logo** / **Logo (dark)** in MoET Careers
@@ -372,9 +388,9 @@ streamed through the portal, so browsers never load files from Frappe.
    how their data is processed and to object to decisions made by automated processing alone. Hiring
    decisions here are always made by people. The portal shows no privacy notice, so ask the legal and data
    protection team to confirm this, or add a notice page in `portal/web`.
-1. **Email.** Configure an outgoing Email Account in Frappe, then add email verification and password reset
-   to the portal (not built yet: the demo has no mail server). Until then, HR can reset an applicant's
-   password in Desk.
+1. **Email.** Configure an outgoing Email Account in Frappe (the ministry SMTP relay) and set **Portal
+   Address** in MoET Careers Settings (or `CAREERS_PORTAL_URL` in the Frappe environment). This switches on
+   email activation and makes password reset emails go out. See "Applicant accounts" above.
 2. **Fonts.** The design system loads Inter, Roboto, Noto Kufi Arabic and Alexandria from Google Fonts, and
    the CSP allows `fonts.googleapis.com` and `fonts.gstatic.com`. For a closed network, self-host the fonts
    under `portal/web/public/fonts/`, replace the import with local `@font-face` rules in

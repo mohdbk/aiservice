@@ -109,6 +109,7 @@ export function createApp(cfg = loadConfig(), deps = {}) {
     { secure: cfg.cookieSecure, maxAgeSec: Math.round(cfg.sessionHours * 3600) });
   const clearCookie = () => cookieHeader("", { secure: cfg.cookieSecure, maxAgeSec: 0 });
 
+  const publicUser = (u) => ({ email: u.email, full_name: u.full_name || "" });
   const str = (v, max) => (typeof v === "string" ? v.slice(0, max) : "");
   const langParam = (url) => {
     const l = url.searchParams.get("lang") || "";
@@ -153,7 +154,10 @@ export function createApp(cfg = loadConfig(), deps = {}) {
       return res.end(buf);
     }
 
-    if (m === "GET" && pathname === "/api/me") return send(res, 200, { user: currentUser(req) });
+    if (m === "GET" && pathname === "/api/me") {
+      const cu = currentUser(req);
+      return send(res, 200, { user: cu ? publicUser(cu) : null });
+    }
 
     if (m === "POST" && pathname === "/api/login") {
       checkCsrf(req);
@@ -162,14 +166,45 @@ export function createApp(cfg = loadConfig(), deps = {}) {
       limit(`login_ip:${ip}`, LIMITS.login_ip);
       limit(`login_email:${email}`, LIMITS.login_email);
       const user = await frappe.authenticate(email, str(b.password, 256));
-      return send(res, 200, { user }, { "Set-Cookie": sessionCookie(user) });
+      return send(res, 200, { user: publicUser(user) }, { "Set-Cookie": sessionCookie(user) });
     }
     if (m === "POST" && pathname === "/api/signup") {
       checkCsrf(req);
       limit(`signup:${ip}`, LIMITS.signup);
       const b = await readJson(req, 16_384);
-      const user = await frappe.signup({ full_name: str(b.full_name, 140), email: str(b.email, 200), password: str(b.password, 256), lang: str(b.lang, 10) });
-      return send(res, 200, { user }, { "Set-Cookie": sessionCookie(user) });
+      const r = await frappe.signup({ full_name: str(b.full_name, 140), email: str(b.email, 200), password: str(b.password, 256),
+        lang: str(b.lang, 10), next_path: str(b.next, 300) });
+      if (r.verification_sent) return send(res, 200, { verification_sent: true, email: r.email });
+      return send(res, 200, { user: publicUser(r) }, { "Set-Cookie": sessionCookie(r) });
+    }
+    // Account links. Resend and forgot always answer the same way (no account discovery).
+    if (m === "POST" && (pathname === "/api/resend-verification" || pathname === "/api/forgot-password")) {
+      checkCsrf(req);
+      const b = await readJson(req, 16_384);
+      const email = str(b.email, 200).trim().toLowerCase();
+      limit(`account_ip:${ip}`, LIMITS.account_ip);
+      limit(`account_email:${email}`, LIMITS.account_email);
+      try {
+        if (pathname === "/api/resend-verification") await frappe.resendVerification(email, str(b.lang, 10), str(b.next, 300));
+        else await frappe.requestPasswordReset(email, str(b.lang, 10));
+      } catch (e) {
+        if (!(e instanceof FrappeError) || e.code === "server") throw e;
+      }
+      return send(res, 200, { sent: true });
+    }
+    if (m === "POST" && pathname === "/api/verify-email") {
+      checkCsrf(req);
+      limit(`verify:${ip}`, LIMITS.verify);
+      const b = await readJson(req, 4096);
+      const r = await frappe.verifyEmail(str(b.token, 200));
+      return send(res, 200, { user: publicUser(r), next: r.next || "", lang: r.lang || "" }, { "Set-Cookie": sessionCookie(r) });
+    }
+    if (m === "POST" && pathname === "/api/reset-password") {
+      checkCsrf(req);
+      limit(`reset:${ip}`, LIMITS.reset);
+      const b = await readJson(req, 4096);
+      await frappe.resetPassword(str(b.token, 200), str(b.password, 256));
+      return send(res, 200, { ok: true }, { "Set-Cookie": clearCookie() });
     }
     if (m === "POST" && pathname === "/api/logout") {
       checkCsrf(req);
@@ -178,12 +213,12 @@ export function createApp(cfg = loadConfig(), deps = {}) {
 
     if (m === "GET" && pathname === "/api/applications") {
       const u = requireUser(req);
-      return send(res, 200, await frappe.applications(u.email, langParam(url)));
+      return send(res, 200, await frappe.applications(u, langParam(url)));
     }
     mm = pathname.match(/^\/api\/applications\/([A-Za-z0-9._-]{1,140})$/);
     if (m === "GET" && mm) {
       const u = requireUser(req);
-      return send(res, 200, await frappe.application(u.email, mm[1], langParam(url)));
+      return send(res, 200, await frappe.application(u, mm[1], langParam(url)));
     }
     if (m === "POST" && pathname === "/api/applications") {
       checkCsrf(req);
@@ -196,7 +231,7 @@ export function createApp(cfg = loadConfig(), deps = {}) {
       if (!CV_EXT.test(name)) throw new HttpError(400, "cv_type");
       const data = Buffer.from(cv.data, "base64");
       if (!data.length) throw new HttpError(400, "cv_empty");
-      const result = await frappe.apply({ email: u.email, job: str(b.job, 140), phone: str(b.phone, 30), country: str(b.country, 140),
+      const result = await frappe.apply({ email: u.email, epoch: u.epoch || 0, job: str(b.job, 140), phone: str(b.phone, 30), country: str(b.country, 140),
         cover_note: str(b.cover_note, 4000), declaration: b.declaration ? "1" : "0", lang: str(b.lang, 10) },
       { name, data, type: str(cv.type, 100) });
       return send(res, 200, result);
@@ -207,7 +242,7 @@ export function createApp(cfg = loadConfig(), deps = {}) {
       const u = requireUser(req);
       limit(`correction:${ip}`, LIMITS.correction);
       const b = await readJson(req, 16_384);
-      return send(res, 200, await frappe.addCorrection(u.email, mm[1], str(b.note, 2000)));
+      return send(res, 200, await frappe.addCorrection(u, mm[1], str(b.note, 2000)));
     }
     throw new HttpError(404, "not_found");
   }

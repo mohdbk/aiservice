@@ -1,0 +1,91 @@
+{
+ "actions": [],
+ "creation": "2026-11-08 18:50:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "autoname": "hash",
+ "field_order": [
+  "user",
+  "purpose",
+  "token_hash",
+  "expires_at",
+  "used",
+  "next_path",
+  "lang"
+ ],
+ "fields": [
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "options": "User",
+   "label": "User",
+   "reqd": 1,
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "purpose",
+   "fieldtype": "Select",
+   "options": "Verify Email\nReset Password",
+   "label": "Purpose",
+   "reqd": 1,
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "token_hash",
+   "fieldtype": "Data",
+   "label": "Token Hash",
+   "reqd": 1,
+   "unique": 1,
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "expires_at",
+   "fieldtype": "Datetime",
+   "label": "Expires At",
+   "reqd": 1,
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "used",
+   "fieldtype": "Check",
+   "label": "Used",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "next_path",
+   "fieldtype": "Data",
+   "label": "Next Page",
+   "read_only": 1
+  },
+  {
+   "fieldname": "lang",
+   "fieldtype": "Data",
+   "label": "Language",
+   "read_only": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-08 18:50:00.000000",
+ "modified_by": "Administrator",
+ "module": "MoET Careers",
+ "name": "Portal Account Token",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "read": 1,
+   "delete": 1,
+   "role": "System Manager",
+   "report": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "in_create": 1,
+ "description": "One-time links for the careers portal (email activation and password reset). Only a hash of each link is stored."
+}

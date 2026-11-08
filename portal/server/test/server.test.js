@@ -8,10 +8,12 @@ import { createFrappe } from "../src/frappe.js";
 
 const cfg = { port: 0, mock: true, sessionSecret: "x".repeat(40), sessionHours: 8, cookieSecure: true, trustProxy: false,
   webDist: new URL("./fixtures/web", import.meta.url).pathname, maxBodyMb: 2, frappeTimeoutMs: 5000 };
-let server, base;
+let server, base, mock;
 
 before(async () => {
-  server = createServer(createApp(cfg));
+  const { createMockFrappe } = await import("../src/mock.js");
+  mock = createMockFrappe();
+  server = createServer(createApp(cfg, { frappe: mock }));
   await new Promise((r) => server.listen(0, r));
   base = `http://127.0.0.1:${server.address().port}`;
 });
@@ -97,10 +99,50 @@ test("sign in, see applications, apply, correct; cookies are secure", async () =
   assert.match(r.headers.get("set-cookie"), /Max-Age=0/);
 });
 
+test("sign up needs email activation; the link signs in once", async () => {
+  const r = await post("/api/signup", { full_name: "Sara Ali", email: "sara@example.com", password: "password123", lang: "en", next: "/en/jobs/HR-OPN-2026-0001/apply" });
+  assert.equal(r.status, 200);
+  const body = await r.json();
+  assert.equal(body.verification_sent, true);
+  assert.equal(r.headers.get("set-cookie"), null);
+  const blocked = await post("/api/login", { email: "sara@example.com", password: "password123" });
+  assert.equal((await blocked.json()).error.code, "email_not_verified");
+  const token = mock._outbox.findLast((m) => m.to === "sara@example.com" && m.purpose === "verify").token;
+  const v = await post("/api/verify-email", { token });
+  assert.equal(v.status, 200);
+  const vb = await v.json();
+  assert.equal(vb.next, "/en/jobs/HR-OPN-2026-0001/apply");
+  assert.match(v.headers.get("set-cookie"), /mc_session=/);
+  const again = await post("/api/verify-email", { token });
+  assert.equal((await again.json()).error.code, "token_invalid");
+});
+
+test("forgot password never reveals whether an account exists", async () => {
+  const a = await (await post("/api/forgot-password", { email: "layla@example.com", lang: "en" })).json();
+  const b = await (await post("/api/forgot-password", { email: "nobody@example.com", lang: "en" })).json();
+  assert.deepEqual(a, b);
+});
+
+test("password reset changes the password and signs out every session", async () => {
+  await post("/api/signup", { full_name: "Huda K", email: "huda@example.com", password: "password123", lang: "en" });
+  await post("/api/verify-email", { token: mock._outbox.findLast((m) => m.to === "huda@example.com").token });
+  const s1 = cookieOf(await post("/api/login", { email: "huda@example.com", password: "password123" }));
+  assert.equal((await fetch(base + "/api/applications?lang=en", { headers: { cookie: s1 } })).status, 200);
+  await post("/api/forgot-password", { email: "huda@example.com", lang: "en" });
+  const token = mock._outbox.findLast((m) => m.to === "huda@example.com" && m.purpose === "reset").token;
+  const r = await post("/api/reset-password", { token, password: "newpassword456" });
+  assert.equal(r.status, 200);
+  assert.equal((await fetch(base + "/api/applications?lang=en", { headers: { cookie: s1 } })).status, 401);
+  assert.equal((await post("/api/login", { email: "huda@example.com", password: "password123" })).status, 401);
+  assert.equal((await post("/api/login", { email: "huda@example.com", password: "newpassword456" })).status, 200);
+  assert.equal((await (await post("/api/reset-password", { token, password: "another12345" })).json()).error.code, "token_invalid");
+});
+
 test("other applicants' applications and signed-out access are refused", async () => {
   const r0 = await post("/api/signup", { full_name: "Omar Saleh", email: "omar@example.com", password: "password123", lang: "en" });
   assert.equal(r0.status, 200);
-  const cookie = cookieOf(r0);
+  await post("/api/verify-email", { token: mock._outbox.findLast((m) => m.to === "omar@example.com").token });
+  const cookie = cookieOf(await post("/api/login", { email: "omar@example.com", password: "password123" }));
   const r = await fetch(base + "/api/applications/HR-APP-2026-00012?lang=en", { headers: { cookie } });
   assert.equal(r.status, 404);
   const anon = await fetch(base + "/api/applications?lang=en");
@@ -132,6 +174,8 @@ test("Frappe client sends the API key and site header and maps error codes", asy
   };
   const f = createFrappe({ frappeUrl: "http://frappe:8000", frappeSite: "hr.local", apiKey: "k", apiSecret: "s", frappeTimeoutMs: 1000 }, fakeFetch);
   await assert.rejects(f.job("en", "X"), (e) => e.code === "job_not_found" && e.status === 404);
+  await assert.rejects(f.applications({ email: "a@b.c", epoch: 3 }, "en"));
+  assert.match(seen[1].url, /epoch=3/);
   assert.equal(seen[0].init.headers.Authorization, "token k:s");
   assert.equal(seen[0].init.headers["X-Frappe-Site-Name"], "hr.local");
   assert.match(seen[0].url, /moet_careers\.portal_api\.job\?lang=en&name=X/);

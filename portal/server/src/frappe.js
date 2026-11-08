@@ -56,9 +56,14 @@ export function createFrappe(cfg, fetchImpl = globalThis.fetch) {
     job: (lang, name) => call("job", { query: { lang, name } }),
     signup: (data) => call("signup", { json: data }),
     authenticate: (email, password) => call("authenticate", { json: { email, password } }),
-    applications: (email, lang) => call("applications", { query: { email, lang } }),
-    application: (email, name, lang) => call("application", { query: { email, name, lang } }),
-    addCorrection: (email, name, note) => call("add_correction", { json: { email, name, note } }),
+    resendVerification: (email, lang, next_path) => call("resend_verification", { json: { email, lang, next_path } }),
+    verifyEmail: (token) => call("verify_email", { json: { token } }),
+    requestPasswordReset: (email, lang) => call("request_password_reset", { json: { email, lang } }),
+    resetPassword: (token, password) => call("reset_password", { json: { token, password } }),
+    // epoch: session version from sign-in; a password reset changes it and signs out old sessions
+    applications: (u, lang) => call("applications", { query: { email: u.email, epoch: u.epoch || 0, lang } }),
+    application: (u, name, lang) => call("application", { query: { email: u.email, epoch: u.epoch || 0, name, lang } }),
+    addCorrection: (u, name, note) => call("add_correction", { json: { email: u.email, epoch: u.epoch || 0, name, note } }),
     apply: (fields, file) => {
       const form = new FormData();
       for (const [k, v] of Object.entries(fields)) form.append(k, String(v ?? ""));

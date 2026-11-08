@@ -17,3 +17,7 @@ after_migrate = "moet_careers.setup.after_migrate"
 doc_events = {
     "Job Opening": {"validate": "moet_careers.i18n.on_job_validate"},
 }
+
+scheduler_events = {
+    "daily": ["moet_careers.accounts.purge_old_tokens"],
+}
