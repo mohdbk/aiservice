@@ -86,7 +86,7 @@ container to suit Railway's single-volume limit, and pulls third-party Railway s
          --index-strategy unsafe-best-match --extra-index-url https://www.paddlepaddle.org.cn/packages/stable/cpu/ \
          "paddlepaddle>=3.2.1,<4" "paddleocr>=3.3,<4" \
     && /home/frappe/paddleocr-env/bin/python -c "import sys; sys.path.insert(0,'/home/frappe/frappe-bench/apps/ai_recruitment/ai_recruitment'); import paddle_runner as r; r._engine('ar'); r._engine('en')" \
-    && touch /home/frappe/paddleocr-env/.ready && chown -R frappe:frappe /home/frappe/paddleocr-env /home/frappe/.paddlex
+    && chown -R "$(id -u frappe):$(id -g frappe)" /home/frappe/paddleocr-env /home/frappe/.paddlex && touch /home/frappe/paddleocr-env/.ready
    USER frappe
    RUN bench compile-po-to-mo --app ai_recruitment || true   # Arabic UI strings
    ```

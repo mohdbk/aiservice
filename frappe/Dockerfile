@@ -51,9 +51,9 @@ RUN ( python3 -m venv /opt/uvtool && /opt/uvtool/bin/pip install --no-cache-dir 
            --index-strategy unsafe-best-match --extra-index-url https://www.paddlepaddle.org.cn/packages/stable/cpu/ \
            "paddlepaddle>=3.2.1,<4" "paddleocr>=3.3,<4" \
       && /home/frappe/paddleocr-env/bin/python -c "import sys; sys.path.insert(0, '/home/frappe/frappe-bench/apps/ai_recruitment/ai_recruitment'); import paddle_runner as r; r._engine('ar'); r._engine('en'); print('PaddleOCR models ready')" \
+      && mkdir -p /home/frappe/.paddlex && chown -R "$(id -u frappe):$(id -g frappe)" /home/frappe/paddleocr-env /home/frappe/.paddlex \
       && touch /home/frappe/paddleocr-env/.ready \
-      && mkdir -p /home/frappe/.paddlex && chown -R frappe:frappe /home/frappe/paddleocr-env /home/frappe/.paddlex \
-    ) || echo "PaddleOCR not installed: local OCR drafts will use Tesseract"
+    ) || (rm -f /home/frappe/paddleocr-env/.ready; echo "PaddleOCR not installed: local OCR drafts will use Tesseract")
 
 RUN sed -i -e 's/^worker_processes .*/worker_processes 2;/' \
       -e 's|^error_log .*|error_log stderr;|' \
