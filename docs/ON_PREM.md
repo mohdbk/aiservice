@@ -11,8 +11,9 @@ Nothing in the production setup depends on Railway or OpenRouter.
 
 | Component | What it is | Required? |
 |---|---|---|
-| **Frappe HR site** | Frappe Framework v16 + ERPNext v16 + Frappe HR (`hrms`) v16, with Frappe's stock job page at `/jobs` (replaced for candidates by `/careers`) | Yes |
-| **`moet_careers` app** | Our careers portal in `frappe/apps/moet_careers`: bilingual `/careers` pages on the UAE Design System, applicant accounts, settings | Yes |
+| **Frappe HR site** | Frappe Framework v16 + ERPNext v16 + Frappe HR (`hrms`) v16, (Frappe's own `/jobs` page is not used by applicants) | Yes |
+| **`moet_careers` app** | Frappe side of the careers portal in `frappe/apps/moet_careers`: the portal API, languages, wording, job translations, settings | Yes |
+| **Careers portal** | `portal/`: React app + Node backend, hosted outside the ministry network (section 4b) | Yes |
 | **`ai_recruitment` app** | Our Frappe app in `frappe/apps/ai_recruitment`: CV scoring, in-Desk assistant, settings | Yes |
 | **MariaDB 10.6+ / 11.x** | Database | Yes |
 | **Redis** | Cache, queue, realtime (frappe_docker runs 2 instances) | Yes |
@@ -25,7 +26,7 @@ Nothing in the production setup depends on Railway or OpenRouter.
 There are no other services. Scoring and the assistant run inside Frappe's own web and worker processes.
 
 ```
-Candidate ──► /careers (moet_careers) ──► Job Applicant ──after_insert──► background job (long queue)
+Candidate ──► portal (DMZ) ──► portal_api ──► Job Applicant ──after_insert──► background job (long queue)
                                                                       │
 HR user ──► Desk "Ask AI" panel ──► ai_recruitment.api.chat (session) ─┤
                                                                       ▼
@@ -38,8 +39,9 @@ HR user ──► Desk "Ask AI" panel ──► ai_recruitment.api.chat (session
 | ERPNext base image | `frappe/erpnext:v16.54.0` | `frappe/Dockerfile` (`ERPNEXT_IMAGE`) |
 | Frappe HR | `v16.53.1` | `frappe/Dockerfile` (`HRMS_VERSION`) |
 | ai_recruitment | `0.6.1` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
-| moet_careers | `0.1.4` | `frappe/apps/moet_careers/moet_careers/__init__.py` |
-| UAE Design System | `@aegov/design-system 3.0.7` + Tailwind `4.1.x` | `frappe/apps/moet_careers/frontend/package.json` |
+| moet_careers | `0.2.0` | `frappe/apps/moet_careers/moet_careers/__init__.py` |
+| Careers portal | `0.1.0` (Node 22, React 18.3, Vite 5.4) | `portal/web/package.json`, `portal/server/package.json` |
+| UAE Design System | `@aegov/design-system 3.0.7` + Tailwind `4.1.17` | `portal/web/package.json` |
 | Demo LLM | `qwen/qwen3.8-27b` (OpenRouter) | AI Recruitment Settings |
 
 Upgrade them deliberately and test in staging first. Every new image version runs `bench migrate`.
@@ -94,17 +96,6 @@ container to suit Railway's single-volume limit, and pulls third-party Railway s
    USER frappe
    RUN bench compile-po-to-mo --app ai_recruitment || true   # Arabic UI strings
    ```
-   The careers portal stylesheet is compiled, not committed (`careers.css` is in `.gitignore`). Add a Node
-   stage in the same Dockerfile and copy the result in (this is what `frappe/Dockerfile` does):
-   ```dockerfile
-   FROM node:22-slim AS careers_css
-   COPY moet_careers /src           # a checkout of the moet_careers repo
-   RUN cd /src/frontend && npm ci || npm install; cd /src/frontend && npm run build
-   # ...then in the final stage:
-   COPY --from=careers_css --chown=frappe:frappe /src/moet_careers/public/css/careers.css \
-        /home/frappe/frappe-bench/apps/moet_careers/moet_careers/public/css/careers.css
-   ```
-   Without it the portal still works but has no styling.
    With a GPU on the Frappe workers, install `paddlepaddle-gpu` instead and set `PADDLEOCR_DEVICE=gpu:0`.
    Air-gapped: pre-download the models (`PP-OCRv5_mobile_det`, `arabic_PP-OCRv5_mobile_rec`,
    `en_PP-OCRv5_mobile_rec`) into `PADDLE_PDX_CACHE_HOME`.
@@ -115,8 +106,7 @@ container to suit Railway's single-volume limit, and pulls third-party Railway s
    between versions. A private Git server needs credentials in the URL or a build secret. Never bake
    tokens into the image.
 5. **Air-gapped builds:** mirror GitHub (frappe, erpnext, hrms), PyPI (`pypdf`, `python-docx` plus Frappe's
-   own dependencies) and npm (Frappe's asset build, `@aegov/design-system`, `tailwindcss`,
-   `@tailwindcss/cli`) internally, or build on a connected machine and import the image.
+   own dependencies) and npm (Frappe's asset build, and the portal's web build) internally, or build on a connected machine and import the image.
 
 ---
 
@@ -266,64 +256,130 @@ Cost: each CV now uses 2 model calls (parse, then score) plus 1 vision call per 
 
 ---
 
-## 4b. Careers portal (`moet_careers`)
+## 4b. External careers portal (`portal/`)
 
-Candidates use `/careers`. It is Arabic by default (right to left) with an English toggle, and follows the
-UAE Design System 3.0.7 (TDRA, MIT): the national aegold/aeblack palette, Noto Kufi Arabic and Inter fonts,
-and the design system's buttons, forms, cards, alerts, badges, steps and pagination.
+The careers portal runs **outside** the ministry network (DMZ or a hosting zone) and Frappe stays **inside**.
+Browsers only ever talk to the portal. The portal's small backend is the only thing that calls Frappe.
 
-| Page | Route | Who |
-|---|---|---|
-| Job search with filters | `/careers` | Everyone |
-| Job details | `/careers/jobs/<job opening>` | Everyone |
-| Sign in / Create account | `/careers/login`, `/careers/signup` | Guests |
-| Apply (CV, phone, country, note, consent) | `/careers/apply/<job opening>` | Signed-in applicants |
-| My applications / one application | `/careers/applications`, `/careers/applications/<id>` | The applicant only |
+```
+Internet ──HTTPS──► Reverse proxy / WAF ──► Portal (portal/: React app + Node backend, DMZ)
+                                                │  one rule: DMZ host → Frappe :443 (or :8080)
+                                                ▼  Authorization: token <key>:<secret>
+                                   Frappe HR + ai_recruitment + moet_careers (internal)
+HR staff ──ministry network / VPN──► Frappe Desk (/app)
+```
+
+| Part | What it is |
+|---|---|
+| `portal/web` | React 18 + Vite + Tailwind 4 + UAE Design System 3.0.7 (`@aegov/design-system`, TDRA, MIT). Built to static files. |
+| `portal/server` | Node 22 backend with **no runtime dependencies** (only Node built-ins). Serves the built app and `/api/*`, keeps applicant sessions (signed HttpOnly cookie), checks CSRF, rate-limits, sets security headers (CSP, HSTS, frame denial), and calls Frappe with the service user's API key. Stores nothing on disk. |
+| `moet_careers.portal_api` | The Frappe API the portal calls. Only users with the **Careers Portal Service** role can call it. |
+
+Pages (every address starts with the language; `/` sends visitors to the default language, Arabic):
+
+| Page | Address |
+|---|---|
+| Job search with filters | `/ar`, `/en` |
+| Job details | `/ar/jobs/<job opening>` |
+| Sign in / Create account | `/ar/sign-in`, `/ar/create-account` |
+| Apply (CV, mobile, country, message, declaration) | `/ar/jobs/<job opening>/apply` |
+| My applications / one application | `/ar/applications`, `/ar/applications/<id>` |
 
 How it fits Frappe HR:
-- Applicants sign in with **email and password** (Website User accounts), since many apply from outside
-  the UAE. Applying creates a normal **Job Applicant**; the CV is a private file. `ai_recruitment` then
-  reads and scores it as before.
-- Applicants see a friendly status (Under review, Interview scheduled, Successful, Not selected), a
-  reference number, and **their details from their CV** so they can report mistakes (saved as a comment on
-  the Job Applicant). They never see scores, summaries or gaps.
+- Applicants sign in with **email and password**. Accounts are Frappe Website Users; the portal checks the
+  password through Frappe and then issues its own session cookie (8 hours). Staff accounts and the service
+  user cannot sign in to the portal.
+- Applying creates a normal **Job Applicant** with the CV as a private file; `ai_recruitment` reads and
+  scores it as before. Applicants see a friendly status, a reference number and **their details from their
+  CV** (they can report mistakes, saved as a comment). They never see scores, summaries or gaps.
 - **Candidate-facing text does not mention AI, a privacy notice or who reviews applications** (ministry
   decision, November 2026). The assistant is told never to mention AI, automation or scores in candidate
-  emails. Keep this in mind when editing templates.
-- Applicants tick a declaration that their information is accurate. It is stored on the Job Applicant
-  (`consent_ai_screening`, labelled "Applicant Declaration Confirmed", and `consent_at`) with the portal
-  language. The field name is kept for compatibility.
-- Job Openings get two optional fields, **Job Title (Arabic)** and **Description (Arabic)**. Fill them so the
-  Arabic site is fully Arabic; English is shown when they are empty.
-- Accessibility: skip link, text size A-/A/A+, high contrast mode, keyboard focus, `lang`/`dir` per page.
-- Rate limits: sign up 5 per hour and apply 20 per hour per IP. CV types PDF, DOCX, JPG, PNG, checked by
-  extension and file signature; maximum size in settings (default 5 MB).
+  emails. Keep this in mind when editing wording.
+- Applicants tick a declaration that their information is accurate (stored as `consent_ai_screening`,
+  labelled "Applicant Declaration Confirmed", plus `consent_at` and the portal language).
 
-**MoET Careers Settings** (Desk, search "MoET Careers Settings"):
-- **Logo** and **Logo (dark)**: upload the official MoET logo files from the ministry's brand team. Until
-  then the ministry name is shown as text. Do not redraw or trace the emblem.
-- Ministry and portal names in Arabic and English, and the ministry website URL (the only external link in
-  the footer). The privacy, terms, accessibility and contact URL fields are kept but not shown.
-- Allow sign up, maximum CV size.
+### Languages and wording (all managed in Frappe Desk)
+- **Portal languages:** MoET Careers Settings > Languages. Add any language (French, Urdu, Hindi...) and it
+  appears in the language menu and in addresses (`/fr`). Right-to-left is automatic for Arabic, Urdu,
+  Persian and Hebrew. The default language is where `/` goes.
+- **Portal wording:** English and Arabic ship with the app (`moet_careers/portal_text/en.json`, `ar.json`).
+  HR can change any text, including the ministry and portal names, in **Portal Text** (one row per language
+  and key; only **Approved** rows are used). For a new language, choose it in MoET Careers Settings and click
+  **Suggest Portal Text**: the on-prem model drafts every string as **Suggested**. HR reviews them in Portal
+  Text and sets them to Approved (editing a draft approves it). Until then the portal falls back to English.
+- **Job titles and descriptions:** each Job Opening has a **Portal Translations** table, one row per
+  language. HR can type a translation, or click **Portal > Suggest Translations** for drafts of the missing
+  languages. Drafts are **Suggested** and are not shown; HR checks or replaces the text and sets the row to
+  Approved (editing approves it; the approver is recorded). Without an approved row the job is shown in its
+  original language, marked with the right `lang` and direction.
 
-Before going live on-prem:
+### Configure the portal
+Environment variables of the portal container:
+
+| Variable | Value |
+|---|---|
+| `FRAPPE_URL` | Internal Frappe address, e.g. `https://hr.moet.internal` |
+| `FRAPPE_SITE` | Frappe site name, if the address does not select it (sent as `X-Frappe-Site-Name`) |
+| `CAREERS_PORTAL_API_KEY` / `CAREERS_PORTAL_API_SECRET` | API key of the service user (below) |
+| `SESSION_SECRET` | 48+ random characters (`openssl rand -base64 48`). Changing it signs everyone out. |
+| `TRUST_PROXY=1`, `CLIENT_IP_HEADER` | Behind a reverse proxy: which header carries the client IP (`x-forwarded-for` or `x-real-ip`), used for rate limits |
+| `COOKIE_SECURE=1` | Always, on HTTPS |
+| `PORT` | Default 8080 |
+| `MAX_BODY_MB`, `SESSION_HOURS` | Optional, defaults 30 and 8 |
+
+**Service user and API key.** `moet_careers` creates the user `careers-portal@service.invalid` with the
+**Careers Portal Service** role on every migrate. Give it a key in either way:
+- set `CAREERS_PORTAL_API_KEY` and `CAREERS_PORTAL_API_SECRET` in the Frappe containers' environment and run
+  `bench --site <site> migrate` (the values are stored on the user), or
+- in Desk open the user, **API Access > Generate Keys**, and copy the key and secret to the portal.
+
+Rotate the key by generating a new one and updating the portal; the old key stops working immediately.
+
+**Build and run** (the image holds the built web app and the backend):
+```bash
+docker build -t registry.moet.internal/hr/careers-portal:0.1.0 portal/
+docker run -d -p 8080:8080 --env-file portal.env --read-only --cap-drop ALL \
+  registry.moet.internal/hr/careers-portal:0.1.0
+```
+Health check: `GET /healthz`. The container runs as the unprivileged `node` user and needs no volume.
+
+**Network rules:**
+- Internet → reverse proxy (443) → portal (8080). Nothing from the internet reaches Frappe.
+- Portal host → Frappe (443 or 8080) only. Frappe never calls the portal.
+- Frappe still needs its usual internal access (database, Redis, LLM endpoint, SMTP).
+- With more than one portal instance, rate limits are per instance; also rate-limit `/api/login`,
+  `/api/signup` and `/api/applications` on the reverse proxy or WAF. Sessions work across instances as long
+  as they share `SESSION_SECRET`.
+
+**Local development:** `cd portal/server && npm run dev` (uses an in-memory mock of Frappe with sample jobs
+and the account `layla@example.com` / `password123`) and `cd portal/web && npm install && npm run dev`, then
+open http://localhost:5173/ar. `npm test` in `portal/server` runs the backend tests. The **Portal preview**
+GitHub workflow builds everything and screenshots every page in Arabic and English.
+
+**MoET Careers Settings** also holds the **Logo** and **Logo (dark)** (upload the official files from the
+ministry's brand team; until then the ministry name is shown as text, and the emblem must not be redrawn),
+the ministry website address (the only external link), sign-up on/off and the maximum CV size. The logo is
+streamed through the portal, so browsers never load files from Frappe.
+
+### Before going live
 0. **Legal review.** UAE PDPL (Federal Decree-Law 45 of 2021) gives people the right to information about
    how their data is processed and to object to decisions made by automated processing alone. Hiring
    decisions here are always made by people. The portal shows no privacy notice, so ask the legal and data
-   protection team to confirm this, or add a link back in `templates/careers_base.html`.
-1. **Email.** Configure an outgoing Email Account, then turn on email verification and password reset for
-   website users (Website Settings / System Settings). The demo creates accounts without verification
-   because it has no mail server.
-2. **Fonts.** The portal and the Desk theme load Inter and Noto Kufi Arabic from Google Fonts. For an
-   air-gapped network, download the font files, serve them from `moet_careers/public/fonts/` and replace
-   the `@import url("https://fonts.googleapis.com/...")` lines in `frontend/input.css` (the design system's
-   font import) and `moet_careers/public/css/desk_theme.css` with local `@font-face` rules.
-3. **Frappe's `/jobs` page** still exists. Point any old links to `/careers`, or hide `/jobs` with a
-   website redirect (Website Settings > Route Redirects: `/jobs` to `/careers`).
-4. **UAE PASS** is not wired in. When needed, add it as a Social Login Key (OpenID Connect) and a button on
-   `/careers/login`; email accounts can stay for applicants abroad.
-5. Rebuild the stylesheet after changing templates or `input.css`: `cd frontend && npm install && npm run build`.
-   Tailwind only keeps classes it finds in `templates/`, `www/` and `public/js/`.
+   protection team to confirm this, or add a notice page in `portal/web`.
+1. **Email.** Configure an outgoing Email Account in Frappe, then add email verification and password reset
+   to the portal (not built yet: the demo has no mail server). Until then, HR can reset an applicant's
+   password in Desk.
+2. **Fonts.** The design system loads Inter, Roboto, Noto Kufi Arabic and Alexandria from Google Fonts, and
+   the CSP allows `fonts.googleapis.com` and `fonts.gstatic.com`. For a closed network, self-host the fonts
+   under `portal/web/public/fonts/`, replace the import with local `@font-face` rules in
+   `portal/web/src/styles.css`, and remove the two Google hosts from the CSP in `portal/server/src/server.js`.
+3. **Frappe's own web pages** (`/jobs`, `/login`) are not used by applicants. With Frappe internal they are
+   not reachable from the internet anyway.
+4. **UAE PASS** is not wired in. It would be added to the portal backend as an OpenID Connect sign-in;
+   email accounts stay for applicants abroad.
+5. **Dependencies.** `portal/web` builds with npm (React, React Router, Vite, Tailwind, the design system).
+   Mirror them in the internal npm registry for offline builds and commit a lock file once the build host
+   has registry access. The backend has no npm dependencies.
 
 ---
 
@@ -332,8 +388,9 @@ Before going live on-prem:
 - [ ] **Data residency:** the LLM endpoint is in-country or on-prem. CVs are redacted of name,
       contacts, nationality, age, gender and religion before sending, but they are still personal data.
 - [ ] The Frappe backend and worker containers can reach the LLM endpoint. No other egress is needed at runtime.
-- [ ] TLS on the public site (reverse proxy or load balancer). Only `/jobs`, `/api/method/...` for the web
-      form, and the assets need to be internet-facing. Desk (`/app`) can be restricted to the ministry network or VPN.
+- [ ] **Frappe is internal only.** Applicants use the external portal (section 4b); the only path in is the
+      portal host's connection to Frappe with the service API key. Desk (`/app`) is for the ministry network or VPN.
+- [ ] TLS on the portal (reverse proxy or load balancer) and on Frappe.
 - [ ] Administrator password changed after setup. Set up SSO for staff (UAE PASS or the ministry's Azure AD
       via Frappe's Social Login Keys / OAuth).
 - [ ] **Assistant permissions:** each chat tool runs as the logged-in user with normal Frappe permissions.
