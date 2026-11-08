@@ -22,6 +22,11 @@ CUSTOM_FIELDS = {
         {"fieldname": "assessment_stages", "fieldtype": "Table", "options": "Job Assessment Stage", "label": "Assessments",
          "insert_after": "assessment_stages_tab",
          "description": "Tests for this job, in order. 'When They Apply' tests are sent automatically to every new applicant."},
+        {"fieldname": "screening_section", "fieldtype": "Section Break", "label": "Screening Questions",
+         "insert_after": "assessment_stages"},
+        {"fieldname": "screening_questions", "fieldtype": "Table", "options": "Job Screening Question",
+         "label": "Screening Questions", "insert_after": "screening_section",
+         "description": "Asked on the application form, in this order."},
     ],
     "User": [
         {"fieldname": "portal_account_section", "fieldtype": "Section Break", "label": "Careers Portal",
@@ -45,6 +50,13 @@ CUSTOM_FIELDS = {
          "insert_after": "consent_at"},
         {"fieldname": "assessment_summary", "fieldtype": "Small Text", "label": "Assessments", "read_only": 1,
          "insert_after": "portal_language"},
+        {"fieldname": "screening_result", "fieldtype": "Select", "label": "Screening",
+         "options": "\nMeets Requirements\nDoes Not Meet Requirements\nNo Requirements", "read_only": 1,
+         "insert_after": "assessment_summary", "in_standard_filter": 1, "in_list_view": 1},
+        {"fieldname": "screening_summary", "fieldtype": "Small Text", "label": "Screening Answers", "read_only": 1,
+         "insert_after": "screening_result"},
+        {"fieldname": "screening_answers", "fieldtype": "Long Text", "label": "Screening Answers (Data)", "read_only": 1,
+         "hidden": 1, "insert_after": "screening_summary"},
     ],
 }
 
@@ -57,7 +69,8 @@ def after_migrate():
         if frappe.db.exists("Custom Field", name):
             frappe.delete_doc("Custom Field", name, ignore_permissions=True, force=True)
     create_custom_fields(CUSTOM_FIELDS, ignore_validate=True, update=True)
-    _fix_field_order("Job Opening", ["portal_translations_tab", "portal_translations", "assessment_stages_tab", "assessment_stages"])
+    _fix_field_order("Job Opening", ["portal_translations_tab", "portal_translations", "assessment_stages_tab", "assessment_stages",
+                                     "screening_section", "screening_questions"])
     frappe.clear_cache(doctype="Job Opening")
     _settings_defaults()
     _backfill_verified()

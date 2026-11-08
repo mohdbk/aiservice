@@ -86,10 +86,16 @@ test("sign in, see applications, apply, correct; cookies are secure", async () =
   const detail = await (await fetch(base + "/api/applications/HR-APP-2026-00012?lang=en", { headers: { cookie } })).json();
   assert.equal(detail.details_state, "ready");
   const cv = { name: "cv.pdf", type: "application/pdf", data: Buffer.from("%PDF-1.7 test").toString("base64") };
-  r = await post("/api/applications", { job: "HR-OPN-2026-0003", phone: "+971 50 123 4567", country: "United Arab Emirates", declaration: true, lang: "en", cv }, { cookie });
+  r = await post("/api/applications", { job: "HR-OPN-2026-0003", phone: "+971 50 123 4567", declaration: true, lang: "en", cv }, { cookie });
+  assert.deepEqual((await r.json()).error, { code: "screening_required", params: { questions: ["sq1", "sq2"] } });
+  const job3 = await (await fetch(base + "/api/jobs/HR-OPN-2026-0003?lang=ar")).json();
+  assert.equal(job3.screening[0].text, "هل لديك رخصة قيادة إماراتية سارية؟");
+  assert.equal(JSON.stringify(job3).includes("expected"), false);
+  r = await post("/api/applications", { job: "HR-OPN-2026-0003", phone: "+971 50 123 4567", country: "United Arab Emirates", declaration: true, lang: "en",
+    screening: { sq1: "Yes", sq2: "4", sq3: ["Arabic"] }, cv }, { cookie });
   assert.equal(r.status, 200);
   assert.ok((await r.json()).application);
-  r = await post("/api/applications", { job: "HR-OPN-2026-0003", phone: "+971 50 123 4567", declaration: true, cv }, { cookie });
+  r = await post("/api/applications", { job: "HR-OPN-2026-0003", phone: "+971 50 123 4567", declaration: true, screening: { sq1: "Yes", sq2: "4" }, cv }, { cookie });
   assert.equal((await r.json()).error.code, "already_applied");
   r = await post("/api/applications", { job: "HR-OPN-2026-0002", phone: "+971501234567", declaration: true, cv: { ...cv, name: "cv.exe" } }, { cookie });
   assert.equal((await r.json()).error.code, "cv_type");

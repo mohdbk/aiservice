@@ -1,0 +1,60 @@
+{
+ "actions": [],
+ "creation": "2026-11-08 19:45:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "screening_question",
+  "required",
+  "rule",
+  "expected"
+ ],
+ "fields": [
+  {
+   "fieldname": "screening_question",
+   "fieldtype": "Link",
+   "options": "Screening Question",
+   "label": "Question",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 4
+  },
+  {
+   "fieldname": "required",
+   "fieldtype": "Check",
+   "label": "Required",
+   "default": "1",
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "rule",
+   "fieldtype": "Select",
+   "options": "\nMust Be\nAt Least\nAt Most",
+   "label": "Requirement",
+   "in_list_view": 1,
+   "columns": 2,
+   "description": "Optional. Applicants who do not meet it are flagged for HR, never rejected automatically."
+  },
+  {
+   "fieldname": "expected",
+   "fieldtype": "Data",
+   "label": "Value",
+   "in_list_view": 1,
+   "columns": 2,
+   "description": "For example Yes, 3, or one of the options."
+  }
+ ],
+ "links": [],
+ "modified": "2026-11-08 19:45:00.000000",
+ "modified_by": "Administrator",
+ "module": "MoET Careers",
+ "name": "Job Screening Question",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "istable": 1,
+ "editable_grid": 1
+}

@@ -39,7 +39,7 @@ HR user ──► Desk "Ask AI" panel ──► ai_recruitment.api.chat (session
 | ERPNext base image | `frappe/erpnext:v16.54.0` | `frappe/Dockerfile` (`ERPNEXT_IMAGE`) |
 | Frappe HR | `v16.53.1` | `frappe/Dockerfile` (`HRMS_VERSION`) |
 | ai_recruitment | `0.6.1` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
-| moet_careers | `0.4.2` | `frappe/apps/moet_careers/moet_careers/__init__.py` |
+| moet_careers | `0.5.0` | `frappe/apps/moet_careers/moet_careers/__init__.py` |
 | Careers portal | `0.1.0` (Node 22, React 18.3, Vite 5.4) | `portal/web/package.json`, `portal/server/package.json` |
 | UAE Design System | `@aegov/design-system 3.0.7` + Tailwind `4.1.17` | `portal/web/package.json` |
 | Demo LLM | `qwen/qwen3.8-27b` (OpenRouter) | AI Recruitment Settings |
@@ -312,7 +312,19 @@ How it fits Frappe HR:
   Approved (editing approves it; the approver is recorded). Without an approved row the job is shown in its
   original language, marked with the right `lang` and direction.
 
-### Assessments (tests for candidates)
+### Screening questions (asked when applying)
+- **Screening Question** (Desk) is a reusable bank: the question, an answer type (Yes or No, Single Choice,
+  Multiple Choice, Number, Date, Short Text, Long Text), options for choice questions, and a translations
+  table with **Suggest Translations** (HR approves; Yes and No come from the portal wording).
+- On a **Job Opening**, the **Assessments** tab has **Screening Questions**: pick questions in order, mark
+  them required, and optionally set a requirement (**Must Be** a value, **At Least** or **At Most** a number).
+- The apply form shows them under "Questions from the Hiring Team" in the candidate's language. Required
+  answers are checked in the browser and again on the server.
+- The **Job Applicant** gets **Screening** (Meets Requirements, Does Not Meet Requirements or No
+  Requirements; filterable and shown in the list) and **Screening Answers** in readable text, with the
+  requirement each answer misses. Applicants are never rejected automatically.
+
+
 HR builds tests in Desk; candidates take them in the portal under **My Assessments** (the "exams" in the
 account note). Nothing on the candidate side mentions AI.
 

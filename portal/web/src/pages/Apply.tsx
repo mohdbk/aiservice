@@ -1,7 +1,7 @@
-import { Briefcase, Envelope, FileText, GlobeHemisphereEast, PaperPlaneTilt, Phone, UploadSimple, UserCircle } from "@phosphor-icons/react";
+import { Briefcase, Envelope, FileText, GlobeHemisphereEast, ListChecks, PaperPlaneTilt, Phone, UploadSimple, UserCircle } from "@phosphor-icons/react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { api, ApiError, fileToBase64, Job } from "../api";
+import { api, ApiError, fileToBase64, Job, ScreeningQuestion } from "../api";
 import { useAuth } from "../auth";
 import { Field, IconBox, Steps } from "../components/Bits";
 import { Alert, Skeleton, Spinner } from "../components/States";
@@ -10,6 +10,63 @@ import { useAsync } from "../useAsync";
 import NotFound from "./NotFound";
 
 const CV_RE = /\.(pdf|docx|jpe?g|png)$/i;
+const empty = (v: unknown) => v === undefined || v === null || v === "" || (Array.isArray(v) && v.length === 0);
+
+function ScreeningField({ q, value, invalid, onChange }: { q: ScreeningQuestion; value: unknown; invalid: boolean; onChange: (v: unknown) => void }) {
+  const { t } = useSite();
+  const id = `sq-${q.key}`;
+  const label = (
+    <span>{q.text}{!q.required && <span className="ms-1 font-normal text-aeblack-500">({t("common.optional")})</span>}
+      {q.required && <span className="text-aered-600" aria-hidden="true"> *</span>}</span>
+  );
+  const ring = invalid ? "rounded-lg ring-2 ring-aered-500 ring-offset-2" : "";
+  if (q.type === "Yes or No" || q.type === "Single Choice") {
+    const opts = q.type === "Yes or No" ? [{ value: "Yes", label: t("common.yes") }, { value: "No", label: t("common.no") }] : q.options;
+    return (
+      <fieldset className={ring} aria-invalid={invalid} aria-required={q.required}>
+        <legend className="mb-2 text-sm font-medium text-aeblack-800">{label}</legend>
+        <div className={q.type === "Yes or No" ? "flex flex-wrap gap-3" : "space-y-2"}>
+          {opts.map((o) => (
+            <label key={o.value} className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 px-4 py-2.5 ${value === o.value ? "border-primary-600 bg-primary-50" : "border-aeblack-100"}`}>
+              <input type="radio" name={id} className="h-5 w-5 rounded-full accent-primary-600" checked={value === o.value} onChange={() => onChange(o.value)} />
+              <span>{o.label}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+    );
+  }
+  if (q.type === "Multiple Choice") {
+    const vals = Array.isArray(value) ? (value as string[]) : [];
+    return (
+      <fieldset className={ring} aria-invalid={invalid}>
+        <legend className="mb-2 text-sm font-medium text-aeblack-800">{label}</legend>
+        <p className="mb-2 text-sm text-aeblack-600">{t("asm.select_all")}</p>
+        <div className="flex flex-wrap gap-3">
+          {q.options.map((o) => {
+            const on = vals.includes(o.value);
+            return (
+              <label key={o.value} className={`flex cursor-pointer items-center gap-3 rounded-lg border-2 px-4 py-2.5 ${on ? "border-primary-600 bg-primary-50" : "border-aeblack-100"}`}>
+                <input type="checkbox" className="h-5 w-5 rounded accent-primary-600" checked={on} onChange={() => onChange(on ? vals.filter((v) => v !== o.value) : [...vals, o.value])} />
+                <span>{o.label}</span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
+    );
+  }
+  const input = q.type === "Long Text"
+    ? <textarea id={id} rows={4} maxLength={4000} dir="auto" value={(value as string) || ""} onChange={(e) => onChange(e.target.value)} aria-invalid={invalid} />
+    : <input id={id} type={q.type === "Date" ? "date" : "text"} inputMode={q.type === "Number" ? "decimal" : undefined} dir={q.type === "Short Text" ? "auto" : "ltr"}
+        maxLength={q.type === "Short Text" ? 300 : 20} value={(value as string) || ""} onChange={(e) => onChange(e.target.value)} aria-invalid={invalid} />;
+  return (
+    <div className={`aegov-form-control ${ring}`}>
+      <label htmlFor={id}>{label}</label>
+      <div className="form-control-input">{input}</div>
+    </div>
+  );
+}
 
 export default function Apply() {
   const { id = "" } = useParams();
@@ -23,6 +80,8 @@ export default function Apply() {
   const [note, setNote] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [declared, setDeclared] = useState(false);
+  const [screening, setScreening] = useState<Record<string, unknown>>({});
+  const [badQuestions, setBadQuestions] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const errRef = useRef<HTMLDivElement>(null);
@@ -38,16 +97,20 @@ export default function Apply() {
     if (!file) return setError(new ApiError("cv_required", 400));
     if (!CV_RE.test(file.name)) return setError(new ApiError("cv_type", 400));
     if (file.size > config.max_cv_mb * 1024 * 1024) return setError(new ApiError("cv_too_large", 400, { max_mb: config.max_cv_mb }));
+    const missing = (job.screening || []).filter((q) => q.required && empty(screening[q.key])).map((q) => q.key);
+    setBadQuestions(missing);
+    if (missing.length) return setError(new ApiError("screening_required", 400));
     if (!declared) return setError(new ApiError("declaration_required", 400));
     setBusy(true);
     try {
       const data = await fileToBase64(file);
       const r = await api<{ application: string }>("/api/applications", {
-        body: { job: job.id, phone: phone.trim(), country, cover_note: note, declaration: true, lang, cv: { name: file.name, type: file.type, data } },
+        body: { job: job.id, phone: phone.trim(), country, cover_note: note, declaration: true, lang, screening, cv: { name: file.name, type: file.type, data } },
       });
       navigate(`${path(`/applications/${encodeURIComponent(r.application)}`)}?new=1`);
     } catch (err) {
       if (err instanceof ApiError && err.code === "signed_out") clear();
+      if (err instanceof ApiError && Array.isArray(err.params.questions)) setBadQuestions(err.params.questions as string[]);
       setError(err);
       setBusy(false);
     }
@@ -98,6 +161,18 @@ export default function Apply() {
               <span className="text-sm text-aeblack-600" id="cv-hint">{t("apply.cv_hint", { max: config.max_cv_mb })}</span>
             </label>
           </div>
+
+          {job.screening && job.screening.length > 0 && (
+            <fieldset className="space-y-5 rounded-xl border border-aeblack-100 p-5">
+              <legend className="flex items-center gap-2 px-2 font-heading text-lg font-semibold text-aeblack-900">
+                <ListChecks size={24} className="text-primary-600" aria-hidden="true" />{t("apply.screening_title")}
+              </legend>
+              {job.screening.map((q) => (
+                <ScreeningField key={q.key} q={q} value={screening[q.key]} invalid={badQuestions.includes(q.key)}
+                  onChange={(v) => { setScreening((s) => ({ ...s, [q.key]: v })); setBadQuestions((b) => b.filter((k) => k !== q.key)); }} />
+              ))}
+            </fieldset>
+          )}
 
           <Field id="note" label={t("apply.note")} optional>
             <textarea id="note" rows={5} maxLength={4000} value={note} onChange={(e) => setNote(e.target.value)} />

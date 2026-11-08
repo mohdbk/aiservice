@@ -232,7 +232,8 @@ export function createApp(cfg = loadConfig(), deps = {}) {
       const data = Buffer.from(cv.data, "base64");
       if (!data.length) throw new HttpError(400, "cv_empty");
       const result = await frappe.apply({ email: u.email, epoch: u.epoch || 0, job: str(b.job, 140), phone: str(b.phone, 30), country: str(b.country, 140),
-        cover_note: str(b.cover_note, 4000), declaration: b.declaration ? "1" : "0", lang: str(b.lang, 10) },
+        cover_note: str(b.cover_note, 4000), declaration: b.declaration ? "1" : "0", lang: str(b.lang, 10),
+        screening: JSON.stringify(b.screening && typeof b.screening === "object" && !Array.isArray(b.screening) ? b.screening : {}).slice(0, 20000) },
       { name, data, type: str(cv.type, 100) });
       return send(res, 200, result);
     }

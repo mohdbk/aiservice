@@ -78,7 +78,9 @@ export type Job = {
   summary: string;
   accepting: boolean;
   description_html?: string;
+  screening?: ScreeningQuestion[];
 };
+export type ScreeningQuestion = { key: string; type: string; required: boolean; text: string; options: { value: string; label: string }[] };
 export type JobList = { jobs: Job[]; total: number; page: number; pages: number; filters: { departments: string[]; locations: string[] } };
 export type User = { email: string; full_name: string };
 export type Status = { code: string; tone: "info" | "warning" | "success" | "error" };

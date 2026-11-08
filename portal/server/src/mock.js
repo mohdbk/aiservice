@@ -25,6 +25,13 @@ const JOBS = [
   },
   {
     id: "HR-OPN-2026-0003", department: "Tourism Development", location: "Dubai", employment_type: "Contract",
+    screening: [
+      { key: "sq1", type: "Yes or No", required: 1, text: { en: "Do you hold a valid UAE driving licence?", ar: "هل لديك رخصة قيادة إماراتية سارية؟" } },
+      { key: "sq2", type: "Number", required: 1, text: { en: "How many years of experience do you have in tourism programmes?", ar: "كم سنة من الخبرة لديك في البرامج السياحية؟" } },
+      { key: "sq3", type: "Multiple Choice", required: 0, text: { en: "Which languages do you speak fluently?", ar: "ما اللغات التي تتحدثها بطلاقة؟" },
+        options: ["Arabic", "English", "French", "Chinese"], labels: { ar: ["العربية", "الإنجليزية", "الفرنسية", "الصينية"] } },
+      { key: "sq4", type: "Date", required: 0, text: { en: "When could you start?", ar: "متى يمكنك البدء؟" } },
+    ],
     posted_on: "2026-10-20", closes_on: "2026-11-25", salary: null,
     en: { title: "Tourism Programmes Specialist", html: "<p>Plan and follow up national tourism programmes with partners across the emirates.</p>" },
     ar: null,
@@ -136,7 +143,11 @@ export function createMockFrappe() {
     const o = { id: j.id, title: c.title, content_lang, content_dir: content_lang === "ar" ? "rtl" : "ltr", department: j.department,
       location: j.location, employment_type: j.employment_type, posted_on: j.posted_on, closes_on: j.closes_on, salary: j.salary,
       summary: c.html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 240), accepting: true };
-    if (full) o.description_html = c.html;
+    if (full) {
+      o.description_html = c.html;
+      o.screening = (j.screening || []).map((q) => ({ key: q.key, type: q.type, required: q.required, text: (q.text[l] || q.text.en),
+        options: (q.options || (q.type === "Yes or No" ? ["Yes", "No"] : [])).map((v, i) => ({ value: v, label: (q.labels && q.labels[l] && q.labels[l][i]) || v })) }));
+    }
     return o;
   };
   const reference = (id) => `MOET-2026-${id.slice(-5)}A`;
@@ -236,6 +247,10 @@ export function createMockFrappe() {
       const u = current({ email: fields.email, epoch: fields.epoch });
       if (apps.some((a) => a.email === u.email && a.job === fields.job)) throw new FrappeError("already_applied", 409);
       if (!/^\+?[0-9][0-9 ()-]{6,19}$/.test(String(fields.phone || "").trim())) throw new FrappeError("phone_invalid", 400);
+      const job = JOBS.find((j) => j.id === fields.job);
+      const answers = JSON.parse(fields.screening || "{}");
+      const missing = (job?.screening || []).filter((q) => q.required && (answers[q.key] === undefined || answers[q.key] === "" || answers[q.key] === null));
+      if (missing.length) throw new FrappeError("screening_required", 400, { questions: missing.map((q) => q.key) });
       const id = `HR-APP-2026-${String(100 + apps.length).padStart(5, "0")}`;
       apps.unshift({ id, job: fields.job, email: u.email, submitted: new Date().toISOString().slice(0, 10), status: { code: "under_review", tone: "info" }, ready: false });
       return { application: id, reference: reference(id) };

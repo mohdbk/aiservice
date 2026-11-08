@@ -294,5 +294,11 @@
  "email.reexam_body": "مرحبا {name}،\n\nتم منحك محاولة جديدة في {test}. يرجى إكمالها قبل {deadline} (بتوقيت الإمارات).\n\n{link}",
  "asm.deadline_label": "الموعد النهائي",
  "asm.attempts_label": "المحاولات",
- "asm.attempts_value": "{used} من {allowed}"
+ "asm.attempts_value": "{used} من {allowed}",
+ "apply.screening_title": "أسئلة من فريق التوظيف",
+ "apply.screening_choose": "اختر",
+ "common.yes": "نعم",
+ "common.no": "لا",
+ "error.screening_required": "يرجى الإجابة عن جميع الأسئلة المطلوبة.",
+ "error.screening_invalid": "يرجى مراجعة إجاباتك عن الأسئلة."
 }

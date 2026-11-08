@@ -192,7 +192,7 @@ def _suggest_job_job(job: str, user: str | None = None):
 # ---------------- assessment translations ----------------
 @frappe.whitelist(methods=["POST"])
 def suggest_assessment_translations(doctype: str, name: str):
-    if doctype not in ("Assessment Question", "Assessment"):
+    if doctype not in ("Assessment Question", "Assessment", "Screening Question"):
         frappe.throw("Not supported.")
     doc = frappe.get_doc(doctype, name)
     doc.check_permission("write")
@@ -206,7 +206,14 @@ def _suggest_assessment_job(doctype: str, name: str, user: str | None = None):
 
     doc = frappe.get_doc(doctype, name)
     langs, _ = portal_languages()
-    if doctype == "Assessment Question":
+    if doctype == "Screening Question":
+        src = source_language(doc.text or "", "")
+        have = {t.language for t in doc.get("translations") or []}
+        opts = [o for o in (doc.options or "").splitlines() if o.strip()]
+        payload = {"question": doc.text or "", "options": opts}
+        schema = {"type": "object", "additionalProperties": False, "required": ["question", "options"],
+                  "properties": {"question": {"type": "string"}, "options": {"type": "array", "items": {"type": "string"}}}}
+    elif doctype == "Assessment Question":
         src = source_language(strip_html_tags(doc.text or ""), "")
         have = {t.language for t in doc.get("translations") or []}
         payload = {"question_html": doc.text or "", "options": [o.option for o in doc.options]}
@@ -230,7 +237,12 @@ def _suggest_assessment_job(doctype: str, name: str, user: str | None = None):
             "code and technical terms; keep the same number and order of options and sections. Do not change the "
             "meaning or make any option more or less obviously correct. Never use em dashes.",
             json.dumps(payload, ensure_ascii=False), schema, "assessment_translation")
-        if doctype == "Assessment Question":
+        if doctype == "Screening Question":
+            text = (out.get("question") or "").strip()[:1000]
+            opts_t = "\n".join((o or "").strip() for o in (out.get("options") or [])[:len(opts)])
+            doc.append("translations", {"language": lang, "status": "Suggested", "text": text, "options": opts_t,
+                                        "suggested_hash": content_hash(text, opts_t)})
+        elif doctype == "Assessment Question":
             text = clean_html(out.get("question_html") or "")
             opts = "\n".join((o or "").strip() for o in (out.get("options") or [])[:len(doc.options)])
             doc.append("translations", {"language": lang, "status": "Suggested", "text": text, "options": opts,

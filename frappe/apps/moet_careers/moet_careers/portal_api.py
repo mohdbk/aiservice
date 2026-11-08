@@ -186,11 +186,33 @@ def _published_job(name: str):
     return job
 
 
+def _screening_questions(job_name: str) -> list:
+    """The job's screening questions with approved translations (requirements stay on the server)."""
+    rows = frappe.get_all("Job Screening Question", filters={"parenttype": "Job Opening", "parent": job_name},
+                          fields=["screening_question", "required", "rule", "expected"], order_by="idx asc")
+    out = []
+    for i, r in enumerate(rows, 1):
+        q = frappe.db.get_value("Screening Question", r.screening_question, ["name", "text", "answer_type", "options", "active"], as_dict=True)
+        if not q or not q.active:
+            continue
+        tr = frappe.get_all("Screening Question Translation", filters={"parent": q.name, "status": "Approved"},
+                            fields=["language", "text", "options"])
+        out.append({"key": f"sq{i}", "question": q.name, "type": q.answer_type, "text": q.text or "", "text_plain": q.text or "",
+                    "options": [o for o in (q.options or "").splitlines() if o.strip()], "required": int(r.required or 0),
+                    "rule": r.rule or "", "expected": r.expected or "",
+                    "i18n": {t.language: {"text": t.text or "", "options": (t.options or "").splitlines()} for t in tr}})
+    return out
+
+
 @endpoint()
 def job(lang: str, name: str):
+    from moet_careers.screening_utils import public
+
     lang = _lang(lang)
     j = _published_job(name)
-    return _present(j, lang, _translations([j.name], lang).get(j.name), full=True)
+    out = _present(j, lang, _translations([j.name], lang).get(j.name), full=True)
+    out["screening"] = [public(q, lang) for q in _screening_questions(j.name)]
+    return out
 
 
 # ---------------- accounts ----------------
@@ -318,7 +340,9 @@ def reset_password(token: str, password: str):
 # ---------------- applications ----------------
 @endpoint(methods=("POST",))
 def apply(email: str, job: str, phone: str = "", country: str = "", cover_note: str = "", declaration: str = "0",
-          lang: str = "ar", epoch: str = ""):
+          lang: str = "ar", epoch: str = "", screening: str = ""):
+    from moet_careers.screening_utils import evaluate, summary
+
     user = _applicant_user(email, epoch)
     s = _settings()
     opening = _published_job(job)
@@ -330,6 +354,16 @@ def apply(email: str, job: str, phone: str = "", country: str = "", cover_note: 
         raise Fail("phone_invalid")
     if frappe.db.exists("Job Applicant", {"email_id": user.name, "job_title": opening.name}):
         raise Fail("already_applied", 409)
+    questions = _screening_questions(opening.name)
+    try:
+        raw = json.loads(screening) if screening else {}
+    except ValueError:
+        raw = {}
+    sc = evaluate(questions, raw if isinstance(raw, dict) else {})
+    if sc["invalid"]:
+        raise Fail("screening_invalid", questions=sc["invalid"])
+    if sc["missing"]:
+        raise Fail("screening_required", questions=sc["missing"])
     f = frappe.request.files.get("cv") if frappe.request else None
     if not f:
         raise Fail("cv_required")
@@ -346,6 +380,12 @@ def apply(email: str, job: str, phone: str = "", country: str = "", cover_note: 
            "applied_via_portal": 1, "consent_ai_screening": 1, "consent_at": now_datetime(),
            "portal_language": (lang or "")[:10]}
     meta = frappe.get_meta("Job Applicant")
+    if questions and meta.has_field("screening_answers"):
+        has_rules = any(q.get("rule") and q.get("expected") for q in questions)
+        doc["screening_answers"] = json.dumps({q["question"]: sc["answers"].get(q["key"]) for q in questions}, ensure_ascii=False)
+        doc["screening_summary"] = summary(questions, sc)
+        doc["screening_result"] = ("Does Not Meet Requirements" if sc["not_met"] else "Meets Requirements") if has_rules \
+            else "No Requirements"
     if country and meta.has_field("country") and frappe.db.exists("Country", country):
         doc["country"] = country
     if meta.has_field("source") and frappe.db.exists("Job Applicant Source", "Website Listing"):

@@ -294,5 +294,11 @@
  "email.reexam_body": "Hello {name},\n\nYou have been given a new attempt at the {test}. Please complete it by {deadline} (UAE time).\n\n{link}",
  "asm.deadline_label": "Deadline",
  "asm.attempts_label": "Attempts",
- "asm.attempts_value": "{used} of {allowed}"
+ "asm.attempts_value": "{used} of {allowed}",
+ "apply.screening_title": "Questions from the Hiring Team",
+ "apply.screening_choose": "Choose an Option",
+ "common.yes": "Yes",
+ "common.no": "No",
+ "error.screening_required": "Please answer all required questions.",
+ "error.screening_invalid": "Please check your answers to the questions."
 }
