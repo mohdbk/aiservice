@@ -67,6 +67,11 @@ jobs:
             }
             await shoot(desk, 'ar_08_application_preparing', '/ar/applications/HR-APP-2026-00007');
             await shoot(desk, 'ar_09_not_found', '/ar/nothing-here');
+          { const g = await b.newContext({ viewport: { width: 1366, height: 900 } }); const p = await g.newPage();
+            await p.goto(B + '/en', { waitUntil: 'networkidle' }); await p.click('button[aria-controls="account-menu"]'); await p.waitForTimeout(300);
+            await p.screenshot({ path: '/tmp/shots/en_14_account_menu_guest.png' }); await g.close(); }
+          { const p = await desk.newPage(); await p.goto(B + '/ar', { waitUntil: 'networkidle' }); await p.click('button[aria-controls="account-menu"]'); await p.waitForTimeout(300);
+            await p.screenshot({ path: '/tmp/shots/ar_15_account_menu_signed_in.png' }); await p.close(); }
           for (const [ctx, name] of [[desk, 'ar_10_accessibility_menu'], [phone, 'phone_ar_accessibility_menu']]) {
             const p = await ctx.newPage();
             await p.goto(B + '/ar', { waitUntil: 'networkidle' });

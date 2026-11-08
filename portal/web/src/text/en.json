@@ -206,5 +206,6 @@
  "email.verify_body": "Hello {name},\n\nPlease confirm your email to activate your account on the Ministry of Economy & Tourism careers portal.\n\n{link}\n\nThe link works for 48 hours. If you did not create this account, you can ignore this email.",
  "email.reset_subject": "Reset Your Careers Portal Password",
  "email.reset_body": "Hello {name},\n\nWe received a request to reset the password of your careers portal account. Choose a new password here.\n\n{link}\n\nThe link works for one hour and can be used once. If you did not ask for this, ignore this email and your password stays the same.",
- "email.signature": "Ministry of Economy & Tourism"
+ "email.signature": "Ministry of Economy & Tourism",
+ "nav.account": "Account"
 }

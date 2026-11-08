@@ -152,7 +152,51 @@ function Brand() {
   );
 }
 
-function Nav({ onNavigate }: { onNavigate?: () => void }) {
+function AccountMenu() {
+  const { t, path } = useSite();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  usePopover(open, () => setOpen(false), ref, buttonRef);
+  const { pathname } = useLocation();
+  useEffect(() => setOpen(false), [pathname]);
+  const item = "flex w-full items-center gap-3 px-4 py-2.5 text-start text-aeblack-800 hover:bg-primary-50 hover:text-primary-800";
+  return (
+    <div className="relative" ref={ref}>
+      <button ref={buttonRef} type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls="account-menu"
+        aria-label={user ? t("nav.signed_in_as", { name: user.full_name || user.email }) : t("nav.account")}
+        className={`inline-flex items-center gap-1.5 rounded-full border-2 p-1.5 pe-2.5 transition ${open ? "border-primary-600 bg-primary-50" : "border-primary-200 hover:border-primary-600 hover:bg-primary-50"} text-primary-700`}>
+        <UserCircle size={28} weight={user ? "fill" : "regular"} aria-hidden="true" />
+        <CaretDown size={16} className={`transition ${open ? "rotate-180" : ""}`} aria-hidden="true" />
+      </button>
+      {open && (
+        <div id="account-menu" className="absolute end-0 z-40 mt-2 w-64 overflow-hidden rounded-xl border border-aeblack-100 bg-white py-1 shadow-xl">
+          {user ? (
+            <>
+              <div className="border-b border-aeblack-100 px-4 py-3">
+                <p className="truncate font-semibold text-aeblack-900">{user.full_name || user.email}</p>
+                <p className="truncate text-sm text-aeblack-600" dir="ltr" style={{ textAlign: "start" }}><bdi>{user.email}</bdi></p>
+              </div>
+              <Link to={path("/applications")} className={item}><Files size={24} className="text-primary-600" aria-hidden="true" />{t("nav.my_applications")}</Link>
+              <button type="button" className={item} onClick={async () => { setOpen(false); await signOut(); navigate(path()); }}>
+                <SignOut size={24} className="text-primary-600 rtl:-scale-x-100" aria-hidden="true" />{t("nav.sign_out")}
+              </button>
+            </>
+          ) : (
+            <>
+              <Link to={path("/sign-in")} className={item}><SignInIcon size={24} className="text-primary-600 rtl:-scale-x-100" aria-hidden="true" />{t("nav.sign_in")}</Link>
+              <Link to={path("/create-account")} className={item}><UserPlus size={24} className="text-primary-600" aria-hidden="true" />{t("nav.create_account")}</Link>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Nav({ onNavigate, mobile }: { onNavigate?: () => void; mobile?: boolean }) {
   const { t, path } = useSite();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -161,22 +205,24 @@ function Nav({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <ul className="flex flex-col gap-1 md:flex-row md:items-center md:gap-2">
       <li><NavLink end to={path()} className={link} onClick={onNavigate}><Briefcase size={24} aria-hidden="true" />{t("nav.jobs")}</NavLink></li>
-      {user ? (
+      {user && <li><NavLink to={path("/applications")} className={link} onClick={onNavigate}><Files size={24} aria-hidden="true" />{t("nav.my_applications")}</NavLink></li>}
+      {!mobile ? (
+        <li className="ms-1"><AccountMenu /></li>
+      ) : user ? (
         <>
-          <li><NavLink to={path("/applications")} className={link} onClick={onNavigate}><Files size={24} aria-hidden="true" />{t("nav.my_applications")}</NavLink></li>
-          <li className="flex items-center gap-2 px-3 py-2 text-sm text-aeblack-600 md:max-w-56" title={user.email}>
-            <UserCircle size={24} className="shrink-0 text-primary-600" aria-hidden="true" /><span className="truncate">{user.full_name || user.email}</span>
+          <li className="flex items-center gap-2 border-t border-aeblack-100 px-3 pt-3 text-sm text-aeblack-600">
+            <UserCircle size={24} weight="fill" className="shrink-0 text-primary-600" aria-hidden="true" /><span className="truncate">{user.full_name || user.email}</span>
           </li>
           <li>
-            <button type="button" className="aegov-btn btn-outline btn-sm" onClick={async () => { await signOut(); onNavigate?.(); navigate(path()); }}>
-              <SignOut size={20} className="rtl:-scale-x-100" aria-hidden="true" />{t("nav.sign_out")}
+            <button type="button" className={link({ isActive: false }) + " w-full"} onClick={async () => { await signOut(); onNavigate?.(); navigate(path()); }}>
+              <SignOut size={24} className="rtl:-scale-x-100" aria-hidden="true" />{t("nav.sign_out")}
             </button>
           </li>
         </>
       ) : (
         <>
-          <li><Link className="aegov-btn btn-outline btn-sm" to={path("/sign-in")} onClick={onNavigate}><SignInIcon size={20} className="rtl:-scale-x-100" aria-hidden="true" />{t("nav.sign_in")}</Link></li>
-          <li><Link className="aegov-btn btn-sm" to={path("/create-account")} onClick={onNavigate}><UserPlus size={20} aria-hidden="true" />{t("nav.create_account")}</Link></li>
+          <li className="border-t border-aeblack-100 pt-1"><NavLink to={path("/sign-in")} className={link} onClick={onNavigate}><SignInIcon size={24} className="rtl:-scale-x-100" aria-hidden="true" />{t("nav.sign_in")}</NavLink></li>
+          <li><NavLink to={path("/create-account")} className={link} onClick={onNavigate}><UserPlus size={24} aria-hidden="true" />{t("nav.create_account")}</NavLink></li>
         </>
       )}
     </ul>
@@ -223,7 +269,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         </div>
         {open && (
           <nav id="mobile-nav" aria-label={t("nav.main")} className="border-t border-aeblack-100 px-4 py-3 md:hidden">
-            <Nav onNavigate={() => setOpen(false)} />
+            <Nav mobile onNavigate={() => setOpen(false)} />
           </nav>
         )}
       </header>
