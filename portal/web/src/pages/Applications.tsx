@@ -1,5 +1,5 @@
 import { CaretRight, FileText, Files } from "@phosphor-icons/react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api, ApplicationSummary } from "../api";
 import { IconBox, StatusBadge } from "../components/Bits";
 import { Alert, EmptyState, Skeleton } from "../components/States";
@@ -8,6 +8,7 @@ import { useAsync } from "../useAsync";
 
 export default function Applications() {
   const { t, lang, path, formatDate, errorText } = useSite();
+  const navigate = useNavigate();
   usePageTitle(t("apps.title"));
   const { data, error, reload } = useAsync((signal) => api<{ applications: ApplicationSummary[] }>(`/api/applications?lang=${lang}`, { signal }), [lang]);
   return (
@@ -23,13 +24,14 @@ export default function Applications() {
         <ul className="space-y-4">
           {data.applications.map((a) => (
             <li key={a.id}>
-              <article className="aegov-card card-bordered relative bg-white transition hover:shadow-md">
+              <article className="aegov-card card-bordered relative cursor-pointer bg-white transition hover:shadow-md"
+                onClick={(e) => { if (!(e.target as HTMLElement).closest("a")) navigate(path(`/applications/${encodeURIComponent(a.id)}`)); }}>
                 <div className="flex flex-col gap-3 p-5 md:flex-row md:items-center md:justify-between">
                   <div className="flex items-start gap-4">
                   <IconBox icon={FileText} />
                   <div>
                     <h2 className="font-heading text-lg font-semibold text-aeblack-900">
-                      <Link to={path(`/applications/${encodeURIComponent(a.id)}`)} className="after:absolute after:inset-0 hover:text-primary-700">{a.title}</Link>
+                      <Link to={path(`/applications/${encodeURIComponent(a.id)}`)} className="hover:text-primary-700">{a.title}</Link>
                     </h2>
                     <p className="mt-1 text-sm text-aeblack-600">
                       {t("apps.submitted", { date: formatDate(a.submitted) })}

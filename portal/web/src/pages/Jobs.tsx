@@ -1,6 +1,6 @@
 import { ArrowCounterClockwise, CaretLeft, CaretRight, MagnifyingGlass } from "@phosphor-icons/react";
-import { FormEvent, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { FormEvent, MouseEvent, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, Job, JobList, qs } from "../api";
 import { MetaIcon } from "../components/Bits";
 import { Alert, EmptyState, Skeleton } from "../components/States";
@@ -9,25 +9,32 @@ import { useAsync } from "../useAsync";
 
 function JobCard({ job }: { job: Job }) {
   const { t, path, formatDate } = useSite();
+  const navigate = useNavigate();
+  const url = path(`/jobs/${encodeURIComponent(job.id)}`);
+  // The whole card opens the job; the title stays the one link for keyboard and screen reader users.
+  const open = (e: MouseEvent) => {
+    if ((e.target as HTMLElement).closest("a") || window.getSelection()?.toString()) return;
+    navigate(url);
+  };
   return (
     <li>
-      <article className="aegov-card card-bordered group relative h-full bg-white transition hover:shadow-md">
+      <article onClick={open} className="aegov-card card-bordered group relative h-full cursor-pointer bg-white transition hover:shadow-md">
         <div className="flex h-full flex-col gap-3 p-5 md:p-6">
           <div className="flex flex-wrap items-center gap-2 text-sm">
             {job.department && <span className="aegov-badge badge-sm">{job.department}</span>}
             {job.employment_type && <span className="text-aeblack-600">{job.employment_type}</span>}
           </div>
           <h3 className="font-heading text-xl font-semibold leading-snug text-aeblack-900" lang={job.content_lang} dir={job.content_dir}>
-            <Link to={path(`/jobs/${encodeURIComponent(job.id)}`)} className="after:absolute after:inset-0 hover:text-primary-700 focus:outline-none">{job.title}</Link>
+            <Link to={url} className="hover:text-primary-700">{job.title}</Link>
           </h3>
           {job.summary && <p className="line-clamp-2 text-aeblack-700" lang={job.content_lang} dir={job.content_dir}>{job.summary}</p>}
           <div className="mt-auto flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-aeblack-100 pt-3 text-sm text-aeblack-700">
             {job.location && <span className="inline-flex items-center gap-1.5"><MetaIcon name="pin" />{job.location}</span>}
             {job.closes_on && <span className="inline-flex items-center gap-1.5"><MetaIcon name="calendar" />{t("jobs.closes", { date: formatDate(job.closes_on) })}</span>}
-            <span className="ms-auto inline-flex items-center gap-1 font-semibold text-primary-700" aria-hidden="true">
+            <Link to={url} tabIndex={-1} aria-hidden="true" className="ms-auto inline-flex items-center gap-1 font-semibold text-primary-700 hover:text-primary-800">
               {t("jobs.view")}
               <CaretRight size={20} className="rtl:-scale-x-100" />
-            </span>
+            </Link>
           </div>
         </div>
       </article>
