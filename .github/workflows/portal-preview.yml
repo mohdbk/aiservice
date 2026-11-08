@@ -1,12 +1,15 @@
-# Design preview of the careers portal: compiles the stylesheet, renders every page with sample data,
-# screenshots them (and the live guest pages) and pushes the images to the "screenshots" branch.
+# Careers portal: build, test and design preview. Screenshots every page (mock Frappe, Arabic and English,
+# desktop and phone) and, if given, the live portal. Images are pushed to the "screenshots" branch.
 name: Portal preview
 on:
   workflow_dispatch:
     inputs:
-      site:
-        description: Live site to screenshot (guest pages only)
-        default: https://frappe-hr-production-6ec4.up.railway.app
+      live:
+        description: Live portal URL to screenshot (optional)
+        default: ""
+  push:
+    branches: [main]
+    paths: ["portal/**", ".github/workflows/portal-preview.yml"]
 permissions:
   contents: write
 jobs:
@@ -16,51 +19,71 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - uses: actions/setup-python@v5
-        with: { python-version: "3.12" }
-      - name: Build stylesheet
-        run: cd frappe/apps/moet_careers/frontend && npm install --no-audit --no-fund && npm run build
-      - name: Render pages
-        run: |
-          pip install jinja2
-          mkdir -p /tmp/site/assets/moet_careers/css /tmp/site/assets/moet_careers/js /tmp/site/p
-          cp frappe/apps/moet_careers/moet_careers/public/css/careers.css /tmp/site/assets/moet_careers/css/
-          cp frappe/apps/moet_careers/moet_careers/public/js/careers.js /tmp/site/assets/moet_careers/js/
-          cd frappe/apps && python3 moet_careers/tests/render_preview.py /tmp/site/p
+      - name: Server tests
+        run: cd portal/server && npm test
+      - name: Build web
+        run: cd portal/web && npm install --no-audit --no-fund && npm run build
+      - name: Type check (report only)
+        continue-on-error: true
+        run: cd portal/web && npm run typecheck
       - name: Screenshots
-        env: { SITE: "${{ inputs.site }}" }
+        env: { LIVE: "${{ inputs.live }}" }
         run: |
           cd /tmp && npm init -y >/dev/null && npm install playwright@1.49.1 >/dev/null && npx playwright install --with-deps chromium >/dev/null
-          (cd /tmp/site && python3 -m http.server 8080 >/dev/null 2>&1 &) ; sleep 1
-          cat > shot.js <<'JS'
-          const { chromium, devices } = require('playwright');
+          cd "$GITHUB_WORKSPACE/portal/server"
+          (MOCK_FRAPPE=1 COOKIE_SECURE=0 PORT=8080 node src/server.js > /tmp/server.log 2>&1 &) ; sleep 2
+          cat > /tmp/shot.cjs <<'JS'
+          const { chromium, devices } = require('/tmp/node_modules/playwright');
           const fs = require('fs');
+          const B = 'http://localhost:8080';
           (async () => {
             const b = await chromium.launch(); fs.mkdirSync('/tmp/shots', { recursive: true });
-            const desk = await b.newContext({ viewport: { width: 1366, height: 900 }, deviceScaleFactor: 1 });
+            const shoot = async (ctx, name, path) => {
+              const p = await ctx.newPage();
+              await p.goto(B + path, { waitUntil: 'networkidle' }); await p.waitForTimeout(400);
+              await p.screenshot({ path: `/tmp/shots/${name}.png`, fullPage: true }); await p.close();
+            };
+            const desk = await b.newContext({ viewport: { width: 1366, height: 900 } });
             const phone = await b.newContext({ ...devices['iPhone 13'] });
-            const pages = fs.readdirSync('/tmp/site/p').filter(f => f.endsWith('.html'));
-            for (const f of pages) {
-              const p = await desk.newPage(); await p.goto('http://localhost:8080/p/' + f, { waitUntil: 'networkidle' });
-              await p.screenshot({ path: '/tmp/shots/local_' + f.replace('.html', '.png'), fullPage: true }); await p.close();
+            for (const l of ['ar', 'en']) {
+              await shoot(desk, `${l}_01_jobs`, `/${l}`);
+              await shoot(desk, `${l}_02_job`, `/${l}/jobs/HR-OPN-2026-0001`);
+              await shoot(desk, `${l}_03_sign_in`, `/${l}/sign-in?next=/${l}/jobs/HR-OPN-2026-0003/apply`);
+              await shoot(desk, `${l}_04_create_account`, `/${l}/create-account`);
             }
-            for (const f of ['ar_index.html', 'en_index.html', 'ar_apply.html', 'ar_application.html']) {
-              const p = await phone.newPage(); await p.goto('http://localhost:8080/p/' + f, { waitUntil: 'networkidle' });
-              await p.screenshot({ path: '/tmp/shots/phone_' + f.replace('.html', '.png'), fullPage: true }); await p.close();
+            await shoot(desk, 'ar_02b_job_untranslated', '/ar/jobs/HR-OPN-2026-0003');
+            for (const ctx of [desk, phone]) {
+              const r = await ctx.request.post(B + '/api/login', { headers: { 'X-Portal': '1' }, data: { email: 'layla@example.com', password: 'password123' } });
+              if (!r.ok()) throw new Error('login failed ' + r.status());
             }
-            const live = [['live_ar_index', '/careers?lang=ar'], ['live_en_index', '/careers?lang=en'], ['live_ar_login', '/careers/login?lang=ar'], ['live_ar_privacy', '/careers/privacy?lang=ar']];
-            for (const [n, path] of live) {
-              const p = await desk.newPage();
-              try { await p.goto(process.env.SITE + path, { waitUntil: 'networkidle', timeout: 60000 });
-                    await p.screenshot({ path: '/tmp/shots/' + n + '.png', fullPage: true }); } catch (e) { console.log(n, e.message); }
-              await p.close();
+            for (const l of ['ar', 'en']) {
+              await shoot(desk, `${l}_05_apply`, `/${l}/jobs/HR-OPN-2026-0003/apply`);
+              await shoot(desk, `${l}_06_applications`, `/${l}/applications`);
+              await shoot(desk, `${l}_07_application`, `/${l}/applications/HR-APP-2026-00012?new=1`);
+            }
+            await shoot(desk, 'ar_08_application_preparing', '/ar/applications/HR-APP-2026-00007');
+            await shoot(desk, 'ar_09_not_found', '/ar/nothing-here');
+            await shoot(phone, 'phone_ar_jobs', '/ar');
+            await shoot(phone, 'phone_ar_job', '/ar/jobs/HR-OPN-2026-0001');
+            await shoot(phone, 'phone_ar_apply', '/ar/jobs/HR-OPN-2026-0003/apply');
+            await shoot(phone, 'phone_ar_application', '/ar/applications/HR-APP-2026-00012');
+            if (process.env.LIVE) {
+              const live = await b.newContext({ viewport: { width: 1366, height: 900 } });
+              for (const [n, path] of [['live_ar_jobs', '/ar'], ['live_en_jobs', '/en'], ['live_ar_sign_in', '/ar/sign-in']]) {
+                const p = await live.newPage();
+                try { await p.goto(process.env.LIVE.replace(/\/$/, '') + path, { waitUntil: 'networkidle', timeout: 60000 }); await p.waitForTimeout(800);
+                      await p.screenshot({ path: `/tmp/shots/${n}.png`, fullPage: true }); } catch (e) { console.log(n, e.message); }
+                await p.close();
+              }
             }
             await b.close();
-          })();
+          })().catch((e) => { console.error(e); process.exit(1); });
           JS
-          sed -i 's/^          //' shot.js && node shot.js
+          sed -i 's/^          //' /tmp/shot.cjs && node /tmp/shot.cjs || (cat /tmp/server.log; exit 1)
       - name: Push to screenshots branch
+        if: always()
         run: |
+          test -d /tmp/shots || exit 0
           cd /tmp/shots && git init -q -b screenshots && git add . \
             && git -c user.name=preview -c user.email=preview@localhost commit -qm "Portal preview ${GITHUB_SHA::7}" \
             && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" screenshots

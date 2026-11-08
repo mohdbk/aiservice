@@ -1,19 +1,17 @@
-"""Pure helpers for the careers portal (no Frappe imports, unit-tested)."""
+"""Pure helpers for the careers portal API (no Frappe imports, unit-tested)."""
 import hashlib
 import re
 
-LANGS = ("ar", "en")
-DEFAULT_LANG = "ar"
-
-# Job Applicant.status -> what the candidate sees (never AI scores or internal notes)
+# Job Applicant.status -> status code the portal shows (never scores or internal notes).
+# The portal turns the code into text in the visitor's language.
 STATUS = {
-    "Open": ("Under review", "قيد المراجعة", "info"),
-    "Hold": ("Under review", "قيد المراجعة", "info"),
-    "Replied": ("We have contacted you", "تم التواصل معك", "warning"),
-    "Accepted": ("Successful", "مقبول", "success"),
-    "Rejected": ("Not selected", "لم يتم الاختيار", "error"),
+    "Open": ("under_review", "info"),
+    "Hold": ("under_review", "info"),
+    "Replied": ("contacted", "warning"),
+    "Accepted": ("successful", "success"),
+    "Rejected": ("not_selected", "error"),
 }
-INTERVIEW = ("Interview scheduled", "تم تحديد مقابلة", "success")
+INTERVIEW = ("interview", "success")
 
 CV_TYPES = {
     "pdf": (b"%PDF",),
@@ -23,29 +21,22 @@ CV_TYPES = {
     "jpeg": (b"\xff\xd8\xff",),
 }
 
-
-def pick_lang(requested: str | None, cookie: str | None) -> str:
-    for value in (requested, cookie):
-        if value in LANGS:
-            return value
-    return DEFAULT_LANG
-
-
-def text(lang: str, en: str, ar: str) -> str:
-    return ar if lang == "ar" else en
-
-
-def localized(lang: str, value_en: str | None, value_ar: str | None) -> str:
-    """Bilingual content field with fallback to whichever language is filled in."""
-    if lang == "ar":
-        return (value_ar or "").strip() or (value_en or "").strip()
-    return (value_en or "").strip() or (value_ar or "").strip()
+RTL_LANGS = {"ar", "he", "fa", "ur", "ps", "ckb", "ku", "dv", "yi", "sd", "ug"}
+LANG_RE = re.compile(r"^[a-z]{2,3}(-[A-Za-z]{2,4})?$")
 
 
 def candidate_status(status: str | None, has_interview: bool = False) -> dict:
-    en, ar, tone = INTERVIEW if has_interview and status in ("Open", "Hold", "Replied") else \
+    code, tone = INTERVIEW if has_interview and status in ("Open", "Hold", "Replied") else \
         STATUS.get(status or "Open", STATUS["Open"])
-    return {"en": en, "ar": ar, "tone": tone}
+    return {"code": code, "tone": tone}
+
+
+def is_rtl(lang: str | None) -> bool:
+    return (lang or "").split("-")[0].lower() in RTL_LANGS
+
+
+def valid_lang(lang: str | None) -> bool:
+    return bool(LANG_RE.match(lang or ""))
 
 
 def clean_department(name: str | None) -> str:
@@ -54,7 +45,7 @@ def clean_department(name: str | None) -> str:
 
 
 def validate_cv(filename: str, content: bytes, max_mb: int) -> str:
-    """Returns the normalised extension or raises ValueError with a user-safe message key."""
+    """Returns the normalised extension or raises ValueError('type'|'size'|'empty')."""
     ext = (filename or "").rsplit(".", 1)[-1].lower() if "." in (filename or "") else ""
     if ext not in CV_TYPES:
         raise ValueError("type")
@@ -67,14 +58,6 @@ def validate_cv(filename: str, content: bytes, max_mb: int) -> str:
     return ext
 
 
-def safe_redirect(path: str | None, default: str = "/careers") -> str:
-    """Only allow same-site paths under /careers (prevents open redirects)."""
-    path = (path or "").strip()
-    if path.startswith("/careers") and not path.startswith("//") and "\\" not in path and "://" not in path:
-        return path
-    return default
-
-
 PHONE_RE = re.compile(r"^\+?[0-9][0-9 ()-]{6,19}$")
 
 
@@ -85,3 +68,23 @@ def valid_phone(phone: str) -> bool:
 def reference(name: str, creation) -> str:
     """Stable, human-friendly application reference for support calls."""
     return f"MOET-{str(creation)[:4]}-{hashlib.sha1((name or '').encode()).hexdigest()[:6].upper()}"
+
+
+def content_hash(*parts) -> str:
+    return hashlib.sha1("\x1f".join(str(p or "") for p in parts).encode()).hexdigest()[:16]
+
+
+def pick_translation(base_title: str, base_desc: str, row: dict | None) -> tuple:
+    """Approved translation fields win; anything missing falls back to the job's original text."""
+    row = row or {}
+    if row.get("status") != "Approved":
+        return base_title or "", base_desc or ""
+    return (row.get("job_title") or "").strip() or base_title or "", (row.get("description") or "").strip() or base_desc or ""
+
+
+def merge_text(base: dict, *overlays: dict) -> dict:
+    """UI text: English base, then the language file, then approved HR overrides. Empty values are ignored."""
+    out = dict(base)
+    for o in overlays:
+        out.update({k: v for k, v in (o or {}).items() if k in base and isinstance(v, str) and v.strip()})
+    return out

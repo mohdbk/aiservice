@@ -1,0 +1,42 @@
+/* MoET careers portal: UAE Design System 3.0 (TDRA, MIT licence) on Tailwind CSS 4. */
+@import "tailwindcss";
+@plugin "@aegov/design-system";
+@source "./";
+
+/* Accessibility tools: text size and contrast classes are set on <html> */
+html.mc-text-sm { font-size: 87.5%; }
+html.mc-text-lg { font-size: 112.5%; }
+html.mc-text-xl { font-size: 125%; }
+html.mc-contrast body { background: #000; color: #fff; }
+html.mc-contrast a { color: #ffeb3b !important; text-decoration: underline !important; }
+html.mc-contrast .aegov-card, html.mc-contrast header, html.mc-contrast footer, html.mc-contrast .mc-surface,
+html.mc-contrast .mc-hero { background: #000 !important; color: #fff !important; border-color: #fff !important; }
+html.mc-contrast .mc-hero * { color: #fff !important; }
+html.mc-contrast .aegov-btn { background: #ffeb3b !important; color: #000 !important; }
+
+/* Hero with a soft gold pattern */
+.mc-hero {
+  background:
+    radial-gradient(1200px 400px at 85% -10%, color-mix(in oklch, var(--color-primary-200) 70%, transparent), transparent 60%),
+    radial-gradient(900px 300px at -10% 110%, color-mix(in oklch, var(--color-primary-100) 80%, transparent), transparent 60%),
+    var(--color-whitely-50);
+}
+
+/* Job description content written by HR */
+.mc-prose h1, .mc-prose h2, .mc-prose h3, .mc-prose h4 { font-weight: 700; font-size: 1.125rem; margin: 1.5rem 0 .5rem; color: var(--color-aeblack-900); }
+.mc-prose p { margin: 0 0 1rem; line-height: 1.8; }
+.mc-prose ul { list-style: disc; padding-inline-start: 1.5rem; margin: 0 0 1rem; }
+.mc-prose ol { list-style: decimal; padding-inline-start: 1.5rem; margin: 0 0 1rem; }
+.mc-prose li { margin: .35rem 0; line-height: 1.7; }
+.mc-prose a { color: var(--color-primary-700); text-decoration: underline; }
+
+/* Skip link */
+.mc-skip { position: absolute; inset-inline-start: -999px; top: 0; }
+.mc-skip:focus { inset-inline-start: 1rem; top: 1rem; z-index: 100; }
+
+/* Loading placeholders */
+@keyframes mc-pulse { 50% { opacity: .5; } }
+.mc-skeleton { background: var(--color-aeblack-100); border-radius: .5rem; animation: mc-pulse 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .mc-skeleton { animation: none; } }
+
+:focus-visible { outline: 3px solid var(--color-primary-support-600, #1a6fb5); outline-offset: 2px; }

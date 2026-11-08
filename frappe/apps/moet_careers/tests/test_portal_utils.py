@@ -1,75 +1,76 @@
-"""python -m unittest discover -s tests (no Frappe needed)"""
 import importlib.util
+import json
 import pathlib
+import re
 import unittest
 
-_P = pathlib.Path(__file__).resolve().parents[1] / "moet_careers" / "portal_utils.py"
-_s = importlib.util.spec_from_file_location("pu", _P)
-u = importlib.util.module_from_spec(_s)
-_s.loader.exec_module(u)
+ROOT = pathlib.Path(__file__).resolve().parents[1] / "moet_careers"
+spec = importlib.util.spec_from_file_location("portal_utils", ROOT / "portal_utils.py")
+u = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(u)
+EN = json.loads((ROOT / "portal_text" / "en.json").read_text(encoding="utf-8"))
+AR = json.loads((ROOT / "portal_text" / "ar.json").read_text(encoding="utf-8"))
 
 
-class TestLanguage(unittest.TestCase):
-    def test_arabic_default(self):
-        self.assertEqual(u.pick_lang(None, None), "ar")
+class TestPortalUtils(unittest.TestCase):
+    def test_status_codes_have_text(self):
+        for code, _tone in list(u.STATUS.values()) + [u.INTERVIEW]:
+            self.assertIn(f"status.{code}", EN)
+        self.assertEqual(u.candidate_status("Open", True)["code"], "interview")
+        self.assertEqual(u.candidate_status("Rejected", True)["code"], "not_selected")
+        self.assertEqual(u.candidate_status(None)["code"], "under_review")
 
-    def test_param_beats_cookie(self):
-        self.assertEqual(u.pick_lang("en", "ar"), "en")
-        self.assertEqual(u.pick_lang(None, "en"), "en")
-        self.assertEqual(u.pick_lang("fr", None), "ar")
+    def test_rtl_and_lang_codes(self):
+        self.assertTrue(u.is_rtl("ar"))
+        self.assertTrue(u.is_rtl("ur"))
+        self.assertFalse(u.is_rtl("en"))
+        self.assertTrue(u.valid_lang("zh-CN"))
+        self.assertFalse(u.valid_lang("../x"))
+        self.assertFalse(u.valid_lang("english"))
 
-    def test_localized_fallback(self):
-        self.assertEqual(u.localized("ar", "Engineer", ""), "Engineer")
-        self.assertEqual(u.localized("ar", "Engineer", "مهندس"), "مهندس")
-        self.assertEqual(u.localized("en", "", "مهندس"), "مهندس")
-
-
-class TestStatus(unittest.TestCase):
-    def test_candidate_never_sees_internal_states(self):
-        self.assertEqual(u.candidate_status("Hold")["en"], "Under review")
-        self.assertEqual(u.candidate_status("Rejected")["tone"], "error")
-        self.assertEqual(u.candidate_status(None)["en"], "Under review")
-
-    def test_interview(self):
-        self.assertEqual(u.candidate_status("Open", has_interview=True)["en"], "Interview scheduled")
-        self.assertEqual(u.candidate_status("Rejected", has_interview=True)["en"], "Not selected")
-
-
-class TestCV(unittest.TestCase):
-    def test_valid_types(self):
-        self.assertEqual(u.validate_cv("cv.PDF", b"%PDF-1.7 ...", 5), "pdf")
-        self.assertEqual(u.validate_cv("cv.docx", b"PK\x03\x04...", 5), "docx")
-        self.assertEqual(u.validate_cv("p.jpg", b"\xff\xd8\xff\xe0..", 5), "jpg")
-
-    def test_rejects_mismatch_and_size(self):
-        for name, data, err in [("cv.pdf", b"MZ\x90\x00", "type"), ("cv.exe", b"%PDF", "type"),
-                                ("cv.pdf", b"", "empty"), ("cv.pdf", b"%PDF" + b"0" * (2 * 1024 * 1024), "size")]:
-            with self.assertRaises(ValueError) as c:
-                u.validate_cv(name, data, 1 if err == "size" else 5)
-            self.assertEqual(str(c.exception), err)
-
-
-class TestSafety(unittest.TestCase):
-    def test_redirect_only_within_careers(self):
-        self.assertEqual(u.safe_redirect("/careers/apply/HR-OPN-1"), "/careers/apply/HR-OPN-1")
-        for bad in ("https://evil.example", "//evil.example", "/app/job-applicant", "/careers\\@evil", None):
-            self.assertEqual(u.safe_redirect(bad), "/careers")
-
-    def test_phone(self):
-        self.assertTrue(u.valid_phone("+971 50 123 4567"))
-        self.assertTrue(u.valid_phone("+44 (20) 7946-0958"))
-        self.assertFalse(u.valid_phone("call me"))
-        self.assertFalse(u.valid_phone("12"))
-
-    def test_department_suffix(self):
+    def test_clean_department(self):
         self.assertEqual(u.clean_department("Digital Solutions - MOET"), "Digital Solutions")
-        self.assertEqual(u.clean_department("Research & Development"), "Research & Development")
+        self.assertEqual(u.clean_department(None), "")
 
-    def test_reference_is_stable(self):
-        a = u.reference("x@example.com", "2026-11-08 10:00:00")
-        self.assertEqual(a, u.reference("x@example.com", "2026-11-08 10:00:00"))
-        self.assertTrue(a.startswith("MOET-2026-"))
-        self.assertNotEqual(a, u.reference("y@example.com", "2026-11-08 10:00:00"))
+    def test_validate_cv(self):
+        self.assertEqual(u.validate_cv("a.pdf", b"%PDF-1.7 x", 5), "pdf")
+        for name, data, err in (("a.exe", b"MZ", "type"), ("a.pdf", b"", "empty"),
+                                ("a.pdf", b"%PDF" + b"0" * (2 * 1024 * 1024), "size"), ("a.pdf", b"PK\x03\x04", "type")):
+            with self.assertRaises(ValueError) as e:
+                u.validate_cv(name, data, 1 if err == "size" else 5)
+            self.assertEqual(str(e.exception), err)
+
+    def test_phone_and_reference(self):
+        self.assertTrue(u.valid_phone("+971 50 123 4567"))
+        self.assertFalse(u.valid_phone("abc"))
+        self.assertEqual(u.reference("HR-APP-1", "2026-11-08"), u.reference("HR-APP-1", "2026-11-08"))
+        self.assertTrue(u.reference("HR-APP-1", "2026-11-08").startswith("MOET-2026-"))
+
+    def test_pick_translation_only_approved(self):
+        self.assertEqual(u.pick_translation("T", "D", None), ("T", "D"))
+        self.assertEqual(u.pick_translation("T", "D", {"status": "Suggested", "job_title": "X"}), ("T", "D"))
+        self.assertEqual(u.pick_translation("T", "D", {"status": "Approved", "job_title": "X", "description": ""}), ("X", "D"))
+
+    def test_merge_text(self):
+        self.assertEqual(u.merge_text({"a": "A", "b": "B"}, {"a": "x", "z": "no"}, {"b": " "}), {"a": "x", "b": "B"})
+
+    def test_content_hash(self):
+        self.assertEqual(u.content_hash("a", "b"), u.content_hash("a", "b"))
+        self.assertNotEqual(u.content_hash("ab", ""), u.content_hash("a", "b"))
+
+    def test_catalogs_complete_and_clean(self):
+        self.assertEqual(set(EN), set(AR))
+        for k in EN:
+            self.assertEqual(set(re.findall(r"\{\w+\}", EN[k])), set(re.findall(r"\{\w+\}", AR[k])), k)
+            self.assertNotIn("—", EN[k] + AR[k])
+            for word in ("AI", "artificial", "ذكاء"):
+                self.assertNotIn(word, EN[k] + AR[k], k)
+
+    def test_every_api_error_code_has_text(self):
+        src = (ROOT / "portal_api.py").read_text()
+        codes = (set(re.findall(r'Fail\(\s*"(\w+)"', src)) | set(re.findall(r'"(cv_\w+)"', src)) | {"forbidden"}) - {"no_logo"}  # no_logo is internal (logo proxy)
+        for c in codes:
+            self.assertIn(f"error.{c}", EN, c)
 
 
 if __name__ == "__main__":

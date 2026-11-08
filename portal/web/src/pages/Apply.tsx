@@ -1,0 +1,113 @@
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { api, ApiError, fileToBase64, Job } from "../api";
+import { useAuth } from "../auth";
+import { Field, Steps } from "../components/Bits";
+import { Alert, Skeleton, Spinner } from "../components/States";
+import { usePageTitle, useSite } from "../site";
+import { useAsync } from "../useAsync";
+import NotFound from "./NotFound";
+
+const CV_RE = /\.(pdf|docx|jpe?g|png)$/i;
+
+export default function Apply() {
+  const { id = "" } = useParams();
+  const { t, lang, path, config, errorText } = useSite();
+  const { user, clear } = useAuth();
+  const navigate = useNavigate();
+  usePageTitle(t("apply.title"));
+  const { data: job, error: loadError } = useAsync((signal) => api<Job>(`/api/jobs/${encodeURIComponent(id)}?lang=${lang}`, { signal }), [id, lang]);
+  const [phone, setPhone] = useState("");
+  const [country, setCountry] = useState("");
+  const [note, setNote] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [declared, setDeclared] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const errRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (error) errRef.current?.querySelector<HTMLElement>("[role=alert]")?.focus(); }, [error]);
+
+  if (loadError && (loadError as ApiError).status === 404) return <NotFound />;
+  if (!job) return <div className="container mx-auto max-w-3xl space-y-4 px-4 py-10"><Skeleton className="h-10 w-1/2" /><Skeleton className="h-96" /></div>;
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!/^\+?[0-9][0-9 ()-]{6,19}$/.test(phone.trim())) return setError(new ApiError("phone_invalid", 400));
+    if (!file) return setError(new ApiError("cv_required", 400));
+    if (!CV_RE.test(file.name)) return setError(new ApiError("cv_type", 400));
+    if (file.size > config.max_cv_mb * 1024 * 1024) return setError(new ApiError("cv_too_large", 400, { max_mb: config.max_cv_mb }));
+    if (!declared) return setError(new ApiError("declaration_required", 400));
+    setBusy(true);
+    try {
+      const data = await fileToBase64(file);
+      const r = await api<{ application: string }>("/api/applications", {
+        body: { job: job.id, phone: phone.trim(), country, cover_note: note, declaration: true, lang, cv: { name: file.name, type: file.type, data } },
+      });
+      navigate(`${path(`/applications/${encodeURIComponent(r.application)}`)}?new=1`);
+    } catch (err) {
+      if (err instanceof ApiError && err.code === "signed_out") clear();
+      setError(err);
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="container mx-auto max-w-3xl px-4 py-10">
+      <Steps current={2} />
+      <h1 className="font-heading text-3xl font-bold text-aeblack-950">{t("apply.title")}</h1>
+      <div className="mc-surface mt-4 rounded-xl border border-primary-200 bg-primary-50 px-5 py-4">
+        <p className="text-sm text-aeblack-600">{t("apply.for")}</p>
+        <p className="font-heading text-lg font-semibold text-aeblack-900" lang={job.content_lang} dir={job.content_dir}>{job.title}</p>
+      </div>
+
+      {!job.accepting ? (
+        <div className="mt-6"><Alert tone="warning" title={t("job.closed")} /></div>
+      ) : (
+        <form onSubmit={submit} className="mc-surface mt-6 space-y-6 rounded-2xl border border-aeblack-100 bg-white p-6 md:p-8" noValidate aria-busy={busy}>
+          <h2 className="font-heading text-xl font-semibold text-aeblack-900">{t("apply.your_details")}</h2>
+          <div className="grid gap-5 md:grid-cols-2">
+            <Field id="name" label={t("apply.name")}><input id="name" value={user?.full_name || ""} readOnly /></Field>
+            <Field id="email" label={t("apply.email")}><input id="email" value={user?.email || ""} readOnly dir="ltr" /></Field>
+            <Field id="phone" label={t("apply.phone")} hint={t("apply.phone_hint")}>
+              <input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" required maxLength={30} dir="ltr" aria-describedby="phone-hint" />
+            </Field>
+            <Field id="country" label={t("apply.country")}>
+              <select id="country" value={country} onChange={(e) => setCountry(e.target.value)} autoComplete="country-name">
+                <option value="">{t("apply.country_choose")}</option>
+                {config.countries.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </Field>
+          </div>
+
+          <div className="aegov-form-control">
+            <label htmlFor="cv">{t("apply.cv")}</label>
+            <label htmlFor="cv" className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary-300 bg-whitely-50 px-4 py-8 text-center hover:border-primary-500">
+              <svg className="h-8 w-8 text-primary-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" /></svg>
+              <span className="font-semibold text-primary-700">{file ? t("apply.cv_selected", { name: file.name }) : t("apply.cv_choose")}</span>
+              <span className="text-sm text-aeblack-600" id="cv-hint">{t("apply.cv_hint", { max: config.max_cv_mb })}</span>
+            </label>
+            <input id="cv" type="file" className="sr-only" accept=".pdf,.docx,.jpg,.jpeg,.png" aria-describedby="cv-hint" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+          </div>
+
+          <Field id="note" label={t("apply.note")} optional>
+            <textarea id="note" rows={5} maxLength={4000} value={note} onChange={(e) => setNote(e.target.value)} />
+          </Field>
+
+          <div className="aegov-check-item">
+            <input id="declaration" type="checkbox" checked={declared} onChange={(e) => setDeclared(e.target.checked)} required />
+            <label htmlFor="declaration">{t("apply.declaration")}</label>
+          </div>
+
+          <div ref={errRef}>{error ? <Alert tone="error" title={errorText(error)} /> : null}</div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="submit" className="aegov-btn" disabled={busy}>{t("apply.submit")}</button>
+            <Link to={path(`/jobs/${encodeURIComponent(job.id)}`)} className="aegov-btn btn-link">{t("apply.cancel")}</Link>
+            {busy && <Spinner label={t("apply.submitting")} />}
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
