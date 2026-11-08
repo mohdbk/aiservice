@@ -1,6 +1,6 @@
 {
  "site.ministry": "Ministry of Economy & Tourism",
- "site.portal": "Careers",
+ "site.portal": "Careers Portal",
  "site.tagline": "Join us in building a diversified, competitive economy and a leading tourism sector.",
  "site.description": "Job opportunities at the Ministry of Economy & Tourism.",
  "nav.main": "Main",
@@ -28,7 +28,7 @@
  "common.not_found_title": "Page not found",
  "common.not_found_body": "The page you are looking for does not exist or has moved.",
  "common.optional": "Optional",
- "jobs.hero_eyebrow": "Careers at the Ministry",
+ "jobs.hero_eyebrow": "Careers Portal",
  "jobs.hero_title": "Shape the future of the UAE economy with us",
  "jobs.hero_body": "Find a role that matches your skills and apply online in a few minutes, wherever you are.",
  "jobs.search_label": "Search jobs",
@@ -171,5 +171,8 @@
  "error.payload_too_large": "The file is too large.",
  "error.bad_request": "Please check the form and try again.",
  "error.connection": "Connection problem. Please check your internet and try again.",
- "auth.account_note": "Careers portal accounts are only for applying for jobs, tracking your applications and taking exams if required."
+ "auth.account_note": "Careers portal accounts are only for applying for jobs, tracking your applications and taking exams if required.",
+ "site.official_note": "Official careers portal of the Ministry of Economy & Tourism",
+ "nav.go_to_ministry": "Ministry website",
+ "nav.opens_new_tab": "opens in a new tab"
 }

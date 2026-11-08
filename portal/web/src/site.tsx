@@ -68,6 +68,6 @@ export function useSite(): Site {
 export function usePageTitle(title: string) {
   const { t } = useSite();
   useEffect(() => {
-    document.title = `${title} | ${t("site.ministry")}`;
+    document.title = title === t("site.portal") ? `${t("site.portal")} | ${t("site.ministry")}` : `${title} | ${t("site.portal")} | ${t("site.ministry")}`;
   }, [title, t]);
 }

@@ -92,10 +92,15 @@ export function logoSrc(lang: string, uploaded: string, dark = false) {
 function Brand() {
   const { config, t, path, lang } = useSite();
   return (
-    <Link to={path()} className="flex min-w-0 items-center gap-3" aria-label={`${t("site.ministry")}, ${t("site.portal")}`}>
-      <img src={logoSrc(lang, config.logo)} alt={t("site.ministry")} className="h-12 w-auto max-w-[62vw] sm:h-14 md:h-[72px]" width={907} height={228} />
-      <span className="hidden h-9 w-px bg-aeblack-200 sm:block" aria-hidden="true" />
-      <span className="hidden font-heading text-base font-semibold text-primary-700 sm:block md:text-lg" dir={config.dir}>{t("site.portal")}</span>
+    <Link to={path()} className="flex min-w-0 items-center gap-3 md:gap-4" aria-label={`${t("site.portal")}, ${t("site.ministry")}`}>
+      <img src={logoSrc(lang, config.logo)} alt={t("site.ministry")} className="h-10 w-auto max-w-[44vw] sm:h-14 md:h-[72px] md:max-w-none" width={907} height={228} />
+      <span className="h-10 w-px shrink-0 bg-aeblack-200 md:h-12" aria-hidden="true" />
+      <span className="inline-flex shrink-0 items-center gap-2 rounded-full bg-primary-600 px-3 py-1.5 text-sm font-bold text-white shadow-sm md:px-4 md:py-2 md:text-lg" dir={config.dir}>
+        <svg className="h-4 w-4 md:h-5 md:w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M3 8h18v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8Z" /><path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18" />
+        </svg>
+        {t("site.portal")}
+      </span>
     </Link>
   );
 }
@@ -140,10 +145,18 @@ export default function Layout({ children }: { children: ReactNode }) {
       <header className="mc-surface sticky top-0 z-20 border-b border-aeblack-100 bg-white/95 backdrop-blur">
         <div className="border-b border-aeblack-100 bg-aeblack-50">
           <div className="container mx-auto flex items-center justify-between gap-2 px-4 py-1 text-sm">
-            {config.main_site_url ? (
-              <a className="truncate text-aeblack-700 hover:text-primary-700" href={config.main_site_url}>{t("site.ministry")}</a>
-            ) : <span className="truncate text-aeblack-700">{t("site.ministry")}</span>}
-            <div className="flex shrink-0 items-center gap-2">
+            <p className="hidden truncate font-medium text-aeblack-800 sm:block">{t("site.official_note")}</p>
+            <div className="flex shrink-0 items-center gap-2 sm:ms-auto">
+              {config.main_site_url && (
+                <>
+                  <a className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-aeblack-700 hover:bg-aeblack-100 hover:text-primary-700" href={config.main_site_url} target="_blank" rel="noopener">
+                    {t("nav.go_to_ministry")}
+                    <svg className="h-3.5 w-3.5 rtl:-scale-x-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></svg>
+                    <span className="sr-only">({t("nav.opens_new_tab")})</span>
+                  </a>
+                  <span className="h-4 w-px bg-aeblack-200" aria-hidden="true" />
+                </>
+              )}
               <A11yTools />
               <span className="h-4 w-px bg-aeblack-200" aria-hidden="true" />
               <LanguageSwitcher />
