@@ -14,7 +14,7 @@ from frappe.utils.html_utils import clean_html
 
 from moet_careers import __version__
 from moet_careers.i18n import portal_languages, portal_text, source_language
-from moet_careers.portal_utils import (candidate_status, clean_department, is_rtl, pick_translation, reference,
+from moet_careers.portal_utils import (candidate_status, clean_department, is_rtl, pick_translation, reference, summary_text,
                                        valid_phone, validate_cv)
 
 SETTINGS = "MoET Careers Settings"
@@ -131,7 +131,7 @@ def _present(job, lang: str, row=None, full: bool = False) -> dict:
         "posted_on": str(job.get("posted_on") or "")[:10],
         "closes_on": str(job.get("closes_on") or "")[:10],
         "salary": None,
-        "summary": frappe.utils.strip_html_tags(desc or "")[:240].strip(),
+        "summary": summary_text(desc),
         "accepting": _is_open(job),
     }
     if job.get("publish_salary_range") and (job.get("lower_range") or job.get("upper_range")):

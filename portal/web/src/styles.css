@@ -40,3 +40,21 @@ html.mc-contrast .aegov-btn { background: #ffeb3b !important; color: #000 !impor
 @media (prefers-reduced-motion: reduce) { .mc-skeleton { animation: none; } }
 
 :focus-visible { outline: 3px solid var(--color-primary-support-600, #1a6fb5); outline-offset: 2px; }
+
+/* Links: the design system underlines every link; keep underlines for links in body text only */
+header a, footer a, nav a, .aegov-card a, a.aegov-btn { text-decoration: none; }
+footer a:hover, nav a.mc-underline-hover:hover { text-decoration: underline; }
+
+/* Form controls: one height, one arrow, no native styling (the design system draws the frame) */
+.aegov-form-control .form-control-input > input,
+.aegov-form-control .form-control-input > select,
+.aegov-form-control .form-control-input > textarea {
+  appearance: none; -webkit-appearance: none; width: 100%; min-height: 3rem; padding: .625rem 1rem;
+  border: 0; background-color: transparent; border-radius: .5rem; font: inherit; color: var(--color-aeblack-900); outline: none;
+}
+.aegov-form-control .form-control-input > select {
+  padding-inline-end: 2.5rem; background-repeat: no-repeat; background-size: 1.25rem; background-position: right .75rem center; cursor: pointer;
+}
+[dir="rtl"] .aegov-form-control .form-control-input > select { background-position: left .75rem center; }
+.aegov-form-control .form-control-input > textarea { min-height: 7rem; resize: vertical; }
+.aegov-form-control .form-control-input > input::placeholder { color: var(--color-aeblack-400); }

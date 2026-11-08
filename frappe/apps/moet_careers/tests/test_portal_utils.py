@@ -54,6 +54,11 @@ class TestPortalUtils(unittest.TestCase):
     def test_merge_text(self):
         self.assertEqual(u.merge_text({"a": "A", "b": "B"}, {"a": "x", "z": "no"}, {"b": " "}), {"a": "x", "b": "B"})
 
+    def test_summary_text(self):
+        self.assertEqual(u.summary_text("<p>Build things.</p><ul><li>SQL</li><li>Python</li></ul>"), "Build things. SQL Python")
+        long = u.summary_text("<p>" + "word " * 100 + "</p>", 30)
+        self.assertTrue(long.endswith("\u2026") and len(long) <= 31)
+
     def test_content_hash(self):
         self.assertEqual(u.content_hash("a", "b"), u.content_hash("a", "b"))
         self.assertNotEqual(u.content_hash("ab", ""), u.content_hash("a", "b"))

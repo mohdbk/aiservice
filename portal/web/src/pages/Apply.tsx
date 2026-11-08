@@ -66,9 +66,11 @@ export default function Apply() {
       ) : (
         <form onSubmit={submit} className="mc-surface mt-6 space-y-6 rounded-2xl border border-aeblack-100 bg-white p-6 md:p-8" noValidate aria-busy={busy}>
           <h2 className="font-heading text-xl font-semibold text-aeblack-900">{t("apply.your_details")}</h2>
+          <dl className="grid gap-4 rounded-xl bg-whitely-100 p-4 sm:grid-cols-2">
+            <div><dt className="text-sm text-aeblack-600">{t("apply.name")}</dt><dd className="font-medium text-aeblack-900">{user?.full_name}</dd></div>
+            <div><dt className="text-sm text-aeblack-600">{t("apply.email")}</dt><dd className="font-medium text-aeblack-900"><bdi>{user?.email}</bdi></dd></div>
+          </dl>
           <div className="grid gap-5 md:grid-cols-2">
-            <Field id="name" label={t("apply.name")}><input id="name" value={user?.full_name || ""} readOnly /></Field>
-            <Field id="email" label={t("apply.email")}><input id="email" value={user?.email || ""} readOnly dir="ltr" /></Field>
             <Field id="phone" label={t("apply.phone")} hint={t("apply.phone_hint")}>
               <input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" required maxLength={30} dir="ltr" aria-describedby="phone-hint" />
             </Field>
@@ -80,14 +82,19 @@ export default function Apply() {
             </Field>
           </div>
 
-          <div className="aegov-form-control">
-            <label htmlFor="cv">{t("apply.cv")}</label>
-            <label htmlFor="cv" className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary-300 bg-whitely-50 px-4 py-8 text-center hover:border-primary-500">
-              <svg className="h-8 w-8 text-primary-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" /></svg>
-              <span className="font-semibold text-primary-700">{file ? t("apply.cv_selected", { name: file.name }) : t("apply.cv_choose")}</span>
+          <div>
+            <p className="mb-1 block text-sm font-medium leading-6 text-aeblack-800" id="cv-label">{t("apply.cv")}</p>
+            <input id="cv" type="file" className="peer sr-only" accept=".pdf,.docx,.jpg,.jpeg,.png" aria-labelledby="cv-label cv-choose" aria-describedby="cv-hint"
+              onChange={(e) => setFile(e.target.files?.[0] || null)} />
+            <label htmlFor="cv" className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-8 text-center transition peer-focus-visible:ring-2 peer-focus-visible:ring-primary-600 ${file ? "border-aegreen-500 bg-aegreen-50" : "border-primary-300 bg-whitely-50 hover:border-primary-500 hover:bg-primary-50"}`}>
+              {file ? (
+                <svg className="h-9 w-9 text-aegreen-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z" /><path d="M14 3v5h5M9 14l2 2 4-4" /></svg>
+              ) : (
+                <svg className="h-9 w-9 text-primary-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M12 16V4m0 0-4 4m4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" /></svg>
+              )}
+              <span id="cv-choose" className="font-semibold text-primary-800"><bdi>{file ? t("apply.cv_selected", { name: file.name }) : t("apply.cv_choose")}</bdi></span>
               <span className="text-sm text-aeblack-600" id="cv-hint">{t("apply.cv_hint", { max: config.max_cv_mb })}</span>
             </label>
-            <input id="cv" type="file" className="sr-only" accept=".pdf,.docx,.jpg,.jpeg,.png" aria-describedby="cv-hint" onChange={(e) => setFile(e.target.files?.[0] || null)} />
           </div>
 
           <Field id="note" label={t("apply.note")} optional>

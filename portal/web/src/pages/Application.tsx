@@ -33,17 +33,17 @@ function DetailsView({ d }: { d: Details }) {
     </div>
   );
   return (
-    <dl className="mt-4" dir="auto">
+    <dl className="mt-4">
       {row(t("app.years"), d.years ? t("app.years_value", { years: d.years }) : none)}
       {row(t("app.experience"), d.work.length ? (
         <ul className="space-y-2">{d.work.map((w, i) => (
-          <li key={i}><span className="font-medium">{[w.position, w.employer].filter(Boolean).join(", ")}</span>
-            {w.start && <span className="ms-2 text-sm text-aeblack-600" dir="ltr">{w.start} - {w.end || t("app.present")}</span>}</li>
+          <li key={i}><bdi className="block font-medium">{[w.position, w.employer].filter(Boolean).join(", ")}</bdi>
+            {w.start && <span className="block text-sm text-aeblack-600"><bdi>{w.start}</bdi> - <bdi>{w.end || t("app.present")}</bdi></span>}</li>
         ))}</ul>) : none)}
-      {row(t("app.education"), d.education.length ? <ul className="space-y-2">{d.education.map((e, i) => <li key={i}>{[e.degree, e.institution, e.end].filter(Boolean).join(", ")}</li>)}</ul> : none)}
+      {row(t("app.education"), d.education.length ? <ul className="space-y-2">{d.education.map((e, i) => <li key={i}><bdi>{[e.degree, e.institution, e.end].filter(Boolean).join(", ")}</bdi></li>)}</ul> : none)}
       {row(t("app.skills"), d.skills.length ? <div className="flex flex-wrap gap-2">{d.skills.map((s) => <span key={s} className="aegov-badge badge-sm">{s}</span>)}</div> : none)}
-      {row(t("app.languages"), d.languages.length ? d.languages.join(", ") : none)}
-      {row(t("app.certificates"), d.certificates.length ? d.certificates.join(", ") : none)}
+      {row(t("app.languages"), d.languages.length ? <bdi>{d.languages.join(", ")}</bdi> : none)}
+      {row(t("app.certificates"), d.certificates.length ? <bdi>{d.certificates.join(", ")}</bdi> : none)}
     </dl>
   );
 }

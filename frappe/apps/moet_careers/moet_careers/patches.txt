@@ -2,3 +2,4 @@
 
 [post_model_sync]
 moet_careers.patches.v0_2.move_arabic_job_fields
+moet_careers.patches.v0_2.remove_em_dashes_from_jobs

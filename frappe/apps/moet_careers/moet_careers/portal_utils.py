@@ -88,3 +88,15 @@ def merge_text(base: dict, *overlays: dict) -> dict:
     for o in overlays:
         out.update({k: v for k, v in (o or {}).items() if k in base and isinstance(v, str) and v.strip()})
     return out
+
+
+def summary_text(html: str, limit: int = 240) -> str:
+    """Plain-text teaser from HR's HTML: block ends become spaces, cut on a word boundary."""
+    text = re.sub(r"<(br|/p|/li|/h[1-6]|/div|/tr)[^>]*>", " ", html or "", flags=re.I)
+    text = re.sub(r"<[^>]+>", "", text)
+    text = re.sub(r"&nbsp;", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text) <= limit:
+        return text
+    cut = text[:limit].rsplit(" ", 1)[0].rstrip(",;:.")
+    return cut + "…"
