@@ -145,7 +145,7 @@ export function createMockFrappe() {
       summary: c.html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 240), accepting: true };
     if (full) {
       o.description_html = c.html;
-      o.screening = (j.screening || []).map((q) => ({ key: q.key, type: q.type, required: q.required, text: (q.text[l] || q.text.en),
+      o.screening = (j.screening || []).map((q) => ({ key: q.key, type: q.type, required: Boolean(q.required), text: (q.text[l] || q.text.en),
         options: (q.options || (q.type === "Yes or No" ? ["Yes", "No"] : [])).map((v, i) => ({ value: v, label: (q.labels && q.labels[l] && q.labels[l][i]) || v })) }));
     }
     return o;

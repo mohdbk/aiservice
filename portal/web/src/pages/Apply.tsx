@@ -16,14 +16,14 @@ function ScreeningField({ q, value, invalid, onChange }: { q: ScreeningQuestion;
   const { t } = useSite();
   const id = `sq-${q.key}`;
   const label = (
-    <span>{q.text}{!q.required && <span className="ms-1 font-normal text-aeblack-500">({t("common.optional")})</span>}
-      {q.required && <span className="text-aered-600" aria-hidden="true"> *</span>}</span>
+    <span>{q.text}{!q.required ? <span className="ms-1 font-normal text-aeblack-500">({t("common.optional")})</span> : null}
+      {q.required ? <span className="text-aered-600" aria-hidden="true"> *</span> : null}</span>
   );
   const ring = invalid ? "rounded-lg ring-2 ring-aered-500 ring-offset-2" : "";
   if (q.type === "Yes or No" || q.type === "Single Choice") {
     const opts = q.type === "Yes or No" ? [{ value: "Yes", label: t("common.yes") }, { value: "No", label: t("common.no") }] : q.options;
     return (
-      <fieldset className={ring} aria-invalid={invalid} aria-required={q.required}>
+      <fieldset className={ring} aria-invalid={invalid} aria-required={Boolean(q.required)}>
         <legend className="mb-2 text-sm font-medium text-aeblack-800">{label}</legend>
         <div className={q.type === "Yes or No" ? "flex flex-wrap gap-3" : "space-y-2"}>
           {opts.map((o) => (
