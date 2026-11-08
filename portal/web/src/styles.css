@@ -1,6 +1,12 @@
 /* MoET careers portal: UAE Design System 3.0 (TDRA, MIT licence) on Tailwind CSS 4. */
 @import "tailwindcss";
 @plugin "@aegov/design-system";
+
+/* The design system theme replaces the palette; keep plain white and black available. */
+@theme {
+  --color-white: #ffffff;
+  --color-black: #000000;
+}
 @source "./";
 
 /* Accessibility tools: text size and contrast classes are set on <html> */

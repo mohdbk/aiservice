@@ -71,6 +71,14 @@ class TestPortalUtils(unittest.TestCase):
             for word in ("AI", "artificial", "ذكاء"):
                 self.assertNotIn(word, EN[k] + AR[k], k)
 
+    def test_portal_fallback_copy_matches(self):
+        web = pathlib.Path(__file__).resolve().parents[4] / "portal" / "web" / "src" / "text"
+        if not web.exists():
+            self.skipTest("portal not in this checkout")
+        for lang, data in (("en", EN), ("ar", AR)):
+            self.assertEqual(json.loads((web / f"{lang}.json").read_text(encoding="utf-8")), data,
+                             f"copy moet_careers/portal_text/{lang}.json to portal/web/src/text/")
+
     def test_every_api_error_code_has_text(self):
         src = (ROOT / "portal_api.py").read_text()
         codes = (set(re.findall(r'Fail\(\s*"(\w+)"', src)) | set(re.findall(r'"(cv_\w+)"', src)) | {"forbidden"}) - {"no_logo"}  # no_logo is internal (logo proxy)
