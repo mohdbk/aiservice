@@ -176,8 +176,8 @@ function AccountMenu() {
           {user ? (
             <>
               <div className="border-b border-aeblack-100 px-4 py-3">
-                <p className="truncate font-semibold text-aeblack-900">{user.full_name || user.email}</p>
-                <p className="truncate text-sm text-aeblack-600" dir="ltr" style={{ textAlign: "start" }}><bdi>{user.email}</bdi></p>
+                <p className="m-0 truncate font-semibold text-aeblack-900">{user.full_name || user.email}</p>
+                <p className="m-0 mt-0.5 truncate text-sm text-aeblack-600"><bdi>{user.email}</bdi></p>
               </div>
               <Link to={path("/applications")} className={item}><Files size={24} className="text-primary-600" aria-hidden="true" />{t("nav.my_applications")}</Link>
               <button type="button" className={item} onClick={async () => { setOpen(false); await signOut(); navigate(path()); }}>
