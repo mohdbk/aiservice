@@ -5,7 +5,8 @@ Engines
   paddleocr        PP-OCRv5 (production runner: Arabic+English, RTL ordering, reversed-Arabic fix)
   paddleocr_vl     PaddleOCR-VL document parser (CPU here; no text classes dropped)
   qwen_vision      Qwen3.8 27B reading the page image (production prompt)
-  hybrid_paddle    PP-OCRv5 draft + image -> Qwen3.8 (production hybrid prompt and guard)
+  hybrid_tesseract Tesseract draft + image -> Qwen3.8 (production hybrid prompt and guard)
+  hybrid_paddle    PP-OCRv5 draft + image -> Qwen3.8
   hybrid_vl        PaddleOCR-VL draft + image -> Qwen3.8
 
 Local Paddle engines run in worker subprocesses so a native crash only loses one page; API engines run
@@ -70,6 +71,14 @@ def paddleocr_vl(path):
                 continue
         print("BENCH-INFO paddleocr_vl ready", file=sys.stderr, flush=True)
     with tempfile.TemporaryDirectory() as tmp:
+        scale = float(os.environ.get("BENCH_VL_SCALE", "1"))
+        if scale < 1:
+            from PIL import Image
+
+            with Image.open(path) as im:
+                small = os.path.join(tmp, "page.png")
+                im.convert("RGB").resize((int(im.width * scale), int(im.height * scale)), Image.LANCZOS).save(small)
+            path = small
         for res in _VL.predict(path):
             res.save_to_markdown(save_path=tmp)
         md = "\n".join(pathlib.Path(f).read_text(encoding="utf-8", errors="ignore")
@@ -170,7 +179,7 @@ def score(text, truths):
 
 def main():
     truth = json.loads((DATA / "truth.json").read_text(encoding="utf-8"))
-    engines = ["tesseract", "paddleocr", "paddleocr_vl", "qwen_vision", "hybrid_paddle", "hybrid_vl"]
+    engines = ["tesseract", "paddleocr", "paddleocr_vl", "qwen_vision", "hybrid_tesseract", "hybrid_paddle", "hybrid_vl"]
     if ONLY:
         engines = [e for e in engines if e in ONLY]
     if not KEY:
@@ -206,15 +215,13 @@ def main():
         def on_result(r):
             page = page_of[r["path"]]
             record(page, eng, r["text"], r["seconds"], r["error"])
-            if hybrid_name in engines:
-                draft = r["text"] or outputs.get((page, "tesseract"), "")
-                src = source if r["text"] else "the Tesseract OCR engine"
-                submit(hybrid_name, hybrid, r["path"], draft, src, page=page)
+            # Only hybridise a real draft from this engine (no fallback, so labels stay honest).
+            if hybrid_name in engines and r["text"].strip():
+                submit(hybrid_name, hybrid, r["path"], r["text"], source, page=page)
         run_worker(eng, [path_of[p] for p in pages], on_result)
 
-    if "tesseract" in engines:
-        run_worker("tesseract", [path_of[p] for p in pages],
-                   lambda r: record(page_of[r["path"]], "tesseract", r["text"], r["seconds"], r["error"]))
+    if "tesseract" in engines or "hybrid_tesseract" in engines:
+        local("tesseract", "hybrid_tesseract", "the Tesseract OCR engine")
     if "paddleocr" in engines:
         local("paddleocr", "hybrid_paddle", "the PaddleOCR engine")
     if "paddleocr_vl" in engines:
