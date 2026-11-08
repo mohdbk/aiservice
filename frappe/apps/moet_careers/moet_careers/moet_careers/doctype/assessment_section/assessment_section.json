@@ -5,9 +5,11 @@
  "engine": "InnoDB",
  "field_order": [
   "section_title",
+  "section_title_en",
   "minutes",
   "pass_mark",
-  "instructions"
+  "instructions",
+  "instructions_en"
  ],
  "fields": [
   {
@@ -16,7 +18,14 @@
    "label": "Section Title",
    "reqd": 1,
    "in_list_view": 1,
-   "columns": 3
+   "columns": 2
+  },
+  {
+   "fieldname": "section_title_en",
+   "fieldtype": "Data",
+   "label": "Section Title (English)",
+   "in_list_view": 1,
+   "columns": 2
   },
   {
    "fieldname": "minutes",
@@ -38,10 +47,15 @@
    "fieldname": "instructions",
    "fieldtype": "Small Text",
    "label": "Instructions"
+  },
+  {
+   "fieldname": "instructions_en",
+   "fieldtype": "Small Text",
+   "label": "Instructions (English)"
   }
  ],
  "links": [],
- "modified": "2026-11-08 19:15:00.000000",
+ "modified": "2026-11-08 20:43:36.000000",
  "modified_by": "Administrator",
  "module": "MoET Careers",
  "name": "Assessment Section",

@@ -100,3 +100,18 @@ def summary_text(html: str, limit: int = 240) -> str:
         return text
     cut = text[:limit].rsplit(" ", 1)[0].rstrip(",;:.")
     return cut + "…"
+
+
+def review_status(approved: bool, was_approved: bool, suggested: bool, stored_hash: str | None, current_hash: str) -> tuple:
+    """Status of the English version in Desk and the suggestion hash to keep.
+
+    A fresh language model draft waits for review. HR approves by ticking English Approved, or by writing or editing
+    the English themselves. Unticking puts the current text back into review.
+    """
+    if suggested:
+        return "Suggested", current_hash
+    if was_approved and not approved:
+        return "Suggested", current_hash
+    if approved or not stored_hash or stored_hash != current_hash:
+        return "Approved", stored_hash
+    return "Suggested", stored_hash

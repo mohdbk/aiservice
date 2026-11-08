@@ -13,6 +13,8 @@
   "active",
   "question_section",
   "text",
+  "text_en",
+  "english_approved",
   "options_section",
   "options",
   "answer_section",
@@ -88,6 +90,17 @@
    "reqd": 1
   },
   {
+   "fieldname": "text_en",
+   "fieldtype": "Text Editor",
+   "label": "Question (English)"
+  },
+  {
+   "fieldname": "english_approved",
+   "fieldtype": "Check",
+   "label": "English Approved",
+   "description": "Only approved English is shown on the English portal. Writing or editing the English yourself approves it."
+  },
+  {
    "fieldname": "options_section",
    "fieldtype": "Section Break",
    "label": "Options",
@@ -146,18 +159,20 @@
    "fieldname": "translations_section",
    "fieldtype": "Section Break",
    "label": "Translations",
-   "collapsible": 1
+   "collapsible": 1,
+   "hidden": 1
   },
   {
    "fieldname": "translations",
    "fieldtype": "Table",
    "options": "Assessment Question Translation",
    "label": "Translations",
-   "description": "One row per portal language. Use Suggest Translations for drafts, then check and approve them."
+   "description": "One row per portal language. Use Suggest Translations for drafts, then check and approve them.",
+   "hidden": 1
   }
  ],
  "links": [],
- "modified": "2026-11-08 19:15:00.000000",
+ "modified": "2026-11-08 20:43:36.000000",
  "modified_by": "Administrator",
  "module": "MoET Careers",
  "name": "Assessment Question",

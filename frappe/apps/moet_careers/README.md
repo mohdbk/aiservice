@@ -10,7 +10,10 @@ backend) lives in `portal/` and is hosted outside the ministry network; it calls
   rows HR approves are shown.
 - **MoET Careers Settings**: logo, ministry website, languages, sign-up, CV size.
 - **Portal Text**: HR-editable wording per language (English and Arabic ship in `portal_text/`).
-- **Job Opening > Portal Translations**: per-language job title and description, with **Suggest Translations**.
+- **Arabic first, English beside it**: jobs, screening questions and tests are written in Arabic with English
+  fields next to them and **Suggest English** (`bilingual.py` stores the English as translation rows, so more
+  languages can be added later).
+- **Recruiter** and **Recruitment Admin** roles with a recruitment-only **Careers** workspace (`desk_setup.py`).
 
 See `docs/ON_PREM.md`, section 4b.
 

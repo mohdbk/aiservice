@@ -2,8 +2,9 @@
 
 Wording: English and Arabic ship with the app in portal_text/<lang>.json. HR can override any key or add a
 language through Portal Text rows; only Approved rows are used. Job titles and descriptions are translated
-per job in the "Portal Translations" table. The language model can suggest drafts for both, but nothing
-reaches the portal until HR approves it (editing a draft approves it).
+in translation tables (one row per language). Desk shows Arabic (the original) and English side by side for now
+(see bilingual.py).
+The language model can suggest drafts, but nothing reaches the portal until HR approves it.
 """
 import json
 import pathlib
@@ -132,96 +133,114 @@ def approve_rows(rows, fields: tuple):
 
 
 def on_job_validate(doc, method=None):
+    from moet_careers.bilingual import sync
+
+    sync(doc)
     approve_rows(doc.get("portal_translations"), ("job_title", "description"))
+
+
+# Desk shows Arabic (the original) and English only for now: suggestions fill the "(English)" fields for HR.
+TARGET = "en"
+
+
+def _check_source(text: str):
+    if source_language(text, "") == TARGET:
+        frappe.throw("The main fields are in English. Write the Arabic in the main fields and the English in the "
+                     "English fields, then try again.")
 
 
 @frappe.whitelist(methods=["POST"])
 def suggest_job_translations(job: str):
+    from moet_careers.bilingual import _filled
+
     doc = frappe.get_doc("Job Opening", job)
     doc.check_permission("write")
-    missing = _missing_languages(doc)
-    if not missing:
-        return "Every portal language already has a translation row. Delete a row to get a new suggestion."
+    _check_source(f"{doc.job_title or ''} {doc.description or ''}")
+    if _filled(doc.get("job_title_en")) or _filled(doc.get("description_en")):
+        return "This job already has English. Clear the English fields and save to get a new suggestion."
     frappe.enqueue("moet_careers.i18n._suggest_job_job", queue="long", timeout=900, job=job, user=frappe.session.user,
                    job_id=f"moet-job-translate-{job}", deduplicate=True)
-    return f"Drafting {', '.join(missing)}. The form refreshes when the suggestions are ready; review and approve them."
+    return "Drafting the English. The form refreshes when it is ready; review it and tick English Approved."
 
 
-def _missing_languages(doc) -> list[str]:
-    langs, _ = portal_languages()
-    src = source_language(doc.job_title or "", doc.description or "")
-    have = {r.language for r in doc.get("portal_translations") or []}
-    return [l["code"] for l in langs if l["code"] != src and l["code"] not in have]
+def _save_suggestion(doc):
+    from moet_careers.bilingual import sync
+
+    doc.flags.moet_suggested = True
+    sync(doc)
+    doc.flags.ignore_validate = True
+    doc.flags.ignore_permissions = True
+    doc.flags.ignore_mandatory = True
+    doc.save()
+    doc.notify_update()
+
+
+def _notify(user: str | None, name: str, done: bool):
+    if user:
+        frappe.publish_realtime("moet_translations_ready", {"job": name, "message":
+                                "The English suggestion is ready. Review it and tick English Approved." if done
+                                else "No English suggestion was added."}, user=user)
 
 
 def _suggest_job_job(job: str, user: str | None = None):
     doc = frappe.get_doc("Job Opening", job)
-    src = source_language(doc.job_title or "", doc.description or "")
-    idx = len(doc.get("portal_translations") or [])
-    done = []
-    for lang in _missing_languages(doc):
-        out = _llm_json(
-            "You translate job advertisements for a UAE government ministry. Translate the job title and the HTML "
-            f"description from {language_name_en(src)} into {language_name_en(lang)} ({lang}). Keep every HTML tag "
-            "and the structure, keep numbers, dates, product names and acronyms, use formal government style, and "
-            "never use em dashes. Return the translated title and HTML only.",
-            json.dumps({"job_title": doc.job_title or "", "description_html": doc.description or ""}, ensure_ascii=False),
-            {"type": "object", "additionalProperties": False, "required": ["job_title", "description_html"],
-             "properties": {"job_title": {"type": "string"}, "description_html": {"type": "string"}}},
-            "job_translation")
-        title = (out.get("job_title") or "").strip()[:140]
-        desc = clean_html(out.get("description_html") or "")
-        if not title:
-            continue
-        idx += 1
-        frappe.get_doc({"doctype": "Job Opening Translation", "parent": job, "parenttype": "Job Opening",
-                        "parentfield": "portal_translations", "idx": idx, "language": lang, "status": "Suggested",
-                        "job_title": title, "description": desc,
-                        "suggested_hash": content_hash(title, desc)}).db_insert()
-        done.append(lang)
-    frappe.db.commit()
+    out = _llm_json(
+        "You translate job advertisements for a UAE government ministry. Translate the job title and the HTML "
+        "description from Arabic into English. Keep every HTML tag and the structure, keep numbers, dates, product "
+        "names and acronyms, use formal, clear government English with Title Case for the job title, and never use em dashes. Return "
+        "the translated title and HTML only.",
+        json.dumps({"job_title": doc.job_title or "", "description_html": doc.description or ""}, ensure_ascii=False),
+        {"type": "object", "additionalProperties": False, "required": ["job_title", "description_html"],
+         "properties": {"job_title": {"type": "string"}, "description_html": {"type": "string"}}},
+        "job_translation")
+    title = (out.get("job_title") or "").strip()[:140]
+    done = bool(title)
     if done:
-        frappe.get_doc("Job Opening", job).notify_update()
-    if user:
-        msg = f"Translation suggestions ready for {', '.join(done)}. Review and approve them." if done else \
-            "No translation suggestions were added."
-        frappe.publish_realtime("moet_translations_ready", {"job": job, "message": msg}, user=user)
+        doc.job_title_en = title
+        doc.description_en = clean_html(out.get("description_html") or "")
+        _save_suggestion(doc)
+    frappe.db.commit()
+    _notify(user, job, done)
     return done
 
 
-# ---------------- assessment translations ----------------
+# ---------------- assessment and screening translations ----------------
 @frappe.whitelist(methods=["POST"])
 def suggest_assessment_translations(doctype: str, name: str):
+    from frappe.utils import strip_html_tags
+
+    from moet_careers.bilingual import SPECS, _filled
+
     if doctype not in ("Assessment Question", "Assessment", "Screening Question"):
         frappe.throw("Not supported.")
     doc = frappe.get_doc(doctype, name)
     doc.check_permission("write")
+    _check_source(strip_html_tags(doc.get("title") if doctype == "Assessment" else doc.get("text") or ""))
+    spec = SPECS[doctype]
+    arabic = [doc.get(af) for af in spec["pairs"].values()]
+    if spec.get("option_rows"):
+        arabic += [r.get(spec["option_rows"][1]) for r in doc.get(spec["option_rows"][0])]
+    if spec.get("sections"):
+        arabic += [r.get(af) for r in doc.get(spec["sections"][0]) for af in spec["sections"][2].values()]
+    if any(_filled(v) for v in arabic):
+        return "This already has English. Clear the English fields and save to get a new suggestion."
     frappe.enqueue("moet_careers.i18n._suggest_assessment_job", queue="long", timeout=1800, doctype=doctype, name=name,
                    user=frappe.session.user, job_id=f"moet-asm-translate-{name}", deduplicate=True)
-    return "Drafting translations for every portal language that has none yet. The form refreshes when they are ready."
+    return "Drafting the English. The form refreshes when it is ready; review it and tick English Approved."
 
 
 def _suggest_assessment_job(doctype: str, name: str, user: str | None = None):
-    from frappe.utils import strip_html_tags
-
     doc = frappe.get_doc(doctype, name)
-    langs, _ = portal_languages()
     if doctype == "Screening Question":
-        src = source_language(doc.text or "", "")
-        have = {t.language for t in doc.get("translations") or []}
         opts = [o for o in (doc.options or "").splitlines() if o.strip()]
         payload = {"question": doc.text or "", "options": opts}
         schema = {"type": "object", "additionalProperties": False, "required": ["question", "options"],
                   "properties": {"question": {"type": "string"}, "options": {"type": "array", "items": {"type": "string"}}}}
     elif doctype == "Assessment Question":
-        src = source_language(strip_html_tags(doc.text or ""), "")
-        have = {t.language for t in doc.get("translations") or []}
         payload = {"question_html": doc.text or "", "options": [o.option for o in doc.options]}
         schema = {"type": "object", "additionalProperties": False, "required": ["question_html", "options"],
                   "properties": {"question_html": {"type": "string"}, "options": {"type": "array", "items": {"type": "string"}}}}
     else:
-        src = source_language(doc.title or "", doc.instructions or "")
-        have = {t.language for t in doc.get("translations") or []}
         payload = {"title": doc.title or "", "instructions_html": doc.instructions or "",
                    "sections": [{"title": s.section_title or "", "instructions": s.instructions or ""} for s in doc.sections]}
         schema = {"type": "object", "additionalProperties": False, "required": ["title", "instructions_html", "sections"],
@@ -229,41 +248,32 @@ def _suggest_assessment_job(doctype: str, name: str, user: str | None = None):
                                  "sections": {"type": "array", "items": {"type": "object", "additionalProperties": False,
                                               "required": ["title", "instructions"],
                                               "properties": {"title": {"type": "string"}, "instructions": {"type": "string"}}}}}}
-    done = []
-    for lang in [l["code"] for l in langs if l["code"] != src and l["code"] not in have]:
-        out = _llm_json(
-            "You translate recruitment test content for a UAE government ministry. Translate from "
-            f"{language_name_en(src)} into {language_name_en(lang)} ({lang}). Keep HTML tags, numbers, names, formulas, "
-            "code and technical terms; keep the same number and order of options and sections. Do not change the "
-            "meaning or make any option more or less obviously correct. Never use em dashes.",
-            json.dumps(payload, ensure_ascii=False), schema, "assessment_translation")
-        if doctype == "Screening Question":
-            text = (out.get("question") or "").strip()[:1000]
-            opts_t = "\n".join((o or "").strip() for o in (out.get("options") or [])[:len(opts)])
-            doc.append("translations", {"language": lang, "status": "Suggested", "text": text, "options": opts_t,
-                                        "suggested_hash": content_hash(text, opts_t)})
-        elif doctype == "Assessment Question":
-            text = clean_html(out.get("question_html") or "")
-            opts = "\n".join((o or "").strip() for o in (out.get("options") or [])[:len(doc.options)])
-            doc.append("translations", {"language": lang, "status": "Suggested", "text": text, "options": opts,
-                                        "suggested_hash": content_hash(text, opts)})
-        else:
-            title, instr = (out.get("title") or "").strip()[:140], clean_html(out.get("instructions_html") or "")
-            doc.append("translations", {"language": lang, "status": "Suggested", "title": title, "instructions": instr,
-                                        "suggested_hash": content_hash(title, instr)})
-            for i, sec in enumerate((out.get("sections") or [])[:len(doc.sections)], 1):
-                st, si = (sec.get("title") or "").strip()[:140], (sec.get("instructions") or "").strip()
-                doc.append("section_translations", {"language": lang, "section": i, "status": "Suggested", "title": st,
-                                                    "instructions": si, "suggested_hash": content_hash(st, si)})
-        done.append(lang)
+    out = _llm_json(
+        "You translate recruitment test content for a UAE government ministry from Arabic into formal, clear "
+        "English. Keep HTML tags, numbers, names, formulas, code and technical terms; keep the same number "
+        "and order of options and sections. Do not change the meaning or make any option more or less obviously "
+        "correct. Never use em dashes.",
+        json.dumps(payload, ensure_ascii=False), schema, "assessment_translation")
+    if doctype == "Screening Question":
+        doc.text_en = (out.get("question") or "").strip()[:1000]
+        doc.options_en = "\n".join((o or "").strip() for o in (out.get("options") or [])[:len(opts)])
+        done = bool(doc.text_en)
+    elif doctype == "Assessment Question":
+        doc.text_en = clean_html(out.get("question_html") or "")
+        for row, text in zip(doc.options, out.get("options") or []):
+            row.option_en = (text or "").strip()
+        done = bool(doc.text_en)
+    else:
+        doc.title_en = (out.get("title") or "").strip()[:140]
+        doc.instructions_en = clean_html(out.get("instructions_html") or "")
+        for row, sec in zip(doc.sections, out.get("sections") or []):
+            row.section_title_en = (sec.get("title") or "").strip()[:140]
+            row.instructions_en = (sec.get("instructions") or "").strip()
+        done = bool(doc.title_en)
     if done:
-        doc.flags.ignore_permissions = True
-        doc.save()
-        doc.notify_update()
-    if user:
-        frappe.publish_realtime("moet_translations_ready", {"job": name, "message":
-                                f"Translation suggestions ready for {', '.join(done)}. Review and approve them." if done
-                                else "No translation suggestions were added."}, user=user)
+        _save_suggestion(doc)
+    frappe.db.commit()
+    _notify(user, name, done)
     return done
 
 

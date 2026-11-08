@@ -3,8 +3,8 @@
 By the **Ministry of Economy & Tourism**. AI CV screening and a recruitment assistant for Frappe HR v16.
 
 ## Features
-- **Automatic CV scoring.** Each new Job Applicant is scored in a background job against the job's rubric
-  (*AI Scoring Criteria*: `weight | criterion | must`). Before anything is sent to the model, contacts, the
+- **Automatic CV scoring.** Each new Job Applicant is scored in a background job against criteria derived from
+  the job description (once per version of it, so every applicant to a job gets the same list). Before anything is sent to the model, contacts, the
   name and labelled personal attributes are redacted. The weighted score is computed in code. It writes per-criterion
   evidence, must-have gaps and an English + Arabic summary, plus an audit comment.
 - **Any CV, Arabic or English, ATS-style or not.** ATS-style PDFs use the text layer. Designed PDFs, scans and

@@ -11,12 +11,19 @@ SERVICE_USER = "careers-portal@service.invalid"
 CUSTOM_FIELDS = {
     "Job Opening": [
         # Own tabs at the end of the form, so they are visible whatever the form's saved field order is.
-        {"fieldname": "portal_translations_tab", "fieldtype": "Tab Break", "label": "Translations",
+        # Arabic is the original (main fields); the English goes in its own tab.
+        {"fieldname": "portal_translations_tab", "fieldtype": "Tab Break", "label": "English",
          "insert_after": "column_break_pfir"},
-        {"fieldname": "portal_translations", "fieldtype": "Table", "options": "Job Opening Translation",
-         "label": "Translations", "insert_after": "portal_translations_tab",
-         "description": "One row per portal language. Use Portal > Suggest Translations for drafts; only Approved rows "
-                        "are shown on the portal, otherwise the job is shown in its original language."},
+        {"fieldname": "job_title_en", "fieldtype": "Data", "label": "Job Title (English)",
+         "insert_after": "portal_translations_tab",
+         "description": "Write the job in Arabic in the main fields and in English here. Portal > Suggest English drafts it for you."},
+        {"fieldname": "description_en", "fieldtype": "Text Editor", "label": "Description (English)",
+         "insert_after": "job_title_en"},
+        {"fieldname": "english_approved", "fieldtype": "Check", "label": "English Approved", "insert_after": "description_en",
+         "description": "Only approved English is shown on the English portal. Writing or editing the English yourself approves it."},
+        {"fieldname": "portal_translations", "fieldtype": "Table", "options": "Job Opening Translation", "hidden": 1,
+         "label": "Translations", "insert_after": "english_approved",
+         "description": "Stored translations, one row per language. Filled from the English fields."},
         {"fieldname": "assessment_stages_tab", "fieldtype": "Tab Break", "label": "Assessments",
          "insert_after": "portal_translations"},
         {"fieldname": "assessment_stages", "fieldtype": "Table", "options": "Job Assessment Stage", "label": "Assessments",
@@ -69,13 +76,26 @@ def after_migrate():
         if frappe.db.exists("Custom Field", name):
             frappe.delete_doc("Custom Field", name, ignore_permissions=True, force=True)
     create_custom_fields(CUSTOM_FIELDS, ignore_validate=True, update=True)
-    _fix_field_order("Job Opening", ["portal_translations_tab", "portal_translations", "assessment_stages_tab", "assessment_stages",
+    _fix_field_order("Job Opening", ["portal_translations_tab", "job_title_en", "description_en", "english_approved",
+                                     "portal_translations", "assessment_stages_tab", "assessment_stages",
                                      "screening_section", "screening_questions"])
     frappe.clear_cache(doctype="Job Opening")
     _settings_defaults()
     _backfill_verified()
     ensure_service_user()
+    _safely("Arabic original", "moet_careers.bilingual.backfill")
+    _safely("Recruitment desk setup", "moet_careers.desk_setup.setup")
     frappe.db.commit()
+
+
+def _safely(title: str, method: str):
+    """Runs an optional setup step; a failure is logged and never stops the migration."""
+    try:
+        frappe.get_attr(method)()
+        frappe.db.commit()
+    except Exception:
+        frappe.db.rollback()
+        frappe.log_error(frappe.get_traceback(), title)
 
 
 def _settings_defaults():

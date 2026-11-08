@@ -1,7 +1,7 @@
 frappe.ui.form.on("Job Opening", {
 	refresh(frm) {
 		if (frm.is_new()) return;
-		frm.add_custom_button(__("Suggest Translations"), () => {
+		frm.add_custom_button(__("Suggest English"), () => {
 			frappe.call({
 				method: "moet_careers.i18n.suggest_job_translations",
 				args: { job: frm.doc.name },

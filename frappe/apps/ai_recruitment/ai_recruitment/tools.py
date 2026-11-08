@@ -25,7 +25,7 @@ def get_job_opening(job_opening: str):
     doc.check_permission("read")
     return {"name": doc.name, "job_title": doc.job_title, "designation": doc.designation, "status": doc.status,
             "description": strip_html(doc.description or "")[:4000],
-            "ai_scoring_criteria": doc.get("ai_scoring_criteria") or ""}
+            "screening_criteria_from_description": doc.get("ai_scoring_criteria") or ""}
 
 
 def pipeline_status(job_opening: str):
@@ -267,16 +267,15 @@ def _default_company():
         or (frappe.get_all("Company", pluck="name", limit_page_length=1) or [None])[0]
 
 
-def preview_create_job_opening(job_title, designation, description, scoring_criteria="", publish=False) -> str:
+def preview_create_job_opening(job_title, designation, description, publish=False, **_ignored) -> str:
     if not frappe.has_permission("Job Opening", "create"):
         frappe.throw(_("You do not have permission to create job openings."))
-    crit = parse_criteria(scoring_criteria)
     new_des = "" if frappe.db.exists("Designation", designation) else f" (new designation '{designation}')"
-    return (f"Create job opening '{job_title}'{new_des}, {len(crit)} scoring criteria, "
+    return (f"Create job opening '{job_title}'{new_des}, "
             f"{'published on the careers page' if publish else 'not published yet'}")
 
 
-def execute_create_job_opening(job_title, designation, description, scoring_criteria="", publish=False) -> str:
+def execute_create_job_opening(job_title, designation, description, publish=False, **_ignored) -> str:
     if not frappe.db.exists("Designation", designation):
         frappe.get_doc({"doctype": "Designation", "designation_name": designation}).insert()
     doc = frappe.get_doc({
@@ -287,28 +286,8 @@ def execute_create_job_opening(job_title, designation, description, scoring_crit
         "status": "Open",
         "publish": 1 if publish else 0,
         "description": frappe.utils.md_to_html(description) if description else "",
-        "ai_scoring_criteria": scoring_criteria or "",
     }).insert()
     return f"Job opening {doc.name} created{' and published' if publish else ' (not published)'}."
-
-
-# ---- rubric ----
-def preview_update_scoring_criteria(job_opening, scoring_criteria) -> str:
-    doc = frappe.get_doc("Job Opening", job_opening)
-    doc.check_permission("write")
-    crit = parse_criteria(scoring_criteria)
-    if not crit:
-        frappe.throw(_("No valid criteria. Use lines like: 30 | 3+ years Python | must"))
-    lines = "; ".join(f"{c['weight']:g} {c['criterion']}{' (must)' if c['must'] else ''}" for c in crit)
-    return f"Replace the scoring criteria of {doc.job_title} ({doc.name}) with: {lines}"
-
-
-def execute_update_scoring_criteria(job_opening, scoring_criteria) -> str:
-    doc = frappe.get_doc("Job Opening", job_opening)
-    doc.check_permission("write")
-    doc.ai_scoring_criteria = scoring_criteria
-    doc.save()
-    return f"Scoring criteria updated for {doc.name}. Re-score applicants to apply them."
 
 
 # ---- email ----
@@ -334,7 +313,6 @@ WRITE_TOOLS = {
     "set_applicant_status": (preview_set_applicant_status, execute_set_applicant_status),
     "schedule_interview": (preview_schedule_interview, execute_schedule_interview),
     "create_job_opening": (preview_create_job_opening, execute_create_job_opening),
-    "update_scoring_criteria": (preview_update_scoring_criteria, execute_update_scoring_criteria),
     "send_candidate_email": (preview_send_candidate_email, execute_send_candidate_email),
 }
 
@@ -342,5 +320,4 @@ WRITE_TARGET = {
     "set_applicant_status": ("Job Applicant", "applicant"),
     "schedule_interview": ("Job Applicant", "applicant"),
     "send_candidate_email": ("Job Applicant", "applicant"),
-    "update_scoring_criteria": ("Job Opening", "job_opening"),
 }

@@ -37,10 +37,12 @@ CUSTOM_FIELDS = {
          "read_only": 1, "insert_after": "ai_profile_json_section"},
     ],
     "Job Opening": [
-        {"fieldname": "ai_scoring_criteria", "fieldtype": "Long Text", "label": "AI Scoring Criteria",
-         "insert_after": "description",
-         "description": "One criterion per line: weight | criterion | must (optional). "
-                        "Example: 30 | 3+ years building production ML systems | must"},
+        # Criteria are derived from the job description once per version of it, so every applicant to the job is
+        # scored against the same list. HR only writes the description; these stay hidden.
+        {"fieldname": "ai_scoring_criteria", "fieldtype": "Long Text", "label": "Screening Criteria (From Description)",
+         "insert_after": "description", "hidden": 1, "read_only": 1},
+        {"fieldname": "ai_criteria_hash", "fieldtype": "Data", "label": "Screening Criteria Version",
+         "insert_after": "ai_scoring_criteria", "hidden": 1, "read_only": 1},
     ],
 }
 

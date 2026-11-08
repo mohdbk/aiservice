@@ -22,11 +22,14 @@ CHOICE = ("Single Choice", "Multiple Choice", "True or False")
 
 # ---------------- validation ----------------
 def validate_question(doc):
+    from moet_careers.bilingual import sync
+
     doc.title = (strip_html_tags(doc.text or "").strip()[:120]) or doc.name
-    approve_rows(doc.get("translations"), ("text", "options"))
     if doc.question_type == "True or False" and not doc.options:
-        doc.append("options", {"option": "True", "correct": 1})
-        doc.append("options", {"option": "False", "correct": 0})
+        doc.append("options", {"option": "صح", "option_en": "True", "correct": 1})
+        doc.append("options", {"option": "خطأ", "option_en": "False", "correct": 0})
+    sync(doc)
+    approve_rows(doc.get("translations"), ("text", "options"))
     if doc.question_type in CHOICE:
         if len(doc.options) < 2:
             frappe.throw("Add at least two options.")
@@ -47,6 +50,9 @@ def validate_question(doc):
 
 
 def validate_assessment(doc):
+    from moet_careers.bilingual import sync
+
+    sync(doc)
     approve_rows(doc.get("translations"), ("title", "instructions"))
     approve_rows(doc.get("section_translations"), ("title", "instructions"))
     if not doc.sections:

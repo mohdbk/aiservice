@@ -19,7 +19,7 @@ HR user ─► Desk "Ask AI" ─► ai_recruitment.api.chat (user's session & pe
 ```
 - The LLM is any OpenAI-compatible endpoint, configured in **AI Recruitment Settings**. The demo uses
   `qwen/qwen3.8-27b` on OpenRouter. On-prem, point it at your vLLM server.
-- Each job's rubric goes in **Job Opening → AI Scoring Criteria**, one per line: `weight | criterion | must`.
+- CVs are scored against criteria derived from each job description, so write clear requirements there.
 - AI scores are recommendations only. Reject, accept and delete are never done by the assistant.
 
 ## Demo (Railway)

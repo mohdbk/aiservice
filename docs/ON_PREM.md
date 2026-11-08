@@ -38,8 +38,8 @@ HR user ──► Desk "Ask AI" panel ──► ai_recruitment.api.chat (session
 |---|---|---|
 | ERPNext base image | `frappe/erpnext:v16.54.0` | `frappe/Dockerfile` (`ERPNEXT_IMAGE`) |
 | Frappe HR | `v16.53.1` | `frappe/Dockerfile` (`HRMS_VERSION`) |
-| ai_recruitment | `0.6.1` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
-| moet_careers | `0.5.0` | `frappe/apps/moet_careers/moet_careers/__init__.py` |
+| ai_recruitment | `0.7.0` | `frappe/apps/ai_recruitment/ai_recruitment/__init__.py` |
+| moet_careers | `0.6.0` | `frappe/apps/moet_careers/moet_careers/__init__.py` |
 | Careers portal | `0.1.0` (Node 22, React 18.3, Vite 5.4) | `portal/web/package.json`, `portal/server/package.json` |
 | UAE Design System | `@aegov/design-system 3.0.7` + Tailwind `4.1.17` | `portal/web/package.json` |
 | Demo LLM | `qwen/qwen3.8-27b` (OpenRouter) | AI Recruitment Settings |
@@ -307,15 +307,25 @@ How it fits Frappe HR:
   and key; only **Approved** rows are used). For a new language, choose it in MoET Careers Settings and click
   **Suggest Portal Text**: the on-prem model drafts every string as **Suggested**. HR reviews them in Portal
   Text and sets them to Approved (editing a draft approves it). Until then the portal falls back to English.
-- **Job titles and descriptions:** each Job Opening has a **Translations** tab (one row per language). HR can type a translation, or click **Portal > Suggest Translations** for drafts of the missing
-  languages. Drafts are **Suggested** and are not shown; HR checks or replaces the text and sets the row to
-  Approved (editing approves it; the approver is recorded). Without an approved row the job is shown in its
-  original language, marked with the right `lang` and direction.
+- **Arabic first, English beside it (Desk):** Arabic is the original. HR writes jobs, screening questions,
+  test questions and tests in Arabic in the main fields, and the English in the "(English)" fields next to
+  them (Job Opening: the **English** tab; options and test sections have an English column). **Suggest
+  English** drafts the English with the language model; a draft is not shown until HR ticks **English
+  Approved** (writing or editing the English yourself approves it; unticking puts it back into review; the
+  approver is recorded). Without approved English, the English portal shows the Arabic, marked with the right
+  `lang` and direction.
+- **Storage stays multilingual:** on save, the English fields are copied into each record's translation table
+  as its `en` row, which is what the portal reads. The tables are hidden in Desk for now; to add a third
+  language later, unhide them (Customize Form) or add more side fields the same way (`moet_careers/bilingual.py`).
+- **Moving from English originals (0.6.0):** on the first migrate, records whose main fields were English and
+  that had an approved Arabic translation are switched: the Arabic becomes the original and the English moves
+  to the English fields. Check the **Must Be** value of Single Choice screening requirements afterwards, since
+  it must match the (now Arabic) option text.
 
 ### Screening questions (asked when applying)
 - **Screening Question** (Desk) is a reusable bank: the question, an answer type (Yes or No, Single Choice,
-  Multiple Choice, Number, Date, Short Text, Long Text), options for choice questions, and a translations
-  table with **Suggest Translations** (HR approves; Yes and No come from the portal wording).
+  Multiple Choice, Number, Date, Short Text, Long Text) and options for choice questions, in Arabic, with the
+  English beside them and **Suggest English** (Yes and No come from the portal wording).
 - On a **Job Opening**, the **Assessments** tab has **Screening Questions**: pick questions in order, mark
   them required, and optionally set a requirement (**Must Be** a value, **At Least** or **At Most** a number).
 - The apply form shows them under "Questions from the Hiring Team" in the candidate's language. Required
@@ -347,9 +357,9 @@ How it works:
   Points, then **Save Marks and Recalculate**. **Suggest Marks** asks the on-prem model for suggested points
   from the rubric, shown to markers only. A candidate passes when the overall pass mark and every section
   pass mark are met. Results appear on the Job Applicant (**Assessments** field).
-- Translations: questions (with their options), test titles, instructions and sections have translation
-  tables. **Suggest Translations** drafts every portal language; HR approves (editing approves). Candidates
-  only see approved text, otherwise the original.
+- Languages: questions (with their options), test titles, instructions and sections are written in Arabic
+  with the English beside them. **Suggest English** drafts it; HR approves (editing approves). Candidates
+  only see approved English, otherwise the Arabic.
 - Invitations past their deadline expire hourly. Answer files: PDF, Office, images or ZIP, up to 10 MB, stored
   as private files on the attempt.
 
@@ -465,7 +475,10 @@ streamed through the portal, so browsers never load files from Frappe.
       Set *Keep Chat Logs (days)* to the retention policy.
 - [ ] **Usage limits** set per user (messages per minute and day, tokens per day).
 - [ ] **AI governance:** scores are recommendations. Keep a human decision step in your recruitment SOP, and
-      document the rubric per job opening (the *AI Scoring Criteria* field).
+      write clear requirements in each job description: CVs are scored against 4 to 6 criteria the model
+      derives from the description once per version of it (stored on the job, hidden in Desk), so every
+      applicant to the job is scored against the same list. Editing the description derives a new list for
+      the next scoring; use **Re-score** for applicants scored before the change.
 - [ ] **Evaluation before go-live:** run an **AI Evaluation Run** (section 8) per job family, and again after
       any model, prompt or rubric change. Keep the passed runs as evidence for the architecture committee.
 - [ ] The LLM API key (if any) is in AI Recruitment Settings (encrypted with the site's `encryption_key`) or
@@ -551,6 +564,25 @@ The result is a PASS/FAIL report with a per-applicant table. Each check runs the
   Add new strings there when you add UI text.
 
 ---
+
+## 10b. Recruitment-only Desk for HR staff
+Frappe HR and ERPNext have many modules HR recruiters do not need. Two roles, created on migrate by
+`moet_careers/desk_setup.py`, show only recruitment:
+
+- **Recruiter:** jobs, applicants, interviews, feedback, offers, assessments (invite, mark), screening
+  questions, and reading portal wording.
+- **Recruitment Admin:** everything a Recruiter has, plus deleting, setup lists (interview rounds, job
+  templates, sources), portal wording, MoET Careers Settings and the AI Recruitment Settings.
+
+Both land on the **Careers** workspace (Hiring, Assessments, Screening, Setup, Portal, Assistant, and
+shortcuts to open jobs, new applicants, upcoming interviews and tests to mark). They can read the records the
+forms link to (designation, department, company...) and nothing else.
+
+To set up a recruiter: **User** > Roles, tick **Recruiter** (or **Recruitment Admin**) and untick everything
+else, especially *HR User*, *HR Manager*, *System Manager* and the ERPNext roles, because Frappe adds up the
+rights of all roles a user has. System Managers and the Administrator still see everything. The setup runs
+on every migrate and only sets the rights of these two roles; a failure is logged in *Error Log* and never
+stops the migration.
 
 ## 11. House style
 

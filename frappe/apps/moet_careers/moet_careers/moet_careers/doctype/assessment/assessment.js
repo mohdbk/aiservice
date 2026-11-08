@@ -1,7 +1,7 @@
 frappe.ui.form.on("Assessment", {
 	refresh(frm) {
 		if (frm.is_new()) return;
-		frm.add_custom_button(__("Suggest Translations"), () => frappe.call({
+		frm.add_custom_button(__("Suggest English"), () => frappe.call({
 			method: "moet_careers.i18n.suggest_assessment_translations",
 			args: { doctype: frm.doctype, name: frm.doc.name },
 			callback: (r) => frappe.show_alert({ message: r.message, indicator: "blue" }, 8),

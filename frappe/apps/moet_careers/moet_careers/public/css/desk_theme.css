@@ -17,3 +17,14 @@ html[dir="rtl"] .form-control,
 html[dir="rtl"] .btn {
   font-family: "Noto Kufi Arabic", "Inter", sans-serif;
 }
+
+/* Arabic and English side by side: each field and paragraph takes the direction of the text typed in it. */
+.frappe-control input.form-control,
+.frappe-control textarea.form-control,
+.frappe-control .ql-editor p,
+.frappe-control .ql-editor li,
+.frappe-control .like-disabled-input,
+.grid-static-col .static-area {
+  unicode-bidi: plaintext;
+  text-align: start;
+}

@@ -19,6 +19,10 @@
   "default_deadline_days",
   "instructions_section",
   "instructions",
+  "english_section",
+  "title_en",
+  "instructions_en",
+  "english_approved",
   "sections_section",
   "sections",
   "items_section",
@@ -122,6 +126,27 @@
    "label": "Instructions"
   },
   {
+   "fieldname": "english_section",
+   "fieldtype": "Section Break",
+   "label": "English"
+  },
+  {
+   "fieldname": "title_en",
+   "fieldtype": "Data",
+   "label": "Title (English)"
+  },
+  {
+   "fieldname": "instructions_en",
+   "fieldtype": "Text Editor",
+   "label": "Instructions (English)"
+  },
+  {
+   "fieldname": "english_approved",
+   "fieldtype": "Check",
+   "label": "English Approved",
+   "description": "Covers the title, instructions and section names. Only approved English is shown on the English portal. Writing or editing the English yourself approves it."
+  },
+  {
    "fieldname": "sections_section",
    "fieldtype": "Section Break",
    "label": "Sections"
@@ -156,23 +181,26 @@
    "fieldname": "translations_section",
    "fieldtype": "Section Break",
    "label": "Translations",
-   "collapsible": 1
+   "collapsible": 1,
+   "hidden": 1
   },
   {
    "fieldname": "translations",
    "fieldtype": "Table",
    "options": "Assessment Translation",
-   "label": "Title and Instructions"
+   "label": "Title and Instructions",
+   "hidden": 1
   },
   {
    "fieldname": "section_translations",
    "fieldtype": "Table",
    "options": "Assessment Section Translation",
-   "label": "Sections"
+   "label": "Sections",
+   "hidden": 1
   }
  ],
  "links": [],
- "modified": "2026-11-08 19:15:00.000000",
+ "modified": "2026-11-08 20:43:36.000000",
  "modified_by": "Administrator",
  "module": "MoET Careers",
  "name": "Assessment",

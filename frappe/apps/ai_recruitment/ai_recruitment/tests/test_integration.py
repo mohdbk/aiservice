@@ -48,6 +48,10 @@ class TestAIRecruitment(TestCase):
             "company": _company(), "status": "Open", "description": "Python and LLMs",
             "ai_scoring_criteria": RUBRIC,
         }).insert()
+        # Pretend the criteria were already derived from this description, so the tests score against RUBRIC.
+        frappe.db.set_value("Job Opening", cls.job.name, "ai_criteria_hash",
+                            scoring.criteria_hash(cls.job.job_title, cls.job.description))
+        cls.job.reload()
         s = frappe.get_single("AI Recruitment Settings")
         s.enabled, s.auto_score, s.chat_enabled = 1, 0, 1
         s.llm_base_url, s.llm_model = "http://llm.test/v1", "test-model"

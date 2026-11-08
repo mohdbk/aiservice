@@ -11,6 +11,10 @@
   "active",
   "options_section",
   "options",
+  "english_section",
+  "text_en",
+  "options_en",
+  "english_approved",
   "translations_section",
   "translations",
   "title"
@@ -64,17 +68,42 @@
    "description": "One per line."
   },
   {
+   "fieldname": "english_section",
+   "fieldtype": "Section Break",
+   "label": "English"
+  },
+  {
+   "fieldname": "text_en",
+   "fieldtype": "Small Text",
+   "label": "Question (English)"
+  },
+  {
+   "fieldname": "options_en",
+   "fieldtype": "Small Text",
+   "label": "Options (English)",
+   "depends_on": "eval:['Single Choice','Multiple Choice'].includes(doc.answer_type)",
+   "description": "One per line, in the same order as Options."
+  },
+  {
+   "fieldname": "english_approved",
+   "fieldtype": "Check",
+   "label": "English Approved",
+   "description": "Only approved English is shown on the English portal. Writing or editing the English yourself approves it."
+  },
+  {
    "fieldname": "translations_section",
    "fieldtype": "Section Break",
    "label": "Translations",
-   "collapsible": 1
+   "collapsible": 1,
+   "hidden": 1
   },
   {
    "fieldname": "translations",
    "fieldtype": "Table",
    "options": "Screening Question Translation",
    "label": "Translations",
-   "description": "One row per portal language. Use Suggest Translations for drafts, then check and approve them. Yes and No are translated automatically."
+   "description": "One row per portal language. Use Suggest Translations for drafts, then check and approve them. Yes and No are translated automatically.",
+   "hidden": 1
   },
   {
    "fieldname": "title",
@@ -85,7 +114,7 @@
   }
  ],
  "links": [],
- "modified": "2026-11-08 19:45:00.000000",
+ "modified": "2026-11-08 20:43:36.000000",
  "modified_by": "Administrator",
  "module": "MoET Careers",
  "name": "Screening Question",

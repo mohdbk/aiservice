@@ -26,11 +26,11 @@ SYSTEM = f"""You are the Ministry of Economy & Tourism's recruitment assistant i
 - To find people by skill, employer or name use search_applicants. To compare, use compare_applicants and answer with a table.
 - AI scores are recommendations only. Humans make hiring decisions; you cannot reject, accept or delete anything.
 - These only PROPOSE an action that waits for the user's Approve button: set_applicant_status, schedule_interview,
-  create_job_opening, update_scoring_criteria, send_candidate_email. Never claim a proposed action is done.
+  create_job_opening, send_candidate_email. Never claim a proposed action is done.
 - Before schedule_interview with interviewers, call find_interview_slots and propose a free slot.
-- When drafting a job description, write it in clear Markdown. When drafting scoring criteria, use lines of
-  "weight | criterion | must" with weights summing to 100 and at most 3 must-haves; keep criteria job-related and
-  never use age, gender, nationality, religion, marital status or family situation.
+- When drafting a job description, write it in clear Markdown with clear duties and requirements (say which
+  requirements are required). CVs are scored against the description itself, so keep every requirement job-related
+  and never use age, gender, nationality, religion, marital status or family situation.
 - Candidate emails must be polite and neutral, written as the hiring team. Never mention AI, automation, scores or this assistant to candidates.
 - The user's current Frappe page is given as context; "this applicant" or "this job" refers to it."""
 
@@ -45,7 +45,7 @@ S = {"type": "string"}
 LIST_S = {"type": "array", "items": {"type": "string"}}
 TOOL_SPECS = [
     _fn("list_job_openings", "List job openings.", {"status": {"type": "string", "enum": ["Open", "Closed"]}}, []),
-    _fn("get_job_opening", "Description and scoring criteria of a job opening.", {"job_opening": S}, ["job_opening"]),
+    _fn("get_job_opening", "Description of a job opening and the screening criteria derived from it.", {"job_opening": S}, ["job_opening"]),
     _fn("pipeline_status", "Applicant counts and AI scoring progress for a job opening.", {"job_opening": S}, ["job_opening"]),
     _fn("shortlist_applicants", "Top applicants for a job opening ranked by AI score.",
         {"job_opening": S, "top_n": {"type": "integer"}, "min_score": {"type": "number"}}, ["job_opening"]),
@@ -64,11 +64,9 @@ TOOL_SPECS = [
     _fn("schedule_interview", "PROPOSE an interview. date YYYY-MM-DD, times HH:MM UAE time, interviewers are user IDs.",
         {"applicant": S, "interview_round": S, "date": S, "from_time": S, "to_time": S, "interviewers": LIST_S},
         ["applicant", "interview_round", "date", "from_time", "to_time"]),
-    _fn("create_job_opening", "PROPOSE a new job opening with a Markdown description and scoring criteria.",
-        {"job_title": S, "designation": S, "description": S, "scoring_criteria": S, "publish": {"type": "boolean"}},
+    _fn("create_job_opening", "PROPOSE a new job opening with a Markdown description.",
+        {"job_title": S, "designation": S, "description": S, "publish": {"type": "boolean"}},
         ["job_title", "designation", "description"]),
-    _fn("update_scoring_criteria", "PROPOSE replacing a job opening's scoring criteria.",
-        {"job_opening": S, "scoring_criteria": S}, ["job_opening", "scoring_criteria"]),
     _fn("send_candidate_email", "PROPOSE an email to an applicant (Markdown body).",
         {"applicant": S, "subject": S, "body": S}, ["applicant", "subject", "body"]),
 ]
