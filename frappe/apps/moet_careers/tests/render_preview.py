@@ -32,7 +32,7 @@ for lang in ("ar", "en"):
       "applications": dict(applications=[D(name="a", title=jobs_l[0].title, submitted="08/11/2026", reference=pu.reference("a","2026"), status=pu.candidate_status("Open")),
                                          D(name="b", title=jobs_l[1].title, submitted="01/11/2026", reference=pu.reference("b","2026"), status=pu.candidate_status("Open", True))]),
       "application": dict(name="a", title=jobs_l[0].title, submitted="08/11/2026", reference="MOET-2026-ABC123", status=pu.candidate_status("Open"), just_applied=True),
-      "login": dict(redirect_to="/careers"), "signup": dict(redirect_to="/careers"), "privacy": dict(),
+      "login": dict(redirect_to="/careers"), "signup": dict(redirect_to="/careers"),
     }
     for name, ctx in pages.items():
         html = env.get_template(f"moet_careers/www/careers/{name}.html").render(**base, **ctx)

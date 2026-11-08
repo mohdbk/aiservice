@@ -68,8 +68,7 @@ def apply(job: str, phone: str = "", country: str = "", cover_note: str = "", co
             opening.closes_on and frappe.utils.getdate(opening.closes_on) < frappe.utils.getdate()):
         _fail("This job is no longer accepting applications.", "لم تعد هذه الوظيفة تستقبل طلبات.")
     if str(consent) not in ("1", "true", "on"):
-        _fail("Please confirm that you have read how your application is processed.",
-              "يرجى تأكيد اطلاعك على طريقة معالجة طلبك.")
+        _fail("Please confirm that your information is accurate.", "يرجى الإقرار بصحة المعلومات.")
     if phone and not valid_phone(phone):
         _fail("Please enter a valid phone number with the country code.", "يرجى إدخال رقم هاتف صحيح مع رمز الدولة.")
 
@@ -126,7 +125,7 @@ def apply(job: str, phone: str = "", country: str = "", cover_note: str = "", co
         "attached_to_field": "resume_attachment",
     }).insert(ignore_permissions=True)
     frappe.db.set_value("Job Applicant", applicant.name, "resume_attachment", file_doc.file_url, update_modified=False)
-    applicant.add_comment("Info", f"Applied via the careers portal ({lang}). Consent to application processing recorded.")
+    applicant.add_comment("Info", f"Applied via the careers portal ({lang}). Applicant declaration recorded.")
     return {"application": applicant.name}
 
 

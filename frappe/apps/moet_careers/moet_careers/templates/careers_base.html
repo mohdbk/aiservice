@@ -71,13 +71,11 @@
         <ul class="space-y-2 text-sm">
           <li><a class="hover:text-primary-300" href="/careers">{{ t('Open jobs', 'الوظائف المتاحة') }}</a></li>
           <li><a class="hover:text-primary-300" href="/careers/applications">{{ t('My applications', 'طلباتي') }}</a></li>
-          <li><a class="hover:text-primary-300" href="/careers/privacy">{{ t('Privacy notice', 'إشعار الخصوصية') }}</a></li>
         </ul>
       </nav>
       <nav aria-label="{{ t('Ministry links', 'روابط الوزارة') }}">
         <p class="mb-3 font-semibold text-white">{{ entity_name }}</p>
         <ul class="space-y-2 text-sm">
-          {% if settings.privacy_url %}<li><a class="hover:text-primary-300" href="{{ settings.privacy_url }}">{{ t('Privacy policy', 'سياسة الخصوصية') }}</a></li>{% endif %}
           {% if settings.terms_url %}<li><a class="hover:text-primary-300" href="{{ settings.terms_url }}">{{ t('Terms of use', 'شروط الاستخدام') }}</a></li>{% endif %}
           {% if settings.accessibility_url %}<li><a class="hover:text-primary-300" href="{{ settings.accessibility_url }}">{{ t('Accessibility', 'إمكانية الوصول') }}</a></li>{% endif %}
           {% if settings.contact_url %}<li><a class="hover:text-primary-300" href="{{ settings.contact_url }}">{{ t('Contact us', 'تواصل معنا') }}</a></li>{% endif %}

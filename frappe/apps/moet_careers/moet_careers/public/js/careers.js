@@ -133,7 +133,7 @@
     if (!file) return showError(af, T("Please attach your CV.", "يرجى إرفاق سيرتك الذاتية."));
     if (!/\.(pdf|docx|jpe?g|png)$/i.test(file.name)) return showError(af, T("Upload your CV as PDF, Word (.docx), JPG or PNG.", "ارفع سيرتك الذاتية بصيغة PDF أو Word (.docx) أو JPG أو PNG."));
     if (file.size > maxMb * 1024 * 1024) return showError(af, T("The CV must be smaller than " + maxMb + " MB.", "يجب أن يكون حجم السيرة الذاتية أقل من " + maxMb + " ميجابايت."));
-    if (!$("#consent", af).checked) return showError(af, T("Please confirm that you have read how your application is processed.", "يرجى تأكيد اطلاعك على طريقة معالجة طلبك."));
+    if (!$("#consent", af).checked) return showError(af, T("Please confirm that your information is accurate.", "يرجى الإقرار بصحة المعلومات."));
     var fd = new FormData();
     fd.append("job", af.getAttribute("data-job"));
     fd.append("phone", phone);
