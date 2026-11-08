@@ -17,7 +17,7 @@ export function PasswordInput({ id, value, onChange, autoComplete, describedBy }
   const [show, setShow] = useState(false);
   return (
     <>
-      <input id={id} type={show ? "text" : "password"} value={value} onChange={(e) => onChange(e.target.value)} autoComplete={autoComplete} required minLength={8} maxLength={128} aria-describedby={describedBy} />
+      <input id={id} dir="ltr" className="rtl:text-right" type={show ? "text" : "password"} value={value} onChange={(e) => onChange(e.target.value)} autoComplete={autoComplete} required minLength={8} maxLength={128} aria-describedby={describedBy} />
       <button type="button" className="control-suffix rounded-lg px-3 text-aeblack-600 hover:text-primary-700 focus-visible:outline-2" onClick={() => setShow((s) => !s)}
         aria-pressed={show} aria-label={show ? t("auth.hide_password") : t("auth.show_password")} title={show ? t("auth.hide_password") : t("auth.show_password")}>
         {show ? <EyeSlash size={24} aria-hidden="true" /> : <Eye size={24} aria-hidden="true" />}
