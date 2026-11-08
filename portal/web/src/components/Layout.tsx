@@ -93,7 +93,7 @@ function Brand() {
   const { config, t, path, lang } = useSite();
   return (
     <Link to={path()} className="flex min-w-0 items-center gap-3" aria-label={`${t("site.ministry")}, ${t("site.portal")}`}>
-      <img src={logoSrc(lang, config.logo)} alt={t("site.ministry")} className="h-10 w-auto max-w-[60vw] sm:h-12 md:h-14" width={907} height={228} />
+      <img src={logoSrc(lang, config.logo)} alt={t("site.ministry")} className="h-12 w-auto max-w-[62vw] sm:h-14 md:h-[72px]" width={907} height={228} />
       <span className="hidden h-9 w-px bg-aeblack-200 sm:block" aria-hidden="true" />
       <span className="hidden font-heading text-base font-semibold text-primary-700 sm:block md:text-lg" dir={config.dir}>{t("site.portal")}</span>
     </Link>
@@ -172,7 +172,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       <footer className="mc-surface bg-aeblack-900 text-aeblack-200">
         <div className="container mx-auto grid gap-8 px-4 py-10 md:grid-cols-2" dir="ltr">
           <div className="flex flex-col items-start">
-            <img src={logoSrc(lang, config.logo_dark || config.logo, Boolean(config.logo_dark))} alt={t("site.ministry")} className="mb-4 h-14 w-auto max-w-full rounded-lg bg-white p-2" width={907} height={228} />
+            <img src={logoSrc(lang, config.logo_dark || config.logo, Boolean(config.logo_dark))} alt={t("site.ministry")} className="mb-4 h-16 w-auto max-w-full md:h-20" width={907} height={228} />
             <p className="max-w-md text-sm leading-6" dir={config.dir}>{t("site.tagline")}</p>
           </div>
           <nav aria-label={t("footer.portal_links")} dir={config.dir} className="md:justify-self-end">
