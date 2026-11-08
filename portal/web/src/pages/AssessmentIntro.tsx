@@ -48,14 +48,15 @@ export default function AssessmentIntro() {
           <p className="text-sm font-medium text-primary-700">{t(typeKey(a.type))}</p>
           <h1 className="font-heading text-3xl font-bold text-aeblack-950">{a.title}</h1>
           {a.job_title && <p className="mt-1 text-aeblack-600">{t("asm.for_job", { job: a.job_title })}</p>}
+          <div className="mt-2"><AsmStatusBadge status={a.status} /></div>
         </div>
       </div>
 
       <section className="mc-surface mt-6 grid gap-4 rounded-2xl border border-aeblack-100 bg-white p-6 sm:grid-cols-2">
         <div className="flex items-center gap-3"><IconBox icon={Clock} /><div><p className="text-sm text-aeblack-600">{t("asm.total_time")}</p><p className="font-semibold">{a.minutes ? t("asm.duration", { minutes: a.minutes }) : t("asm.untimed")}</p></div></div>
         <div className="flex items-center gap-3"><IconBox icon={ListNumbers} /><div><p className="text-sm text-aeblack-600">{t("asm.sections")}</p><p className="font-semibold">{a.sections.length}</p></div></div>
-        {!done && a.deadline && <div className="flex items-center gap-3"><IconBox icon={CalendarBlank} /><div><p className="text-sm text-aeblack-600">{t("asm_status.to_do")}</p><p className="font-semibold">{t("asm.deadline", { date: deadline(a.deadline) })}</p></div></div>}
-        <div className="flex items-center gap-3"><IconBox icon={Repeat} /><div><p className="text-sm text-aeblack-600">{t("asm.attempts", { used: a.attempts_used, allowed: a.attempts_allowed })}</p><AsmStatusBadge status={a.status} /></div></div>
+        {!done && a.deadline && <div className="flex items-center gap-3"><IconBox icon={CalendarBlank} /><div><p className="text-sm text-aeblack-600">{t("asm.deadline_label")}</p><p className="font-semibold">{deadline(a.deadline)}</p></div></div>}
+        <div className="flex items-center gap-3"><IconBox icon={Repeat} /><div><p className="text-sm text-aeblack-600">{t("asm.attempts_label")}</p><p className="font-semibold">{t("asm.attempts_value", { used: a.attempts_used, allowed: a.attempts_allowed })}</p></div></div>
       </section>
 
       {done ? (

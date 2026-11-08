@@ -28,6 +28,9 @@ html.mc-contrast .aegov-btn { background: #ffeb3b !important; color: #000 !impor
     var(--color-whitely-50);
 }
 
+/* The design system gives paragraphs margins; components here set their own spacing */
+:where(.mc-surface, header, footer, .aegov-alert) p { margin-block: 0; }
+
 /* Job description content written by HR */
 .mc-prose h1, .mc-prose h2, .mc-prose h3, .mc-prose h4 { font-weight: 700; font-size: 1.125rem; margin: 1.5rem 0 .5rem; color: var(--color-aeblack-900); }
 .mc-prose p { margin: 0 0 1rem; line-height: 1.8; }

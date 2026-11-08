@@ -291,5 +291,8 @@
  "email.assessment_subject": "Assessment Invitation: {test}",
  "email.assessment_body": "Hello {name},\n\nAs part of your application, please complete the {test} on the Ministry of Economy & Tourism careers portal by {deadline} (UAE time).\n\n{link}\n\nSign in with your careers portal account to start. Before you begin, make sure you have a stable connection and enough time to finish.",
  "email.reexam_subject": "New Attempt: {test}",
- "email.reexam_body": "Hello {name},\n\nYou have been given a new attempt at the {test}. Please complete it by {deadline} (UAE time).\n\n{link}"
+ "email.reexam_body": "Hello {name},\n\nYou have been given a new attempt at the {test}. Please complete it by {deadline} (UAE time).\n\n{link}",
+ "asm.deadline_label": "Deadline",
+ "asm.attempts_label": "Attempts",
+ "asm.attempts_value": "{used} of {allowed}"
 }

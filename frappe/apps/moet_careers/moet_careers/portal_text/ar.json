@@ -291,5 +291,8 @@
  "email.assessment_subject": "دعوة إلى اختبار: {test}",
  "email.assessment_body": "مرحبا {name}،\n\nضمن طلبك للوظيفة، يرجى إكمال {test} عبر بوابة الوظائف بوزارة الاقتصاد والسياحة قبل {deadline} (بتوقيت الإمارات).\n\n{link}\n\nسجّل الدخول بحسابك في بوابة الوظائف للبدء. قبل أن تبدأ، تأكد من استقرار الاتصال ومن توفر الوقت الكافي لإكمال الاختبار.",
  "email.reexam_subject": "محاولة جديدة: {test}",
- "email.reexam_body": "مرحبا {name}،\n\nتم منحك محاولة جديدة في {test}. يرجى إكمالها قبل {deadline} (بتوقيت الإمارات).\n\n{link}"
+ "email.reexam_body": "مرحبا {name}،\n\nتم منحك محاولة جديدة في {test}. يرجى إكمالها قبل {deadline} (بتوقيت الإمارات).\n\n{link}",
+ "asm.deadline_label": "الموعد النهائي",
+ "asm.attempts_label": "المحاولات",
+ "asm.attempts_value": "{used} من {allowed}"
 }

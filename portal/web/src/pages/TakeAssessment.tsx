@@ -22,7 +22,7 @@ function Answer({ q, value, onChange, onUpload, disabled }: {
       <fieldset className="space-y-3"><legend className="sr-only">{t("asm.your_answer")}</legend>
         {q.options.map((o) => (
           <label key={o.key} className={`${radio} ${value === o.key ? "border-primary-600 bg-primary-50" : "border-aeblack-100 bg-white"}`}>
-            <input type="radio" name={q.key} className="mt-1 h-5 w-5 accent-primary-600" checked={value === o.key} disabled={disabled} onChange={() => onChange(o.key, true)} />
+            <input type="radio" name={q.key} className="mt-1 h-5 w-5 rounded-full accent-primary-600" checked={value === o.key} disabled={disabled} onChange={() => onChange(o.key, true)} />
             <span>{o.text}</span>
           </label>
         ))}
@@ -37,7 +37,7 @@ function Answer({ q, value, onChange, onUpload, disabled }: {
           const on = vals.includes(o.key);
           return (
             <label key={o.key} className={`${radio} ${on ? "border-primary-600 bg-primary-50" : "border-aeblack-100 bg-white"}`}>
-              <input type="checkbox" className="mt-1 h-5 w-5 accent-primary-600" checked={on} disabled={disabled}
+              <input type="checkbox" className="mt-1 h-5 w-5 rounded accent-primary-600" checked={on} disabled={disabled}
                 onChange={() => onChange(on ? vals.filter((v) => v !== o.key) : [...vals, o.key], true)} />
               <span>{o.text}</span>
             </label>
