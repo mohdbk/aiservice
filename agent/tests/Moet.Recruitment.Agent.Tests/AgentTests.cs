@@ -16,6 +16,31 @@ namespace Moet.Recruitment.Agent.Tests;
 public class A2uiTests
 {
     [Fact]
+    public void Component_fields_become_bound_inputs_with_options_and_starting_values()
+    {
+        using var doc = JsonDocument.Parse("""
+            {"nodes":[{"type":"row","children":[
+              {"type":"field","name":"date","input":"date","label":{"ar":"التاريخ","en":"Date"},"required":true},
+              {"type":"field","name":"round_id","input":"choice","source":"rounds","label":{"ar":"الجولة"}}]},
+              {"type":"field","name":"panel","input":"multichoice","options":[{"value":"1","label":{"en":"Sara"}},{"value":"2","label":{"en":"Omar"}}]}]}
+            """);
+        var s = new Surface("f");
+        var form = new JsonObject();
+        var required = new List<string>();
+        var ids = Forms.Component(s, doc.RootElement, "en", name => name == "rounds" ? new List<(string, string)> { ("5", "Technical") } : new List<(string, string)>(),
+            new Dictionary<string, string?> { ["date"] = "2026-11-20", ["panel"] = "1,2" }, form, required);
+
+        Assert.Equal(2, ids.Count);
+        Assert.Equal("2026-11-20", form["date"]!.GetValue<string>());
+        Assert.Equal(2, form["panel"]!.AsArray().Count);
+        Assert.Equal(new List<string> { "/form/date" }, required);
+        var components = s.Messages()[1]!["updateComponents"]!["components"]!.AsArray();
+        var round = components.First(c => c!["component"]!.GetValue<string>() == "ChoicePicker" && c["label"]!.GetValue<string>() == "الجولة")!;
+        Assert.Equal("Technical", round["options"]![0]!["label"]!.GetValue<string>());
+        Assert.Equal("/form/round_id", round["value"]!["@path"]!.GetValue<string>());
+    }
+
+    [Fact]
     public void Surface_is_created_with_its_data_then_drawn_from_root()
     {
         var s = new Surface("proposal-1").Set("proposal_id", "abc");
@@ -69,7 +94,7 @@ public class AgUiEndToEndTests
         public void Dispose() { }
     }
 
-    sealed class FakeBackoffice : HttpMessageHandler
+    sealed class FakeBackoffice(string components = """{"items":[]}""") : HttpMessageHandler
     {
         public List<(string Path, string? Cookie, string Body)> Calls { get; } = [];
 
@@ -78,8 +103,10 @@ public class AgUiEndToEndTests
             var body = request.Content == null ? "" : await request.Content.ReadAsStringAsync(cancellationToken);
             Calls.Add((request.RequestUri!.AbsolutePath, request.Headers.TryGetValues("Cookie", out var c) ? c.First() : null, body));
             Assert.Equal("1", request.Headers.GetValues("X-Backoffice").First());
-            var json = request.RequestUri.AbsolutePath.EndsWith("/agent/proposals")
+            var path = request.RequestUri.AbsolutePath;
+            var json = path.EndsWith("/agent/proposals")
                 ? """{"id":"9a6c1d1e-0000-4000-8000-000000000001","action":"add_note","label":"Add a note to Layla (APP-2026-00001): Strong candidate","expires_at":"2026-11-12T10:30:00Z"}"""
+                : path.EndsWith("/agent/components") ? components
                 : """{"error":{"code":"not_found"}}""";
             return new HttpResponseMessage(json.Contains("error") ? HttpStatusCode.NotFound : HttpStatusCode.OK) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
         }
@@ -132,12 +159,36 @@ public class AgUiEndToEndTests
         Assert.Contains("waiting for your approval", sse);
         Assert.Contains("RUN_FINISHED", sse);
 
+        // The built-in card is an editable form pre-filled with the note.
+        Assert.Contains("TextField", sse);
+        Assert.Contains("/form/text", sse);
+
         // The tool ran as the staff member: their cookie went to the backoffice API with the proposal.
-        var call = Assert.Single(backoffice.Calls);
+        var call = backoffice.Calls.First(c => c.Path.EndsWith("/agent/proposals"));
         Assert.Equal("/api/backoffice/agent/proposals", call.Path);
         Assert.Equal("moet_backoffice=session-cookie", call.Cookie);
         Assert.Contains("\"applicant_id\":7", call.Body);
         Assert.Contains("\"action\":\"add_note\"", call.Body);
+    }
+
+    [Fact]
+    public async Task An_admin_designed_card_replaces_the_built_in_one()
+    {
+        const string designed = """
+            {"items":[{"key":"note_card","kind":"Approval","action_name":"add_note","definition":{"nodes":[
+              {"type":"heading","text":{"ar":"ملاحظة للفريق","en":"Note for the Team"}},
+              {"type":"field","name":"text","input":"longtext","label":{"ar":"النص","en":"Team Note"},"required":true}]}}]}
+            """;
+        var backoffice = new FakeBackoffice(designed);
+        using var app = new App(backoffice);
+        using var req = new HttpRequestMessage(HttpMethod.Post, "/agent") { Content = Run("note please") };
+        req.Headers.Add("X-Agent-Key", Key);
+        req.Headers.Add("Cookie", "moet_backoffice=session-cookie");
+        req.Headers.Add("X-Lang", "en");
+        var sse = await (await app.CreateClient().SendAsync(req)).Content.ReadAsStringAsync();
+        Assert.Contains("Note for the Team", sse);
+        Assert.Contains("Team Note", sse);
+        Assert.Contains("Strong candidate", sse);
     }
 
     [Fact]

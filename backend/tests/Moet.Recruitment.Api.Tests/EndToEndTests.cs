@@ -136,14 +136,37 @@ public class EndToEndTests
             JsonBody(new { action = "add_note", arguments = new { applicant_id = applicantId, text = "Strong analytics background" }, thread_id = "t1", lang = "en" })));
         Assert.StartsWith("Add a note to", proposal.GetProperty("label").GetString());
         var pid = proposal.GetProperty("id").GetString();
-        var approved = await Read(await admin.PostAsync($"/api/backoffice/agent/proposals/{pid}/approve?lang=en", JsonBody(new { })));
+        // The staff member edits the note on the card; who it is about cannot change.
+        var approved = await Read(await admin.PostAsync($"/api/backoffice/agent/proposals/{pid}/approve?lang=en",
+            JsonBody(new { changes = new { text = "Edited: strong analytics background", applicant_id = 999 } })));
         Assert.Equal("Approved", approved.GetProperty("status").GetString());
         Assert.Equal(HttpStatusCode.Conflict, (await admin.PostAsync($"/api/backoffice/agent/proposals/{pid}/approve", JsonBody(new { }))).StatusCode);
         var detail = await Read(await admin.GetAsync($"/api/backoffice/applicants/{applicantId}"));
-        Assert.Contains(detail.GetProperty("notes").EnumerateArray(), n => n.GetProperty("text").GetString() == "Strong analytics background");
+        Assert.Contains(detail.GetProperty("notes").EnumerateArray(), n => n.GetProperty("text").GetString() == "Edited: strong analytics background");
         var unknown = await admin.PostAsync("/api/backoffice/agent/proposals", JsonBody(new { action = "delete_everything", arguments = new { } }));
         Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await admin.PostAsync("/api/backoffice/agent/run", JsonBody(new { }))).StatusCode);
+
+        // Admins design the agent's components; each approval card may only edit what its action allows.
+        var card = new
+        {
+            key = "note_card", name = "بطاقة الملاحظة", name_en = "Note Card", purpose = "Notes", kind = "Approval", action_name = "add_note", is_active = true,
+            definition = new { nodes = new object[] { new { type = "field", name = "text", input = "longtext", label = new { ar = "الملاحظة", en = "Note" }, required = true } } },
+        };
+        var created = await Read(await admin.PostAsync("/api/backoffice/components", JsonBody(card)));
+        var second = await admin.PostAsync("/api/backoffice/components", JsonBody(card with { }));
+        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
+        var bad = await admin.PostAsync("/api/backoffice/components", JsonBody(new
+        {
+            key = "bad_card", name = "x", kind = "Approval", action_name = "add_note", is_active = true,
+            definition = new { nodes = new object[] { new { type = "field", name = "applicant_id", input = "number" } } },
+        }));
+        Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
+        var comps = await Read(await admin.GetAsync("/api/backoffice/components?kind=Approval&sort=name"));
+        Assert.Equal(1, comps.GetProperty("total").GetInt32());
+        var forAgent = await Read(await admin.GetAsync("/api/backoffice/agent/components"));
+        Assert.Equal("note_card", forAgent.GetProperty("items")[0].GetProperty("key").GetString());
+        Assert.Equal(HttpStatusCode.OK, (await admin.DeleteAsync($"/api/backoffice/components/{created.GetProperty("id").GetInt32()}")).StatusCode);
 
         // Changes without the X-Admin header are refused.
         var plain = app.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });

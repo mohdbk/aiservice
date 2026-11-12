@@ -31,6 +31,9 @@ public sealed class RecruitmentTools(BackofficeApi api)
         AIFunctionFactory.Create(GetDashboard, "get_dashboard"),
         AIFunctionFactory.Create(ShowApplicants, "show_applicants"),
         AIFunctionFactory.Create(CompareApplicants, "compare_applicants"),
+        AIFunctionFactory.Create(AskUser, "ask_user"),
+        AIFunctionFactory.Create(ListComponents, "list_components"),
+        AIFunctionFactory.Create(ShowComponent, "show_component"),
         AIFunctionFactory.Create(ProposeStatusChange, "propose_status_change"),
         AIFunctionFactory.Create(ProposeNote, "propose_note"),
         AIFunctionFactory.Create(ProposeInterview, "propose_interview"),
@@ -174,77 +177,274 @@ public sealed class RecruitmentTools(BackofficeApi api)
         return Ui(s, $"Comparison shown. {summary}");
     }
 
-    // ---------------- propose (approval cards) ----------------
+    // ---------------- ask (A2UI forms) ----------------
+
+    public sealed class AskOption
+    {
+        [Description("Value returned when chosen, for example an id")] public string Value { get; set; } = "";
+        [Description("Text shown to the user")] public string Label { get; set; } = "";
+    }
+
+    public sealed class AskField
+    {
+        [Description("Key for the answer, for example start_date")] public string Name { get; set; } = "";
+        [Description("Label shown to the user, in the user's language")] public string Label { get; set; } = "";
+        [Description("text, longtext, number, date, time, choice, multichoice or checkbox")] public string Type { get; set; } = "text";
+        [Description("Options for choice and multichoice")] public List<AskOption>? Options { get; set; }
+        [Description("Pre-filled value, if you can suggest one")] public string? Value { get; set; }
+        [Description("Whether an answer is needed")] public bool Required { get; set; }
+    }
+
+    [Description("Shows the user a short form when you need details from them (choices, dates, numbers, text). Pre-fill what you know and use real options from other tools. After calling it, stop and wait: the answers arrive as an A2UI action named submit_form.")]
+    public JsonElement AskUser(
+        [Description("Short question or title, in the user's language")] string title,
+        [Description("The fields, at most 8")] List<AskField> fields)
+    {
+        if (fields.Count is 0 or > 8) return Error("give_1_to_8_fields");
+        var s = new Surface($"form-{Guid.NewGuid():N}"[..17]);
+        var form = new JsonObject();
+        var parts = new List<string> { s.Text(title, "h5") };
+        var required = new List<string>();
+        foreach (var f in fields)
+        {
+            var key = new string(f.Name.Where(ch => char.IsLetterOrDigit(ch) || ch == '_').ToArray());
+            if (key.Length == 0 || form.ContainsKey(key)) continue;
+            parts.Add(Forms.Add(s, form, new Forms.Field(key, f.Label, f.Type, (f.Options ?? []).Select(o => (o.Value, o.Label)).ToList(), f.Required, f.Value), required));
+        }
+        var submit = s.Button(L("إرسال", "Submit"), "submit_form", new JsonObject { ["answers"] = new JsonObject { ["@path"] = "/form" } }, "primary");
+        s.RequireFilled(submit, [.. required]);
+        parts.Add(s.Row([submit], id: "actions"));
+        s.Set("form", form).Set("state", "open");
+        s.Card(s.Column(parts), id: "root");
+        return Ui(s, "Form shown. Stop here and wait: the user's answers arrive as an A2UI action named submit_form.");
+    }
+
+    // ---------------- components designed by admins ----------------
+
+    [Description("Forms that HR admins designed for you to show (key, name, when to use it, fields). Prefer one of these over ask_user when it fits.")]
+    public async Task<JsonElement> ListComponents(CancellationToken ct = default)
+    {
+        JsonElement all;
+        try { all = await api.GetAsync("agent/components", ct); }
+        catch (BackofficeException e) { return Error(e.Code); }
+        var list = all.GetProperty("items").EnumerateArray().Where(c => Str(c, "kind") == "Ask").Select(c => new
+        {
+            key = Str(c, "key"), name = Ar || Str(c, "name_en").Length == 0 ? Str(c, "name") : Str(c, "name_en"), purpose = Str(c, "purpose"),
+            fields = Fields(c.GetProperty("definition")).Select(f => new { name = Str(f, "name"), input = Str(f, "input"), required = f.TryGetProperty("required", out var r) && r.ValueKind == JsonValueKind.True }),
+        });
+        return JsonSerializer.SerializeToElement(list);
+    }
+
+    [Description("Shows a form an admin designed (key from list_components), pre-filled with values you know. After calling it, stop and wait: the answers arrive as an A2UI action named submit_form.")]
+    public async Task<JsonElement> ShowComponent(
+        [Description("Component key")] string key,
+        [Description("Pre-filled values by field name; multiple choices comma separated")] Dictionary<string, string>? values = null,
+        CancellationToken ct = default)
+    {
+        JsonElement component;
+        try { component = (await FindComponentAsync(c => Str(c, "key") == key && Str(c, "kind") == "Ask", ct)) ?? default; }
+        catch (BackofficeException e) { return Error(e.Code); }
+        if (component.ValueKind != JsonValueKind.Object) return Error("component_not_found");
+        var definition = component.GetProperty("definition");
+        var lookups = await LookupsIfNeededAsync(definition, ct);
+        var s = new Surface($"form-{key}-{Guid.NewGuid():N}"[..Math.Min(60, 14 + key.Length)]);
+        var form = new JsonObject();
+        var required = new List<string>();
+        var title = Forms.Localized(definition, "title", api.Lang);
+        var parts = new List<string>();
+        if (title.Length > 0) parts.Add(s.Text(title, "h5"));
+        parts.AddRange(Forms.Component(s, definition, api.Lang, name => Source(name, lookups), (values ?? new Dictionary<string, string>()).ToDictionary(x => x.Key, x => (string?)x.Value), form, required));
+        var submitLabel = Forms.Localized(definition, "submit", api.Lang);
+        var submit = s.Button(submitLabel.Length > 0 ? submitLabel : L("إرسال", "Submit"), "submit_form",
+            new JsonObject { ["component"] = key, ["answers"] = new JsonObject { ["@path"] = "/form" } }, "primary");
+        s.RequireFilled(submit, [.. required]);
+        parts.Add(s.Row([submit], id: "actions"));
+        s.Set("form", form).Set("state", "open");
+        s.Card(s.Column(parts), id: "root");
+        return Ui(s, $"Form {key} shown. Stop here and wait: the user's answers arrive as an A2UI action named submit_form.");
+    }
+
+    async Task<JsonElement?> FindComponentAsync(Func<JsonElement, bool> match, CancellationToken ct)
+    {
+        var all = await api.GetAsync("agent/components", ct);
+        foreach (var c in all.GetProperty("items").EnumerateArray()) if (match(c)) return c;
+        return null;
+    }
+
+    static IEnumerable<JsonElement> Fields(JsonElement definition) =>
+        definition.TryGetProperty("nodes", out var nodes) && nodes.ValueKind == JsonValueKind.Array
+            ? nodes.EnumerateArray().SelectMany(n => Str(n, "type") == "row" && n.TryGetProperty("children", out var k) ? k.EnumerateArray() : [n]).Where(n => Str(n, "type") == "field")
+            : [];
+
+    async Task<JsonElement> LookupsIfNeededAsync(JsonElement definition, CancellationToken ct) =>
+        Fields(definition).Any(f => Str(f, "source") is "rounds" or "staff" or "assessments" or "departments") ? await api.GetAsync("lookups", ct) : default;
+
+    IReadOnlyList<(string, string)> Source(string name, JsonElement lookups) => name switch
+    {
+        "rounds" => Options(lookups, "rounds", "name").ToList(),
+        "staff" => Options(lookups, "staff", "name").ToList(),
+        "assessments" => Options(lookups, "assessments", "title").ToList(),
+        "departments" => Options(lookups, "departments", Ar ? "name" : "name_en").Select(x => (x.Item1, x.Item2.Length > 0 ? x.Item2 : x.Item1)).ToList(),
+        "statuses" => Statuses().ToList(),
+        "employment_types" => EmploymentTypes().ToList(),
+        _ => [],
+    };
+
+    // ---------------- propose (editable approval cards) ----------------
 
     [Description("Proposes moving an applicant to another status. Shows an approval card; nothing changes until the user approves.")]
     public Task<JsonElement> ProposeStatusChange(int applicantId, [Description("Open, Replied, Hold, Accepted or Rejected")] string status, CancellationToken ct = default) =>
-        Propose("set_applicant_status", new JsonObject { ["applicant_id"] = applicantId, ["status"] = status }, ct);
+        Propose("set_applicant_status", new JsonObject { ["applicant_id"] = applicantId, ["status"] = status }, ct, (s, _) =>
+            [s.ChoicePicker(L("الحالة", "Status"), "/form/status", Statuses(), required: true)], "status");
 
-    [Description("Proposes adding an internal note to an applicant. Shows an approval card.")]
+    [Description("Proposes adding an internal note to an applicant. Shows an approval card the user can edit.")]
     public Task<JsonElement> ProposeNote(int applicantId, string text, CancellationToken ct = default) =>
-        Propose("add_note", new JsonObject { ["applicant_id"] = applicantId, ["text"] = text }, ct);
+        Propose("add_note", new JsonObject { ["applicant_id"] = applicantId, ["text"] = text }, ct, (s, _) =>
+            [s.TextField(L("الملاحظة", "Note"), "/form/text", "longText", true)], "text");
 
-    [Description("Proposes an interview. Get round and staff ids from get_lookups. date YYYY-MM-DD, times HH:MM in UAE time. Shows an approval card.")]
+    [Description("Proposes an interview. Get round and staff ids from get_lookups. date YYYY-MM-DD, times HH:MM in UAE time. Shows an approval card the user can edit; if you lack details, propose your best suggestion and let the user adjust it.")]
     public Task<JsonElement> ProposeInterview(int applicantId, int roundId, string date, string from, string to,
         [Description("Room or meeting link")] string? location = null, [Description("Staff ids on the panel")] int[]? panelIds = null,
         string? notes = null, CancellationToken ct = default) =>
         Propose("schedule_interview", new JsonObject
         {
-            ["applicant_id"] = applicantId, ["round_id"] = roundId, ["date"] = date, ["from"] = from, ["to"] = to, ["location"] = location,
-            ["notes"] = notes, ["panel_ids"] = new JsonArray([.. (panelIds ?? []).Select(x => (JsonNode)x)]),
-        }, ct);
+            ["applicant_id"] = applicantId, ["round_id"] = roundId.ToString(CultureInfo.InvariantCulture), ["date"] = date, ["from"] = from, ["to"] = to,
+            ["location"] = location ?? "", ["notes"] = notes ?? "",
+            ["panel_ids"] = new JsonArray([.. (panelIds ?? []).Select(x => (JsonNode)x.ToString(CultureInfo.InvariantCulture))]),
+        }, ct, (s, lookups) =>
+        [
+            s.ChoicePicker(L("جولة المقابلة", "Interview Round"), "/form/round_id", Options(lookups, "rounds", "name"), required: true),
+            s.DateTimeInput(L("التاريخ", "Date"), "/form/date", required: true),
+            s.Row([s.DateTimeInput(L("من", "From"), "/form/from", false, true, true), s.DateTimeInput(L("إلى", "To"), "/form/to", false, true, true)]),
+            s.TextField(L("المكان أو رابط الاجتماع", "Location or Meeting Link"), "/form/location"),
+            s.ChoicePicker(L("لجنة المقابلة", "Interview Panel"), "/form/panel_ids", Options(lookups, "staff", "name"), multiple: true),
+            s.TextField(L("ملاحظات", "Notes"), "/form/notes", "longText"),
+        ], "round_id", "date", "from", "to");
 
     [Description("Proposes inviting an applicant to a published test (ids from get_lookups). Shows an approval card.")]
     public Task<JsonElement> ProposeTestInvitation(int applicantId, int testId, [Description("Days to complete it")] int? deadlineDays = null, CancellationToken ct = default) =>
-        Propose("invite_to_test", new JsonObject { ["applicant_id"] = applicantId, ["assessment_id"] = testId, ["deadline_days"] = deadlineDays }, ct);
+        Propose("invite_to_test", new JsonObject
+        {
+            ["applicant_id"] = applicantId, ["assessment_id"] = testId.ToString(CultureInfo.InvariantCulture),
+            ["deadline_days"] = deadlineDays?.ToString(CultureInfo.InvariantCulture) ?? "",
+        }, ct, (s, lookups) =>
+        [
+            s.ChoicePicker(L("الاختبار", "Test"), "/form/assessment_id", Options(lookups, "assessments", "title"), required: true),
+            s.TextField(L("عدد الأيام لإكماله", "Days to Complete"), "/form/deadline_days", "number"),
+        ], "assessment_id");
 
-    [Description("Proposes a draft job offer (not sent to the candidate). Dates YYYY-MM-DD. Shows an approval card.")]
+    [Description("Proposes a draft job offer (not sent to the candidate). Dates YYYY-MM-DD. Shows an approval card the user can edit.")]
     public Task<JsonElement> ProposeOffer(int applicantId, string positionTitle, string offerDate, string? startDate = null,
         decimal? monthlySalary = null, [Description("Currency code, default AED")] string? currency = null, string? terms = null, CancellationToken ct = default) =>
         Propose("make_offer", new JsonObject
         {
-            ["applicant_id"] = applicantId, ["position_title"] = positionTitle, ["offer_date"] = offerDate, ["start_date"] = startDate,
-            ["monthly_salary"] = monthlySalary, ["currency"] = currency ?? "AED", ["terms"] = terms,
-        }, ct);
+            ["applicant_id"] = applicantId, ["position_title"] = positionTitle, ["offer_date"] = offerDate, ["start_date"] = startDate ?? "",
+            ["monthly_salary"] = monthlySalary?.ToString(CultureInfo.InvariantCulture) ?? "", ["currency"] = currency ?? "AED", ["terms"] = terms ?? "",
+        }, ct, (s, _) =>
+        [
+            s.TextField(L("المسمى الوظيفي", "Position Title"), "/form/position_title", required: true),
+            s.Row([s.DateTimeInput(L("تاريخ العرض", "Offer Date"), "/form/offer_date", required: true), s.DateTimeInput(L("تاريخ المباشرة", "Start Date"), "/form/start_date")]),
+            s.Row([s.TextField(L("الراتب الشهري", "Monthly Salary"), "/form/monthly_salary", "number"), s.TextField(L("العملة", "Currency"), "/form/currency")]),
+            s.TextField(L("الشروط", "Terms"), "/form/terms", "longText"),
+        ], "position_title", "offer_date");
 
-    [Description("Proposes an email to an applicant, in the applicant's language, written as the hiring team. Plain text body. Shows an approval card with the full text.")]
+    [Description("Proposes an email to an applicant, in the applicant's language, written as the hiring team. Plain text body. Shows an approval card where the user can edit the subject and text.")]
     public Task<JsonElement> ProposeEmail(int applicantId, string subject, string body, CancellationToken ct = default) =>
-        Propose("email_candidate", new JsonObject { ["applicant_id"] = applicantId, ["subject"] = subject, ["body"] = body }, ct, preview: body);
+        Propose("email_candidate", new JsonObject { ["applicant_id"] = applicantId, ["subject"] = subject, ["body"] = body }, ct, (s, _) =>
+        [
+            s.TextField(L("الموضوع", "Subject"), "/form/subject", required: true),
+            s.TextField(L("نص الرسالة", "Message"), "/form/body", "longText", true),
+        ], "subject", "body");
 
-    [Description("Proposes a new unpublished draft job. description is simple HTML (p, ul, li, strong). Shows an approval card.")]
+    [Description("Proposes a new unpublished draft job. description is simple HTML (p, ul, li, strong). Shows an approval card the user can edit.")]
     public Task<JsonElement> ProposeDraftJob(string title, string description, string location,
         [Description("FullTime, PartTime, Contract, Temporary or Internship")] string employmentType = "FullTime",
         [Description("Department id from get_lookups")] int? departmentId = null, CancellationToken ct = default) =>
         Propose("create_draft_job", new JsonObject
         {
-            ["title"] = title, ["description"] = description, ["location"] = location, ["employment_type"] = employmentType, ["department_id"] = departmentId,
-        }, ct);
+            ["title"] = title, ["description"] = description, ["location"] = location, ["employment_type"] = employmentType,
+            ["department_id"] = departmentId?.ToString(CultureInfo.InvariantCulture) ?? "",
+        }, ct, (s, lookups) =>
+        [
+            s.TextField(L("المسمى الوظيفي", "Job Title"), "/form/title", required: true),
+            s.Row([s.TextField(L("الموقع", "Location"), "/form/location"),
+                s.ChoicePicker(L("نوع التوظيف", "Employment Type"), "/form/employment_type", EmploymentTypes())]),
+            s.ChoicePicker(L("الإدارة", "Department"), "/form/department_id", Options(lookups, "departments", "name")),
+        ], "title");
 
     [Description("Proposes asking for an English version of Arabic content for HR to review. kind: job, screening, question or assessment.")]
     public Task<JsonElement> ProposeEnglishSuggestion(string kind, int id, CancellationToken ct = default) =>
-        Propose("suggest_english", new JsonObject { ["kind"] = kind, ["id"] = id }, ct);
+        Propose("suggest_english", new JsonObject { ["kind"] = kind, ["id"] = id }, ct, null);
 
-    async Task<JsonElement> Propose(string action, JsonObject arguments, CancellationToken ct, string? preview = null)
+    /// <summary>
+    /// Records the proposal in the backend and returns its approval card. When <paramref name="form"/> is given, the card
+    /// is an editable form pre-filled with the proposal; Approve sends the edits, which the backend checks again.
+    /// </summary>
+    async Task<JsonElement> Propose(string action, JsonObject arguments, CancellationToken ct,
+        Func<Surface, JsonElement, IEnumerable<string>>? form, params string[] required)
     {
-        JsonElement p;
-        try { p = await api.PostAsync("agent/proposals", new { action, arguments, lang = api.Lang }, ct); }
+        JsonElement p, lookups = default;
+        JsonElement? designed;
+        try
+        {
+            p = await api.PostAsync("agent/proposals", new { action, arguments, lang = api.Lang }, ct);
+            designed = await FindComponentAsync(c => Str(c, "kind") == "Approval" && Str(c, "action_name") == action, ct);
+            if (designed is { } d) lookups = await LookupsIfNeededAsync(d.GetProperty("definition"), ct);
+            else if (form != null && action is "schedule_interview" or "invite_to_test" or "create_draft_job") lookups = await api.GetAsync("lookups", ct);
+        }
         catch (BackofficeException e) { return Error(e.Code); }
         var id = Str(p, "id");
         var s = new Surface($"proposal-{id}");
-        s.Set("proposal_id", id).Set("state", "pending");
-        var parts = new List<string>
+        var values = (JsonObject)arguments.DeepClone();
+        values.Remove("applicant_id");
+        if (action == "create_draft_job") values.Remove("description");
+        s.Set("proposal_id", id).Set("state", "pending").Set("form", values);
+        var parts = new List<string> { s.Text(L("بانتظار موافقتك", "Needs Your Approval"), "h5"), s.Text(Str(p, "label")) };
+        if (designed is { } component)
         {
-            s.Text(L("بانتظار موافقتك", "Needs Your Approval"), "h5"),
-            s.Text(Str(p, "label")),
-        };
-        if (preview is { Length: > 0 }) parts.Add(s.Text(Clip(preview, 3000), "caption"));
-        parts.Add(s.Row([
-            s.Button(L("موافقة", "Approve"), "approve_proposal", new JsonObject { ["proposal_id"] = new JsonObject { ["@path"] = "/proposal_id" } }, "primary"),
-            s.Button(L("إلغاء", "Cancel"), "cancel_proposal", new JsonObject { ["proposal_id"] = new JsonObject { ["@path"] = "/proposal_id" } }, "borderless"),
-        ], id: "actions"));
+            // An admin designed this card in the backoffice: draw their fields, pre-filled with the proposal.
+            var definition = component.GetProperty("definition");
+            var start = values.ToDictionary(x => x.Key, x => x.Value switch
+            {
+                JsonArray arr => (string?)string.Join(",", arr.Select(v => v?.ToString())),
+                null => null,
+                var v => v.ToString(),
+            });
+            var editable = new JsonObject();
+            var needed = new List<string>();
+            parts.AddRange(Forms.Component(s, definition, api.Lang, name => Source(name, lookups), start, editable, needed));
+            s.Set("form", editable);
+            required = [.. needed.Select(r => r["/form/".Length..])];
+        }
+        else if (form != null) parts.AddRange(form(s, lookups));
+        var approve = s.Button(L("موافقة", "Approve"), "approve_proposal", new JsonObject
+        {
+            ["proposal_id"] = new JsonObject { ["@path"] = "/proposal_id" },
+            ["changes"] = new JsonObject { ["@path"] = "/form" },
+        }, "primary");
+        s.RequireFilled(approve, [.. required.Select(r => $"/form/{r}")]);
+        var cancel = s.Button(L("إلغاء", "Cancel"), "cancel_proposal", new JsonObject { ["proposal_id"] = new JsonObject { ["@path"] = "/proposal_id" } }, "borderless");
+        parts.Add(s.Row([approve, cancel], id: "actions"));
         s.Card(s.Column(parts), id: "root");
-        return Ui(s, $"Proposal {id} shown to the user with Approve and Cancel buttons. NOT applied yet: {Str(p, "label")}");
+        return Ui(s, $"Proposal {id} shown to the user as an editable card with Approve and Cancel. NOT applied yet: {Str(p, "label")}");
     }
+
+    IEnumerable<(string, string)> Statuses() =>
+    [
+        ("Open", L("مفتوح", "Open")), ("Replied", L("تم الرد", "Replied")), ("Hold", L("معلق", "On Hold")),
+        ("Accepted", L("مقبول", "Accepted")), ("Rejected", L("مرفوض", "Rejected")),
+    ];
+
+    IEnumerable<(string, string)> EmploymentTypes() =>
+    [
+        ("FullTime", L("دوام كامل", "Full Time")), ("PartTime", L("دوام جزئي", "Part Time")), ("Contract", L("عقد", "Contract")),
+        ("Temporary", L("مؤقت", "Temporary")), ("Internship", L("تدريب", "Internship")),
+    ];
+
+    static IEnumerable<(string, string)> Options(JsonElement lookups, string list, string label) =>
+        lookups.ValueKind == JsonValueKind.Object && lookups.TryGetProperty(list, out var items) && items.ValueKind == JsonValueKind.Array
+            ? items.EnumerateArray().Select(x => (Str(x, "id"), Str(x, label))).ToList()
+            : [];
 
     // ---------------- helpers ----------------
 

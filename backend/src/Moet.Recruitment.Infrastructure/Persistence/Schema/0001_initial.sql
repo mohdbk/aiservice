@@ -676,6 +676,26 @@ CREATE TABLE ops.AgentProposal (
 );
 CREATE INDEX IX_AgentProposal_Staff ON ops.AgentProposal (StaffUserId, CreatedAt);
 
+/* Forms HR admins design in the component builder; the agent draws them in the chat as A2UI surfaces. */
+CREATE TABLE ops.AgentComponent (
+    Id               int IDENTITY(1,1) NOT NULL CONSTRAINT PK_AgentComponent PRIMARY KEY,
+    [Key]            varchar(60)    NOT NULL CONSTRAINT UQ_AgentComponent_Key UNIQUE,
+    Name             nvarchar(140)  NOT NULL,
+    NameEn           nvarchar(140)  NOT NULL CONSTRAINT DF_AgentComponent_NameEn DEFAULT (N''),
+    Purpose          nvarchar(1000) NOT NULL CONSTRAINT DF_AgentComponent_Purpose DEFAULT (N''),
+    Kind             varchar(10)    NOT NULL CONSTRAINT CK_AgentComponent_Kind CHECK (Kind IN ('Ask', 'Approval')),
+    ActionName       varchar(60)    NULL,
+    Definition       nvarchar(max)  NOT NULL CONSTRAINT CK_AgentComponent_Definition CHECK (ISJSON(Definition) = 1),
+    IsActive         bit            NOT NULL CONSTRAINT DF_AgentComponent_IsActive DEFAULT (1),
+    CreatedAt        datetime2(0)   NOT NULL,
+    UpdatedAt        datetime2(0)   NOT NULL,
+    UpdatedByStaffId int            NULL CONSTRAINT FK_AgentComponent_Staff REFERENCES [identity].StaffUser (Id),
+    RowVersion       rowversion     NOT NULL,
+    CONSTRAINT CK_AgentComponent_Action CHECK ((Kind = 'Approval' AND ActionName IS NOT NULL) OR (Kind = 'Ask' AND ActionName IS NULL))
+);
+/* At most one active approval card per kind of change. */
+CREATE UNIQUE INDEX UX_AgentComponent_Action ON ops.AgentComponent (ActionName) WHERE ActionName IS NOT NULL AND IsActive = 1;
+
 /* Readable codes (JOB-2026-0001 and so on) come from sequences, so they never repeat. */
 CREATE SEQUENCE hiring.JobOpeningCode AS int START WITH 1;
 CREATE SEQUENCE hiring.JobApplicationCode AS int START WITH 1;

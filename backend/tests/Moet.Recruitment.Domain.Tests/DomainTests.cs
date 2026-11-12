@@ -4,6 +4,7 @@ using Moet.Recruitment.Domain.Assessments;
 using Moet.Recruitment.Domain.Common;
 using Moet.Recruitment.Domain.Content;
 using Moet.Recruitment.Domain.Hiring;
+using Moet.Recruitment.Domain.Operations;
 
 namespace Moet.Recruitment.Domain.Tests;
 
@@ -315,5 +316,43 @@ public class ContentTests
         var e = Assert.Throws<DomainException>(() => CvFile.Validate("cv.pdf", "PK\u0003\u0004"u8.ToArray(), 5));
         Assert.Equal("cv_type", e.Code);
         Assert.Equal("cv_empty", Assert.Throws<DomainException>(() => CvFile.Validate("cv.pdf", [], 5)).Code);
+    }
+}
+
+public class AgentComponentTests
+{
+    static AgentComponent Approval(string action, string nodes) => new()
+    {
+        Key = "interview_card", Name = "بطاقة المقابلة", Kind = ComponentKind.Approval, ActionName = action, Definition = $$"""{"nodes":{{nodes}}}""",
+    };
+
+    [Fact]
+    public void Approval_cards_may_only_edit_what_the_action_allows()
+    {
+        const string ok = """[{"type":"heading","text":{"ar":"مقابلة","en":"Interview"}},{"type":"row","children":[{"type":"field","name":"date","input":"date"},{"type":"field","name":"from","input":"time"}]},{"type":"field","name":"round_id","input":"choice","source":"rounds"}]""";
+        Approval("schedule_interview", ok).Validate();
+
+        var e = Assert.Throws<DomainException>(() => Approval("schedule_interview", """[{"type":"field","name":"applicant_id","input":"number"}]""").Validate());
+        Assert.Equal("component_field_not_editable", e.Code);
+        Assert.Equal("component_action_required", Assert.Throws<DomainException>(() => Approval("delete_all", ok).Validate()).Code);
+    }
+
+    [Fact]
+    public void Definitions_are_checked()
+    {
+        var ask = new AgentComponent { Key = "start_date", Name = "Start", Kind = ComponentKind.Ask, ActionName = "add_note", Definition = """{"nodes":[{"type":"field","name":"when","input":"date"}]}""" };
+        ask.Validate();
+        Assert.Null(ask.ActionName);
+
+        ask.Definition = """{"nodes":[{"type":"field","name":"pick","input":"choice"}]}""";
+        Assert.Equal("component_options_required", Assert.Throws<DomainException>(ask.Validate).Code);
+        ask.Definition = """{"nodes":[{"type":"field","name":"a","input":"text"},{"type":"field","name":"a","input":"text"}]}""";
+        Assert.Equal("component_field_name", Assert.Throws<DomainException>(ask.Validate).Code);
+        ask.Definition = """{"nodes":[{"type":"row","children":[{"type":"row","children":[]}]}]}""";
+        Assert.Equal("component_row_invalid", Assert.Throws<DomainException>(ask.Validate).Code);
+        ask.Definition = """{"nodes":[{"type":"heading","text":{"ar":"x"}}]}""";
+        Assert.Equal("component_needs_field", Assert.Throws<DomainException>(ask.Validate).Code);
+        ask.Key = "Bad Key";
+        Assert.Equal("component_key_invalid", Assert.Throws<DomainException>(ask.Validate).Code);
     }
 }

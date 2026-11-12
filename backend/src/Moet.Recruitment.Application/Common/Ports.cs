@@ -38,6 +38,7 @@ public interface IAppDbContext
     DbSet<BackgroundJob> BackgroundJobs { get; }
     DbSet<AuditEntry> AuditEntries { get; }
     DbSet<AgentProposal> AgentProposals { get; }
+    DbSet<AgentComponent> AgentComponents { get; }
 
     Task<int> SaveChangesAsync(CancellationToken ct = default);
 }

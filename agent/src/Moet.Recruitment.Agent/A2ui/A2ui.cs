@@ -54,6 +54,33 @@ public sealed class Surface(string id)
         }, id);
     }
 
+    static JsonObject Bind(string path) => new() { ["@path"] = path };
+
+    /// <summary>A text input bound two-way to <paramref name="path"/>. type: shortText, longText or number.</summary>
+    public string TextField(string label, string path, string type = "shortText", bool required = false) =>
+        Add("TextField", new JsonObject { ["label"] = label, ["value"] = Bind(path), ["textFieldType"] = type, ["required"] = required });
+
+    /// <summary>A choice of options bound to <paramref name="path"/>; multiple choices store an array.</summary>
+    public string ChoicePicker(string label, string path, IEnumerable<(string Value, string Label)> options, bool multiple = false, bool required = false) =>
+        Add("ChoicePicker", new JsonObject
+        {
+            ["label"] = label, ["value"] = Bind(path), ["maxAllowedSelections"] = multiple ? null : 1, ["required"] = required,
+            ["options"] = new JsonArray([.. options.Select(o => (JsonNode)new JsonObject { ["value"] = o.Value, ["label"] = o.Label })]),
+        });
+
+    /// <summary>A date (YYYY-MM-DD) or time (HH:MM) input bound to <paramref name="path"/>.</summary>
+    public string DateTimeInput(string label, string path, bool date = true, bool time = false, bool required = false) =>
+        Add("DateTimeInput", new JsonObject { ["label"] = label, ["value"] = Bind(path), ["enableDate"] = date, ["enableTime"] = time, ["required"] = required });
+
+    public string CheckBox(string label, string path) => Add("CheckBox", new JsonObject { ["label"] = label, ["value"] = Bind(path) });
+
+    /// <summary>Marks a button so the renderer only enables it once the inputs at <paramref name="paths"/> are filled.</summary>
+    public void RequireFilled(string buttonId, params string[] paths)
+    {
+        var button = components.Select(c => c!.AsObject()).First(c => c["id"]!.GetValue<string>() == buttonId);
+        button["checks"] = new JsonArray([.. paths.Select(p => (JsonNode)new JsonObject { ["@call"] = "required", ["args"] = new JsonObject { ["value"] = Bind(p) } })]);
+    }
+
     public Surface Set(string key, JsonNode? value)
     {
         data[key] = value;

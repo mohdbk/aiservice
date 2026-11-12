@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using Moet.Recruitment.Application.Backoffice;
 using Moet.Recruitment.Application.Common;
@@ -20,17 +21,15 @@ public sealed class AgentProposalService(
     IAppDbContext db, ICurrentActor actor, IClock clock, ContentService content, PortalMailer mailer,
     BackofficeApplicantService applicants, BackofficeInterviewService interviews, BackofficeJobService jobs, BackofficeSetupService setup)
 {
-    public static readonly string[] Actions =
-    [
-        "set_applicant_status", "add_note", "schedule_interview", "invite_to_test", "make_offer", "email_candidate", "create_draft_job", "suggest_english",
-    ];
+
+    static IReadOnlyDictionary<string, string[]> Editable => AgentActions.Editable;
 
     public async Task<object> ProposeAsync(ProposalInput input, CancellationToken ct = default)
     {
         var staffId = actor.Id ?? throw DomainException.Forbidden();
         if (!(await content.SettingsAsync(ct)).AssistantEnabled) throw DomainException.Forbidden("assistant_off");
         var name = input.Action ?? "";
-        if (!Actions.Contains(name)) throw DomainException.Invalid("invalid_value");
+        if (!Editable.ContainsKey(name)) throw DomainException.Invalid("invalid_value");
         var a = input.Arguments.ValueKind == JsonValueKind.Object ? input.Arguments : throw DomainException.Invalid("invalid_value");
         var ar = input.Lang != "en";
         var label = await DescribeAsync(name, a, ar, ct);
@@ -56,10 +55,21 @@ public sealed class AgentProposalService(
     }
 
     /// <summary>Carries out a proposal: single use, only by the staff member it was proposed to, before it expires.</summary>
-    public async Task<object> ApproveAsync(Guid id, string? lang, CancellationToken ct = default)
+    public async Task<object> ApproveAsync(Guid id, string? lang, JsonElement? changes, CancellationToken ct = default)
     {
         var staffId = actor.Id ?? throw DomainException.Forbidden();
         var p = await db.AgentProposals.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound("proposal_expired");
+        if (changes is { ValueKind: JsonValueKind.Object } edits && p.StaffUserId == staffId)
+        {
+            // The staff member edited the card: take only the fields this action allows, then check and describe it again.
+            var merged = JsonNode.Parse(p.Arguments)!.AsObject();
+            foreach (var prop in edits.EnumerateObject())
+                if (Editable.TryGetValue(p.ActionName, out var keys) && keys.Contains(prop.Name))
+                    merged[prop.Name] = JsonNode.Parse(prop.Value.GetRawText());
+            using var check = JsonDocument.Parse(merged.ToJsonString());
+            p.Label = TextUtil.Clip(TextUtil.NoEmDash(await DescribeAsync(p.ActionName, check.RootElement, lang != "en", ct)), 600);
+            p.Arguments = merged.ToJsonString();
+        }
         p.Claim(staffId, clock.UtcNow, approve: true);
         await db.SaveChangesAsync(ct);
         using var doc = JsonDocument.Parse(p.Arguments);
@@ -102,7 +112,7 @@ public sealed class AgentProposalService(
             {
                 var app = await ApplicantAsync(a, ct);
                 var panel = a.TryGetProperty("panel_ids", out var pl) && pl.ValueKind == JsonValueKind.Array
-                    ? pl.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.Number).Select(x => x.GetInt32()).ToList() : [];
+                    ? pl.EnumerateArray().Select(x => x.ValueKind == JsonValueKind.Number ? x.GetInt32() : int.TryParse(x.GetString(), out var v) ? v : 0).Where(x => x > 0).ToList() : [];
                 await interviews.ScheduleAsync(null, new InterviewInput(app.Id, I(a, "round_id"), S(a, "date"), S(a, "from"), S(a, "to"),
                     Opt(a, "location"), Opt(a, "notes"), panel), ct);
                 return (ar ? $"تم تحديد مقابلة مع {app.FullName}." : $"Interview scheduled with {app.FullName}.", $"/applicants/{app.Id}");
@@ -110,14 +120,14 @@ public sealed class AgentProposalService(
             case "invite_to_test":
             {
                 var app = await ApplicantAsync(a, ct);
-                await applicants.InviteAsync(app.Id, I(a, "assessment_id"), a.TryGetProperty("deadline_days", out var d) && d.TryGetInt32(out var n) ? n : null, ct);
+                await applicants.InviteAsync(app.Id, I(a, "assessment_id"), I(a, "deadline_days") is > 0 and var n ? n : null, ct);
                 return (ar ? $"أرسلت دعوة الاختبار إلى {app.FullName}." : $"Test invitation sent to {app.FullName}.", $"/applicants/{app.Id}");
             }
             case "make_offer":
             {
                 var app = await ApplicantAsync(a, ct);
                 await interviews.SaveOfferAsync(null, new OfferInput(app.Id, S(a, "position_title"), S(a, "offer_date"), Opt(a, "start_date"),
-                    a.TryGetProperty("monthly_salary", out var m) && m.TryGetDecimal(out var sal) ? sal : null, Opt(a, "currency"), Opt(a, "terms")), ct);
+                    decimal.TryParse(S(a, "monthly_salary"), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var sal) ? sal : null, Opt(a, "currency"), Opt(a, "terms")), ct);
                 return (ar ? $"أنشئ عرض عمل مسودة لـ {app.FullName}." : $"Draft offer created for {app.FullName}.", $"/applicants/{app.Id}");
             }
             case "email_candidate":
@@ -138,7 +148,7 @@ public sealed class AgentProposalService(
             }
             case "create_draft_job":
             {
-                var saved = await jobs.SaveAsync(null, new JobInput(S(a, "title"), S(a, "description"), a.TryGetProperty("department_id", out var dep) && dep.TryGetInt32(out var di) ? di : null,
+                var saved = await jobs.SaveAsync(null, new JobInput(S(a, "title"), S(a, "description"), I(a, "department_id") is > 0 and var di ? di : null,
                     S(a, "location"), S(a, "employment_type") is { Length: > 0 } et ? et : "FullTime", "Draft", false, null, null, null, null, null, null, false,
                     null, null, null, null), ct);
                 var id = JsonSerializer.SerializeToElement(saved).TryGetProperty("id", out var idv) ? idv.GetInt32() : 0;

@@ -18,6 +18,7 @@ public static class BackofficeEndpoints
     public sealed record InviteBody(int AssessmentId, int? DeadlineDays);
     public sealed record ReexamBody(int ExtraAttempts, int DeadlineDays, bool Notify);
     public sealed record MarksBody(IReadOnlyList<MarkInput> Marks);
+    public sealed record ApproveBody(System.Text.Json.JsonElement? Changes);
     public sealed record StaffBody(string? Email, string? FullName, string? Role, bool IsEnabled, string? Password);
 
     public static void Map(WebApplication app)
@@ -121,7 +122,8 @@ public static class BackofficeEndpoints
         // recruitment agent: the browser talks AG-UI to the agent service through this proxy; the agent can only propose changes
         staff.MapPost("/agent/run", AgentProxy.RunAsync).RequireRateLimiting("assistant");
         staff.MapPost("/agent/proposals", (ProposalInput b, AgentProposalService s, CancellationToken ct) => s.ProposeAsync(b, ct));
-        staff.MapPost("/agent/proposals/{id:guid}/approve", (Guid id, string? lang, AgentProposalService s, CancellationToken ct) => s.ApproveAsync(id, lang, ct));
+        staff.MapPost("/agent/proposals/{id:guid}/approve", (Guid id, string? lang, ApproveBody? b, AgentProposalService s, CancellationToken ct) => s.ApproveAsync(id, lang, b?.Changes, ct));
+        staff.MapGet("/agent/components", (BackofficeComponentService s, CancellationToken ct) => s.ActiveAsync(ct));
         staff.MapPost("/agent/proposals/{id:guid}/cancel", (Guid id, AgentProposalService s, CancellationToken ct) => s.CancelAsync(id, ct));
 
         // setup (recruitment admins only)
@@ -132,6 +134,12 @@ public static class BackofficeEndpoints
         setup.MapGet("/rounds", ([AsParameters] ListQuery lq, BackofficeSetupService s, CancellationToken ct) => s.RoundsAsync(lq, ct));
         setup.MapPost("/rounds", (NamedInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveRoundAsync(null, b, ct));
         setup.MapPut("/rounds/{id:int}", (int id, NamedInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveRoundAsync(id, b, ct));
+        setup.MapGet("/components", ([AsParameters] ListQuery lq, string? kind, bool? active, string? action, BackofficeComponentService s, CancellationToken ct) =>
+            s.ListAsync(lq, kind, active, action, ct));
+        setup.MapGet("/components/{id:int}", (int id, BackofficeComponentService s, CancellationToken ct) => s.GetAsync(id, ct));
+        setup.MapPost("/components", (ComponentInput b, BackofficeComponentService s, CancellationToken ct) => s.SaveAsync(null, b, ct));
+        setup.MapPut("/components/{id:int}", (int id, ComponentInput b, BackofficeComponentService s, CancellationToken ct) => s.SaveAsync(id, b, ct));
+        setup.MapDelete("/components/{id:int}", (int id, BackofficeComponentService s, CancellationToken ct) => s.DeleteAsync(id, ct));
         setup.MapGet("/settings", (BackofficeSetupService s, CancellationToken ct) => s.SettingsAsync(ct));
         setup.MapPut("/settings", (SettingsInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveSettingsAsync(b, ct));
         setup.MapGet("/portal-text/{lang}", (string lang, [AsParameters] ListQuery lq, string? changed, BackofficeSetupService s, CancellationToken ct) => s.PortalTextAsync(lang, lq, changed, ct));
