@@ -20,7 +20,7 @@ Agent tools  --staff member's own session-->  API /api/backoffice/*  (role check
 - **Show tools:** `show_applicants`, `compare_applicants`.
 - **Propose tools:** status change, note, interview, test invitation, draft offer, candidate email, draft job, English suggestion.
   - The backend stores the proposal (`ops.AgentProposal`) and writes its description from current data.
-  - The proposal is carried out only when the same person presses **Approve**, once, within 30 minutes.
+  - The proposal is carried out only when the same person presses **Approve**, once, before it expires (30 minutes by default; set in Assistant Settings).
   - The change runs through the normal backoffice services, so it is audited like any other change.
 
 ## Forms, components and the open screen
@@ -52,7 +52,7 @@ The agent fetches these from `/api/internal/agent/settings`, which accepts only 
 | `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` | agent | OpenAI-compatible endpoint with tool calling (on-prem vLLM, Ollama, Azure OpenAI and so on) |
 | `AGENT_URL` | API | Internal URL of the agent, for example `http://agent:8080` |
 
-The assistant can be switched off in the backoffice under Setup, Settings. It is also off if `AGENT_URL` is not set.
+The assistant can be switched off under Setup › Assistant Settings. It is also off if `AGENT_URL` is not set.
 
 ## On-prem
 
