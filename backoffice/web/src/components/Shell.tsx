@@ -210,14 +210,16 @@ export function Shell({ children }: { children: ReactNode }) {
       <a href="#main" className="mc-skip aegov-btn btn-sm">{t("app.skip")}</a>
       <header className="sticky top-0 z-30 border-b border-aeblack-100 bg-white">
         {/* The logo is always on the left, in Arabic and English: the bar is laid out left to right. */}
-        {/* The menu button sits at the far right in both languages, the reading-start side in Arabic. */}
+        {/* The menu button sits on the reading-start side: the far left in English (before the logo), the far right in Arabic. */}
         <div dir="ltr" className="flex h-16 items-center justify-between gap-2 px-3 sm:h-20 sm:gap-3 sm:px-6">
-          <Brand />
+          <div className="flex min-w-0 items-center gap-1">
+            {dir === "ltr" && menu}
+            <Brand />
+          </div>
           <div dir={dir} className="flex shrink-0 items-center gap-0.5 sm:gap-1">
             {dir === "rtl" && menu}
             <LanguageSwitch />
             <UserMenu />
-            {dir === "ltr" && menu}
           </div>
         </div>
       </header>

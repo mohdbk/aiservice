@@ -24,9 +24,11 @@ for (const [lang, device] of [["ar", "Pixel 7"], ["en", "iPhone 13"], ["ar", "iP
   const menuBtn = await page.locator(`header button[aria-label="${lang === "ar" ? "القائمة" : "Menu"}"]`).boundingBox();
   const group = await page.locator("header > div > div").last().boundingBox();
   if (!(logo && logo.x < vw / 3)) { failed = true; console.error(`FAIL ${lang}: logo not on the left`); }
-  if (!(menuBtn && menuBtn.x + menuBtn.width > vw - 60)) { failed = true; console.error(`FAIL ${lang}: menu button not at the right edge`); }
+  // The menu button is on the reading-start side: the right edge in Arabic, the left edge (before the logo) in English.
+  const menuOk = lang === "ar" ? menuBtn && menuBtn.x + menuBtn.width > vw - 60 : menuBtn && logo && menuBtn.x < 60 && menuBtn.x + menuBtn.width <= logo.x + 1;
+  if (!menuOk) { failed = true; console.error(`FAIL ${lang}: menu button not at the ${lang === "ar" ? "right" : "left"} edge`); }
   if (!(logo && group && logo.x + logo.width <= group.x + 1)) { failed = true; console.error(`FAIL ${lang}: header items overlap the logo`); }
-  else console.log(`ok   ${lang}: header (logo left, menu right, no overlap)`);
+  else console.log(`ok   ${lang}: header (logo left, menu ${lang === "ar" ? "right" : "left"}, no overlap)`);
   await page.locator(".mh-assistant-fab").click();
   const box = page.locator(".mh-chat-drawer textarea");
   await box.fill(lang === "ar" ? "ما الوظائف المفتوحة؟" : "Which jobs are open?");
