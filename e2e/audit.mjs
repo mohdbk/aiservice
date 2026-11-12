@@ -88,7 +88,7 @@ for (const [view, opts] of Object.entries(VIEWS)) {
     test && ["test", `/tests/${test.id}`], ["questions", "/questions"], question && ["question", `/questions/${question.id}`], ["invitations", "/invitations"],
     attempt && ["marking", `/marking/${attempt.id}`], ["role_profiles", "/role-profiles"], ["assistant", "/assistant"],
     ["departments", "/setup/departments"], ["rounds", "/setup/rounds"], ["settings", "/setup/settings"], ["portal_text", "/setup/portal-text"],
-    ["email_templates", "/setup/email-templates"], ["offer_templates", "/setup/offer-templates"], ["components", "/setup/components"], ["component_new", "/setup/components/new"],
+    ["email_templates", "/setup/email-templates"], ["document_templates", "/setup/document-templates"], ["components", "/setup/components"], ["component_new", "/setup/components/new"],
     ["staff", "/setup/staff"], ["email_server", "/setup/email-server"], ["agent_settings", "/setup/assistant"], ["email_log", "/setup/email-log"],
     ["password", "/password"],
   ].filter(Boolean);

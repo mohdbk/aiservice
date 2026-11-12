@@ -1,6 +1,6 @@
 import { Checkbox, Dialog, Menu, Switch, Tabs } from "@base-ui/react";
 import {
-  ArrowClockwise, CaretDown, Check, CircleNotch, Info, ListBullets, ListNumbers, MagicWand, TextB, TextItalic, Warning, X,
+  ArrowClockwise, CaretDown, Check, CircleNotch, Info, ListBullets, ListNumbers, MagicWand, Paragraph, TextB, TextH, TextItalic, Warning, X,
 } from "@phosphor-icons/react";
 import { ReactNode, forwardRef, useEffect, useId, useRef, useState } from "react";
 import { ApiError, useLang } from "../core";
@@ -173,7 +173,9 @@ export function Tick({ label, checked, onChange }: { label: ReactNode; checked: 
 }
 
 /** Small rich text editor for job descriptions and instructions (the server cleans the HTML). */
-export function RichText({ label, hint, value, onChange, dir }: { label: ReactNode; hint?: ReactNode; value: string; onChange: (v: string) => void; dir: "rtl" | "ltr" }) {
+export function RichText({ label, hint, value, onChange, dir, headings = false, after }: {
+  label: ReactNode; hint?: ReactNode; value: string; onChange: (v: string) => void; dir: "rtl" | "ltr"; headings?: boolean; after?: ReactNode;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const id = useId();
   useEffect(() => {
@@ -194,10 +196,13 @@ export function RichText({ label, hint, value, onChange, dir }: { label: ReactNo
           <button type="button" className={tool} onClick={() => cmd("italic")} aria-label="Italic"><TextItalic size={20} /></button>
           <button type="button" className={tool} onClick={() => cmd("insertUnorderedList")} aria-label="Bullet list"><ListBullets size={20} /></button>
           <button type="button" className={tool} onClick={() => cmd("insertOrderedList")} aria-label="Numbered list"><ListNumbers size={20} /></button>
+          {headings && <button type="button" className={tool} onClick={() => { document.execCommand("formatBlock", false, "h2"); onChange(ref.current?.innerHTML || ""); ref.current?.focus(); }} aria-label="Heading"><TextH size={20} /></button>}
+          {headings && <button type="button" className={tool} onClick={() => { document.execCommand("formatBlock", false, "p"); onChange(ref.current?.innerHTML || ""); ref.current?.focus(); }} aria-label="Paragraph"><Paragraph size={20} /></button>}
         </div>
         <div ref={ref} dir={dir} contentEditable role="textbox" aria-multiline="true" aria-labelledby={id} className="mh-editor mc-prose"
-          onInput={(e) => onChange((e.target as HTMLDivElement).innerHTML)} suppressContentEditableWarning />
+          onInput={(e) => onChange((e.currentTarget as HTMLDivElement).innerHTML)} suppressContentEditableWarning />
       </div>
+      {after}
       {hint && <p className="mh-ui mt-1 text-xs text-aeblack-500">{hint}</p>}
     </div>
   );
@@ -452,6 +457,43 @@ export function PlaceholderText({ label, hint, lang, value, onChange, placeholde
           ? <h3 key={i} className="mb-3 text-lg font-bold">{para.trim().slice(2)}</h3>
           : <p key={i} className="mb-3 whitespace-pre-line last:mb-0">{para}</p>)}
       </div>
+    </div>
+  );
+}
+
+/** Placeholder chips for a rich text editor: clicking one types {placeholder} where the cursor is (the editor keeps focus). */
+function RichChips({ placeholders }: { placeholders: string[] }) {
+  const { t } = useLang();
+  if (placeholders.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label={t("mail.placeholders")}>
+      {placeholders.map((p) => (
+        <button key={p} type="button" dir="ltr" onMouseDown={(e) => e.preventDefault()} onClick={() => document.execCommand("insertText", false, `{${p}}`)}
+          className="rounded-md bg-aeblack-50 px-2 py-1 font-mono text-xs text-aeblack-700 hover:bg-primary-50 hover:text-primary-800">{`{${p}}`}</button>
+      ))}
+    </div>
+  );
+}
+
+/** Plain text turned into simple HTML (paragraphs, line breaks, "# " headings), to start a designed version from. */
+export function textToHtml(text: string) {
+  const esc = (x: string) => x.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return text.split(/\n\s*\n/).filter((p) => p.trim()).map((p) => (p.trim().startsWith("# ")
+    ? `<h2>${esc(p.trim().slice(2))}</h2>` : `<p>${esc(p).replace(/\n/g, "<br>")}</p>`)).join("");
+}
+
+/**
+ * One language of a template: the plain text (always kept, for mail clients that show text only and as the fallback) and,
+ * when switched on, a designed HTML version with headings, bold and lists.
+ */
+export function TemplateBody({ lang, text, html, designed, onText, onHtml, placeholders, textLabel, htmlLabel, hint, rows = 10, sample }: {
+  lang: Bilingual; text: string; html: string; designed: boolean; onText: (v: string) => void; onHtml: (v: string) => void; placeholders: string[];
+  textLabel: ReactNode; htmlLabel: ReactNode; hint?: ReactNode; rows?: number; sample?: (x: string) => string;
+}) {
+  return (
+    <div className="space-y-4">
+      {designed && <RichText label={htmlLabel} dir={lang === "ar" ? "rtl" : "ltr"} headings value={html} onChange={onHtml} after={<RichChips placeholders={placeholders} />} />}
+      <PlaceholderText label={textLabel} hint={hint} lang={lang} value={text} onChange={onText} placeholders={placeholders} rows={designed ? 6 : rows} sample={sample} />
     </div>
   );
 }

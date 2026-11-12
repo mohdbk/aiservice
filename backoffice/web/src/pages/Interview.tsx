@@ -1,4 +1,5 @@
-import { CalendarBlank, MapPin, PencilSimple, Star } from "@phosphor-icons/react";
+import { CalendarBlank, FileText, MapPin, PencilSimple, Star } from "@phosphor-icons/react";
+import { DocumentDialog } from "../components/DocumentDialog";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ActionMenu, Badge, Button, Card, Empty, ErrorState, Loading, PageHeader, SelectInput, TextArea, useSaving } from "../components/ui";
@@ -22,6 +23,7 @@ export default function Interview() {
   const { data, error, loading, reload } = useAsync(() => api<Detail>(`/interviews/${id}`), [id]);
   const lookups = useLookups();
   const [edit, setEdit] = useState(false);
+  const [letter, setLetter] = useState(false);
   const [rec, setRec] = useState("Cleared");
   const [comments, setComments] = useState("");
   const [ratings, setRatings] = useState<Record<string, number>>({});
@@ -52,10 +54,12 @@ export default function Interview() {
         subtitle={<span className="flex flex-wrap items-center gap-2">{i.round.name} · {i.applicant.job_title} <Badge tone={intTone(i.status)}>{t(`int.status.${i.status}`)}</Badge></span>}
         actions={<>
           <Button variant="outline" size="sm" onClick={() => setEdit(true)} icon={<PencilSimple size={20} aria-hidden="true" />}>{t("common.edit")}</Button>
+          <Button variant="outline" size="sm" onClick={() => setLetter(true)} icon={<FileText size={20} aria-hidden="true" />}>{t("int.letter")}</Button>
           <ActionMenu label={t("common.status")} items={["Scheduled", "UnderReview", "Cleared", "Rejected", "Cancelled"].filter((s) => s !== i.status)
             .map((s) => ({ label: t(`int.status.${s}`), onClick: () => save(`/interviews/${i.id}/status`, { status: s }) }))} />
         </>}
       />
+      {letter && <DocumentDialog kind="InterviewLetter" recordId={i.id} title={t("int.letter")} onClose={() => setLetter(false)} />}
       {act.error && <div className="mb-4"><ErrorState error={act.error} /></div>}
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="space-y-6 xl:col-span-2">

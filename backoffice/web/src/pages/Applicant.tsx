@@ -1,9 +1,10 @@
-import { ArrowClockwise, CalendarPlus, DownloadSimple, Envelope, Exam, Handshake, Phone } from "@phosphor-icons/react";
+import { ArrowClockwise, CalendarPlus, DownloadSimple, Envelope, Exam, FileText, Handshake, Phone } from "@phosphor-icons/react";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ActionMenu, Badge, Button, Card, Empty, ErrorState, Loading, Modal, Note, PageHeader, Score, SectionTabs, SelectInput, Table, TextArea, TextInput, Tick, useSaving,
 } from "../components/ui";
+import { DocumentDialog } from "../components/DocumentDialog";
 import { TraitProfile, parseProfile, type PersonalitySummary } from "../components/personality";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
 import { appTone, screenTone } from "./Applicants";
@@ -41,7 +42,7 @@ export default function Applicant() {
   const { data, error, loading, reload } = useAsync(() => api<Detail>(`/applicants/${id}`), [id]);
   const lookups = useLookups();
   const [tab, setTab] = useState("overview");
-  const [dialog, setDialog] = useState<"" | "interview" | "offer" | "invite" | "reexam">("");
+  const [dialog, setDialog] = useState<"" | "interview" | "offer" | "invite" | "reexam" | "document">("");
   const [reexamFor, setReexamFor] = useState<number | null>(null);
   const [note, setNote] = useState("");
   const act = useSaving();
@@ -78,9 +79,11 @@ export default function Applicant() {
           }))} />
           <Button variant="outline" size="sm" onClick={() => setDialog("invite")} icon={<Exam size={20} aria-hidden="true" />}>{t("app.invite")}</Button>
           <Button variant="outline" size="sm" onClick={() => setDialog("interview")} icon={<CalendarPlus size={20} aria-hidden="true" />}>{t("app.schedule")}</Button>
+          <Button variant="outline" size="sm" onClick={() => setDialog("document")} icon={<FileText size={20} aria-hidden="true" />}>{t("app.letter")}</Button>
           <Button size="sm" onClick={() => setDialog("offer")} icon={<Handshake size={20} aria-hidden="true" />}>{t("app.make_offer")}</Button>
         </>}
       />
+      {dialog === "document" && <DocumentDialog kind="ApplicantLetter" recordId={a.id} title={t("app.letter")} onClose={() => setDialog("")} />}
       {act.error && <div className="mb-4"><ErrorState error={act.error} /></div>}
       <SectionTabs value={tab} onChange={setTab} tabs={[
         { value: "overview", label: t("app.overview") }, { value: "cv", label: t("app.cv") },
@@ -330,7 +333,7 @@ export function OfferDialog({ open, onClose, onSave, busy, defaultTitle, initial
   const today = new Date().toISOString().slice(0, 10);
   const [f, setF] = useState(initial || { position_title: defaultTitle, offer_date: today, start_date: "", monthly_salary: null as number | null, currency: "AED", terms: "", offer_template_id: null as number | null });
   // Letter templates: the default is used when none is picked.
-  const templates = useAsync(() => (open ? api<{ items: { id: number; name_ar: string; name_en: string; is_default: boolean }[] }>("/offer-templates?active=true") : Promise.resolve({ items: [] })), [open]);
+  const templates = useAsync(() => (open ? api<{ items: { id: number; name_ar: string; name_en: string; is_default: boolean }[] }>("/document-templates?kind=OfferLetter&active=true") : Promise.resolve({ items: [] })), [open]);
   const set = (k: string, v: unknown) => setF((x) => ({ ...x, [k]: v }));
   return (
     <Modal open={open} onClose={onClose} title={t("app.make_offer")} footer={<>

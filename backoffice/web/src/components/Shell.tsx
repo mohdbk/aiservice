@@ -24,7 +24,6 @@ function useNav(): { group?: string; items: Item[] }[] {
         { to: "/applicants", label: t("nav.applicants"), icon: i(Users) },
         { to: "/interviews", label: t("nav.interviews"), icon: i(CalendarCheck) },
         { to: "/offers", label: t("nav.offers"), icon: i(Handshake) },
-        { to: "/setup/offer-templates", label: t("nav.offer_templates"), icon: i(Scroll), admin: true },
       ],
     },
     {
@@ -52,6 +51,7 @@ function useNav(): { group?: string; items: Item[] }[] {
         { to: "/setup/settings", label: t("nav.settings"), icon: i(Gear), admin: true },
         { to: "/setup/portal-text", label: t("nav.portal_text"), icon: i(Translate), admin: true },
         { to: "/setup/email-templates", label: t("nav.email_templates"), icon: i(EnvelopeSimple), admin: true },
+        { to: "/setup/document-templates", label: t("nav.document_templates"), icon: i(Scroll), admin: true },
       ],
     },
     {

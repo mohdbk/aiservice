@@ -2,8 +2,8 @@ import { ArrowClockwise, EnvelopeSimple, FloppyDisk, PaperPlaneTilt, Plus, Trash
 import { useEffect, useState } from "react";
 import { DataTable, useList } from "../components/DataTable";
 import {
-  ActionMenu, Badge, Bilingual, Button, Card, Empty, ErrorState, FlagLabel, LangSwitch, Loading, Modal, Note, PageHeader, PlaceholderText, Row, RowList, SectionTabs,
-  TextArea, TextInput, Toggle, useSaving,
+  ActionMenu, Badge, Bilingual, Button, Card, Empty, ErrorState, FlagLabel, LangSwitch, Loading, Modal, Note, PageHeader, Row, RowList, SectionTabs,
+  TemplateBody, TextArea, TextInput, Toggle, textToHtml, useSaving,
 } from "../components/ui";
 import { api, useAsync, useAuth, useLang, usePageTitle, useToast } from "../core";
 
@@ -111,7 +111,9 @@ export function EmailServer() {
 type TemplateRow = { id: number; key: string; event: string | null; name_ar: string; name_en: string; subject_ar: string; subject_en: string; is_enabled: boolean; required: boolean };
 type Template = {
   id?: number; key: string; event: string | null; name_ar: string; name_en: string; subject_ar: string; body_ar: string; subject_en: string; body_en: string;
-  is_enabled: boolean; required: boolean; placeholders: string[]; row_version?: string;
+  is_enabled: boolean; required: boolean; placeholders: string[]; row_version?: string; body_html_ar: string; body_html_en: string;
+  /** Editing only: whether the designed HTML version is switched on. */
+  designed?: boolean;
 };
 
 const SAMPLE: Record<string, [string, string]> = {
@@ -125,9 +127,10 @@ function fill(text: string, ar: boolean) {
   return text.replace(/\{([a-z_]+)\}/g, (m, k) => (k === "link" ? "[ ... ]" : SAMPLE[k] ? SAMPLE[k][ar ? 0 : 1] : m));
 }
 
-/** One language's subject and body, with placeholder chips and a preview filled with sample values. */
-function TemplateText({ lang, subject, body, placeholders, onSubject, onBody }: {
-  lang: Bilingual; subject: string; body: string; placeholders: string[]; onSubject: (v: string) => void; onBody: (v: string) => void;
+/** One language's subject and body (plain text, plus the designed HTML when switched on), with a preview filled with sample values. */
+function TemplateText({ lang, subject, body, html, designed, placeholders, onSubject, onBody, onHtml }: {
+  lang: Bilingual; subject: string; body: string; html: string; designed: boolean; placeholders: string[];
+  onSubject: (v: string) => void; onBody: (v: string) => void; onHtml: (v: string) => void;
 }) {
   const { t } = useLang();
   const ar = lang === "ar";
@@ -135,8 +138,9 @@ function TemplateText({ lang, subject, body, placeholders, onSubject, onBody }: 
     <div className="space-y-3">
       <TextInput label={<FlagLabel lang={lang}>{t("mail.subject")}</FlagLabel>} dir={ar ? "rtl" : "ltr"} value={subject} onChange={(e) => onSubject(e.target.value)}
         hint={subject && <span dir={ar ? "rtl" : "ltr"}>{fill(subject, ar)}</span>} />
-      <PlaceholderText label={<FlagLabel lang={lang}>{t("mail.body")}</FlagLabel>} hint={t("mail.body_hint")} lang={lang} value={body} onChange={onBody}
-        placeholders={placeholders} sample={(x) => fill(x, ar)} />
+      <TemplateBody lang={lang} text={body} html={html} designed={designed} onText={onBody} onHtml={onHtml} placeholders={placeholders}
+        textLabel={<FlagLabel lang={lang}>{designed ? t("mail.body_text") : t("mail.body")}</FlagLabel>} htmlLabel={<FlagLabel lang={lang}>{t("mail.body_html")}</FlagLabel>}
+        hint={designed ? t("mail.body_text_hint") : t("mail.body_hint")} sample={(x) => fill(x, ar)} />
     </div>
   );
 }
@@ -150,10 +154,11 @@ export function EmailTemplates() {
   const [f, setF] = useState<Template | null>(null);
   const [testing, setTesting] = useState(false);
   const { busy, error, run } = useSaving();
-  const open = async (id: number) => { const x = await run(() => api<Template>(`/email-templates/${id}`)); if (x) setF(x); };
+  const open = async (id: number) => { const x = await run(() => api<Template>(`/email-templates/${id}`)); if (x) setF({ ...x, designed: !!(x.body_html_ar || x.body_html_en) }); };
   const save = async () => {
     if (!f) return;
-    if (await run(() => api(f.id ? `/email-templates/${f.id}` : "/email-templates", { method: f.id ? "PUT" : "POST", body: f })) !== undefined) {
+    const body = { ...f, body_html_ar: f.designed ? f.body_html_ar : "", body_html_en: f.designed ? f.body_html_en : "" };
+    if (await run(() => api(f.id ? `/email-templates/${f.id}` : "/email-templates", { method: f.id ? "PUT" : "POST", body })) !== undefined) {
       toast(t("common.saved"));
       setF(null);
       list.reload();
@@ -182,7 +187,7 @@ export function EmailTemplates() {
   return (
     <>
       <PageHeader title={t("nav.email_templates")} subtitle={t("mail.templates_intro")} actions={
-        <Button onClick={() => setF({ key: "", event: null, name_ar: "", name_en: "", subject_ar: "", body_ar: "", subject_en: "", body_en: "", is_enabled: true, required: false,
+        <Button onClick={() => setF({ key: "", event: null, name_ar: "", name_en: "", subject_ar: "", body_ar: "", subject_en: "", body_en: "", body_html_ar: "", body_html_en: "", is_enabled: true, required: false,
           placeholders: ["name", "job_title", "reference"] })} icon={<Plus size={24} aria-hidden="true" />}>{t("common.add")}</Button>} />
       {!list.data?.email_ready && <div className="mb-4"><Note tone="warning">{t("mail.not_ready")}</Note></div>}
       {error && !f && <div className="mb-4"><ErrorState error={error} /></div>}
@@ -205,11 +210,16 @@ export function EmailTemplates() {
           </div>
           {!f.event && <TextInput label={t("mail.key")} hint={t("mail.key_hint")} dir="ltr" value={f.key} onChange={(e) => setF({ ...f, key: e.target.value })} />}
           <Toggle label={t("mail.enabled")} hint={f.required ? t("mail.required_hint") : undefined} checked={f.is_enabled} onChange={(v) => !f.required && setF({ ...f, is_enabled: v })} />
+          <Toggle label={t("mail.designed")} hint={t("mail.designed_hint")} checked={!!f.designed} onChange={(v) => setF({
+            ...f, designed: v,
+            // Start the designed version from the plain text.
+            body_html_ar: v && !f.body_html_ar ? textToHtml(f.body_ar) : f.body_html_ar, body_html_en: v && !f.body_html_en ? textToHtml(f.body_en) : f.body_html_en,
+          })} />
           <div className="grid gap-6 xl:grid-cols-2">
-            <TemplateText lang="ar" subject={f.subject_ar} body={f.body_ar} placeholders={f.placeholders}
-              onSubject={(v) => setF({ ...f, subject_ar: v })} onBody={(v) => setF({ ...f, body_ar: v })} />
-            <TemplateText lang="en" subject={f.subject_en} body={f.body_en} placeholders={f.placeholders}
-              onSubject={(v) => setF({ ...f, subject_en: v })} onBody={(v) => setF({ ...f, body_en: v })} />
+            <TemplateText lang="ar" subject={f.subject_ar} body={f.body_ar} html={f.body_html_ar} designed={!!f.designed} placeholders={f.placeholders}
+              onSubject={(v) => setF({ ...f, subject_ar: v })} onBody={(v) => setF({ ...f, body_ar: v })} onHtml={(v) => setF((x) => x && { ...x, body_html_ar: v })} />
+            <TemplateText lang="en" subject={f.subject_en} body={f.body_en} html={f.body_html_en} designed={!!f.designed} placeholders={f.placeholders}
+              onSubject={(v) => setF({ ...f, subject_en: v })} onBody={(v) => setF({ ...f, body_en: v })} onHtml={(v) => setF((x) => x && { ...x, body_html_en: v })} />
           </div>
         </Modal>
       )}
@@ -228,12 +238,12 @@ export function EmailLog() {
   const toast = useToast();
   const list = useList<LogRow>("/email-log", ["status"]);
   const status = list.get("status");
-  const [shown, setShown] = useState<{ subject: string; to: string; html: string } | null>(null);
+  const [shown, setShown] = useState<{ subject: string; to: string; html: string; text?: string } | null>(null);
   const act = useSaving();
   const retry = async (id: number) => {
     if (await act.run(() => api(`/email-log/${id}/retry`, { body: {} })) !== undefined) { toast(t("mail.requeued")); list.reload(); }
   };
-  const view = async (id: number) => { const m = await act.run(() => api<{ subject: string; to: string; html: string }>(`/email-log/${id}`)); if (m) setShown(m); };
+  const view = async (id: number) => { const m = await act.run(() => api<{ subject: string; to: string; html: string; text?: string }>(`/email-log/${id}`)); if (m) setShown(m); };
   const tone = (s: string) => (s === "Sent" ? "green" : s === "Failed" ? "red" : "amber");
   return (
     <>
@@ -256,7 +266,13 @@ export function EmailLog() {
       {shown && (
         <Modal open onClose={() => setShown(null)} title={shown.subject} footer={<Button variant="outline" onClick={() => setShown(null)}>{t("common.close")}</Button>}>
           <p className="inline-flex items-center gap-2 text-sm text-aeblack-600"><EnvelopeSimple size={24} aria-hidden="true" /><span dir="ltr">{shown.to}</span></p>
-          <div className="max-h-[60vh] overflow-auto rounded-xl border border-aeblack-100 bg-white p-4" dangerouslySetInnerHTML={{ __html: shown.html }} />
+          <div className="max-h-[50vh] overflow-auto rounded-xl border border-aeblack-100 bg-white p-4" dangerouslySetInnerHTML={{ __html: shown.html }} />
+          {shown.text && (
+            <details className="rounded-xl bg-whitely-100 p-3 text-sm">
+              <summary className="cursor-pointer font-semibold">{t("mail.text_part")}</summary>
+              <pre className="mt-2 whitespace-pre-wrap font-sans" dir="auto">{shown.text}</pre>
+            </details>
+          )}
         </Modal>
       )}
     </>
