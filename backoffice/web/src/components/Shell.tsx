@@ -1,8 +1,7 @@
 import { Dialog, Menu } from "@base-ui/react";
 import {
   Briefcase, CalendarCheck, CaretDown, ChatCircleDots, ClipboardText, Exam, FileText, Gear, Handshake, Key, List, ListChecks,
-  Cube, EnvelopeSimple, HardDrives, Robot, Scroll, SignOut, SquaresFour, Target, Tray, Translate, TreeStructure, UserCircle, Users, UsersThree, X, Brain, ChartBar, ClockCounterClockwise, Pulse, ChartLine, ShieldCheck, ChatText, UsersFour, ArrowsLeftRight, MapPin,
-} from "@phosphor-icons/react";
+  Cube, EnvelopeSimple, HardDrives, Robot, Scroll, SignOut, SquaresFour, Target, Tray, Translate, TreeStructure, UserCircle, Users, UsersThree, X, Brain, ChartBar, ClockCounterClockwise, Pulse, ChartLine, ShieldCheck, ChatText, UsersFour, ArrowsLeftRight, MapPin, Stamp } from "@phosphor-icons/react";
 import { ReactNode, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { api, useAuth, useLang } from "../core";
@@ -25,6 +24,8 @@ function useNav(): { group?: string; items: Item[] }[] {
         { to: "/interviews", label: t("nav.interviews"), icon: i(CalendarCheck) },
         { to: "/offers", label: t("nav.offers"), icon: i(Handshake) },
         { to: "/talent-pool", label: t("nav.talent_pool"), icon: i(UsersFour) },
+        { to: "/requisitions", label: t("nav.requisitions"), icon: i(ClipboardText) },
+        { to: "/approvals", label: t("nav.approvals"), icon: i(Stamp) },
       ],
     },
     {

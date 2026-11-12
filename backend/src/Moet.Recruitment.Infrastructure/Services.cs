@@ -44,6 +44,8 @@ public sealed class HttpCurrentActor(IHttpContextAccessor http) : ICurrentActor
         }
     }
 
+    public bool IsAdmin => Type == ActorType.Staff && http.HttpContext!.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value is "RecruitmentAdmin" or "Administrator";
+
     public int? Id => Type == ActorType.Staff && int.TryParse(http.HttpContext!.User.FindFirst("sid")?.Value, out var id) ? id : null;
 
     public string Name => Type switch
@@ -92,6 +94,7 @@ public sealed class SqlCodeGenerator(AppDbContext db, IClock clock) : ICodeGener
             CodeKind.JobApplication => ("hiring.JobApplicationCode", "APP", 5, true),
             CodeKind.Interview => ("hiring.InterviewCode", "INT", 5, true),
             CodeKind.JobOffer => ("hiring.JobOfferCode", "OFR", 4, true),
+            CodeKind.Requisition => ("hiring.RequisitionCode", "REQ", 4, true),
             _ => ("assessment.InvitationCode", "ASM", 5, false),
         };
         // Not composed (SingleAsync would wrap it in a subquery, where NEXT VALUE FOR is not allowed).

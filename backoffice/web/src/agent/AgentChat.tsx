@@ -1,4 +1,4 @@
-import { ArrowCircleUp, ChatCircleDots, CheckCircle, CircleNotch, ClockCounterClockwise, File as FileIcon, Lightbulb, Paperclip, Plus, ShareNetwork, StopCircle, Trash, X } from "@phosphor-icons/react";
+import { ArrowBendDownRight, ArrowCircleUp, ChatCircleDots, CheckCircle, CircleNotch, ClockCounterClockwise, File as FileIcon, Lightbulb, Paperclip, Plus, ShareNetwork, StopCircle, Trash, X } from "@phosphor-icons/react";
 import { FormEvent, ReactElement, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Button, Empty, ErrorState, Loading, Modal, Note } from "../components/ui";
@@ -8,7 +8,7 @@ import { AgEvent, AgMessage, newId, parseToolResult, runAgent } from "./agui";
 
 type Tool = { id: string; name: string; done: boolean };
 /** One chat turn. Hidden user turns carry A2UI action events (Submit, Approve, Cancel) to the agent. */
-type Turn = { id: string; role: "user" | "assistant"; text: string; hidden?: boolean; tools?: Tool[]; surfaces?: string[] };
+type Turn = { id: string; role: "user" | "assistant"; text: string; hidden?: boolean; tools?: Tool[]; surfaces?: string[]; next?: string[] };
 type Saved = { thread: string; turns: Turn[]; surfaces: A2Surfaces };
 type Info = { is_enabled: boolean; examples_ar: string; examples_en: string; history_turns: number };
 type Suggestion = { key: string; count: number; text_ar: string; text_en: string; ask_ar: string; ask_en: string };
@@ -222,6 +222,12 @@ export function AgentChat({ panel = false }: { panel?: boolean }) {
           const ev = e as { toolCallId: string; content: string };
           const result = parseToolResult(ev.content);
           const a2ui = result && Array.isArray(result.a2ui) ? result.a2ui : null;
+          // Suggested next steps: shown as buttons under the reply (not as a tool step).
+          if (result && Array.isArray(result.next_actions)) {
+            const next = (result.next_actions as unknown[]).filter((x): x is string => typeof x === "string" && x.trim().length > 0).slice(0, 4);
+            patch((r) => ({ next, tools: r.tools?.filter((x) => x.id !== ev.toolCallId) }));
+            break;
+          }
           let touched: string[] = [];
           patch(
             (r) => ({ tools: r.tools?.map((x) => (x.id === ev.toolCallId ? { ...x, done: true } : x)), surfaces: [...new Set([...(r.surfaces ?? []), ...touched])] }),
@@ -341,7 +347,7 @@ export function AgentChat({ panel = false }: { panel?: boolean }) {
                 {m.role === "assistant" && <ChatCircleDots size={20} className="mb-1 text-primary-600" aria-hidden="true" />}
                 {m.tools && m.tools.length > 0 && (
                   <ul className={`flex flex-wrap gap-2 ${m.text.trim() || m.surfaces?.length ? "mb-2" : "mb-0"}`} aria-label={t("asst.thinking")}>
-                    {m.tools.map((x) => (
+                    {m.tools.filter((x) => x.name !== "suggest_next_actions").map((x) => (
                       <li key={x.id} className="inline-flex items-center gap-1 rounded-full bg-whitely-100 px-3 py-1 text-xs text-aeblack-600">
                         {x.done ? <CheckCircle size={16} className="text-aegreen-600" aria-hidden="true" /> : <CircleNotch size={16} className="animate-spin" aria-hidden="true" />}
                         {t(`asst.tool.${x.name}`) === `asst.tool.${x.name}` ? x.name : t(`asst.tool.${x.name}`)}
@@ -353,6 +359,19 @@ export function AgentChat({ panel = false }: { panel?: boolean }) {
                 {m.role === "user" ? <UserText text={m.text} /> : m.text.trim() && <Markdown text={m.text} />}
                 {m.surfaces?.map((id) => state.surfaces[id] && <A2Surface key={id} surface={state.surfaces[id]} busy={acting === id} onAction={onAction} emptyText={t("common.choose")}
                   onData={(sid, path, value) => setState((s) => ({ ...s, surfaces: writeData(s.surfaces, sid, path, value) }))} />)}
+                {m.role === "assistant" && m.next && m.next.length > 0 && m.id === visible[visible.length - 1]?.id && !running && (
+                  <div className="mt-3 border-t border-aeblack-100 pt-3">
+                    <p className="mb-2 text-xs font-semibold text-aeblack-500">{t("asst.next")}</p>
+                    <ul className="flex flex-wrap gap-2">
+                      {m.next.map((q) => (
+                        <li key={q}><button type="button" onClick={() => ask(q)} dir="auto"
+                          className="inline-flex items-center gap-1 rounded-full border border-primary-200 bg-primary-50 px-3 py-1.5 text-start text-xs font-semibold text-primary-800 hover:bg-primary-100 focus-visible:outline-2">
+                          <ArrowBendDownRight size={14} className="shrink-0 rtl:-scale-x-100" aria-hidden="true" />{q}
+                        </button></li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
           ))}

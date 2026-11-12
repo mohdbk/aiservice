@@ -24,6 +24,8 @@ import RoleProfiles from "./pages/RoleProfiles";
 import Reports from "./pages/Reports";
 import { AssistantUsage, AuditLog, DataProtection, HandOffSettings, HealthPage, TextMessages } from "./pages/System";
 import TalentPool from "./pages/TalentPool";
+import Approvals from "./pages/Approvals";
+import Requisitions from "./pages/Requisitions";
 import PersonalitySettings from "./pages/PersonalitySettings";
 import Screening from "./pages/Screening";
 import { Departments, Locations, Password, PortalText, Rounds, Settings, Staff } from "./pages/Setup";
@@ -85,6 +87,8 @@ function Guarded() {
         <Route path="setup/texts" element={<TextMessages />} />
         <Route path="setup/handoff" element={<HandOffSettings />} />
         <Route path="talent-pool" element={<TalentPool />} />
+        <Route path="approvals" element={<Approvals />} />
+        <Route path="requisitions" element={<Requisitions />} />
         <Route path="setup/components/:id" element={<ComponentEdit />} />
         <Route path="*" element={<Navigate to={`/${lang}`} replace />} />
       </Routes>

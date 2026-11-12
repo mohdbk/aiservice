@@ -14,7 +14,7 @@ public class AgentSetting
         "propose_draft_job", "propose_english_suggestion", "read_attachment", "get_hiring_report", "search_talent_pool", "list_interview_times",
         "list_role_profiles", "get_personality_settings", "list_document_templates", "get_document", "get_system_health", "get_assistant_usage",
         "list_data_requests", "get_audit_log", "propose_interview_times", "propose_talent_invite", "propose_offer_status", "propose_interview_status",
-        "propose_job_selection",
+        "propose_job_selection", "suggest_next_actions",
     ];
 
     public byte Id { get; set; } = 1;

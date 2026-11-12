@@ -46,6 +46,15 @@ public static class AgentSetup
         - After finding people, call show_applicants to show them as cards, or compare_applicants to compare 2 to 5.
           The cards are drawn in the chat, so do not repeat every detail in text; add a short conclusion.
 
+        Next steps
+        - End every answer that finishes a task (not a form, a question to the user or an approval card) by calling
+          suggest_next_actions with 2 to 4 next steps that follow from it and that your tools can do for this user: for example after
+          ranking, "Compare the top 3" or "Show the CV summary of <name>"; after a profile, "Schedule an interview for <name>" or
+          "Invite <name> to a test"; after an accepted interview, "Draft an offer for <name>". Name the person or job, use the user's
+          language, and only suggest changes as proposals (they still need approval). Do not repeat the steps in your text.
+        - With many results (hundreds or thousands of applicants), say the total, show the first page, and suggest narrowing
+          steps (a job, a status, a minimum score, a skill in the CV) rather than reading everything.
+
         Asking for details
         - When you need details from the user (choices, dates, numbers), show a form instead of asking in text:
           first check list_components for a form an admin designed; otherwise use ask_user. Pre-fill what you know and

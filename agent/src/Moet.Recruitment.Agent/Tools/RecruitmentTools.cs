@@ -31,6 +31,7 @@ public sealed class RecruitmentTools(BackofficeApi api)
         AIFunctionFactory.Create(GetLookups, "get_lookups"),
         AIFunctionFactory.Create(GetDashboard, "get_dashboard"),
         AIFunctionFactory.Create(ShowApplicants, "show_applicants"),
+        AIFunctionFactory.Create(SuggestNextActions, "suggest_next_actions"),
         AIFunctionFactory.Create(CompareApplicants, "compare_applicants"),
         AIFunctionFactory.Create(AskUser, "ask_user"),
         AIFunctionFactory.Create(ListComponents, "list_components"),
@@ -149,7 +150,7 @@ public sealed class RecruitmentTools(BackofficeApi api)
     public Task<JsonElement> SearchTalentPool([Description("Words in their CVs, for example a skill")] string? cvText = null,
         [Description("Leave out those who already applied to this job id")] int? notAppliedToJobId = null, [Description("Name or email")] string? search = null,
         int page = 1, CancellationToken ct = default) =>
-        Read("talent-pool?" + Q(("cv", cvText), ("job", notAppliedToJobId?.ToString(CultureInfo.InvariantCulture)), ("q", search), ("page", page.ToString(CultureInfo.InvariantCulture)), ("size", "20")), ct);
+        Read("talent-pool?" + Q(("cv", cvText), ("job", notAppliedToJobId?.ToString(CultureInfo.InvariantCulture)), ("q", search), ("page", page.ToString(CultureInfo.InvariantCulture)), ("size", "12")), ct);
 
     [Description("Interview times offered to an applicant to choose from, and whether they picked one.")]
     public Task<JsonElement> ListInterviewTimes(int applicantId, CancellationToken ct = default) => Read($"applicants/{applicantId}/bookings", ct);
@@ -181,6 +182,15 @@ public sealed class RecruitmentTools(BackofficeApi api)
         Read("audit?" + Q(("record", record), ("key", key), ("q", search), ("size", "25")), ct);
 
     // ---------------- show (A2UI) ----------------
+
+    [Description("Shows 2 to 4 follow-up requests as buttons under your reply. Each is a short request the user could send next, in the user's language, that you can carry out with your tools for the records just discussed (for example: compare the top 3, schedule an interview for Sara, invite her to a test, draft the offer). Pressing one sends it as the user's next message.")]
+    public JsonElement SuggestNextActions([Description("2 to 4 short requests, written as the user would ask, naming the record (person, job) they apply to")] string[] actions)
+    {
+        var clean = actions.Select(a => NoDash(a ?? "").Trim()).Where(a => a.Length is > 0 and <= 120).Distinct().Take(4).ToArray();
+        if (clean.Length == 0) return Error("give_2_to_4_actions");
+        var arr = new JsonArray(clean.Select(a => (JsonNode)JsonValue.Create(a)!).ToArray());
+        return JsonSerializer.SerializeToElement(new JsonObject { ["summary"] = $"Shown {clean.Length} next steps.", ["next_actions"] = arr });
+    }
 
     [Description("Shows applicants as cards in the chat (name, job, status, score, summary, open button). Use after finding people.")]
     public async Task<JsonElement> ShowApplicants([Description("Applicant ids, up to 6")] int[] applicantIds, CancellationToken ct = default)
@@ -631,6 +641,9 @@ public sealed class RecruitmentTools(BackofficeApi api)
     }
 
     static JsonElement Ui(Surface s, string summary) => JsonSerializer.SerializeToElement(new JsonObject { ["summary"] = summary, ["a2ui"] = s.Messages() });
+
+    /// <summary>Em dashes (and spaced en dashes) become commas: they are not used anywhere in the product's text.</summary>
+    static string NoDash(string s) => s.Replace(" " + (char)0x2013 + " ", ", ").Replace(" " + (char)0x2014 + " ", ", ").Replace(((char)0x2014).ToString(), ", ");
 
     static JsonElement Error(string code) => JsonSerializer.SerializeToElement(new { error = code });
 

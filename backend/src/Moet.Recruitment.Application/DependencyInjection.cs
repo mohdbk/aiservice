@@ -47,6 +47,7 @@ public static class DependencyInjection
         s.AddScoped<SystemService>();
         s.AddScoped<DataProtectionService>();
         s.AddScoped<TalentPoolService>();
+        s.AddScoped<ApprovalService>();
         s.AddScoped<BookingService>();
         s.AddScoped<TextService>();
         s.AddScoped<HandOffService>();

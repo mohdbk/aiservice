@@ -17,7 +17,7 @@ public sealed record OfferInput(int ApplicationId, string PositionTitle, string 
     int? OfferTemplateId = null);
 
 public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator codes, ICurrentActor actor, IRequestLanguage language, IClock clock, DocumentService letters,
-    PortalMailer mailer, ContentService content, HandOffService handOff)
+    PortalMailer mailer, ContentService content, HandOffService handOff, ApprovalService approvals)
 {
     static readonly Sorts<Interview> InterviewSorts = new Sorts<Interview>("starts", false)
         .Add("starts", i => i.StartsAt).Add("applicant", i => i.JobApplication!.FullName).Add("round", i => i.InterviewRound!.Name)
@@ -220,7 +220,17 @@ public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator 
     public async Task<object> SetOfferStatusAsync(int id, string? status, CancellationToken ct = default)
     {
         var o = await db.JobOffers.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound();
-        o.MoveTo(BackofficeJobService.Parse<OfferStatus>(status, "status"), clock.UtcNow);
+        var target = BackofficeJobService.Parse<OfferStatus>(status, "status");
+        // Sending may need a recruitment admin's approval: the offer stays a draft and a request goes to the inbox.
+        if (target == OfferStatus.Sent && o.Status == OfferStatus.Draft && await approvals.NeededAsync(ApprovalKind.OfferSend, ct))
+        {
+            var who = await db.JobApplications.AsNoTracking().Where(a => a.Id == o.JobApplicationId).Select(a => a.FullName).FirstOrDefaultAsync(ct);
+            await approvals.RequestAsync(ApprovalKind.OfferSend, o.Id, $"{o.Code} {o.PositionTitle}: {who}",
+                o.MonthlySalary is { } m ? $"{m:0.##} {o.Currency}" : "", ct);
+            await db.SaveChangesAsync(ct);
+            return new { status = o.Status.ToString(), emailed = false, hand_off_queued = false, approval_pending = true };
+        }
+        o.MoveTo(target, clock.UtcNow);
         if (o.Status == OfferStatus.Accepted)
         {
             var app = await db.JobApplications.FirstAsync(a => a.Id == o.JobApplicationId, ct);
@@ -237,6 +247,6 @@ public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator 
             await db.SaveChangesAsync(ct);
             emailed = true;
         }
-        return new { status = o.Status.ToString(), emailed, hand_off_queued = handedOff };
+        return new { status = o.Status.ToString(), emailed, hand_off_queued = handedOff, approval_pending = false };
     }
 }

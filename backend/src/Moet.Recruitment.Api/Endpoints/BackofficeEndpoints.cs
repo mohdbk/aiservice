@@ -79,6 +79,18 @@ public static class BackofficeEndpoints
         staff.MapGet("/reports/hires.csv", async (DateOnly? from, DateOnly? to, HandOffService s, CancellationToken ct) =>
             Results.File(await s.HiresCsvAsync(from, to, ct), "text/csv; charset=utf-8", "hires.csv"));
         staff.MapGet("/talent-pool", ([AsParameters] ListQuery lq, string? cv, int? job, TalentPoolService s, CancellationToken ct) => s.ListAsync(lq, cv, job, ct));
+        staff.MapGet("/approvals", ([AsParameters] ListQuery lq, string? status, ApprovalService s, CancellationToken ct) => s.ListAsync(lq, status, ct));
+        staff.MapPost("/approvals/{id:int}/decide", async (int id, DecisionInput b, ApprovalService s, BackofficeInterviewService offers, CancellationToken ct) =>
+        {
+            var r = await s.DecideAsync(id, b, ct);
+            // An approved offer is sent now (by the approver, so it needs no further approval).
+            if (b.Approve && r.kind == "OfferSend") await offers.SetOfferStatusAsync(r.record_id, "Sent", ct);
+            return r;
+        });
+        staff.MapGet("/requisitions", ([AsParameters] ListQuery lq, string? status, ApprovalService s, CancellationToken ct) => s.RequisitionsAsync(lq, status, ct));
+        staff.MapPost("/requisitions", (RequisitionInput b, ApprovalService s, CancellationToken ct) => s.SaveRequisitionAsync(null, b, ct));
+        staff.MapPut("/requisitions/{id:int}", (int id, RequisitionInput b, ApprovalService s, CancellationToken ct) => s.SaveRequisitionAsync(id, b, ct));
+        staff.MapPost("/requisitions/{id:int}/cancel", (int id, ApprovalService s, CancellationToken ct) => s.CancelRequisitionAsync(id, ct));
         staff.MapPost("/talent-pool/{id:int}/invite", (int id, TalentInviteBody b, TalentPoolService s, CancellationToken ct) => s.InviteAsync(id, b.JobId, ct));
         staff.MapGet("/applicants/{id:int}/cv", async (int id, bool? download, BackofficeApplicantService s, CancellationToken ct) =>
         {
@@ -174,6 +186,8 @@ public static class BackofficeEndpoints
 
         // setup (recruitment admins only)
         var setup = api.MapGroup("").RequireAuthorization(StaffPolicies.Admin);
+        setup.MapGet("/approval-settings", (ApprovalService s, CancellationToken ct) => s.SettingsAsync(ct));
+        setup.MapPut("/approval-settings", (ApprovalSettingsInput b, ApprovalService s, CancellationToken ct) => s.SaveSettingsAsync(b, ct));
         setup.MapGet("/locations", ([AsParameters] ListQuery lq, BackofficeSetupService s, CancellationToken ct) => s.LocationsAsync(lq, ct));
         setup.MapPost("/locations", (LocationInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveLocationAsync(null, b, ct));
         setup.MapPut("/locations/{id:int}", (int id, LocationInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveLocationAsync(id, b, ct));

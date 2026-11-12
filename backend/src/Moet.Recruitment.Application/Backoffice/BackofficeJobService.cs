@@ -22,7 +22,7 @@ public sealed record JobInput(
 /// <summary>Combined selection score weights (percent, adding up to 100).</summary>
 public sealed record SelectionWeightsInput(int Cv, int Tests, int Interview, int Personality);
 
-public sealed class BackofficeJobService(IAppDbContext db, ICodeGenerator codes, ICurrentActor actor, IRequestLanguage language, IClock clock, IHtmlCleaner html, JobQueue jobs)
+public sealed class BackofficeJobService(IAppDbContext db, ICodeGenerator codes, ICurrentActor actor, IRequestLanguage language, IClock clock, IHtmlCleaner html, JobQueue jobs, ApprovalService approvals)
 {
     static readonly Sorts<JobOpening> JobSorts = new Sorts<JobOpening>("created")
         .Add("created", j => j.CreatedAt).Add("code", j => j.Code).Add("title", j => j.Title).Add("status", j => j.Status)
@@ -131,7 +131,9 @@ public sealed class BackofficeJobService(IAppDbContext db, ICodeGenerator codes,
         j.Location = loc?.Name ?? locationText;
         j.EmploymentType = Parse<EmploymentType>(input.EmploymentType, "employment_type");
         j.Status = Parse<JobStatus>(input.Status, "status");
-        j.IsPublished = input.IsPublished;
+        // Publishing may need a recruitment admin's approval: the job stays unpublished and a request goes to the inbox.
+        var approvalNeeded = input.IsPublished && !j.IsPublished && await approvals.NeededAsync(ApprovalKind.JobPublish, ct);
+        j.IsPublished = input.IsPublished && !approvalNeeded;
         j.PostedOn = ParseDate(input.PostedOn) ?? (j.Status == JobStatus.Open ? j.PostedOn ?? clock.Today() : j.PostedOn);
         j.ClosesOn = ParseDate(input.ClosesOn);
         j.SalaryMin = input.SalaryMin;
@@ -177,7 +179,12 @@ public sealed class BackofficeJobService(IAppDbContext db, ICodeGenerator codes,
             });
         j.Validate();
         await db.SaveChangesAsync(ct);
-        return new { id = j.Id, code = j.Code };
+        if (approvalNeeded)
+        {
+            await approvals.RequestAsync(ApprovalKind.JobPublish, j.Id, $"{j.Code} {j.Title}", "", ct);
+            await db.SaveChangesAsync(ct);
+        }
+        return new { id = j.Id, code = j.Code, approval_pending = approvalNeeded };
     }
 
     /// <summary>The job's selection settings only: the role profile (0 for none) and the weights of the combined score.</summary>

@@ -23,6 +23,9 @@ public class PortalSetting
     public Guid? LogoFileId { get; set; }
     public Guid? LogoDarkFileId { get; set; }
     public bool AutoScoreApplications { get; set; } = true;
+    /// <summary>Publishing a job and sending an offer need a recruitment admin's approval when asked for by someone else.</summary>
+    public bool RequireJobApproval { get; set; }
+    public bool RequireOfferApproval { get; set; }
     public DateTime UpdatedAt { get; set; }
     public int? UpdatedByStaffId { get; set; }
 }

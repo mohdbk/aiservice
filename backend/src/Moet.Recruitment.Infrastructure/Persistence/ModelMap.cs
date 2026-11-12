@@ -244,6 +244,8 @@ static class ModelMap
             e.Property(x => x.RowVersion).IsRowVersion();
         });
         m.Entity<DataRequest>(e => e.ToTable("DataRequest", "ops"));
+        m.Entity<ApprovalRequest>(e => e.ToTable("ApprovalRequest", "hiring"));
+        m.Entity<Requisition>(e => e.ToTable("Requisition", "hiring"));
         m.Entity<InterviewBooking>(e =>
         {
             e.ToTable("InterviewBooking", "hiring");

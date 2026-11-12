@@ -175,7 +175,7 @@ public class EndToEndTests
         // Assistant settings: the model key is stored encrypted, never shown, and only the agent service can read it.
         var settings = await Read(await admin.GetAsync("/api/backoffice/agent-settings"));
         Assert.True(settings.GetProperty("is_enabled").GetBoolean());
-        Assert.Equal(42, settings.GetProperty("tools").GetArrayLength());
+        Assert.Equal(43, settings.GetProperty("tools").GetArrayLength());
         var put = new
         {
             is_enabled = true, model_base_url = "http://llm.internal/v1", model_name = "qwen3", api_key = "sk-secret-123", clear_api_key = false,
@@ -469,6 +469,41 @@ public class EndToEndTests
         Assert.Equal(before.GetProperty("total").GetInt32(), after.GetProperty("total").GetInt32());
         Assert.Equal(before.GetProperty("items")[0].GetProperty("full_name").GetString(), after.GetProperty("items")[0].GetProperty("full_name").GetString());
         Assert.True((await admin.GetAsync("/api/backoffice/jobs")).IsSuccessStatusCode);   // the session survived (its keys were restored too)
+
+        // Approvals: with job approval on, a recruiter's publish waits in the inbox until a recruitment admin approves it;
+        // a requisition, once approved, becomes a draft job.
+        Assert.True((await admin.PostAsync("/api/backoffice/staff", JsonBody(new { email = "recruiter@moet.test", full_name = "Recruiter One", role = "Recruiter", is_enabled = true, password = "Recruiter-Password-123" }))).IsSuccessStatusCode);
+        Assert.True((await admin.PutAsync("/api/backoffice/approval-settings", JsonBody(new { require_job_approval = true, require_offer_approval = true }))).IsSuccessStatusCode);
+        var recruiter = app.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
+        recruiter.DefaultRequestHeaders.Add("X-Backoffice", "1");
+        Assert.True((await recruiter.PostAsync("/api/backoffice/sign-in", JsonBody(new { email = "recruiter@moet.test", password = "Recruiter-Password-123" }))).IsSuccessStatusCode);
+        var pending = await Read(await recruiter.PostAsync("/api/backoffice/jobs", JsonBody(new
+        {
+            title = "مدقق", description = "<p>تدقيق</p>", department_id = (int?)null, location = "دبي", employment_type = "FullTime", status = "Open", is_published = true,
+            posted_on = (string?)null, closes_on = (string?)null, salary_min = (decimal?)null, salary_max = (decimal?)null, salary_currency = "AED", salary_period = "Month",
+            show_salary = false, translations = Array.Empty<object>(), screening = Array.Empty<object>(), stages = Array.Empty<object>(), row_version = (string?)null,
+        })));
+        Assert.True(pending.GetProperty("approval_pending").GetBoolean());
+        var pendingJob = pending.GetProperty("id").GetInt32();
+        Assert.False((await Read(await admin.GetAsync($"/api/backoffice/jobs/{pendingJob}"))).GetProperty("is_published").GetBoolean());
+        var inbox = await Read(await admin.GetAsync("/api/backoffice/approvals?status=Pending"));
+        Assert.True(inbox.GetProperty("can_decide").GetBoolean());
+        var request = inbox.GetProperty("items").EnumerateArray().First(a => a.GetProperty("kind").GetString() == "JobPublish" && a.GetProperty("record_id").GetInt32() == pendingJob);
+        Assert.Equal(HttpStatusCode.Forbidden, (await recruiter.PostAsync($"/api/backoffice/approvals/{request.GetProperty("id").GetInt32()}/decide", JsonBody(new { approve = true, comment = "" }))).StatusCode);
+        Assert.True((await admin.PostAsync($"/api/backoffice/approvals/{request.GetProperty("id").GetInt32()}/decide", JsonBody(new { approve = true, comment = "Fine" }))).IsSuccessStatusCode);
+        Assert.True((await Read(await admin.GetAsync($"/api/backoffice/jobs/{pendingJob}"))).GetProperty("is_published").GetBoolean());
+        var req = await Read(await recruiter.PostAsync("/api/backoffice/requisitions", JsonBody(new
+        {
+            title = "باحث اقتصادي", title_en = "Economic Researcher", department_id = (int?)null, location_id = (int?)null, employment_type = "FullTime", grade = "G7",
+            headcount = 2, budget_monthly = 25000m, justification = "New tourism research unit", needed_by = (string?)null,
+        })));
+        var reqApproval = (await Read(await admin.GetAsync("/api/backoffice/approvals?status=Pending"))).GetProperty("items").EnumerateArray()
+            .First(a => a.GetProperty("kind").GetString() == "Requisition" && a.GetProperty("record_id").GetInt32() == req.GetProperty("id").GetInt32());
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsync($"/api/backoffice/approvals/{reqApproval.GetProperty("id").GetInt32()}/decide", JsonBody(new { approve = false, comment = "" }))).StatusCode);
+        var decided = await Read(await admin.PostAsync($"/api/backoffice/approvals/{reqApproval.GetProperty("id").GetInt32()}/decide", JsonBody(new { approve = true, comment = "" })));
+        var draftJob = await Read(await admin.GetAsync($"/api/backoffice/jobs/{decided.GetProperty("job_id").GetInt32()}"));
+        Assert.Equal("Draft", draftJob.GetProperty("status").GetString());
+        Assert.True((await admin.PutAsync("/api/backoffice/approval-settings", JsonBody(new { require_job_approval = false, require_offer_approval = false }))).IsSuccessStatusCode);
 
         // Changes without the X-Admin header are refused.
         var plain = app.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });

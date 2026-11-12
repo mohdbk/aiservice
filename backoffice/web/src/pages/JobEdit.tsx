@@ -83,9 +83,9 @@ export default function JobEdit() {
       screening: job.screening, stages: job.stages, row_version: job.row_version,
       role_profile_id: job.role_profile_id ?? 0, weights: job.weights,
     };
-    const r = await run(() => api<{ id: number }>(isNew ? "/jobs" : `/jobs/${id}`, { method: isNew ? "POST" : "PUT", body }));
+    const r = await run(() => api<{ id: number; approval_pending?: boolean }>(isNew ? "/jobs" : `/jobs/${id}`, { method: isNew ? "POST" : "PUT", body }));
     if (!r) return;
-    toast(t("jobs.saved"));
+    toast(r.approval_pending ? t("approvals.sent_for_approval") : t("jobs.saved"), r.approval_pending ? "info" : "success");
     if (isNew) nav(to(`/jobs/${r.id}`), { replace: true });
     else loaded.reload();
   };

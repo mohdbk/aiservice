@@ -28,7 +28,7 @@ export default function Offers() {
   const change = async (id: number, s: string) => {
     const r = await act.run(() => api<{ emailed?: boolean }>(`/offers/${id}/status`, { body: { status: s } }));
     if (r !== undefined) {
-      toast(r?.emailed ? t("offer.emailed") : (r as { hand_off_queued?: boolean })?.hand_off_queued ? t("handoff.queued") : t("common.saved"));
+      toast((r as { approval_pending?: boolean })?.approval_pending ? t("approvals.sent_for_approval") : r?.emailed ? t("offer.emailed") : (r as { hand_off_queued?: boolean })?.hand_off_queued ? t("handoff.queued") : t("common.saved"));
       reload();
     }
   };

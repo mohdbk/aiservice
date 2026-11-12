@@ -47,6 +47,8 @@ public interface IAppDbContext
     DbSet<RoleProfile> RoleProfiles { get; }
     DbSet<TypeNote> TypeNotes { get; }
     DbSet<DataRequest> DataRequests { get; }
+    DbSet<ApprovalRequest> ApprovalRequests { get; }
+    DbSet<Requisition> Requisitions { get; }
     DbSet<InterviewBooking> InterviewBookings { get; }
     DbSet<TextSetting> TextSettings { get; }
     DbSet<HandOffSetting> HandOffSettings { get; }
@@ -80,6 +82,8 @@ public interface ICurrentActor
     Domain.ActorType Type { get; }
     int? Id { get; }
     string Name { get; }
+    /// <summary>A recruitment admin or administrator (who can approve jobs, offers and requisitions).</summary>
+    bool IsAdmin => false;
 }
 
 public interface IPasswordHasher
@@ -95,7 +99,7 @@ public interface ICodeGenerator
     Task<string> NextAsync(CodeKind kind, CancellationToken ct = default);
 }
 
-public enum CodeKind { JobOpening, JobApplication, Interview, JobOffer, Invitation }
+public enum CodeKind { JobOpening, JobApplication, Interview, JobOffer, Invitation, Requisition }
 
 /// <summary>The wording that ships with the product (English base and other languages).</summary>
 public interface ITextCatalog
