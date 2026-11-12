@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Moet.Recruitment.Application.Common;
 using Moet.Recruitment.Domain;
 using Moet.Recruitment.Domain.Assessments;
+using Moet.Recruitment.Domain.Common;
 using Moet.Recruitment.Domain.Content;
 
 namespace Moet.Recruitment.Application.Assessments;
