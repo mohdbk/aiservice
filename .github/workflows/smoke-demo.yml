@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BASE_URL: https://recruitment-backoffice-production.up.railway.app
+      PORTAL_URL: https://careers-portal-production-bd6b.up.railway.app
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
