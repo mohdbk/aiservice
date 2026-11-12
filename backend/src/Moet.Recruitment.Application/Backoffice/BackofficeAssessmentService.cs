@@ -322,7 +322,7 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
         var inv = await db.Invitations.Include(i => i.Assessment).Include(i => i.JobApplication).FirstOrDefaultAsync(i => i.Id == id, ct)
                   ?? throw DomainException.NotFound();
         inv.AllowReexam(extraAttempts, deadlineDays, clock.UtcNow);
-        if (notify) await workflow.EmailAsync(inv, inv.Assessment!, inv.JobApplication!, "email.reexam_subject", "email.reexam_body", ct);
+        if (notify) await workflow.EmailAsync(inv, inv.Assessment!, inv.JobApplication!, "reexam", ct);
         await db.SaveChangesAsync(ct);
         return new { attempts_allowed = (int)inv.AttemptsAllowed, deadline_at = inv.DeadlineAt };
     }

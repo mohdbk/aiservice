@@ -110,6 +110,8 @@ public class JobOffer
     public decimal? MonthlySalary { get; set; }
     public string Currency { get; set; } = "AED";
     public string Terms { get; set; } = "";
+    /// <summary>The letter template; the default template when none was picked.</summary>
+    public int? OfferTemplateId { get; set; }
     public OfferStatus Status { get; set; } = OfferStatus.Draft;
     public DateTime CreatedAt { get; set; }
     public int? CreatedByStaffId { get; set; }

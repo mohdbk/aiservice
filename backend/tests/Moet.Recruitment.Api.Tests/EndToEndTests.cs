@@ -238,6 +238,42 @@ public class EndToEndTests
         }));
         Assert.Equal(HttpStatusCode.BadRequest, badRole.StatusCode);
 
+        // Email templates: the eight events exist; the sign-in emails cannot be switched off.
+        var emailTemplates = await Read(await admin.GetAsync("/api/backoffice/email-templates"));
+        Assert.Equal(8, emailTemplates.GetProperty("items").EnumerateArray().Count(t => t.GetProperty("event").ValueKind == JsonValueKind.String));
+        var verifyId = emailTemplates.GetProperty("items").EnumerateArray().First(t => t.GetProperty("event").GetString() == "verify").GetProperty("id").GetInt32();
+        var verify = await Read(await admin.GetAsync($"/api/backoffice/email-templates/{verifyId}"));
+        Assert.Contains("{link}", verify.GetProperty("body_en").GetString());
+        var off = await admin.PutAsync($"/api/backoffice/email-templates/{verifyId}", JsonBody(new
+        {
+            key = "verify", name_ar = verify.GetProperty("name_ar").GetString(), name_en = verify.GetProperty("name_en").GetString(),
+            subject_ar = verify.GetProperty("subject_ar").GetString(), body_ar = verify.GetProperty("body_ar").GetString(),
+            subject_en = verify.GetProperty("subject_en").GetString(), body_en = verify.GetProperty("body_en").GetString(), is_enabled = false,
+        }));
+        Assert.Equal(HttpStatusCode.BadRequest, off.StatusCode);
+        var custom = await admin.PostAsync("/api/backoffice/email-templates", JsonBody(new
+        {
+            key = "documents_request", name_ar = "طلب مستندات", name_en = "Documents Request", subject_ar = "مستندات", body_ar = "مرحبًا {name}",
+            subject_en = "Documents", body_en = "Hello {name}", is_enabled = true,
+        }));
+        Assert.True(custom.IsSuccessStatusCode, await custom.Content.ReadAsStringAsync());
+
+        // Email server: saved in the backoffice (password never returned); a test to a server that is not there reports the error.
+        Assert.Equal("None", (await Read(await admin.GetAsync("/api/backoffice/email-settings"))).GetProperty("in_use").GetString());
+        var server = new { host = "127.0.0.1", port = 2, use_tls = false, user_name = "", password = "", clear_password = false, from_address = "careers@moet.test",
+            from_name = "MoET", signature_ar = "وزارة الاقتصاد والسياحة", signature_en = "Ministry of Economy & Tourism" };
+        Assert.True((await admin.PutAsync("/api/backoffice/email-settings", JsonBody(server))).IsSuccessStatusCode);
+        Assert.Equal("Settings", (await Read(await admin.GetAsync("/api/backoffice/email-settings"))).GetProperty("in_use").GetString());
+        var test = await Read(await admin.PostAsync("/api/backoffice/email-settings/test", JsonBody(new { to = "someone@moet.test", lang = "en" })));
+        Assert.False(test.GetProperty("ok").GetBoolean());
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsync("/api/backoffice/email-settings", JsonBody(server with { from_address = "nope" }))).StatusCode);
+        Assert.True((await admin.PutAsync("/api/backoffice/email-settings", JsonBody(server with { host = "" }))).IsSuccessStatusCode);
+        Assert.True((await admin.GetAsync("/api/backoffice/email-log")).IsSuccessStatusCode);
+
+        // Offer letters: the standard template is the default.
+        var offerTemplates = await Read(await admin.GetAsync("/api/backoffice/offer-templates"));
+        Assert.Contains(offerTemplates.GetProperty("items").EnumerateArray(), t => t.GetProperty("is_default").GetBoolean());
+
         // Changes without the X-Admin header are refused.
         var plain = app.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
         Assert.Equal(HttpStatusCode.Forbidden, (await plain.PostAsync("/api/backoffice/sign-in", JsonBody(new { email = "x", password = "y" }))).StatusCode);

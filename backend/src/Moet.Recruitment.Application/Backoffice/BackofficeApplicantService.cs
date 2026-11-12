@@ -10,7 +10,8 @@ namespace Moet.Recruitment.Application.Backoffice;
 public sealed record ApplicantFilter(int? JobId, string? Status, string? Screening, string? AiStatus, decimal? MinScore, string? Country, DateOnly? From, DateOnly? To, string? CvText = null);
 
 /// <summary>The applicant pipeline: lists, the applicant's full record, status changes, notes and re-scoring.</summary>
-public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor actor, IClock clock, JobQueue jobs, AssessmentWorkflow workflow)
+public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor actor, IClock clock, JobQueue jobs, AssessmentWorkflow workflow,
+    PortalMailer mailer, ContentService content)
 {
     static readonly Sorts<JobApplication> AppSorts = new Sorts<JobApplication>("created")
         .Add("created", a => a.CreatedAt).Add("name", a => a.FullName).Add("code", a => a.Code).Add("status", a => a.Status)
@@ -133,7 +134,17 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
         a.Status = next;
         a.UpdatedAt = now;
         await db.SaveChangesAsync(ct);
-        return new { status = a.Status.ToString() };
+        // "Not Selected" email, when HR has switched it on.
+        var emailed = false;
+        if (next == ApplicationStatus.Rejected)
+        {
+            var job = await db.JobOpenings.AsNoTracking().Include(j => j.Translations).FirstAsync(j => j.Id == a.JobOpeningId, ct);
+            var lang = await content.PortalLanguageAsync(a.LanguageCode, ct);
+            emailed = await mailer.QueueAsync(a.Email, a.FullName, lang, "not_selected", "",
+                new Dictionary<string, string> { ["job_title"] = job.In(lang).Title, ["reference"] = a.Reference }, ct);
+            if (emailed) await db.SaveChangesAsync(ct);
+        }
+        return new { status = a.Status.ToString(), emailed };
     }
 
     public async Task<object> AddNoteAsync(int id, string? text, CancellationToken ct = default)

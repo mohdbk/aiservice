@@ -31,7 +31,7 @@ public sealed class AssessmentWorkflow(IAppDbContext db, ContentService content,
             CreatedAt = now, CreatedByStaffId = staffId, UpdatedAt = now,
         };
         db.Invitations.Add(inv);
-        if (sendEmail) await EmailAsync(inv, asm, app, "email.assessment_subject", "email.assessment_body", ct);
+        if (sendEmail) await EmailAsync(inv, asm, app, "assessment", ct);
         return inv;
     }
 
@@ -46,12 +46,12 @@ public sealed class AssessmentWorkflow(IAppDbContext db, ContentService content,
         }
     }
 
-    public async Task EmailAsync(Invitation inv, Assessment asm, JobApplication app, string subjectKey, string bodyKey, CancellationToken ct)
+    public async Task EmailAsync(Invitation inv, Assessment asm, JobApplication app, string eventKey, CancellationToken ct)
     {
         var lang = await content.PortalLanguageAsync(inv.LanguageCode, ct);
         var link = await mailer.LinkAsync(lang, $"/assessments/{inv.Code}", ct);
         if (link.Length == 0) return;
-        await mailer.QueueAsync(app.Email, app.FullName, lang, subjectKey, bodyKey, link,
+        await mailer.QueueAsync(app.Email, app.FullName, lang, eventKey, link,
             new Dictionary<string, string> { ["test"] = asm.In(lang).Title, ["deadline"] = clock.LocalHuman(inv.DeadlineAt) }, ct);
     }
 

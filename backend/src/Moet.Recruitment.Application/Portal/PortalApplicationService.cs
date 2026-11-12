@@ -23,7 +23,7 @@ public sealed record ApplicationSummaryView(string Id, string Job, string Title,
 /// <summary>Applying, the applicant's applications, and corrections to their CV details.</summary>
 public sealed class PortalApplicationService(
     IAppDbContext db, ContentService content, PortalAccountService accounts, PortalSiteService site, AssessmentWorkflow assessments,
-    JobQueue jobs, ICodeGenerator codes, IClock clock)
+    JobQueue jobs, ICodeGenerator codes, IClock clock, PortalMailer mailer)
 {
     public async Task<object> ApplyAsync(ApplyInput input, CancellationToken ct = default)
     {
@@ -83,6 +83,9 @@ public sealed class PortalApplicationService(
 
         if (s.AutoScoreApplications) await jobs.EnqueueAsync(JobTypes.ScoreApplication, app.Id, ct);
         await assessments.InviteOnApplyAsync(app, ct);
+        // "Application Received" email, when HR has switched it on.
+        await mailer.QueueAsync(app.Email, app.FullName, lang, "application_received", await mailer.LinkAsync(lang, "/applications", ct),
+            new Dictionary<string, string> { ["job_title"] = job.In(lang).Title, ["reference"] = app.Reference }, ct);
         await db.SaveChangesAsync(ct);
         return new { application = app.Code, reference = app.Reference };
     }

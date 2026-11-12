@@ -12,9 +12,11 @@ public sealed record FeedbackInput(string Recommendation, string Comments, IRead
 
 public sealed record RatingInput(string Skill, int Rating);
 
-public sealed record OfferInput(int ApplicationId, string PositionTitle, string OfferDate, string? StartDate, decimal? MonthlySalary, string? Currency, string? Terms);
+public sealed record OfferInput(int ApplicationId, string PositionTitle, string OfferDate, string? StartDate, decimal? MonthlySalary, string? Currency, string? Terms,
+    int? OfferTemplateId = null);
 
-public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator codes, ICurrentActor actor, IClock clock)
+public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator codes, ICurrentActor actor, IClock clock, OfferLetterService letters,
+    PortalMailer mailer, ContentService content)
 {
     static readonly Sorts<Interview> InterviewSorts = new Sorts<Interview>("starts", false)
         .Add("starts", i => i.StartsAt).Add("applicant", i => i.JobApplication!.FullName).Add("round", i => i.InterviewRound!.Name)
@@ -99,7 +101,23 @@ public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator 
         i.Panelists.RemoveAll(p => !valid.Contains(p.StaffUserId));
         foreach (var sid in valid.Where(v => i.Panelists.All(p => p.StaffUserId != v))) i.Panelists.Add(new InterviewPanelist { StaffUserId = sid });
         await db.SaveChangesAsync(ct);
-        return new { id = i.Id, code = i.Code };
+        // A new interview tells the candidate when HR has switched on the "Interview Scheduled" email.
+        var emailed = id == null && await EmailInterviewAsync(i, input, ct);
+        return new { id = i.Id, code = i.Code, emailed };
+    }
+
+    async Task<bool> EmailInterviewAsync(Interview i, InterviewInput input, CancellationToken ct)
+    {
+        var app = await db.JobApplications.AsNoTracking().Include(a => a.JobOpening!).ThenInclude(j => j.Translations).FirstAsync(a => a.Id == i.JobApplicationId, ct);
+        var round = await db.InterviewRounds.AsNoTracking().Where(r => r.Id == i.InterviewRoundId).Select(r => r.Name).FirstAsync(ct);
+        var lang = await content.PortalLanguageAsync(app.LanguageCode, ct);
+        var sent = await mailer.QueueAsync(app.Email, app.FullName, lang, "interview_scheduled", "", new Dictionary<string, string>
+        {
+            ["job_title"] = app.JobOpening!.In(lang).Title, ["round"] = round, ["date"] = input.Date, ["time"] = $"{input.From} - {input.To}",
+            ["location"] = i.Location,
+        }, ct);
+        if (sent) await db.SaveChangesAsync(ct);
+        return sent;
     }
 
     public async Task<object> SetStatusAsync(int id, string? status, CancellationToken ct = default)
@@ -148,7 +166,7 @@ public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator 
         return new
         {
             id = o.Id, code = o.Code, position_title = o.PositionTitle, status = o.Status.ToString(), offer_date = o.OfferDate,
-            start_date = o.StartDate, monthly_salary = o.MonthlySalary, currency = o.Currency, terms = o.Terms,
+            start_date = o.StartDate, monthly_salary = o.MonthlySalary, currency = o.Currency, terms = o.Terms, offer_template_id = o.OfferTemplateId,
             applicant = new { id = o.JobApplicationId, name = o.JobApplication!.FullName, job_title = o.JobApplication.JobOpening!.Title },
         };
     }
@@ -175,6 +193,12 @@ public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator 
         o.MonthlySalary = input.MonthlySalary;
         o.Currency = string.IsNullOrWhiteSpace(input.Currency) ? "AED" : TextUtil.Clip(input.Currency.Trim().ToUpperInvariant(), 3);
         o.Terms = TextUtil.Clip(input.Terms, 20000);
+        if (input.OfferTemplateId is { } tid)
+        {
+            if (!await db.OfferTemplates.AnyAsync(t => t.Id == tid && t.IsActive, ct)) throw DomainException.Invalid("offer_template_invalid");
+            o.OfferTemplateId = tid;
+        }
+        else o.OfferTemplateId ??= await db.OfferTemplates.Where(t => t.IsDefault && t.IsActive).Select(t => (int?)t.Id).FirstOrDefaultAsync(ct);
         o.UpdatedAt = now;
         await db.SaveChangesAsync(ct);
         return new { id = o.Id, code = o.Code };
@@ -191,6 +215,13 @@ public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator 
             app.UpdatedAt = clock.UtcNow;
         }
         await db.SaveChangesAsync(ct);
-        return new { status = o.Status.ToString() };
+        // Sending the offer emails the letter to the candidate when HR has switched on the "Job Offer" email.
+        var emailed = false;
+        if (o.Status == OfferStatus.Sent && await letters.EmailOfferAsync(o.Id, ct))
+        {
+            await db.SaveChangesAsync(ct);
+            emailed = true;
+        }
+        return new { status = o.Status.ToString(), emailed };
     }
 }

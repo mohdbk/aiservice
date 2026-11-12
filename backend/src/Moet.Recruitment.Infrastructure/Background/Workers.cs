@@ -14,7 +14,7 @@ using Moet.Recruitment.Infrastructure.Persistence;
 namespace Moet.Recruitment.Infrastructure.Background;
 
 /// <summary>Sends queued emails over SMTP, with retries.</summary>
-public sealed class EmailOutboxWorker(IServiceScopeFactory scopes, IConfiguration cfg, ILogger<EmailOutboxWorker> log) : BackgroundService
+public sealed class EmailOutboxWorker(IServiceScopeFactory scopes, ILogger<EmailOutboxWorker> log) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stop)
     {
@@ -22,7 +22,7 @@ public sealed class EmailOutboxWorker(IServiceScopeFactory scopes, IConfiguratio
         {
             try
             {
-                if (!string.IsNullOrWhiteSpace(cfg["SMTP_HOST"])) await SendDueAsync(stop);
+                await SendDueAsync(stop);
             }
             catch (Exception e) when (!stop.IsCancellationRequested)
             {
@@ -37,29 +37,24 @@ public sealed class EmailOutboxWorker(IServiceScopeFactory scopes, IConfiguratio
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var clock = scope.ServiceProvider.GetRequiredService<IClock>();
+        // The server set in the backoffice, otherwise the SMTP_* environment settings; nothing is sent without either.
+        var config = await scope.ServiceProvider.GetRequiredService<MailConfig>().CurrentAsync(ct);
+        if (config == null) return;
+        var sender = scope.ServiceProvider.GetRequiredService<IMailSender>();
         var now = clock.UtcNow;
         var due = await db.EmailMessages.Where(m => m.Status == EmailStatus.Queued && m.NextAttemptAt <= now)
             .OrderBy(m => m.Id).Take(20).ToListAsync(ct);
         if (due.Count == 0) return;
-        using var smtp = new SmtpClient(cfg["SMTP_HOST"], int.TryParse(cfg["SMTP_PORT"], out var p) ? p : 587)
-        {
-            EnableSsl = !string.Equals(cfg["SMTP_TLS"], "0", StringComparison.Ordinal),
-            Credentials = string.IsNullOrEmpty(cfg["SMTP_USER"]) ? null : new NetworkCredential(cfg["SMTP_USER"], cfg["SMTP_PASSWORD"]),
-            Timeout = 30_000,
-        };
-        var from = new MailAddress(cfg["SMTP_FROM"] ?? "careers@moet.gov.ae", cfg["SMTP_FROM_NAME"] ?? "Ministry of Economy & Tourism");
         foreach (var m in due)
         {
             try
             {
-                using var msg = new MailMessage { From = from, Subject = m.Subject, Body = m.HtmlBody, IsBodyHtml = true };
-                msg.To.Add(m.ToAddress);
-                await smtp.SendMailAsync(msg, ct);
+                await sender.SendAsync(config, m.ToAddress, m.Subject, m.HtmlBody, ct);
                 m.Status = EmailStatus.Sent;
                 m.SentAt = clock.UtcNow;
                 m.Attempts++;
             }
-            catch (Exception e) when (e is SmtpException or InvalidOperationException or FormatException)
+            catch (Exception e) when (e is SmtpException or InvalidOperationException or FormatException or System.Net.Sockets.SocketException)
             {
                 m.Failed(e.Message, clock.UtcNow);
                 log.LogWarning("Email {Id} to {To} failed: {Error}", m.Id, m.ToAddress, e.Message);

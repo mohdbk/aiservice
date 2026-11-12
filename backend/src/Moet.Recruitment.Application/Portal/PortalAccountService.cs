@@ -12,13 +12,13 @@ public sealed record ApplicantSession(string Email, string FullName, int Epoch);
 /// <summary>Applicant accounts: sign-up, sign-in, email verification and password reset.</summary>
 public sealed class PortalAccountService(IAppDbContext db, ContentService content, PortalMailer mailer, IPasswordHasher hasher, IClock clock)
 {
-    static readonly Dictionary<TokenPurpose, (string Page, string Subject, string Body)> Mail = new()
+    static readonly Dictionary<TokenPurpose, (string Page, string Event)> Mail = new()
     {
-        [TokenPurpose.VerifyEmail] = ("verify-email", "email.verify_subject", "email.verify_body"),
-        [TokenPurpose.ResetPassword] = ("reset-password", "email.reset_subject", "email.reset_body"),
+        [TokenPurpose.VerifyEmail] = ("verify-email", "verify"),
+        [TokenPurpose.ResetPassword] = ("reset-password", "reset"),
     };
 
-    async Task<bool> VerificationRequiredAsync(CancellationToken ct) => (await content.SettingsAsync(ct)).RequireEmailVerification && mailer.CanSend;
+    async Task<bool> VerificationRequiredAsync(CancellationToken ct) => (await content.SettingsAsync(ct)).RequireEmailVerification && await mailer.CanSendAsync(ct);
 
     public async Task<object> SignUpAsync(string? fullName, string? email, string? password, string? lang, string? nextPath, CancellationToken ct = default)
     {
@@ -151,8 +151,8 @@ public sealed class PortalAccountService(IAppDbContext db, ContentService conten
     /// <summary>Issues a new single-use link (older unused links for the same purpose stop working) and queues the email.</summary>
     async Task SendLinkAsync(ApplicantAccount a, TokenPurpose purpose, string lang, string? nextPath, CancellationToken ct)
     {
-        var (page, subject, body) = Mail[purpose];
-        if ((await mailer.LinkAsync(lang, "", ct)).Length == 0 || !mailer.CanSend) return;
+        var (page, eventKey) = Mail[purpose];
+        if ((await mailer.LinkAsync(lang, "", ct)).Length == 0 || !await mailer.CanSendAsync(ct)) return;
         var now = clock.UtcNow;
         await db.AccountTokens.Where(x => x.ApplicantAccountId == a.Id && x.Purpose == purpose && x.UsedAt == null)
             .ExecuteUpdateAsync(u => u.SetProperty(x => x.UsedAt, now), ct);
@@ -162,7 +162,7 @@ public sealed class PortalAccountService(IAppDbContext db, ContentService conten
             ApplicantAccountId = a.Id, Purpose = purpose, TokenHash = TextUtil.Sha256Hex(token), LanguageCode = lang,
             NextPath = TextUtil.SafeNext(nextPath), ExpiresAt = now + AccountToken.Lifetime(purpose), CreatedAt = now,
         });
-        await mailer.QueueAsync(a.Email, a.FullName, lang, subject, body, await mailer.LinkAsync(lang, $"/{page}?token={token}", ct), ct: ct);
+        await mailer.QueueAsync(a.Email, a.FullName, lang, eventKey, await mailer.LinkAsync(lang, $"/{page}?token={token}", ct), ct: ct);
     }
 
     static string Base64Url(byte[] b) => Convert.ToBase64String(b).TrimEnd('=').Replace('+', '-').Replace('/', '_');

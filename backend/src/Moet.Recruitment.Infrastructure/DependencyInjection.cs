@@ -36,7 +36,8 @@ public static class DependencyInjection
         s.AddScoped<ICodeGenerator, SqlCodeGenerator>();
         s.AddSingleton<ITextCatalog, EmbeddedTextCatalog>();
         s.AddSingleton<IHtmlCleaner, HtmlCleaner>();
-        s.AddSingleton<IMailStatus, SmtpMailStatus>();
+        s.AddSingleton<IMailEnvironment, EnvironmentMail>();
+        s.AddSingleton<IMailSender, SmtpMailSender>();
         s.AddSingleton<ISecretProtector, AesSecretProtector>();
         s.AddHttpClient<ILanguageModel, OpenAiCompatibleModel>(c => c.Timeout = TimeSpan.FromMinutes(5));
         s.AddHttpClient<ICvReader, CvReader>(c => c.Timeout = TimeSpan.FromMinutes(5));

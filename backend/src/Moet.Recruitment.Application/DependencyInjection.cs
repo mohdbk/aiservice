@@ -13,6 +13,7 @@ public static class DependencyInjection
     {
         s.AddMemoryCache();
         s.AddScoped<ContentService>();
+        s.AddScoped<MailConfig>();
         s.AddScoped<PortalMailer>();
         s.AddScoped<JobQueue>();
         s.AddScoped<AssessmentWorkflow>();
@@ -39,6 +40,8 @@ public static class DependencyInjection
         s.AddScoped<BackofficeAssessmentService>();
         s.AddScoped<PersonalityTemplates>();
         s.AddScoped<RoleProfileService>();
+        s.AddScoped<BackofficeEmailService>();
+        s.AddScoped<OfferLetterService>();
         s.AddScoped<BackofficeSetupService>();
         s.AddScoped<AgentProposalService>();
         s.AddScoped<AgentSettingsService>();

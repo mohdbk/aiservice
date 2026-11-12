@@ -35,6 +35,9 @@ public interface IAppDbContext
     DbSet<AttemptQuestion> AttemptQuestions { get; }
     DbSet<StoredFile> StoredFiles { get; }
     DbSet<EmailMessage> EmailMessages { get; }
+    DbSet<EmailSetting> EmailSettings { get; }
+    DbSet<EmailTemplate> EmailTemplates { get; }
+    DbSet<OfferTemplate> OfferTemplates { get; }
     DbSet<BackgroundJob> BackgroundJobs { get; }
     DbSet<AuditEntry> AuditEntries { get; }
     DbSet<AgentProposal> AgentProposals { get; }
@@ -87,10 +90,19 @@ public interface IHtmlCleaner
     string Clean(string? html);
 }
 
-/// <summary>Whether outgoing email is set up (SMTP host configured).</summary>
-public interface IMailStatus
+/// <summary>An SMTP server to send through.</summary>
+public sealed record SmtpConfig(string Host, int Port, bool UseTls, string UserName, string Password, string FromAddress, string FromName, string Source);
+
+/// <summary>The SMTP_* environment settings (used when no email server is set in the backoffice), or null.</summary>
+public interface IMailEnvironment
 {
-    bool IsConfigured { get; }
+    SmtpConfig? FromEnvironment { get; }
+}
+
+/// <summary>Sends one email straight away (the outbox worker and the Send Test Email button).</summary>
+public interface IMailSender
+{
+    Task SendAsync(SmtpConfig config, string to, string subject, string html, CancellationToken ct = default);
 }
 
 /// <summary>An OpenAI-compatible chat model, on-prem or hosted.</summary>

@@ -1,14 +1,39 @@
 using System.Text;
+using Microsoft.EntityFrameworkCore;
 using Moet.Recruitment.Domain;
 using Moet.Recruitment.Domain.Common;
 using Moet.Recruitment.Domain.Operations;
 
 namespace Moet.Recruitment.Application.Common;
 
-/// <summary>Queues candidate emails built from portal wording (so HR can edit them), in the candidate's language.</summary>
-public sealed class PortalMailer(IAppDbContext db, ContentService content, IClock clock, IMailStatus mail)
+/// <summary>The email server in use: the one set in the backoffice, otherwise the SMTP_* environment settings.</summary>
+public sealed class MailConfig(IAppDbContext db, ISecretProtector secrets, IMailEnvironment env)
 {
-    public bool CanSend => mail.IsConfigured;
+    SmtpConfig? cached;
+    bool loaded;
+
+    public async Task<SmtpConfig?> CurrentAsync(CancellationToken ct = default)
+    {
+        if (loaded) return cached;
+        var s = await db.EmailSettings.AsNoTracking().FirstOrDefaultAsync(ct);
+        cached = s is { Host.Length: > 0 }
+            ? new SmtpConfig(s.Host, s.Port, s.UseTls, s.UserName, s.PasswordProtected.Length > 0 ? secrets.Unprotect(s.PasswordProtected) ?? "" : "",
+                s.FromAddress, s.FromName.Length > 0 ? s.FromName : "Ministry of Economy & Tourism", "Settings")
+            : env.FromEnvironment;
+        loaded = true;
+        return cached;
+    }
+
+    public async Task<bool> IsConfiguredAsync(CancellationToken ct = default) => await CurrentAsync(ct) != null;
+}
+
+/// <summary>
+/// Queues candidate emails from the email templates (edited by HR in the backoffice), in the candidate's language:
+/// Arabic uses the Arabic wording and every other language the English wording.
+/// </summary>
+public sealed class PortalMailer(IAppDbContext db, ContentService content, IClock clock, MailConfig mail)
+{
+    public Task<bool> CanSendAsync(CancellationToken ct = default) => mail.IsConfiguredAsync(ct);
 
     public async Task<string> LinkAsync(string lang, string path, CancellationToken ct = default)
     {
@@ -17,47 +42,71 @@ public sealed class PortalMailer(IAppDbContext db, ContentService content, ICloc
         return b.Length == 0 ? "" : $"{b}/{lang}{path}";
     }
 
-    /// <summary>Adds the email to the outbox (sent by the background worker). False when email is not set up.</summary>
-    public async Task<bool> QueueAsync(string to, string name, string lang, string subjectKey, string bodyKey, string link,
+    public async Task<string> SignatureAsync(string lang, CancellationToken ct = default)
+    {
+        var s = await db.EmailSettings.AsNoTracking().FirstOrDefaultAsync(ct);
+        var sig = s == null ? "" : lang == "ar" ? s.SignatureAr : s.SignatureEn;
+        return sig.Length > 0 ? sig : (await content.PortalTextAsync(lang, ct))["email.signature"];
+    }
+
+    /// <summary>
+    /// Adds the event's email to the outbox (sent by the background worker). False when email is not set up or the
+    /// template is switched off. The values fill the template's placeholders; {name} and {link} are always there.
+    /// </summary>
+    public async Task<bool> QueueAsync(string to, string name, string lang, string eventKey, string link,
         IDictionary<string, string>? values = null, CancellationToken ct = default)
     {
-        if (!mail.IsConfigured) return false;
-        var text = await content.PortalTextAsync(lang, ct);
+        if (!await mail.IsConfiguredAsync(ct)) return false;
+        var template = await db.EmailTemplates.AsNoTracking().FirstOrDefaultAsync(t => t.Event == eventKey, ct);
+        if (template is { IsEnabled: false }) return false;
+        string subject, body;
+        if (template != null) (subject, body) = template.In(lang == "ar" ? "ar" : "en");
+        else
+        {
+            // Before the templates existed the wording lived in the portal text; it remains the fallback.
+            var text = await content.PortalTextAsync(lang, ct);
+            if (!text.TryGetValue($"email.{eventKey}_subject", out var s) || !text.TryGetValue($"email.{eventKey}_body", out var b)) return false;
+            (subject, body) = (s, b);
+        }
         var all = new Dictionary<string, string> { ["name"] = name, ["link"] = link };
         foreach (var (k, v) in values ?? new Dictionary<string, string>()) all[k] = v;
-        var subject = Fill(text[subjectKey], all);
-        var body = Fill(text[bodyKey], all);
+        subject = TextUtil.NoEmDash(EmailTemplates.Fill(subject, all));
+        body = TextUtil.NoEmDash(EmailTemplates.Fill(body, all));
         db.EmailMessages.Add(new EmailMessage
         {
-            ToAddress = to, Subject = TextUtil.Clip(subject, 300), HtmlBody = Html(body, subject, link, text["email.signature"], TextUtil.IsRtl(lang)),
+            ToAddress = to, Subject = TextUtil.Clip(subject, 300), HtmlBody = Html(body, subject, link, await SignatureAsync(lang, ct), TextUtil.IsRtl(lang)),
             Status = EmailStatus.Queued, NextAttemptAt = clock.UtcNow, CreatedAt = clock.UtcNow,
         });
         return true;
     }
 
-    static string Fill(string s, IDictionary<string, string> values)
-    {
-        foreach (var (k, v) in values) s = s.Replace("{" + k + "}", v);
-        return s;
-    }
-
-    internal static string Html(string body, string subject, string link, string signature, bool rtl)
+    /// <summary>
+    /// The email HTML: one paragraph per blank-line-separated block, a button for a block that is just the link, and a
+    /// heading for a line starting with "# " (offer letters).
+    /// </summary>
+    public static string Html(string body, string subject, string link, string signature, bool rtl)
     {
         var sb = new StringBuilder();
         sb.Append($"<div dir=\"{(rtl ? "rtl" : "ltr")}\" style=\"font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#232528;max-width:560px\">");
         foreach (var para in body.Replace("\r", "").Split("\n\n"))
         {
+            if (para.Trim().Length == 0) continue;
             if (link.Length > 0 && para.Trim() == link)
             {
                 sb.Append($"<p style=\"margin:0 0 16px\"><a href=\"{TextUtil.Esc(link)}\" style=\"display:inline-block;background:#92722a;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:bold\">{TextUtil.Esc(subject)}</a></p>");
                 sb.Append($"<p style=\"margin:0 0 16px;font-size:12px;color:#555;word-break:break-all\">{TextUtil.Esc(link)}</p>");
+            }
+            else if (para.TrimStart().StartsWith("# "))
+            {
+                sb.Append($"<h2 style=\"margin:0 0 16px;font-size:20px\">{TextUtil.Esc(para.TrimStart()[2..].Trim())}</h2>");
             }
             else
             {
                 sb.Append($"<p style=\"margin:0 0 16px\">{TextUtil.Esc(para).Replace("\n", "<br>")}</p>");
             }
         }
-        sb.Append($"<p style=\"margin:24px 0 0;color:#555\">{TextUtil.Esc(signature)}</p></div>");
+        if (signature.Length > 0) sb.Append($"<p style=\"margin:24px 0 0;color:#555\">{TextUtil.Esc(signature)}</p>");
+        sb.Append("</div>");
         return sb.ToString();
     }
 }

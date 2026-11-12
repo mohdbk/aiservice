@@ -134,13 +134,13 @@ public sealed class AgentProposalService(
             case "email_candidate":
             {
                 var app = await ApplicantAsync(a, ct);
-                if (!mailer.CanSend) throw DomainException.Conflict("email_not_configured");
+                if (!await mailer.CanSendAsync(ct)) throw DomainException.Conflict("email_not_configured");
                 var subject = TextUtil.Clip(TextUtil.NoEmDash(S(a, "subject")), 300);
-                var text = await content.PortalTextAsync(app.LanguageCode, ct);
+                var signature = await mailer.SignatureAsync(app.LanguageCode, ct);
                 db.EmailMessages.Add(new EmailMessage
                 {
                     ToAddress = app.Email, Subject = subject,
-                    HtmlBody = PortalMailer.Html(TextUtil.NoEmDash(S(a, "body")), subject, "", text["email.signature"], TextUtil.IsRtl(app.LanguageCode)),
+                    HtmlBody = PortalMailer.Html(TextUtil.NoEmDash(S(a, "body")), subject, "", signature, TextUtil.IsRtl(app.LanguageCode)),
                     Status = EmailStatus.Queued, NextAttemptAt = clock.UtcNow, CreatedAt = clock.UtcNow,
                 });
                 db.ApplicationNotes.Add(new ApplicationNote { JobApplicationId = app.Id, Kind = NoteKind.System, Text = $"Email sent: {subject}", AuthorStaffId = staffId, CreatedAt = clock.UtcNow });

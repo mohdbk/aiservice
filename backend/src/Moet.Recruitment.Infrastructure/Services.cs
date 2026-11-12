@@ -139,9 +139,31 @@ public sealed class HtmlCleaner : IHtmlCleaner
     public string Clean(string? html) => _s.Sanitize(html ?? "");
 }
 
-public sealed class SmtpMailStatus(IConfiguration cfg) : IMailStatus
+public sealed class EnvironmentMail(IConfiguration cfg) : IMailEnvironment
 {
-    public bool IsConfigured => !string.IsNullOrWhiteSpace(cfg["SMTP_HOST"]);
+    public SmtpConfig? FromEnvironment => string.IsNullOrWhiteSpace(cfg["SMTP_HOST"]) ? null : new SmtpConfig(
+        cfg["SMTP_HOST"]!, int.TryParse(cfg["SMTP_PORT"], out var p) ? p : 587, !string.Equals(cfg["SMTP_TLS"], "0", StringComparison.Ordinal),
+        cfg["SMTP_USER"] ?? "", cfg["SMTP_PASSWORD"] ?? "", cfg["SMTP_FROM"] ?? "careers@moet.gov.ae", cfg["SMTP_FROM_NAME"] ?? "Ministry of Economy & Tourism",
+        "Environment");
+}
+
+public sealed class SmtpMailSender : IMailSender
+{
+    public async Task SendAsync(SmtpConfig c, string to, string subject, string html, CancellationToken ct = default)
+    {
+        using var smtp = new System.Net.Mail.SmtpClient(c.Host, c.Port)
+        {
+            EnableSsl = c.UseTls,
+            Credentials = c.UserName.Length == 0 ? null : new System.Net.NetworkCredential(c.UserName, c.Password),
+            Timeout = 30_000,
+        };
+        using var msg = new System.Net.Mail.MailMessage
+        {
+            From = new System.Net.Mail.MailAddress(c.FromAddress, c.FromName), Subject = subject, Body = html, IsBodyHtml = true,
+        };
+        msg.To.Add(to);
+        await smtp.SendMailAsync(msg, ct);
+    }
 }
 
 /// <summary>AES-GCM with a key derived from AGENT_KEY (the secret the API and the agent service already share).</summary>

@@ -271,7 +271,8 @@ public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor
         var shipped = catalog.Shipped(lang);
         var english = catalog.Shipped("en");
         var overrides = await db.PortalTexts.AsNoTracking().Where(t => t.LanguageCode == lang).ToListAsync(ct);
-        var rows = english.Keys.Select(k =>
+        // Email wording is edited on the Email Templates page (the email.* keys remain only as a fallback).
+        var rows = english.Keys.Where(k => !k.StartsWith("email.", StringComparison.Ordinal)).Select(k =>
         {
             var o = overrides.FirstOrDefault(x => x.TextKey == k);
             return new PortalTextRow(k, english[k], shipped.TryGetValue(k, out var v) ? v : "", o?.Text ?? "", o?.ReviewStatus.ToString() ?? "", o?.ReviewStatus == ReviewStatus.Approved);
