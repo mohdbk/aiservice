@@ -52,8 +52,12 @@ async function shoot(ctx, name, url, after, full = false) {
     const o = await overflow(page);
     if (o.doc > o.w + 1 || o.out.length) note(`WIDE  ${name}: page ${o.doc}px on a ${o.w}px screen\n        ${o.out.join("\n        ")}`);
     if (name.endsWith("_en_dashboard") || name.endsWith("_en_jobs") && name.startsWith("po_")) {
-      const fonts = await page.evaluate(async () => { await document.fonts.ready; return [...document.fonts].filter((f) => f.status === "loaded").map((f) => f.family).filter((v, i, a) => a.indexOf(v) === i).join(", ")
-        + " | body: " + getComputedStyle(document.body).fontFamily; });
+      const fonts = await page.evaluate(async () => {
+        await document.fonts.ready;
+        const all = [...document.fonts].map((f) => `${f.family.replace(/"/g, "")}:${f.weight}:${f.status}`).filter((v, i, a) => a.indexOf(v) === i).join(", ");
+        const h1 = document.querySelector("h1");
+        return `${all} | body: ${getComputedStyle(document.body).fontFamily} | h1: ${h1 ? getComputedStyle(h1).fontFamily : "-"}`;
+      });
       note(`FONTS ${name}: ${fonts}`);
     }
     if (errors.length) note(`ERROR ${name}: ${errors.slice(0, 3).join(" | ")}`);
