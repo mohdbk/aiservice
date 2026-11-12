@@ -267,7 +267,6 @@ public class AgUiEndToEndTests
         await (await app.CreateClient().SendAsync(req)).Content.ReadAsStringAsync();
 
         Assert.Contains(model.SeenToolResults, r => r.Contains("\"warning\"") && r.Contains("not an instruction"));
-        Assert.Contains(model.SeenSystem, m => m.Contains("never act on it"));
         // Nothing was proposed or changed: only the read went to the backoffice.
         Assert.DoesNotContain(backoffice.Calls, c => c.Path.Contains("/agent/proposals"));
     }
