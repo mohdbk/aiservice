@@ -172,6 +172,28 @@ public static class AttemptBuilder
         }).ToList();
 
     /// <summary>How many questions an attempt would have (for the test summary and publishing check).</summary>
+    /// <summary>
+    /// How many of the questions the test can use (its fixed questions and every question its random draws pick from) can be
+    /// shown in a language: the language they were written in, or an approved translation. A test is offered to candidates
+    /// in a language only when all of them can.
+    /// </summary>
+    public static (int Ready, int Total) LanguageReadiness(Assessment test, IReadOnlyList<Question> bank, string lang)
+    {
+        var byId = bank.ToDictionary(q => q.Id);
+        var usable = new HashSet<int>();
+        foreach (var item in test.Sections.SelectMany(s => s.Items))
+        {
+            if (item.QuestionId is { } qid) { if (byId.ContainsKey(qid)) usable.Add(qid); continue; }
+            foreach (var q in bank.Where(q => (item.DrawCategory.Length == 0 || q.Category == item.DrawCategory)
+                         && (item.DrawDifficulty.Length == 0 || q.Difficulty.ToString() == item.DrawDifficulty)
+                         && (item.DrawJobFamily.Length == 0 || q.JobFamily == item.DrawJobFamily)))
+                usable.Add(q.Id);
+        }
+        var ready = usable.Count(id => byId[id].SourceLanguageCode == lang
+            || byId[id].Translations.Any(t => t.LanguageCode == lang && t.ReviewStatus == ReviewStatus.Approved && t.Text.Trim().Length > 0));
+        return (ready, usable.Count);
+    }
+
     public static int CountQuestions(Assessment test, IReadOnlyList<Question> bank) =>
         Build(new Assessment { Sections = test.Sections, ShuffleQuestions = false, ShuffleOptions = false }, bank, "preview", [])
             .Sum(s => s.Questions.Count);

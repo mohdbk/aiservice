@@ -2,7 +2,7 @@ import { FloppyDisk, Plus, Shuffle, Trash } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
-  Bilingual, Button, Card, Empty, EnglishBadge, ErrorState, LangTabs, Loading, Modal, PageHeader, Pager, PickerField, RichText, SelectInput, TextArea, TextInput, Toggle, useSaving,
+  Bilingual, Button, Card, Empty, EnglishBadge, ErrorState, LangTabs, Loading, Modal, Note, PageHeader, Pager, PickerField, RichText, SelectInput, TextArea, TextInput, Toggle, useSaving,
 } from "../components/ui";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
 import { BIG_FIVE, MODEL_KEYS, NORMED, MODELS } from "../components/personality";
@@ -15,6 +15,7 @@ type Test = {
   title: string; title_en: string; instructions: string; instructions_en: string; english_status: string; english_approved: boolean; assessment_type: string;
   status: string; pass_mark: number; max_attempts: number; score_policy: string; shuffle_questions: boolean; shuffle_options: boolean;
   show_score_to_candidate: boolean; default_deadline_days: number; question_count?: number; sections: Sec[];
+  english_questions?: { ready: number; total: number };
   personality_model: string; trait_norms: Record<string, { mean: number; sd: number }>;
 };
 
@@ -80,6 +81,13 @@ export default function TestEdit() {
           <Card>
             <LangTabs value={lang} onChange={setLang} english={x.english_status} approved={x.english_approved} onApproved={(v) => set("english_approved", v)}
               onSuggest={isNew ? undefined : suggestEnglish} suggesting={suggest.busy}>
+              {!ar && !isNew && x.english_questions && x.english_questions.total > 0 && (
+                <div className="mb-5">
+                  {x.english_approved && x.english_questions.ready === x.english_questions.total
+                    ? <Note>{t("test.english_ready")}</Note>
+                    : <Note tone="warning">{t("test.english_not_ready", { ready: x.english_questions.ready, total: x.english_questions.total })}</Note>}
+                </div>
+              )}
               <div className="space-y-5" dir={ar ? "rtl" : "ltr"} lang={lang}>
                 <TextInput label={ar ? t("test.name_ar") : t("test.name_en")} value={ar ? x.title : x.title_en} onChange={(e) => set(ar ? "title" : "title_en", e.target.value)} />
                 <RichText label={ar ? t("test.instructions_ar") : t("test.instructions_en")} dir={ar ? "rtl" : "ltr"}

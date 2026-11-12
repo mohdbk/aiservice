@@ -185,6 +185,7 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
         var a = await LoadAssessment(id).AsNoTracking().FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
         var tr = a.Translations.FirstOrDefault(t => t.LanguageCode == En);
         var bank = await workflow.BankAsync(ct);
+        var english = AttemptBuilder.LanguageReadiness(a, bank, En);
         return new
         {
             id = a.Id, title = a.Title, title_en = tr?.Title ?? "", instructions = a.Instructions, instructions_en = tr?.Instructions ?? "",
@@ -196,6 +197,7 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
             traits = Personality.Traits(a.PersonalityModel == PersonalityModel.None ? PersonalityModel.BigFive : a.PersonalityModel)
                 .Select(t => new { code = t.Code, name_ar = t.NameAr, name_en = t.NameEn }).ToList(),
             question_count = AttemptBuilder.CountQuestions(a, bank),
+            english_questions = new { ready = english.Ready, total = english.Total },
             sections = a.OrderedSections.Select(s => new
             {
                 id = s.Id, title = s.Title, title_en = s.Translations.FirstOrDefault(t => t.LanguageCode == En)?.Title ?? "",

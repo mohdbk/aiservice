@@ -249,8 +249,21 @@ public sealed class AssessmentWorkflow(IAppDbContext db, ContentService content,
         var showScore = asm.ShowScoreToCandidate && inv.Status == InvitationStatus.Marked;
         // The candidate can take it in the original language or any language with an approved translation that the portal offers.
         var (portalLangs, _) = await content.LanguagesAsync(ct);
-        var languages = portalLangs.Select(l => l.Code)
+        var candidates = portalLangs.Select(l => l.Code)
             .Where(c => c == asm.SourceLanguageCode || asm.Translations.Any(t => t.LanguageCode == c && t.ReviewStatus == ReviewStatus.Approved)).ToList();
+        // Every question must be ready in a language too, so nobody gets a test half in one language and half in another.
+        List<string> languages = [asm.SourceLanguageCode];
+        if (candidates.Count > 1 && inv.Status is InvitationStatus.Invited or InvitationStatus.InProgress)
+        {
+            var full = await db.Assessments.AsNoTracking().Include(x => x.Sections).ThenInclude(s => s.Items).FirstAsync(x => x.Id == asm.Id, ct);
+            var bank = await BankAsync(ct);
+            foreach (var c in candidates.Where(c => c != asm.SourceLanguageCode))
+            {
+                var (ready, total) = AttemptBuilder.LanguageReadiness(full, bank, c);
+                if (ready == total) languages.Add(c);
+            }
+            languages = [.. candidates.Where(languages.Contains)];
+        }
         return new
         {
             languages, language = languages.Contains(inv.LanguageCode) ? inv.LanguageCode : asm.SourceLanguageCode,

@@ -822,5 +822,7 @@
  "test.name": "Name",
  "pers.ready_made": "Add Ready-Made Questionnaire",
  "q.text": "Question",
- "sq.text": "Question"
+ "sq.text": "Question",
+ "test.english_ready": "Candidates can take this test in English: the test text and all its questions have approved English.",
+ "test.english_not_ready": "Candidates can take this test in English once the English test text is approved and every question has approved English ({ready} of {total} questions so far). Until then it is offered in Arabic only."
 }
