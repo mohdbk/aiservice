@@ -58,3 +58,20 @@ public class AgentRun
     public int StaffUserId { get; set; }
     public DateTime StartedAt { get; set; }
 }
+
+/// <summary>
+/// An assistant conversation kept on the server, so it follows the staff member to other devices and can be shared with
+/// colleagues (read only: opening a shared one starts the reader's own copy). Content is the chat as the backoffice shows it.
+/// </summary>
+public class AgentConversation
+{
+    public string Thread { get; set; } = "";
+    public int StaffUserId { get; set; }
+    public string Title { get; set; } = "";
+    public string Content { get; set; } = "{}";
+    public bool IsShared { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+
+    public const int MaxContent = 2_000_000;
+}

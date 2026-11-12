@@ -1,7 +1,7 @@
-import { ArrowCircleUp, ChatCircleDots, CheckCircle, CircleNotch, Plus, StopCircle } from "@phosphor-icons/react";
+import { ArrowCircleUp, ChatCircleDots, CheckCircle, CircleNotch, ClockCounterClockwise, Lightbulb, Plus, ShareNetwork, StopCircle, Trash } from "@phosphor-icons/react";
 import { FormEvent, ReactElement, useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { Button, ErrorState, Note } from "../components/ui";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Button, Empty, ErrorState, Loading, Modal, Note } from "../components/ui";
 import { ApiError, api, useAsync, useAuth, useLang, useToast } from "../core";
 import { A2Action, A2Surface, A2Surfaces, applyMessages, writeData } from "./a2ui";
 import { AgEvent, AgMessage, newId, parseToolResult, runAgent } from "./agui";
@@ -11,6 +11,8 @@ type Tool = { id: string; name: string; done: boolean };
 type Turn = { id: string; role: "user" | "assistant"; text: string; hidden?: boolean; tools?: Tool[]; surfaces?: string[] };
 type Saved = { thread: string; turns: Turn[]; surfaces: A2Surfaces };
 type Info = { is_enabled: boolean; examples_ar: string; examples_en: string; history_turns: number };
+type Suggestion = { key: string; count: number; text_ar: string; text_en: string; ask_ar: string; ask_en: string };
+type ConvRow = { thread: string; title: string; shared: boolean; updated_at: string };
 
 const KEEP = 60;
 
@@ -109,6 +111,55 @@ export function AgentChat({ panel = false }: { panel?: boolean }) {
   const end = useRef<HTMLDivElement>(null);
 
   useEffect(() => save(key, state), [key, state]);
+  const [params, setParams] = useSearchParams();
+  const [sharedBy, setSharedBy] = useState("");
+  const [history, setHistory] = useState(false);
+  const suggestions = useAsync(() => api<Suggestion[]>("/agent/suggestions").catch(() => [] as Suggestion[]), []);
+  // The conversation is also kept on the server (after each reply), so it follows the person to other devices and can be shared.
+  const title = state.turns.find((x) => x.role === "user" && !x.hidden)?.text.slice(0, 120) || "";
+  useEffect(() => {
+    if (running || !title || sharedBy) return;
+    const timer = setTimeout(() => {
+      api(`/agent/conversations/${encodeURIComponent(state.thread)}`, { method: "PUT", body: { title, content: { ...state, turns: state.turns.slice(-KEEP) } } }).catch(() => { /* kept locally anyway */ });
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [state, running, title, sharedBy]);
+  const openConversation = async (thread: string) => {
+    try {
+      const c = await api<{ mine: boolean; owner: string; content: Saved }>(`/agent/conversations/${encodeURIComponent(thread)}`);
+      const content = { turns: c.content.turns || [], surfaces: c.content.surfaces || {} };
+      // A colleague's shared conversation opens as the reader's own copy; theirs is never changed.
+      setState(c.mine ? { ...content, thread } : { ...content, thread: newId() });
+      setSharedBy(c.mine ? "" : c.owner);
+      setHistory(false);
+    } catch (e) {
+      toast(errorText(e instanceof ApiError ? e : new ApiError("server", 500)), "error");
+    }
+  };
+  useEffect(() => {
+    // Only the assistant page takes ?c= (a conversation) and ?q= (a question to ask); lists use ?q= for their search.
+    if (panel) return;
+    const c = params.get("c");
+    const q = params.get("q");
+    if (!c && !q) return;
+    const next = new URLSearchParams(params);
+    next.delete("c");
+    next.delete("q");
+    setParams(next, { replace: true });
+    if (c) openConversation(c);
+    else if (q) ask(q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const share = async () => {
+    try {
+      await api(`/agent/conversations/${encodeURIComponent(state.thread)}`, { method: "PUT", body: { title, content: { ...state, turns: state.turns.slice(-KEEP) } } });
+      await api(`/agent/conversations/${encodeURIComponent(state.thread)}/share`, { body: { shared: true } });
+      const link = `${location.origin}/${lang}/assistant?c=${encodeURIComponent(state.thread)}`;
+      try { await navigator.clipboard.writeText(link); toast(t("asst.share_copied")); } catch { toast(link, "info"); }
+    } catch (e) {
+      toast(errorText(e instanceof ApiError ? e : new ApiError("server", 500)), "error");
+    }
+  };
   // Scroll only the message list (scrollIntoView can move the whole page on phones).
   const list = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -233,13 +284,27 @@ export function AgentChat({ panel = false }: { panel?: boolean }) {
       <div className={`flex flex-col bg-whitely-50 ${panel ? "h-full" : "mc-surface h-[calc(100dvh-11rem)] min-h-[26rem] rounded-2xl border border-aeblack-100 sm:h-[calc(100vh-16rem)]"}`}>
         {/* The open screen still goes to the assistant with each message; it is not shown here. */}
         <div className="flex items-center justify-end gap-2 border-b border-aeblack-100 bg-white px-4 py-2">
-          <Button variant="link" size="sm" disabled={running} onClick={() => setState({ thread: newId(), turns: [], surfaces: {} })}
+          <Button variant="link" size="sm" onClick={() => setHistory(true)} icon={<ClockCounterClockwise size={20} aria-hidden="true" />}>
+            <span className={panel ? "sr-only" : "hidden sm:inline"}>{t("asst.history")}</span></Button>
+          {title && !running && <Button variant="link" size="sm" onClick={share} icon={<ShareNetwork size={20} aria-hidden="true" />}>
+            <span className={panel ? "sr-only" : "hidden sm:inline"}>{t("asst.share")}</span></Button>}
+          <Button variant="link" size="sm" disabled={running} onClick={() => { setState({ thread: newId(), turns: [], surfaces: {} }); setSharedBy(""); }}
             icon={<Plus size={20} aria-hidden="true" />}>{t("asst.new_chat")}</Button>
         </div>
         <div ref={list} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 sm:p-6" aria-live="polite">
+          {sharedBy && <Note>{t("asst.shared_by", { name: sharedBy })}</Note>}
           {visible.length === 0 && (
             <div className="space-y-3">
               <Note>{t("asst.intro")}</Note>
+              {(suggestions.data?.length ?? 0) > 0 && (
+                <div>
+                  <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-aeblack-700"><Lightbulb size={20} className="text-primary-600" aria-hidden="true" />{t("asst.suggested")}</p>
+                  <ul className="space-y-2">{suggestions.data!.map((x) => (
+                    <li key={x.key}><button type="button" className="w-full rounded-xl border border-aeblack-100 bg-white px-3 py-2 text-start text-sm hover:border-primary-300 hover:bg-primary-50"
+                      onClick={() => ask(lang === "en" ? x.ask_en : x.ask_ar)}>{lang === "en" ? x.text_en : x.text_ar}</button></li>
+                  ))}</ul>
+                </div>
+              )}
               {examples.length > 0 && <ul className="flex flex-wrap gap-2">{examples.map((x) => (
                 <li key={x}><button type="button" className="rounded-full border border-primary-200 bg-white px-3 py-1.5 text-start text-sm text-primary-800 hover:bg-primary-50"
                   onClick={() => ask(x)}>{x}</button></li>
@@ -287,6 +352,34 @@ export function AgentChat({ panel = false }: { panel?: boolean }) {
             : <Button type="submit" aria-label={t("asst.send")} disabled={!text.trim()} icon={<ArrowCircleUp size={24} aria-hidden="true" />}><span className="hidden sm:inline">{t("asst.send")}</span></Button>}
         </form>
       </div>
+      {history && <History onClose={() => setHistory(false)} onOpen={openConversation} current={state.thread} />}
     </>
+  );
+}
+
+/** The staff member's saved conversations: open one again or delete it. */
+function History({ onClose, onOpen, current }: { onClose: () => void; onOpen: (thread: string) => void; current: string }) {
+  const { t, date } = useLang();
+  const list = useAsync(() => api<{ items: ConvRow[] }>("/agent/conversations?size=50"), []);
+  const remove = async (thread: string) => {
+    await api(`/agent/conversations/${encodeURIComponent(thread)}`, { method: "DELETE" }).catch(() => undefined);
+    list.reload();
+  };
+  return (
+    <Modal open onClose={onClose} title={t("asst.history")}>
+      {list.loading && !list.data ? <Loading /> : list.error ? <ErrorState error={list.error} /> : (list.data?.items.length ?? 0) === 0 ? <Empty /> : (
+        <ul className="divide-y divide-aeblack-100">
+          {list.data!.items.map((c) => (
+            <li key={c.thread} className="flex items-center justify-between gap-3 py-2">
+              <button type="button" className="min-w-0 flex-1 text-start" onClick={() => onOpen(c.thread)}>
+                <span className={`block truncate font-semibold ${c.thread === current ? "text-primary-700" : "text-aeblack-900"}`} dir="auto">{c.title}</span>
+                <span className="text-xs text-aeblack-500">{date(c.updated_at, true)}{c.shared && <> · {t("asst.shared")}</>}</span>
+              </button>
+              <Button variant="link" size="sm" aria-label={t("common.delete")} onClick={() => remove(c.thread)}><Trash size={20} aria-hidden="true" /></Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Modal>
   );
 }

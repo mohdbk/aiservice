@@ -50,6 +50,7 @@ public static class DependencyInjection
         s.AddScoped<BookingService>();
         s.AddScoped<TextService>();
         s.AddScoped<HandOffService>();
+        s.AddScoped<AgentConversationService>();
         s.AddScoped<IJobHandler>(sp => sp.GetRequiredService<HandOffService>());
         s.AddScoped<PersonalitySettingsService>();
         s.AddScoped<BackofficeSetupService>();

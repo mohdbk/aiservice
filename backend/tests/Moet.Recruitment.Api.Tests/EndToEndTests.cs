@@ -370,6 +370,17 @@ public class EndToEndTests
             is_enabled = true, channel = "Sms", provider = "Webhook", url = "http://not-https.example", account_id = "", token = "", sender = "MOET", events = new[] { "offer_sent" },
         }))).StatusCode);
 
+        // Assistant conversations live on the server and can be shared; suggestions list what needs attention.
+        Assert.True((await admin.PutAsync("/api/backoffice/agent/conversations/thread-abc-123", JsonBody(new { title = "Best analysts", content = new { turns = new[] { new { id = "1", role = "user", text = "Best analysts?" } }, surfaces = new { } } }))).IsSuccessStatusCode);
+        var convs = await Read(await admin.GetAsync("/api/backoffice/agent/conversations"));
+        Assert.Equal("Best analysts", convs.GetProperty("items")[0].GetProperty("title").GetString());
+        var conv = await Read(await admin.GetAsync("/api/backoffice/agent/conversations/thread-abc-123"));
+        Assert.True(conv.GetProperty("mine").GetBoolean());
+        Assert.Equal("Best analysts?", conv.GetProperty("content").GetProperty("turns")[0].GetProperty("text").GetString());
+        Assert.True((await Read(await admin.PostAsync("/api/backoffice/agent/conversations/thread-abc-123/share", JsonBody(new { shared = true })))).GetProperty("shared").GetBoolean());
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsync("/api/backoffice/agent/conversations/x", JsonBody(new { title = "t", content = new { } }))).StatusCode);
+        Assert.True((await admin.GetAsync("/api/backoffice/agent/suggestions")).IsSuccessStatusCode);
+
         // HR system hand-off: off by default; it needs an https address and a secret; hires export as CSV.
         var handoff = await Read(await admin.GetAsync("/api/backoffice/handoff-settings"));
         Assert.False(handoff.GetProperty("is_enabled").GetBoolean());

@@ -148,6 +148,12 @@ public static class BackofficeEndpoints
         staff.MapPost("/agent/run", AgentProxy.RunAsync).RequireRateLimiting("assistant");
         staff.MapPost("/agent/proposals", (ProposalInput b, AgentProposalService s, CancellationToken ct) => s.ProposeAsync(b, ct));
         staff.MapPost("/agent/proposals/{id:guid}/approve", (Guid id, string? lang, ApproveBody? b, AgentProposalService s, CancellationToken ct) => s.ApproveAsync(id, lang, b?.Changes, ct));
+        staff.MapGet("/agent/conversations", ([AsParameters] ListQuery lq, AgentConversationService s, CancellationToken ct) => s.ListAsync(lq, ct));
+        staff.MapGet("/agent/conversations/{thread}", (string thread, AgentConversationService s, CancellationToken ct) => s.GetAsync(thread, ct));
+        staff.MapPut("/agent/conversations/{thread}", (string thread, ConversationInput b, AgentConversationService s, CancellationToken ct) => s.SaveAsync(thread, b, ct));
+        staff.MapPost("/agent/conversations/{thread}/share", (string thread, ShareBody b, AgentConversationService s, CancellationToken ct) => s.ShareAsync(thread, b.Shared, ct));
+        staff.MapDelete("/agent/conversations/{thread}", (string thread, AgentConversationService s, CancellationToken ct) => s.DeleteAsync(thread, ct));
+        staff.MapGet("/agent/suggestions", (AgentConversationService s, CancellationToken ct) => s.SuggestionsAsync(ct));
         staff.MapGet("/agent/info", (AgentSettingsService s, CancellationToken ct) => s.InfoAsync(ct));
         staff.MapGet("/agent/components", (BackofficeComponentService s, CancellationToken ct) => s.ActiveAsync(ct));
         staff.MapPost("/agent/proposals/{id:guid}/cancel", (Guid id, AgentProposalService s, CancellationToken ct) => s.CancelAsync(id, ct));
@@ -250,3 +256,4 @@ public sealed record AssistantLimitBody(int? Limit);
 public sealed record ResponseBody(string? Response);
 public sealed record TalentInviteBody(int JobId);
 public sealed record TextTestBody(string? To);
+public sealed record ShareBody(bool Shared);

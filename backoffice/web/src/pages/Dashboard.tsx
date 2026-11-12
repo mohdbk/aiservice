@@ -1,4 +1,4 @@
-import { Briefcase, CalendarCheck, Exam, Globe, Handshake, Translate, UserPlus, Users } from "@phosphor-icons/react";
+import { Briefcase, CalendarCheck, Exam, Globe, Handshake, Lightbulb, Translate, UserPlus, Users } from "@phosphor-icons/react";
 import { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Badge, Card, Empty, ErrorState, Loading, PageHeader, Score } from "../components/ui";
@@ -24,10 +24,11 @@ function Stat({ icon, label, value, to }: { icon: ReactNode; label: string; valu
 }
 
 export default function Dashboard() {
-  const { t, to, date } = useLang();
+  const { t, to, date, lang } = useLang();
   const { me } = useAuth();
   usePageTitle(t("dash.title"));
   const { data, error, loading, reload } = useAsync(() => api<Dash>("/dashboard"), []);
+  const suggestions = useAsync(() => api<{ key: string; text_ar: string; text_en: string; ask_ar: string; ask_en: string }[]>("/agent/suggestions").catch(() => []), []);
   if (loading) return <Loading />;
   if (error || !data) return <ErrorState error={error} retry={reload} />;
   const i = (C: typeof Briefcase) => <C size={24} aria-hidden="true" />;
@@ -44,6 +45,21 @@ export default function Dashboard() {
         <Stat icon={i(Handshake)} label={t("dash.offers_out")} value={data.offers_out} to={to("/offers?status=Sent")} />
         <Stat icon={i(Translate)} label={t("dash.english_to_review")} value={data.english_to_review} to={to("/jobs")} />
       </div>
+      {(suggestions.data?.length ?? 0) > 0 && (
+        <Card title={<span className="flex items-center gap-2"><Lightbulb size={24} className="text-primary-600" aria-hidden="true" />{t("dash.suggested")}</span>} className="mt-6">
+          <ul className="grid gap-2 md:grid-cols-2">
+            {suggestions.data!.map((x) => (
+              <li key={x.key}>
+                <Link to={to(`/assistant?q=${encodeURIComponent(lang === "en" ? x.ask_en : x.ask_ar)}`)}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-aeblack-100 p-3 text-aeblack-900 no-underline hover:border-primary-300 hover:bg-primary-50 [&_*]:no-underline">
+                  <span>{lang === "en" ? x.text_en : x.text_ar}</span>
+                  <span className="flex-none text-sm font-semibold text-primary-700">{t("dash.ask_assistant")}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
         <Card title={t("dash.recent")} className="xl:col-span-2">
           {data.recent.length === 0 ? <Empty /> : (

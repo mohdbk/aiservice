@@ -1096,5 +1096,13 @@
  "rep.export_hires": "Export Hires (CSV)",
  "error.handoff_url_invalid": "Enter an https address for the HR system.",
  "error.handoff_secret_required": "Enter a shared secret.",
- "error.handoff_off": "The hand-off is switched off."
+ "error.handoff_off": "The hand-off is switched off.",
+ "asst.history": "History",
+ "asst.share": "Share",
+ "asst.share_copied": "Link copied. Colleagues who open it get their own copy.",
+ "asst.shared_by": "Shared by {name}. Your messages continue in your own copy.",
+ "asst.suggested": "Suggested Now",
+ "asst.shared": "Shared",
+ "dash.suggested": "Suggested Next Steps",
+ "dash.ask_assistant": "Ask the Assistant"
 }

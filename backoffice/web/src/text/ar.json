@@ -1096,5 +1096,13 @@
  "rep.export_hires": "تصدير التعيينات (CSV)",
  "error.handoff_url_invalid": "أدخل عنوان https لنظام الموارد البشرية.",
  "error.handoff_secret_required": "أدخل المفتاح المشترك.",
- "error.handoff_off": "الربط متوقف."
+ "error.handoff_off": "الربط متوقف.",
+ "asst.history": "السجل",
+ "asst.share": "مشاركة",
+ "asst.share_copied": "تم نسخ الرابط. يحصل الزملاء الذين يفتحونه على نسختهم الخاصة.",
+ "asst.shared_by": "شاركها {name}. تستمر رسائلك في نسختك الخاصة.",
+ "asst.suggested": "مقترحات الآن",
+ "asst.shared": "مشتركة",
+ "dash.suggested": "الخطوات التالية المقترحة",
+ "dash.ask_assistant": "اسأل المساعد"
 }

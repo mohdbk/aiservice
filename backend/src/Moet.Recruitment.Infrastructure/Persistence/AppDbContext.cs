@@ -55,6 +55,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
     public DbSet<DataRequest> DataRequests => Set<DataRequest>();
     public DbSet<InterviewBooking> InterviewBookings => Set<InterviewBooking>();
     public DbSet<TextSetting> TextSettings => Set<TextSetting>();
+    public DbSet<AgentConversation> AgentConversations => Set<AgentConversation>();
     public DbSet<HandOffSetting> HandOffSettings => Set<HandOffSetting>();
     public DbSet<TextMessage> TextMessages => Set<TextMessage>();
     public DbSet<ConsentRecord> ConsentRecords => Set<ConsentRecord>();
