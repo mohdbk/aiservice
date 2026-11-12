@@ -11,7 +11,7 @@ public sealed record ApplicantFilter(int? JobId, string? Status, string? Screeni
 
 /// <summary>The applicant pipeline: lists, the applicant's full record, status changes, notes and re-scoring.</summary>
 public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor actor, IRequestLanguage language, IClock clock, JobQueue jobs, AssessmentWorkflow workflow,
-    PortalMailer mailer, ContentService content)
+    PortalMailer mailer, ContentService content, SelectionService selection)
 {
     static readonly Sorts<JobApplication> AppSorts = new Sorts<JobApplication>("created")
         .Add("created", a => a.CreatedAt).Add("name", a => a.FullName).Add("code", a => a.Code).Add("status", a => a.Status)
@@ -88,6 +88,7 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
         var personality = invitations.Where(i => i.personality_model != PersonalityModel.None).ToDictionary(i => i.id.ToString(System.Globalization.CultureInfo.InvariantCulture),
             i => RoleProfileService.Summary(i.personality_model, i.attempts.LastOrDefault(t => t.trait_profile != null)?.trait_profile, roles));
         var c = a.CvAnalysis;
+        var combined = await selection.ForApplicantAsync(a.Id, ct);
         return new
         {
             id = a.Id, code = a.Code, reference = a.Reference, full_name = a.FullName, email = a.Email, phone = a.Phone, country = a.Country,
@@ -111,7 +112,7 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
                 id = n.Id, kind = n.Kind.ToString(), text = n.Text, created_at = n.CreatedAt,
                 author = n.AuthorStaff?.FullName ?? (n.AuthorApplicantId != null ? a.FullName : "System"),
             }).ToList(),
-            interviews, offers, invitations, personality,
+            interviews, offers, invitations, personality, selection = combined,
         };
     }
 

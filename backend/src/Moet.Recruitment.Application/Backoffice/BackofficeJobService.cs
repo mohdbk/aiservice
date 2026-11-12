@@ -17,7 +17,10 @@ public sealed record JobInput(
     string Title, string Description, int? DepartmentId, string Location, string EmploymentType, string Status, bool IsPublished,
     string? PostedOn, string? ClosesOn, decimal? SalaryMin, decimal? SalaryMax, string? SalaryCurrency, string? SalaryPeriod, bool ShowSalary,
     IReadOnlyList<TranslationInput>? Translations, IReadOnlyList<JobScreeningInput>? Screening, IReadOnlyList<JobStageInput>? Stages,
-    string? RowVersion);
+    string? RowVersion, int? RoleProfileId = null, SelectionWeightsInput? Weights = null);
+
+/// <summary>Combined selection score weights (percent, adding up to 100).</summary>
+public sealed record SelectionWeightsInput(int Cv, int Tests, int Interview, int Personality);
 
 public sealed class BackofficeJobService(IAppDbContext db, ICodeGenerator codes, ICurrentActor actor, IRequestLanguage language, IClock clock, IHtmlCleaner html, JobQueue jobs)
 {
@@ -77,6 +80,8 @@ public sealed class BackofficeJobService(IAppDbContext db, ICodeGenerator codes,
         posted_on = AppTime.Date(j.PostedOn), closes_on = AppTime.Date(j.ClosesOn),
         salary_min = j.SalaryMin, salary_max = j.SalaryMax, salary_currency = j.SalaryCurrency, salary_period = j.SalaryPeriod.ToString(),
         show_salary = j.ShowSalary,
+        role_profile_id = j.RoleProfileId,
+        weights = new { cv = (int)j.WeightCv, tests = (int)j.WeightTests, interview = (int)j.WeightInterview, personality = (int)j.WeightPersonality },
         translations = j.Translations.Select(t => new
         {
             lang = t.LanguageCode, title = t.Title, description = t.Description, review_status = t.ReviewStatus.ToString(),
@@ -128,6 +133,17 @@ public sealed class BackofficeJobService(IAppDbContext db, ICodeGenerator codes,
         j.SalaryCurrency = string.IsNullOrWhiteSpace(input.SalaryCurrency) ? "AED" : input.SalaryCurrency.Trim().ToUpperInvariant()[..Math.Min(3, input.SalaryCurrency.Trim().Length)];
         j.SalaryPeriod = Parse<SalaryPeriod>(input.SalaryPeriod ?? "Month", "salary_period");
         j.ShowSalary = input.ShowSalary;
+        // Null keeps the current choice (the assistant's job drafts do not set it); 0 clears it.
+        if (input.RoleProfileId is { } rp)
+        {
+            if (rp > 0 && !await db.RoleProfiles.AnyAsync(r => r.Id == rp, ct)) throw DomainException.Invalid("invalid_value", new Dictionary<string, object?> { ["field"] = "role_profile_id" });
+            j.RoleProfileId = rp > 0 ? rp : null;
+        }
+        if (input.Weights is { } w)
+        {
+            new SelectionWeights(w.Cv, w.Tests, w.Interview, w.Personality).Validate();
+            (j.WeightCv, j.WeightTests, j.WeightInterview, j.WeightPersonality) = ((byte)w.Cv, (byte)w.Tests, (byte)w.Interview, (byte)w.Personality);
+        }
         j.UpdatedAt = now;
         j.UpdatedByStaffId = actor.Id;
 

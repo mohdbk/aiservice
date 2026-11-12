@@ -478,5 +478,23 @@ public class PersonalityTests
         roles.Types = "ESTX";
         Assert.Equal("role_types_invalid", Assert.Throws<DomainException>(roles.Validate).Code);
     }
-}
 
+    [Fact]
+    public void Selection_score_weights_parts_and_scales_up_while_parts_are_missing()
+    {
+        var w = SelectionWeights.Default;
+        var all = Selection.Combine(w, 90, 80, 70, 60);
+        Assert.Equal(72.0, all.Total);   // 0.4*80 + 0.4*70 + 0.2*60; the CV weighs 0
+        Assert.True(all.Complete);
+        var partial = Selection.Combine(w, null, 80, null, null);
+        Assert.Equal(80.0, partial.Total);
+        Assert.False(partial.Complete);
+        Assert.Null(Selection.Combine(w, 90, null, null, null).Total);   // the CV alone does not count
+        Assert.Equal("selection_weights_total", Assert.Throws<DomainException>(() => new SelectionWeights(10, 40, 40, 20).Validate()).Code);
+
+        // Panel: one panelist rates 4 and 5 (90), another only clears (100): average 95. Personality questionnaires are not marked.
+        Assert.Equal(95, Selection.InterviewPercent([(Recommendation.Cleared, [4, 5]), (Recommendation.Cleared, [])]));
+        Assert.Null(Selection.InterviewPercent([]));
+        Assert.Equal(70, Selection.TestsPercent([60m, null, 80m]));
+    }
+}

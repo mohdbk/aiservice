@@ -5,6 +5,7 @@ import {
   ActionMenu, Badge, Button, Card, Empty, ErrorState, Loading, Modal, Note, PageHeader, Score, SectionTabs, SelectInput, Table, TextArea, TextInput, Tick, useSaving,
 } from "../components/ui";
 import { DocumentDialog } from "../components/DocumentDialog";
+import { SelectionCard, type SelectionView } from "../components/Selection";
 import { TraitProfile, parseProfile, type PersonalitySummary } from "../components/personality";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
 import { appTone, screenTone } from "./Applicants";
@@ -23,6 +24,7 @@ type Detail = {
   interviews: { id: number; code: string; round: string; starts_at: string; ends_at: string; status: string; feedback: number }[];
   offers: { id: number; code: string; position_title: string; status: string; offer_date: string }[];
   personality?: Record<string, PersonalitySummary | null>;
+  selection?: SelectionView | null;
   invitations: {
     id: number; code: string; assessment_id: number; title: string; status: string; deadline_at: string; attempts_used: number; attempts_allowed: number;
     score: number | null; result: string | null; personality_model: string;
@@ -92,6 +94,7 @@ export default function Applicant() {
         { value: "notes", label: t("app.notes") },
       ]} />
 
+      {tab === "overview" && <div className="mb-6"><SelectionCard s={a.selection} /></div>}
       {tab === "overview" && (
         <div className="grid gap-6 xl:grid-cols-3">
           <Card className="xl:col-span-2" title={t("app.score")}

@@ -238,6 +238,31 @@ public class EndToEndTests
         }));
         Assert.Equal(HttpStatusCode.BadRequest, badRole.StatusCode);
 
+        // Selection: the job is matched against a role profile and weighs the parts 0/30/50/20; the ranking lists its applicants.
+        var jobId = job.GetProperty("id").GetInt32();
+        var jobView = await Read(await admin.GetAsync($"/api/backoffice/jobs/{jobId}"));
+        Assert.Equal(40, jobView.GetProperty("weights").GetProperty("tests").GetInt32());
+        var pmId = roleProfiles.GetProperty("items").EnumerateArray().First(r => r.GetProperty("name_en").GetString() == "Project Manager").GetProperty("id").GetInt32();
+        object JobBody(object weights) => new
+        {
+            title = "محلل بيانات", description = "<p>تحليل البيانات الاقتصادية</p>", department_id = (int?)null, location = "دبي",
+            employment_type = "FullTime", status = "Open", is_published = true, posted_on = (string?)null, closes_on = (string?)null,
+            salary_min = (decimal?)null, salary_max = (decimal?)null, salary_currency = "AED", salary_period = "Month", show_salary = false,
+            translations = Array.Empty<object>(), screening = Array.Empty<object>(), stages = Array.Empty<object>(), row_version = (string?)null,
+            role_profile_id = pmId, weights,
+        };
+        var badWeights = await admin.PutAsync($"/api/backoffice/jobs/{jobId}", JsonBody(JobBody(new { cv = 0, tests = 30, interview = 50, personality = 10 })));
+        Assert.Equal(HttpStatusCode.BadRequest, badWeights.StatusCode);
+        var weighted = await admin.PutAsync($"/api/backoffice/jobs/{jobId}", JsonBody(JobBody(new { cv = 0, tests = 30, interview = 50, personality = 20 })));
+        Assert.True(weighted.IsSuccessStatusCode, await weighted.Content.ReadAsStringAsync());
+        var ranking = await Read(await admin.GetAsync($"/api/backoffice/jobs/{jobId}/ranking?all=true"));
+        Assert.Equal(50, ranking.GetProperty("weights").GetProperty("interview").GetInt32());
+        Assert.Equal(pmId, ranking.GetProperty("role_profile_id").GetInt32());
+        Assert.True(ranking.GetProperty("total").GetInt32() >= 1);
+        Assert.Equal(1, ranking.GetProperty("items")[0].GetProperty("rank").GetInt32());
+        var withSelection = await Read(await admin.GetAsync($"/api/backoffice/applicants/{ranking.GetProperty("items")[0].GetProperty("id").GetInt32()}"));
+        Assert.Equal(4, withSelection.GetProperty("selection").GetProperty("parts").GetArrayLength());
+
         // Email templates: the eight events exist; the sign-in emails cannot be switched off.
         var emailTemplates = await Read(await admin.GetAsync("/api/backoffice/email-templates"));
         Assert.Equal(8, emailTemplates.GetProperty("items").EnumerateArray().Count(t => t.GetProperty("event").ValueKind == JsonValueKind.String));

@@ -24,6 +24,15 @@ public class JobOpening
     public SalaryPeriod SalaryPeriod { get; set; } = SalaryPeriod.Month;
     public bool ShowSalary { get; set; }
     public string? CriteriaVersion { get; set; }
+    /// <summary>The role profile (job family) personality results are matched against; its sibling of the other questionnaire is used too.</summary>
+    public int? RoleProfileId { get; set; }
+    /// <summary>Weights of the combined selection score (percent, adding up to 100).</summary>
+    public byte WeightCv { get; set; }
+    public byte WeightTests { get; set; } = 40;
+    public byte WeightInterview { get; set; } = 40;
+    public byte WeightPersonality { get; set; } = 20;
+
+    public SelectionWeights Weights => new(WeightCv, WeightTests, WeightInterview, WeightPersonality);
     public DateTime CreatedAt { get; set; }
     public int? CreatedByStaffId { get; set; }
     public DateTime UpdatedAt { get; set; }
@@ -61,6 +70,7 @@ public class JobOpening
         if (PostedOn != null && ClosesOn != null && ClosesOn < PostedOn) throw DomainException.Invalid("closing_date");
         if (ScreeningQuestions.Any(q => q.RequirementRule != null && string.IsNullOrWhiteSpace(q.ExpectedValue)))
             throw DomainException.Invalid("requirement_value");
+        Weights.Validate();
     }
 }
 

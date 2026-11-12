@@ -5,6 +5,7 @@ import {
   Bilingual, Button, Card, EnglishBadge, ErrorState, LangTabs, Loading, Note, PageHeader, RichText, SectionTabs, SelectInput, TextInput, Toggle, Tick, useSaving,
 } from "../components/ui";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
+import { DEFAULT_WEIGHTS, JobRanking, SelectionSettings, type Weights } from "../components/Selection";
 
 export type Lookups = {
   departments: { id: number; name: string; name_en: string }[];
@@ -23,13 +24,14 @@ type Job = {
   status: string; is_published: boolean; posted_on: string; closes_on: string; salary_min: number | null; salary_max: number | null;
   salary_currency: string; salary_period: string; show_salary: boolean; title_en: string; description_en: string; english: string;
   english_approved: boolean; screening: Screening[]; stages: Stage[]; criteria: { criterion: string; weight: number; is_must_have: boolean }[];
-  criteria_current: boolean; row_version: string | null;
+  criteria_current: boolean; row_version: string | null; role_profile_id: number | null; weights: Weights;
 };
 
 const EMPTY: Job = {
   title: "", description: "", department_id: null, location: "", employment_type: "FullTime", status: "Draft", is_published: false,
   posted_on: "", closes_on: "", salary_min: null, salary_max: null, salary_currency: "AED", salary_period: "Month", show_salary: false,
   title_en: "", description_en: "", english: "Missing", english_approved: false, screening: [], stages: [], criteria: [], criteria_current: false, row_version: null,
+  role_profile_id: null, weights: DEFAULT_WEIGHTS,
 };
 
 export function useLookups() {
@@ -78,6 +80,7 @@ export default function JobEdit() {
       salary_min: job.salary_min, salary_max: job.salary_max, salary_currency: job.salary_currency, salary_period: job.salary_period, show_salary: job.show_salary,
       translations: [{ lang: "en", title: job.title_en, description: job.description_en, approved: job.english_approved }],
       screening: job.screening, stages: job.stages, row_version: job.row_version,
+      role_profile_id: job.role_profile_id ?? 0, weights: job.weights,
     };
     const r = await run(() => api<{ id: number }>(isNew ? "/jobs" : `/jobs/${id}`, { method: isNew ? "POST" : "PUT", body }));
     if (!r) return;
@@ -107,7 +110,8 @@ export default function JobEdit() {
       {suggest.error && <div className="mb-4"><ErrorState error={suggest.error} /></div>}
       <SectionTabs value={tab} onChange={setTab} tabs={[
         { value: "details", label: t("jobs.tab.details") }, { value: "screening", label: t("jobs.tab.screening") },
-        { value: "tests", label: t("jobs.tab.tests") }, ...(isNew ? [] : [{ value: "criteria", label: t("jobs.tab.criteria") }]),
+        { value: "tests", label: t("jobs.tab.tests") }, { value: "selection", label: t("jobs.tab.selection") },
+        ...(isNew ? [] : [{ value: "criteria", label: t("jobs.tab.criteria") }, { value: "ranking", label: t("jobs.tab.ranking") }]),
       ]} />
 
       {tab === "details" && (
@@ -215,6 +219,13 @@ export default function JobEdit() {
         </Card>
       )}
 
+      {tab === "selection" && (
+        <SelectionSettings roleProfileId={job.role_profile_id} weights={job.weights}
+          onChange={(rp, w) => setJob((j) => ({ ...j, role_profile_id: rp, weights: w }))} />
+      )}
+
+      {tab === "ranking" && id && <JobRanking jobId={id} />}
+
       {tab === "criteria" && (
         <Card title={t("jobs.tab.criteria")}>
           <div className="mb-4"><Note>{t("jobs.criteria_hint")}</Note></div>
@@ -233,9 +244,9 @@ export default function JobEdit() {
           )}
         </Card>
       )}
-      <div className="mt-6 flex justify-end">
+      {tab !== "ranking" && <div className="mt-6 flex justify-end">
         <Button busy={busy} onClick={save} icon={<FloppyDisk size={20} aria-hidden="true" />}>{t("common.save")}</Button>
-      </div>
+      </div>}
     </>
   );
 }

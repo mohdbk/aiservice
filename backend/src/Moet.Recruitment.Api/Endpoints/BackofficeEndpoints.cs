@@ -58,6 +58,8 @@ public static class BackofficeEndpoints
         staff.MapGet("/jobs/{id:int}", (int id, BackofficeJobService s, CancellationToken ct) => s.GetAsync(id, ct));
         staff.MapPost("/jobs", (JobInput b, BackofficeJobService s, CancellationToken ct) => s.SaveAsync(null, b, ct));
         staff.MapPut("/jobs/{id:int}", (int id, JobInput b, BackofficeJobService s, CancellationToken ct) => s.SaveAsync(id, b, ct));
+        staff.MapGet("/jobs/{id:int}/ranking", (int id, [AsParameters] ListQuery lq, bool? all, SelectionService s, CancellationToken ct) =>
+            s.RankingAsync(id, lq, all == true, ct));
         staff.MapPost("/jobs/{id:int}/suggest-english", (int id, BackofficeJobService s, CancellationToken ct) => s.SuggestTranslationAsync(id, ct));
 
         // applicants
