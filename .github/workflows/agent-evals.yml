@@ -1,0 +1,32 @@
+name: Agent Evals
+
+# Live behaviour checks against a real model (ambiguity, language, instructions hidden in CVs, writing rules). Runs weekly
+# and on demand when the AGENT_EVAL_API_KEY secret is set; the deterministic safety tests run on every push in agent.yml.
+on:
+  schedule:
+    - cron: "17 2 * * 1"
+  workflow_dispatch:
+
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      AGENT_EVAL_API_KEY: ${{ secrets.AGENT_EVAL_API_KEY }}
+      AGENT_EVAL_BASE_URL: ${{ secrets.AGENT_EVAL_BASE_URL }}
+      AGENT_EVAL_MODEL: ${{ vars.AGENT_EVAL_MODEL }}
+    defaults:
+      run:
+        working-directory: agent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Live evaluations
+        if: env.AGENT_EVAL_API_KEY != ''
+        run: dotnet test tests/Moet.Recruitment.Agent.Tests -c Release --filter "FullyQualifiedName~LiveEvals" --logger "console;verbosity=normal"
+      - name: Skipped
+        if: env.AGENT_EVAL_API_KEY == ''
+        run: echo "Set the AGENT_EVAL_API_KEY secret (and optionally AGENT_EVAL_BASE_URL and the AGENT_EVAL_MODEL variable) to run the live evaluations."

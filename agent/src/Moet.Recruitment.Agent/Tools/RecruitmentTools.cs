@@ -510,7 +510,8 @@ public sealed class RecruitmentTools(BackofficeApi api)
             var r = await api.GetAsync(path, ct);
             if (r.ValueKind == JsonValueKind.Undefined) return Error("empty");
             var raw = r.GetRawText();
-            return raw.Length <= MaxResultChars ? r : JsonSerializer.SerializeToElement(new { truncated = true, json = raw[..MaxResultChars] });
+            // Candidate-written text that reads like instructions is flagged as data (see InjectionGuard).
+            return InjectionGuard.Guard(raw.Length <= MaxResultChars ? r : JsonSerializer.SerializeToElement(new { truncated = true, json = raw[..MaxResultChars] }));
         }
         catch (BackofficeException e) { return Error(e.Code); }
     }
