@@ -49,6 +49,8 @@ public static class DependencyInjection
         s.AddScoped<TalentPoolService>();
         s.AddScoped<BookingService>();
         s.AddScoped<TextService>();
+        s.AddScoped<HandOffService>();
+        s.AddScoped<IJobHandler>(sp => sp.GetRequiredService<HandOffService>());
         s.AddScoped<PersonalitySettingsService>();
         s.AddScoped<BackofficeSetupService>();
         s.AddScoped<AgentProposalService>();

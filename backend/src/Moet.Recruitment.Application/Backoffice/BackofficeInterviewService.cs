@@ -17,7 +17,7 @@ public sealed record OfferInput(int ApplicationId, string PositionTitle, string 
     int? OfferTemplateId = null);
 
 public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator codes, ICurrentActor actor, IRequestLanguage language, IClock clock, DocumentService letters,
-    PortalMailer mailer, ContentService content)
+    PortalMailer mailer, ContentService content, HandOffService handOff)
 {
     static readonly Sorts<Interview> InterviewSorts = new Sorts<Interview>("starts", false)
         .Add("starts", i => i.StartsAt).Add("applicant", i => i.JobApplication!.FullName).Add("round", i => i.InterviewRound!.Name)
@@ -218,6 +218,8 @@ public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator 
             app.UpdatedAt = clock.UtcNow;
         }
         await db.SaveChangesAsync(ct);
+        // An accepted offer goes to the HR system when the hand-off is switched on.
+        var handedOff = o.Status == OfferStatus.Accepted && await handOff.QueueAsync(o.Id, ct);
         // Sending the offer emails the letter to the candidate when HR has switched on the "Job Offer" email.
         var emailed = false;
         if (o.Status == OfferStatus.Sent && await letters.EmailOfferAsync(o.Id, ct))
@@ -225,6 +227,6 @@ public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator 
             await db.SaveChangesAsync(ct);
             emailed = true;
         }
-        return new { status = o.Status.ToString(), emailed };
+        return new { status = o.Status.ToString(), emailed, hand_off_queued = handedOff };
     }
 }

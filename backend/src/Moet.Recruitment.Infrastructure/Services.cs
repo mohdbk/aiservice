@@ -250,3 +250,19 @@ public sealed class HttpTextSender(IHttpClientFactory http) : ITextSender
         }
     }
 }
+
+/// <summary>POSTs JSON to another system (the HR system hand-off), with the given headers.</summary>
+public sealed class HttpWebhookClient(IHttpClientFactory http) : IWebhookClient
+{
+    public async Task PostAsync(string url, string json, IReadOnlyDictionary<string, string> headers, CancellationToken ct = default)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Post, url) { Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json") };
+        foreach (var (k, v) in headers) req.Headers.TryAddWithoutValidation(k, v);
+        using var res = await http.CreateClient("webhooks").SendAsync(req, ct);
+        if (!res.IsSuccessStatusCode)
+        {
+            var text = await res.Content.ReadAsStringAsync(ct);
+            throw new HttpRequestException($"HTTP {(int)res.StatusCode}: {(text.Length > 200 ? text[..200] : text)}");
+        }
+    }
+}

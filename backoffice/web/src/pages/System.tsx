@@ -442,3 +442,55 @@ export function TextMessages() {
     </>
   );
 }
+
+// ---------------- HR system hand-off ----------------
+
+type HandOff = {
+  is_enabled: boolean; url: string; has_secret: boolean; include_cv: boolean; waiting: number;
+  recent: { id: number; code: string; name: string; handed_off_at: string | null; error: string }[];
+};
+
+/** Accepted offers are sent to the HR system (signed JSON); the same details can be downloaded per offer or as CSV. */
+export function HandOffSettings() {
+  const { t, date } = useLang();
+  usePageTitle(t("nav.handoff"));
+  const toast = useToast();
+  const data = useAsync(() => api<HandOff>("/handoff-settings"), []);
+  const [f, setF] = useState<(HandOff & { secret: string }) | null>(null);
+  const { busy, error, run } = useSaving();
+  if (data.loading && !data.data) return <Loading />;
+  if (data.error) return <ErrorState error={data.error} retry={data.reload} />;
+  const s = f || { ...data.data!, secret: "" };
+  const save = async () => {
+    if (await run(() => api("/handoff-settings", { method: "PUT", body: s })) !== undefined) { toast(t("common.saved")); setF(null); data.reload(); }
+  };
+  return (
+    <>
+      <PageHeader title={t("nav.handoff")} subtitle={t("handoff.subtitle")} actions={<Button busy={busy} onClick={save}>{t("common.save")}</Button>} />
+      {error && <div className="mb-4"><ErrorState error={error} /></div>}
+      <div className="grid gap-6 xl:grid-cols-3">
+        <Card title={t("handoff.settings")} className="xl:col-span-2">
+          <div className="grid gap-4">
+            <Toggle label={t("handoff.enabled")} checked={s.is_enabled} onChange={(v) => setF({ ...s, is_enabled: v })} />
+            <TextInput label={t("handoff.url")} type="url" value={s.url} onChange={(e) => setF({ ...s, url: e.target.value })} />
+            <TextInput label={t("handoff.secret")} type="password" autoComplete="new-password" value={s.secret}
+              hint={s.has_secret ? t("handoff.secret_kept") : t("handoff.secret_hint")} onChange={(e) => setF({ ...s, secret: e.target.value })} />
+            <Toggle label={t("handoff.include_cv")} checked={s.include_cv} onChange={(v) => setF({ ...s, include_cv: v })} />
+            <Note>{t("handoff.how")}</Note>
+          </div>
+        </Card>
+        <Card title={t("handoff.recent")}>
+          <p className="mb-3 text-sm text-aeblack-600">{t("handoff.waiting", { n: s.waiting })}</p>
+          <ul className="space-y-2 text-sm">
+            {s.recent.map((o) => (
+              <li key={o.id} className="flex justify-between gap-2" title={o.error}>
+                <span><span className="font-semibold">{o.name}</span> <span className="text-xs text-aeblack-500" dir="ltr">{o.code}</span></span>
+                {o.handed_off_at ? <Badge tone="green">{date(o.handed_off_at)}</Badge> : <Badge tone={o.error ? "red" : "gray"}>{t(o.error ? "handoff.failed_short" : "handoff.not_sent")}</Badge>}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      </div>
+    </>
+  );
+}

@@ -72,6 +72,11 @@ public static class BackofficeEndpoints
         staff.MapGet("/applicants/{id:int}/bookings", (int id, BookingService s, CancellationToken ct) => s.ForApplicantAsync(id, ct));
         staff.MapPost("/bookings", (BookingInput b, BookingService s, CancellationToken ct) => s.CreateAsync(b, ct));
         staff.MapPost("/bookings/{id:int}/cancel", (int id, BookingService s, CancellationToken ct) => s.CancelAsync(id, ct));
+        staff.MapGet("/offers/{id:int}/handoff", async (int id, HandOffService s, CancellationToken ct) =>
+            Results.File(System.Text.Encoding.UTF8.GetBytes(await s.PayloadJsonAsync(id, ct)), "application/json", $"hire-{id}.json"));
+        staff.MapPost("/offers/{id:int}/handoff", (int id, HandOffService s, CancellationToken ct) => s.SendNowAsync(id, ct));
+        staff.MapGet("/reports/hires.csv", async (DateOnly? from, DateOnly? to, HandOffService s, CancellationToken ct) =>
+            Results.File(await s.HiresCsvAsync(from, to, ct), "text/csv; charset=utf-8", "hires.csv"));
         staff.MapGet("/talent-pool", ([AsParameters] ListQuery lq, string? cv, int? job, TalentPoolService s, CancellationToken ct) => s.ListAsync(lq, cv, job, ct));
         staff.MapPost("/talent-pool/{id:int}/invite", (int id, TalentInviteBody b, TalentPoolService s, CancellationToken ct) => s.InviteAsync(id, b.JobId, ct));
         staff.MapGet("/applicants/{id:int}/cv", async (int id, bool? download, BackofficeApplicantService s, CancellationToken ct) =>
@@ -195,6 +200,8 @@ public static class BackofficeEndpoints
         sys.MapPost("/data-requests/{id:int}/approve", (int id, ResponseBody b, DataProtectionService s, CancellationToken ct) => s.ApproveAsync(id, b.Response, ct));
         sys.MapPost("/data-requests/{id:int}/decline", (int id, ResponseBody b, DataProtectionService s, CancellationToken ct) => s.DeclineAsync(id, b.Response, ct));
         sys.MapGet("/consents", ([AsParameters] ListQuery lq, string? kind, DataProtectionService s, CancellationToken ct) => s.ConsentsAsync(lq, kind, ct));
+        sys.MapGet("/handoff-settings", (HandOffService s, CancellationToken ct) => s.GetAsync(ct));
+        sys.MapPut("/handoff-settings", (HandOffInput b, HandOffService s, CancellationToken ct) => s.SaveAsync(b, ct));
         sys.MapGet("/text-settings", (TextService s, CancellationToken ct) => s.GetAsync(ct));
         sys.MapPut("/text-settings", (TextSettingInput b, TextService s, CancellationToken ct) => s.SaveAsync(b, ct));
         sys.MapPost("/text-settings/test", (TextTestBody b, TextService s, CancellationToken ct) => s.TestAsync(b.To, ct));

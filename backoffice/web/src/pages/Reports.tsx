@@ -70,7 +70,10 @@ export default function Reports() {
 
   return (
     <>
-      <PageHeader title={t("nav.reports")} subtitle={t("rep.subtitle")} />
+      <PageHeader title={t("nav.reports")} subtitle={t("rep.subtitle")} actions={
+        <a className="aegov-btn btn-outline btn-sm" href={`/api/backoffice/reports/hires.csv?${new URLSearchParams([["from", get("from") || r?.from || ""], ["to", get("to") || r?.to || ""]]).toString()}`}>
+          {t("rep.export_hires")}
+        </a>} />
       <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <TextInput label={t("rep.from")} type="date" value={get("from") || r?.from || ""} onChange={(e) => set("from", e.target.value)} />
         <TextInput label={t("rep.to")} type="date" value={get("to") || r?.to || ""} onChange={(e) => set("to", e.target.value)} />

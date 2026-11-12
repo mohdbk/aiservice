@@ -22,7 +22,7 @@ import DocumentTemplates from "./pages/DocumentTemplates";
 import Questions from "./pages/Questions";
 import RoleProfiles from "./pages/RoleProfiles";
 import Reports from "./pages/Reports";
-import { AssistantUsage, AuditLog, DataProtection, HealthPage, TextMessages } from "./pages/System";
+import { AssistantUsage, AuditLog, DataProtection, HandOffSettings, HealthPage, TextMessages } from "./pages/System";
 import TalentPool from "./pages/TalentPool";
 import PersonalitySettings from "./pages/PersonalitySettings";
 import Screening from "./pages/Screening";
@@ -82,6 +82,7 @@ function Guarded() {
         <Route path="setup/health" element={<HealthPage />} />
         <Route path="setup/data-protection" element={<DataProtection />} />
         <Route path="setup/texts" element={<TextMessages />} />
+        <Route path="setup/handoff" element={<HandOffSettings />} />
         <Route path="talent-pool" element={<TalentPool />} />
         <Route path="setup/components/:id" element={<ComponentEdit />} />
         <Route path="*" element={<Navigate to={`/${lang}`} replace />} />

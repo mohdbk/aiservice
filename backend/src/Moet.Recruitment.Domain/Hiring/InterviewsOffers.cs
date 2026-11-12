@@ -114,6 +114,9 @@ public class JobOffer
     public string Terms { get; set; } = "";
     /// <summary>The letter template; the default template when none was picked.</summary>
     public int? OfferTemplateId { get; set; }
+    /// <summary>When the hire reached the HR system, and the last error while it has not.</summary>
+    public DateTime? HandedOffAt { get; set; }
+    public string HandOffError { get; set; } = "";
     public OfferStatus Status { get; set; } = OfferStatus.Draft;
     public DateTime CreatedAt { get; set; }
     public int? CreatedByStaffId { get; set; }

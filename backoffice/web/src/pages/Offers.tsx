@@ -28,9 +28,13 @@ export default function Offers() {
   const change = async (id: number, s: string) => {
     const r = await act.run(() => api<{ emailed?: boolean }>(`/offers/${id}/status`, { body: { status: s } }));
     if (r !== undefined) {
-      toast(r?.emailed ? t("offer.emailed") : t("common.saved"));
+      toast(r?.emailed ? t("offer.emailed") : (r as { hand_off_queued?: boolean })?.hand_off_queued ? t("handoff.queued") : t("common.saved"));
       reload();
     }
+  };
+  const sendAgain = async (id: number) => {
+    const r = await act.run(() => api<{ ok: boolean; error: string }>(`/offers/${id}/handoff`, { body: {} }));
+    if (r) toast(r.ok ? t("handoff.sent") : t("handoff.failed", { error: r.error }), r.ok ? "success" : "error");
   };
   const open = async (id: number) => {
     const o = await act.run(() => api<any>(`/offers/${id}`));
@@ -52,6 +56,10 @@ export default function Offers() {
         { key: "act", label: t("common.actions"), render: (o) => <ActionMenu label={t("common.actions")} items={[
           { label: t("offer.view_letter"), onClick: () => setLetter(o.id) },
           ...NEXT[o.status].map((s) => ({ label: t(LABEL[s]), onClick: () => change(o.id, s) })),
+          ...(o.status === "Accepted" ? [
+            { label: t("handoff.download"), onClick: () => { window.location.href = `/api/backoffice/offers/${o.id}/handoff`; } },
+            { label: t("handoff.send_again"), onClick: () => sendAgain(o.id) },
+          ] : []),
         ]} /> },
       ]} />
       {editing && (

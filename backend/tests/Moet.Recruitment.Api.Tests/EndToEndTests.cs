@@ -370,6 +370,15 @@ public class EndToEndTests
             is_enabled = true, channel = "Sms", provider = "Webhook", url = "http://not-https.example", account_id = "", token = "", sender = "MOET", events = new[] { "offer_sent" },
         }))).StatusCode);
 
+        // HR system hand-off: off by default; it needs an https address and a secret; hires export as CSV.
+        var handoff = await Read(await admin.GetAsync("/api/backoffice/handoff-settings"));
+        Assert.False(handoff.GetProperty("is_enabled").GetBoolean());
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsync("/api/backoffice/handoff-settings", JsonBody(new { is_enabled = true, url = "ftp://x", secret = "s", include_cv = false }))).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsync("/api/backoffice/handoff-settings", JsonBody(new { is_enabled = true, url = "https://hrms.example/hires", secret = "", include_cv = false }))).StatusCode);
+        var csv = await admin.GetAsync("/api/backoffice/reports/hires.csv");
+        Assert.True(csv.IsSuccessStatusCode);
+        Assert.StartsWith("offer_code,", (await csv.Content.ReadAsStringAsync()).TrimStart('\uFEFF'));
+
         // PDPL: the candidate gets a copy of their data and asks to delete their account; an administrator approves it and the
         // application keeps its dates and statuses without the personal data. Retention settings are kept.
         var myData = await Read(await portal.GetAsync($"/api/portal/my_data?email=layla@example.test&epoch={epoch}"));

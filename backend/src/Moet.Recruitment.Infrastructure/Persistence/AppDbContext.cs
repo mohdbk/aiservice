@@ -55,6 +55,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
     public DbSet<DataRequest> DataRequests => Set<DataRequest>();
     public DbSet<InterviewBooking> InterviewBookings => Set<InterviewBooking>();
     public DbSet<TextSetting> TextSettings => Set<TextSetting>();
+    public DbSet<HandOffSetting> HandOffSettings => Set<HandOffSetting>();
     public DbSet<TextMessage> TextMessages => Set<TextMessage>();
     public DbSet<ConsentRecord> ConsentRecords => Set<ConsentRecord>();
     public DbSet<RetentionSetting> RetentionSettings => Set<RetentionSetting>();
@@ -111,10 +112,10 @@ static class Audit
         typeof(JobOpening), typeof(JobOpeningTranslation), typeof(JobApplication), typeof(Interview), typeof(InterviewFeedback),
         typeof(JobOffer), typeof(Question), typeof(Assessment), typeof(Invitation), typeof(ScreeningQuestion), typeof(PortalSetting),
         typeof(PortalText), typeof(StaffUser), typeof(Department), typeof(InterviewRound), typeof(AgentComponent), typeof(AgentSetting), typeof(RoleProfile),
-        typeof(EmailSetting), typeof(EmailTemplate), typeof(DocumentTemplate), typeof(TypeNote), typeof(PersonalitySetting), typeof(DataRequest), typeof(RetentionSetting), typeof(InterviewBooking), typeof(TextSetting),
+        typeof(EmailSetting), typeof(EmailTemplate), typeof(DocumentTemplate), typeof(TypeNote), typeof(PersonalitySetting), typeof(DataRequest), typeof(RetentionSetting), typeof(InterviewBooking), typeof(TextSetting), typeof(HandOffSetting),
     ];
 
-    static readonly HashSet<string> Secret = ["PasswordHash", "RowVersion", "Content", "ModelApiKeyProtected", "PasswordProtected", "TokenProtected"];
+    static readonly HashSet<string> Secret = ["PasswordHash", "RowVersion", "Content", "ModelApiKeyProtected", "PasswordProtected", "TokenProtected", "SecretProtected"];
 
     public sealed class Pending(EntityEntry source, AuditEntry entry, bool added)
     {

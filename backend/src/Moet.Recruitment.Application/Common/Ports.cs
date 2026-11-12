@@ -47,6 +47,7 @@ public interface IAppDbContext
     DbSet<DataRequest> DataRequests { get; }
     DbSet<InterviewBooking> InterviewBookings { get; }
     DbSet<TextSetting> TextSettings { get; }
+    DbSet<HandOffSetting> HandOffSettings { get; }
     DbSet<TextMessage> TextMessages { get; }
     DbSet<ConsentRecord> ConsentRecords { get; }
     DbSet<RetentionSetting> RetentionSettings { get; }
@@ -116,6 +117,12 @@ public interface IMailEnvironment
 /// <summary>Sends one email straight away (the outbox worker and the Send Test Email button).</summary>
 /// <summary>The provider settings a text is sent with (the token already decrypted).</summary>
 public sealed record TextConfig(string Provider, TextChannel Channel, string Url, string AccountId, string Token, string Sender);
+
+/// <summary>POSTs JSON to another system; throws with the reason on any failure.</summary>
+public interface IWebhookClient
+{
+    Task PostAsync(string url, string json, IReadOnlyDictionary<string, string> headers, CancellationToken ct = default);
+}
 
 /// <summary>Sends one SMS or WhatsApp message; throws on failure.</summary>
 public interface ITextSender
