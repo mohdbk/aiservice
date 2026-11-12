@@ -14,6 +14,8 @@ public class StaffUser
     public int FailedSignIns { get; set; }
     public DateTime? LockedUntil { get; set; }
     public DateTime? LastSignInAt { get; set; }
+    /// <summary>This person's assistant messages per day; null uses the assistant's default and 0 turns it off for them.</summary>
+    public short? AgentDailyLimit { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 

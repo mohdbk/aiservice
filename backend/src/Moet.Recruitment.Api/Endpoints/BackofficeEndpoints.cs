@@ -181,6 +181,30 @@ public static class BackofficeEndpoints
         var sys = api.MapGroup("").RequireAuthorization(StaffPolicies.SystemAdmin);
         sys.MapGet("/staff", ([AsParameters] ListQuery lq, string? role, bool? enabled, StaffAuthService s, CancellationToken ct) => s.ListAsync(lq, role, enabled, ct));
         sys.MapPost("/staff", (StaffBody b, StaffAuthService s, CancellationToken ct) => s.SaveAsync(null, b.Email, b.FullName, b.Role, b.IsEnabled, b.Password, ct));
+        sys.MapGet("/audit", ([AsParameters] ListQuery lq, string? record, string? action, string? key, DateOnly? from, DateOnly? to, SystemService s, CancellationToken ct) =>
+            s.AuditAsync(lq, record, action, key, from, to, ct));
+        sys.MapGet("/assistant-usage", (SystemService s, CancellationToken ct) => s.AssistantUsageAsync(ct));
+        sys.MapPut("/assistant-usage/{staffId:int}", (int staffId, AssistantLimitBody b, SystemService s, CancellationToken ct) => s.SetAssistantLimitAsync(staffId, b.Limit, ct));
+        sys.MapGet("/health", async (SystemService s, IHttpClientFactory http, IConfiguration cfg, CancellationToken ct) =>
+        {
+            // The assistant service answers on /healthz when it is set up and running.
+            object assistant;
+            var url = cfg["AGENT_URL"];
+            if (string.IsNullOrWhiteSpace(url)) assistant = new { state = "off", ms = 0L };
+            else
+            {
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                try
+                {
+                    using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    cts.CancelAfter(TimeSpan.FromSeconds(5));
+                    var res = await http.CreateClient().GetAsync(url.TrimEnd('/') + "/healthz", cts.Token);
+                    assistant = new { state = res.IsSuccessStatusCode ? "ok" : "down", ms = sw.ElapsedMilliseconds };
+                }
+                catch (Exception e) when (e is HttpRequestException or TaskCanceledException) { assistant = new { state = "down", ms = sw.ElapsedMilliseconds }; }
+            }
+            return await s.HealthAsync(assistant, ct);
+        });
         sys.MapGet("/agent-settings", (AgentSettingsService s, CancellationToken ct) => s.GetAsync(ct));
         sys.MapPut("/agent-settings", (AgentSettingsInput b, AgentSettingsService s, CancellationToken ct) => s.SaveAsync(b, ct));
         sys.MapGet("/email-settings", (BackofficeEmailService s, CancellationToken ct) => s.SettingsAsync(ct));
@@ -198,3 +222,5 @@ public static class BackofficeEndpoints
         can_administer = role is "RecruitmentAdmin" or "Administrator", is_administrator = role == "Administrator",
     };
 }
+
+public sealed record AssistantLimitBody(int? Limit);

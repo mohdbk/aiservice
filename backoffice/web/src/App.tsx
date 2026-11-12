@@ -22,6 +22,7 @@ import DocumentTemplates from "./pages/DocumentTemplates";
 import Questions from "./pages/Questions";
 import RoleProfiles from "./pages/RoleProfiles";
 import Reports from "./pages/Reports";
+import { AssistantUsage, AuditLog, HealthPage } from "./pages/System";
 import PersonalitySettings from "./pages/PersonalitySettings";
 import Screening from "./pages/Screening";
 import { Departments, Password, PortalText, Rounds, Settings, Staff } from "./pages/Setup";
@@ -75,6 +76,9 @@ function Guarded() {
         <Route path="setup/email-templates" element={<EmailTemplates />} />
         <Route path="setup/email-server" element={<EmailServer />} />
         <Route path="setup/email-log" element={<EmailLog />} />
+        <Route path="setup/assistant-usage" element={<AssistantUsage />} />
+        <Route path="setup/audit" element={<AuditLog />} />
+        <Route path="setup/health" element={<HealthPage />} />
         <Route path="setup/components/:id" element={<ComponentEdit />} />
         <Route path="*" element={<Navigate to={`/${lang}`} replace />} />
       </Routes>

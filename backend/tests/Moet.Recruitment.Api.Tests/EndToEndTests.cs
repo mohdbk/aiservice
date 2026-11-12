@@ -238,6 +238,20 @@ public class EndToEndTests
         }));
         Assert.Equal(HttpStatusCode.BadRequest, badRole.StatusCode);
 
+        // System pages: the audit log shows the job saved above, assistant usage lists staff, and the health page answers.
+        var audit = await Read(await admin.GetAsync("/api/backoffice/audit?record=JobOpening"));
+        Assert.True(audit.GetProperty("total").GetInt32() >= 1);
+        Assert.Contains(audit.GetProperty("records").EnumerateArray(), r => r.GetString() == "JobOpening");
+        var usage = await Read(await admin.GetAsync("/api/backoffice/assistant-usage"));
+        var someone = usage.GetProperty("people")[0].GetProperty("id").GetInt32();
+        Assert.Equal(30, usage.GetProperty("days").GetArrayLength());
+        Assert.True((await admin.PutAsync($"/api/backoffice/assistant-usage/{someone}", JsonBody(new { limit = 25 }))).IsSuccessStatusCode);
+        usage = await Read(await admin.GetAsync("/api/backoffice/assistant-usage"));
+        Assert.Equal(25, usage.GetProperty("people").EnumerateArray().First(p => p.GetProperty("id").GetInt32() == someone).GetProperty("limit").GetInt32());
+        Assert.True((await admin.PutAsync($"/api/backoffice/assistant-usage/{someone}", JsonBody(new { limit = (int?)null }))).IsSuccessStatusCode);
+        var health = await Read(await admin.GetAsync("/api/backoffice/health"));
+        Assert.Equal("ok", health.GetProperty("database").GetProperty("state").GetString());
+
         // The hiring report: the funnel starts with every application of the period.
         var report = await Read(await admin.GetAsync("/api/backoffice/reports/hiring"));
         Assert.Equal(7, report.GetProperty("funnel").GetArrayLength());

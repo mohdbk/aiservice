@@ -44,6 +44,7 @@ public static class DependencyInjection
         s.AddScoped<DocumentService>();
         s.AddScoped<SelectionService>();
         s.AddScoped<ReportService>();
+        s.AddScoped<SystemService>();
         s.AddScoped<PersonalitySettingsService>();
         s.AddScoped<BackofficeSetupService>();
         s.AddScoped<AgentProposalService>();

@@ -93,7 +93,7 @@ for (const [view, opts] of Object.entries(VIEWS)) {
     attempt && ["marking", `/marking/${attempt.id}`], ["role_profiles", "/role-profiles"], ["personality_settings", "/personality-settings"], ["assistant", "/assistant"],
     ["departments", "/setup/departments"], ["rounds", "/setup/rounds"], ["settings", "/setup/settings"], ["portal_text", "/setup/portal-text"],
     ["email_templates", "/setup/email-templates"], ["document_templates", "/setup/document-templates"], ["components", "/setup/components"], ["component_new", "/setup/components/new"],
-    ["staff", "/setup/staff"], ["email_server", "/setup/email-server"], ["agent_settings", "/setup/assistant"], ["email_log", "/setup/email-log"],
+    ["staff", "/setup/staff"], ["email_server", "/setup/email-server"], ["agent_settings", "/setup/assistant"], ["email_log", "/setup/email-log"], ["assistant_usage", "/setup/assistant-usage"], ["audit", "/setup/audit"], ["health", "/setup/health"],
     ["password", "/password"],
   ].filter(Boolean);
   for (const lang of ["ar", "en"]) {

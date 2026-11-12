@@ -1,7 +1,7 @@
 import { Dialog, Menu } from "@base-ui/react";
 import {
   Briefcase, CalendarCheck, CaretDown, ChatCircleDots, ClipboardText, Exam, FileText, Gear, Handshake, Key, List, ListChecks,
-  Cube, EnvelopeSimple, HardDrives, Robot, Scroll, SignOut, SquaresFour, Target, Tray, Translate, TreeStructure, UserCircle, Users, UsersThree, X, Brain, ChartBar,
+  Cube, EnvelopeSimple, HardDrives, Robot, Scroll, SignOut, SquaresFour, Target, Tray, Translate, TreeStructure, UserCircle, Users, UsersThree, X, Brain, ChartBar, ClockCounterClockwise, Pulse, ChartLine,
 } from "@phosphor-icons/react";
 import { ReactNode, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
@@ -62,6 +62,9 @@ function useNav(): { group?: string; items: Item[] }[] {
         { to: "/setup/email-server", label: t("nav.email_server"), icon: i(HardDrives), sys: true },
         { to: "/setup/assistant", label: t("nav.agent_settings"), icon: i(Robot), sys: true },
         { to: "/setup/email-log", label: t("nav.email_log"), icon: i(Tray), sys: true },
+        { to: "/setup/assistant-usage", label: t("nav.assistant_usage"), icon: i(ChartLine), sys: true },
+        { to: "/setup/audit", label: t("nav.audit"), icon: i(ClockCounterClockwise), sys: true },
+        { to: "/setup/health", label: t("nav.health"), icon: i(Pulse), sys: true },
       ],
     },
   ];

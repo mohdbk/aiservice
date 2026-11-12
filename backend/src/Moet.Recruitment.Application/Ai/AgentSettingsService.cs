@@ -91,7 +91,9 @@ public sealed class AgentSettingsService(IAppDbContext db, ICurrentActor actor, 
         var s = await CurrentAsync(ct);
         if (!s.IsEnabled) throw DomainException.Forbidden("assistant_off");
         var since = clock.UtcNow.AddDays(-1);
-        if (await db.AgentRuns.CountAsync(r => r.StaffUserId == staffId && r.StartedAt >= since, ct) >= s.DailyRunLimit)
+        var own = await db.StaffUsers.AsNoTracking().Where(u => u.Id == staffId).Select(u => u.AgentDailyLimit).FirstOrDefaultAsync(ct);
+        if (own == 0) throw DomainException.Forbidden("assistant_off_for_you");
+        if (await db.AgentRuns.CountAsync(r => r.StaffUserId == staffId && r.StartedAt >= since, ct) >= (own ?? s.DailyRunLimit))
             throw new DomainException("too_many_messages", 429);
         db.AgentRuns.Add(new AgentRun { StaffUserId = staffId, StartedAt = clock.UtcNow });
         await db.SaveChangesAsync(ct);
