@@ -25,6 +25,11 @@ public sealed class SystemClock : IClock
 }
 
 /// <summary>The staff member signed in to the backoffice, the applicant (via the portal key), or the system.</summary>
+public sealed class HttpRequestLanguage(IHttpContextAccessor http) : IRequestLanguage
+{
+    public bool English => http.HttpContext?.Request.Headers["X-Lang"].ToString() == "en";
+}
+
 public sealed class HttpCurrentActor(IHttpContextAccessor http) : ICurrentActor
 {
     public const string ApplicantHeader = "X-Applicant";

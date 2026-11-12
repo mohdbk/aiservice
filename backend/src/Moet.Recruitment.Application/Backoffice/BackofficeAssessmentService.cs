@@ -28,7 +28,7 @@ public sealed record AssessmentInput(
 public sealed record MarkInput(int QuestionId, decimal? Points, string? Comment);
 
 /// <summary>Question bank, tests, invitations and marking for HR.</summary>
-public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor actor, IClock clock, IHtmlCleaner html, AssessmentWorkflow workflow, JobQueue jobs)
+public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor actor, IRequestLanguage language, IClock clock, IHtmlCleaner html, AssessmentWorkflow workflow, JobQueue jobs)
 {
     const string En = "en";
 
@@ -49,9 +49,10 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
         if (active != null) query = query.Where(x => x.IsActive == active);
         if (english == "Missing") query = query.Where(x => !x.Translations.Any(t => t.LanguageCode == En));
         else if (Enum.TryParse<ReviewStatus>(english, out var rs)) query = query.Where(x => x.Translations.Any(t => t.LanguageCode == En && t.ReviewStatus == rs));
+        var en = language.English;
         return await query.PageAsync(lq, QuestionSorts, x => new
         {
-            id = x.Id, text = x.Text.Length > 400 ? x.Text.Substring(0, 400) : x.Text, question_type = x.QuestionType, category = x.Category,
+            id = x.Id, text = (en ? x.Translations.Where(t => t.LanguageCode == En && t.Text != "").Select(t => t.Text).FirstOrDefault() ?? x.Text : x.Text).Substring(0, 400), question_type = x.QuestionType, category = x.Category,
             job_family = x.JobFamily, difficulty = x.Difficulty, points = x.Points, is_active = x.IsActive, trait = x.Trait, reverse_keyed = x.ReverseKeyed,
             english = x.Translations.Where(t => t.LanguageCode == En).Select(t => (ReviewStatus?)t.ReviewStatus).FirstOrDefault(),
         }, ct);
@@ -165,9 +166,10 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
         if (Enum.TryParse<AssessmentStatus>(status, out var st)) q = q.Where(a => a.Status == st);
         if (Enum.TryParse<AssessmentType>(type, out var ty)) q = q.Where(a => a.AssessmentType == ty);
         if (lq.Term.Length > 0) q = q.Where(a => a.Title.Contains(lq.Term) || a.Translations.Any(t => t.Title.Contains(lq.Term)));
+        var en = language.English;
         return await q.PageAsync(lq, TestSorts, a => new
         {
-            id = a.Id, title = a.Title, assessment_type = a.AssessmentType, status = a.Status, pass_mark = a.PassMark,
+            id = a.Id, title = (en ? a.Translations.Where(t => t.LanguageCode == "en" && t.Title != "").Select(t => t.Title).FirstOrDefault() ?? a.Title : a.Title), assessment_type = a.AssessmentType, status = a.Status, pass_mark = a.PassMark,
             sections = a.Sections.Count, minutes = a.Sections.Sum(s => s.Minutes),
             invitations = db.Invitations.Count(i => i.AssessmentId == a.Id),
             english = a.Translations.Where(t => t.LanguageCode == En).Select(t => (ReviewStatus?)t.ReviewStatus).FirstOrDefault(),
@@ -306,12 +308,13 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
         if (Enum.TryParse<InvitationResult>(result, out var r)) q = q.Where(i => i.Result == r);
         if (jobId != null) q = q.Where(i => i.JobApplication!.JobOpeningId == jobId);
         if (lq.Term.Length > 0) q = q.Where(i => i.JobApplication!.FullName.Contains(lq.Term) || i.Code.Contains(lq.Term));
+        var en = language.English;
         return await q.PageAsync(lq, InvitationSorts, i => new
         {
             id = i.Id, code = i.Code, status = i.Status, deadline_at = i.DeadlineAt, score = i.Score, result = i.Result,
             attempts_used = (int)i.AttemptsUsed, attempts_allowed = (int)i.AttemptsAllowed,
-            assessment = i.Assessment!.Title, applicant_id = i.JobApplicationId, applicant = i.JobApplication!.FullName,
-            job_title = i.JobApplication.JobOpening!.Title,
+            assessment = (en ? i.Assessment!.Translations.Where(t => t.LanguageCode == "en" && t.Title != "").Select(t => t.Title).FirstOrDefault() ?? i.Assessment!.Title : i.Assessment!.Title), applicant_id = i.JobApplicationId, applicant = i.JobApplication!.FullName,
+            job_title = (en ? i.JobApplication.JobOpening!.Translations.Where(t => t.LanguageCode == "en" && t.Title != "").Select(t => t.Title).FirstOrDefault() ?? i.JobApplication.JobOpening!.Title : i.JobApplication.JobOpening!.Title),
             to_mark = i.Attempts.Where(t => t.Status == AttemptStatus.Submitted).Select(t => (int?)t.Id).FirstOrDefault(),
             last_attempt = i.Attempts.OrderByDescending(t => t.AttemptNo).Select(t => (int?)t.Id).FirstOrDefault(),
         }, ct);
@@ -337,7 +340,7 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
 
     async Task<Attempt> LoadAttemptAsync(int id, CancellationToken ct) =>
         await db.Attempts.Where(a => a.Id == id)
-            .Include(a => a.Invitation!).ThenInclude(i => i.Assessment)
+            .Include(a => a.Invitation!).ThenInclude(i => i.Assessment!).ThenInclude(x => x.Translations)
             .Include(a => a.Invitation!).ThenInclude(i => i.Attempts)
             .Include(a => a.Invitation!).ThenInclude(i => i.JobApplication)
             .Include(a => a.Sections).ThenInclude(s => s.Questions).ThenInclude(q => q.Options)
@@ -355,7 +358,7 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
             passed = a.Passed, started_at = a.StartedAt, trait_profile = TraitProfile(a.TraitProfile),
             personality_model = inv.Assessment!.PersonalityModel.ToString(),
             personality = RoleProfileService.Summary(inv.Assessment.PersonalityModel, a.TraitProfile, roles), submitted_at = a.SubmittedAt, tab_switches = a.TabSwitches, pastes = a.Pastes,
-            invitation = new { id = inv.Id, code = inv.Code, assessment = inv.Assessment!.Title, pass_mark = inv.Assessment.PassMark },
+            invitation = new { id = inv.Id, code = inv.Code, assessment = inv.Assessment!.In(language.English ? "en" : "ar").Title, pass_mark = inv.Assessment.PassMark },
             applicant = new { id = inv.JobApplicationId, name = inv.JobApplication!.FullName },
             sections = a.SectionScores().Select(s => new { s.SectionNo, s.Title, s.Earned, s.Total, s.Percent, s.Passed }).ToList(),
             questions = a.AllQuestions.Select(q => new

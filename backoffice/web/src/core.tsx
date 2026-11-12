@@ -20,7 +20,9 @@ export async function api<T = any>(path: string, opts: Opts = {}): Promise<T> {
     res = await fetch(`/api/backoffice${path}`, {
       method,
       credentials: "same-origin",
-      headers: { Accept: "application/json", ...(method !== "GET" ? { "X-Backoffice": "1" } : {}), ...(opts.body !== undefined ? { "Content-Type": "application/json" } : {}) },
+      // X-Lang: lists come back with English names and titles when the backoffice is in English.
+      headers: { Accept: "application/json", "X-Lang": location.pathname.startsWith("/en") ? "en" : "ar",
+        ...(method !== "GET" ? { "X-Backoffice": "1" } : {}), ...(opts.body !== undefined ? { "Content-Type": "application/json" } : {}) },
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     });
   } catch {

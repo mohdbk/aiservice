@@ -19,7 +19,7 @@ public sealed record JobInput(
     IReadOnlyList<TranslationInput>? Translations, IReadOnlyList<JobScreeningInput>? Screening, IReadOnlyList<JobStageInput>? Stages,
     string? RowVersion);
 
-public sealed class BackofficeJobService(IAppDbContext db, ICodeGenerator codes, ICurrentActor actor, IClock clock, IHtmlCleaner html, JobQueue jobs)
+public sealed class BackofficeJobService(IAppDbContext db, ICodeGenerator codes, ICurrentActor actor, IRequestLanguage language, IClock clock, IHtmlCleaner html, JobQueue jobs)
 {
     static readonly Sorts<JobOpening> JobSorts = new Sorts<JobOpening>("created")
         .Add("created", j => j.CreatedAt).Add("code", j => j.Code).Add("title", j => j.Title).Add("status", j => j.Status)
@@ -42,11 +42,12 @@ public sealed class BackofficeJobService(IAppDbContext db, ICodeGenerator codes,
         var sorts = lq.Sort == "applicants"
             ? new Sorts<JobOpening>("applicants").Add("applicants", j => db.JobApplications.Count(a => a.JobOpeningId == j.Id))
             : JobSorts;
+        var en = language.English;
         return await query.PageAsync(lq, sorts, j => new
         {
             id = j.Id, code = j.Code, title = j.Title,
             title_en = j.Translations.Where(t => t.LanguageCode == "en").Select(t => t.Title).FirstOrDefault() ?? "",
-            department = j.Department == null ? "" : j.Department.Name, status = j.Status, is_published = j.IsPublished,
+            department = j.Department == null ? "" : en ? j.Department.Translations.Where(t => t.LanguageCode == "en" && t.Name != "").Select(t => t.Name).FirstOrDefault() ?? j.Department.Name : j.Department.Name, status = j.Status, is_published = j.IsPublished,
             posted_on = j.PostedOn, closes_on = j.ClosesOn,
             applicants = db.JobApplications.Count(a => a.JobOpeningId == j.Id),
             new_applicants = db.JobApplications.Count(a => a.JobOpeningId == j.Id && a.Status == ApplicationStatus.Open),

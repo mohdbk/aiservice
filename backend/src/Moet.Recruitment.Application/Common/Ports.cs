@@ -56,6 +56,12 @@ public interface IClock
 }
 
 /// <summary>Who is acting, for audit and "approved by" fields.</summary>
+/// <summary>The language the backoffice is shown in (X-Lang): lists show English names and titles when it is English.</summary>
+public interface IRequestLanguage
+{
+    bool English { get; }
+}
+
 public interface ICurrentActor
 {
     Domain.ActorType Type { get; }

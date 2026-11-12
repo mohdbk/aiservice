@@ -7,6 +7,8 @@ public class InterviewRound
 {
     public int Id { get; set; }
     public string Name { get; set; } = "";
+    /// <summary>English name, shown when the backoffice is in English (the Arabic name otherwise).</summary>
+    public string NameEn { get; set; } = "";
     public string Description { get; set; } = "";
     public bool IsActive { get; set; } = true;
     public List<InterviewRoundSkill> Skills { get; set; } = [];

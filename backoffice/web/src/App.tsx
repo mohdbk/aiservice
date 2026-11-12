@@ -36,7 +36,8 @@ function Guarded() {
   if (me === null) return <Navigate to={`/${lang}/sign-in?next=${encodeURIComponent(loc.pathname + loc.search)}`} replace />;
   return (
     <Shell>
-      <Routes>
+      {/* Keyed by language: switching language reloads the page's data (lists come back in that language). */}
+      <Routes key={lang}>
         <Route index element={<Dashboard />} />
         <Route path="jobs" element={<Jobs />} />
         <Route path="jobs/new" element={<JobEdit />} />

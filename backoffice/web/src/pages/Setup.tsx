@@ -9,7 +9,8 @@ import { api, useAsync, useAuth, useLang, usePageTitle, useToast } from "../core
 type Dept = { id: number; name: string; name_en: string; is_active: boolean };
 
 export function Departments() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
+  const en = lang === "en";
   usePageTitle(t("setup.departments"));
   const toast = useToast();
   const list = useList<Dept>("/departments", []);
@@ -28,8 +29,7 @@ export function Departments() {
     <>
       <PageHeader title={t("setup.departments")} actions={<Button onClick={() => setF({ is_active: true })} icon={<Plus size={20} aria-hidden="true" />}>{t("common.add")}</Button>} />
       <DataTable list={list} rowKey={(d) => d.id} columns={[
-        { key: "name", label: t("setup.name_ar"), sort: "name", render: (d) => <button type="button" className="font-semibold text-primary-700" onClick={() => setF(d)}>{d.name}</button> },
-        { key: "en", label: t("setup.name_en"), render: (d) => <span lang="en" dir="ltr">{d.name_en}</span> },
+        { key: "name", label: t("common.name"), sort: "name", render: (d) => <button type="button" className="text-start font-semibold text-primary-700" onClick={() => setF(d)}>{en && d.name_en ? d.name_en : d.name}</button> },
         { key: "active", label: t("common.status"), sort: "active", render: (d) => <Badge tone={d.is_active ? "green" : "gray"}>{d.is_active ? t("common.active") : t("common.inactive")}</Badge> },
       ]} />
       {f && (
@@ -46,10 +46,11 @@ export function Departments() {
 }
 
 // ---------------- interview rounds ----------------
-type Round = { id: number; name: string; description: string; is_active: boolean; skills: string[] };
+type Round = { id: number; name: string; name_en: string; description: string; is_active: boolean; skills: string[] };
 
 export function Rounds() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
+  const en = lang === "en";
   usePageTitle(t("setup.rounds"));
   const toast = useToast();
   const list = useList<Round>("/rounds", []);
@@ -57,7 +58,7 @@ export function Rounds() {
   const { busy, error, run } = useSaving();
   const save = async () => {
     if (!f) return;
-    const body = { name: f.name || "", name_en: null, is_active: f.is_active ?? true, description: f.description || "", skills: (f.skillsText || "").split("\n").map((s) => s.trim()).filter(Boolean) };
+    const body = { name: f.name || "", name_en: f.name_en || "", is_active: f.is_active ?? true, description: f.description || "", skills: (f.skillsText || "").split("\n").map((s) => s.trim()).filter(Boolean) };
     if (await run(() => api(f.id ? `/rounds/${f.id}` : "/rounds", { method: f.id ? "PUT" : "POST", body })) !== undefined) {
       toast(t("common.saved"));
       setF(null);
@@ -68,7 +69,7 @@ export function Rounds() {
     <>
       <PageHeader title={t("setup.rounds")} actions={<Button onClick={() => setF({ is_active: true, skillsText: "" })} icon={<Plus size={20} aria-hidden="true" />}>{t("common.add")}</Button>} />
       <DataTable list={list} rowKey={(r) => r.id} columns={[
-        { key: "name", label: t("common.name"), sort: "name", render: (r) => <button type="button" className="font-semibold text-primary-700" onClick={() => setF({ ...r, skillsText: r.skills.join("\n") })}>{r.name}</button> },
+        { key: "name", label: t("common.name"), sort: "name", render: (r) => <button type="button" className="font-semibold text-primary-700" onClick={() => setF({ ...r, skillsText: r.skills.join("\n") })}>{en && r.name_en ? r.name_en : r.name}</button> },
         { key: "skills", label: t("setup.skills"), render: (r) => <span className="text-sm">{r.skills.join(" · ")}</span> },
         { key: "active", label: t("common.status"), sort: "active", render: (r) => <Badge tone={r.is_active ? "green" : "gray"}>{r.is_active ? t("common.active") : t("common.inactive")}</Badge> },
       ]} />
@@ -76,7 +77,8 @@ export function Rounds() {
         <Modal open onClose={() => setF(null)} title={f.id ? t("common.edit") : t("common.add")} footer={<>
           <Button variant="outline" onClick={() => setF(null)}>{t("common.cancel")}</Button><Button busy={busy} onClick={save}>{t("common.save")}</Button></>}>
           {error && <ErrorState error={error} />}
-          <TextInput label={t("common.name")} value={f.name || ""} onChange={(e) => setF({ ...f, name: e.target.value })} />
+          <TextInput label={<FlagLabel lang="ar">{t("setup.name_ar")}</FlagLabel>} dir="rtl" value={f.name || ""} onChange={(e) => setF({ ...f, name: e.target.value })} />
+          <TextInput label={<FlagLabel lang="en">{t("setup.name_en")}</FlagLabel>} dir="ltr" value={f.name_en || ""} onChange={(e) => setF({ ...f, name_en: e.target.value })} />
           <TextArea label={t("setup.description")} value={f.description || ""} onChange={(e) => setF({ ...f, description: e.target.value })} />
           <TextArea label={t("setup.skills")} hint={t("setup.skills_hint")} rows={5} value={f.skillsText || ""} onChange={(e) => setF({ ...f, skillsText: e.target.value })} />
           <Toggle label={t("common.active")} checked={f.is_active ?? true} onChange={(v) => setF({ ...f, is_active: v })} />

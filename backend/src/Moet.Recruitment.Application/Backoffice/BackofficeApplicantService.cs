@@ -10,7 +10,7 @@ namespace Moet.Recruitment.Application.Backoffice;
 public sealed record ApplicantFilter(int? JobId, string? Status, string? Screening, string? AiStatus, decimal? MinScore, string? Country, DateOnly? From, DateOnly? To, string? CvText = null);
 
 /// <summary>The applicant pipeline: lists, the applicant's full record, status changes, notes and re-scoring.</summary>
-public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor actor, IClock clock, JobQueue jobs, AssessmentWorkflow workflow,
+public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor actor, IRequestLanguage language, IClock clock, JobQueue jobs, AssessmentWorkflow workflow,
     PortalMailer mailer, ContentService content)
 {
     static readonly Sorts<JobApplication> AppSorts = new Sorts<JobApplication>("created")
@@ -38,10 +38,11 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
             var t = lq.Term;
             q = q.Where(a => a.FullName.Contains(t) || a.Email.Contains(t) || a.Code.Contains(t) || a.Phone.Contains(t));
         }
+        var en = language.English;
         return await q.PageAsync(lq, AppSorts, a => new
         {
             id = a.Id, code = a.Code, full_name = a.FullName, email = a.Email, job_id = a.JobOpeningId, job_code = a.JobOpening!.Code,
-            job_title = a.JobOpening.Title, status = a.Status, screening = a.ScreeningOutcome, country = a.Country,
+            job_title = (en ? a.JobOpening.Translations.Where(t => t.LanguageCode == "en" && t.Title != "").Select(t => t.Title).FirstOrDefault() ?? a.JobOpening.Title : a.JobOpening.Title), status = a.Status, screening = a.ScreeningOutcome, country = a.Country,
             score = a.CvAnalysis == null ? null : a.CvAnalysis.Score, ai_status = a.CvAnalysis == null ? (CvAnalysisStatus?)null : a.CvAnalysis.Status,
             created_at = a.CreatedAt,
             interviews = db.Interviews.Count(i => i.JobApplicationId == a.Id && i.Status != InterviewStatus.Cancelled),
@@ -51,17 +52,18 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
     public async Task<object> GetAsync(int id, CancellationToken ct = default)
     {
         var a = await db.JobApplications.AsNoTracking().Where(x => x.Id == id)
-                    .Include(x => x.JobOpening)
+                    .Include(x => x.JobOpening!).ThenInclude(j => j.Translations)
                     .Include(x => x.ScreeningAnswers)
                     .Include(x => x.CvAnalysis!).ThenInclude(c => c.CriterionScores)
                     .Include(x => x.Notes).ThenInclude(n => n.AuthorStaff)
                     .AsSplitQuery().FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
+        var en = language.English;
         var cv = await db.StoredFiles.AsNoTracking().Where(f => f.Id == a.CvFileId)
             .Select(f => new { f.FileName, f.ContentType, f.SizeBytes }).FirstOrDefaultAsync(ct);
         var interviews = await db.Interviews.AsNoTracking().Where(i => i.JobApplicationId == id).Include(i => i.InterviewRound)
             .OrderByDescending(i => i.StartsAt).Select(i => new
             {
-                id = i.Id, code = i.Code, round = i.InterviewRound!.Name, starts_at = i.StartsAt, ends_at = i.EndsAt,
+                id = i.Id, code = i.Code, round = (en && i.InterviewRound!.NameEn != "" ? i.InterviewRound!.NameEn : i.InterviewRound!.Name), starts_at = i.StartsAt, ends_at = i.EndsAt,
                 status = i.Status, feedback = i.Feedback.Count,
             }).ToListAsync(ct);
         var offers = await db.JobOffers.AsNoTracking().Where(o => o.JobApplicationId == id).OrderByDescending(o => o.CreatedAt)
@@ -70,7 +72,7 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
         var invitations = await db.Invitations.AsNoTracking().Where(i => i.JobApplicationId == id).Include(i => i.Assessment)
             .OrderByDescending(i => i.CreatedAt).Select(i => new
             {
-                id = i.Id, code = i.Code, assessment_id = i.AssessmentId, title = i.Assessment!.Title, status = i.Status,
+                id = i.Id, code = i.Code, assessment_id = i.AssessmentId, title = (en ? i.Assessment!.Translations.Where(t => t.LanguageCode == "en" && t.Title != "").Select(t => t.Title).FirstOrDefault() ?? i.Assessment!.Title : i.Assessment!.Title), status = i.Status,
                 personality_model = i.Assessment.PersonalityModel,
                 deadline_at = i.DeadlineAt, attempts_used = (int)i.AttemptsUsed, attempts_allowed = (int)i.AttemptsAllowed,
                 score = i.Score, result = i.Result,
@@ -90,7 +92,7 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
         {
             id = a.Id, code = a.Code, reference = a.Reference, full_name = a.FullName, email = a.Email, phone = a.Phone, country = a.Country,
             cover_note = a.CoverNote, status = a.Status.ToString(), language = a.LanguageCode, created_at = a.CreatedAt,
-            job = new { id = a.JobOpeningId, code = a.JobOpening!.Code, title = a.JobOpening.Title },
+            job = new { id = a.JobOpeningId, code = a.JobOpening!.Code, title = a.JobOpening.In(en ? "en" : "ar").Title },
             cv = cv == null ? null : new { file_name = cv.FileName, content_type = cv.ContentType, size = cv.SizeBytes, url = $"/api/backoffice/applicants/{a.Id}/cv" },
             screening = new
             {

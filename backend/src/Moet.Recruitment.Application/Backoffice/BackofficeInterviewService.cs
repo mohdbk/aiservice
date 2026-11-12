@@ -15,7 +15,7 @@ public sealed record RatingInput(string Skill, int Rating);
 public sealed record OfferInput(int ApplicationId, string PositionTitle, string OfferDate, string? StartDate, decimal? MonthlySalary, string? Currency, string? Terms,
     int? OfferTemplateId = null);
 
-public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator codes, ICurrentActor actor, IClock clock, OfferLetterService letters,
+public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator codes, ICurrentActor actor, IRequestLanguage language, IClock clock, OfferLetterService letters,
     PortalMailer mailer, ContentService content)
 {
     static readonly Sorts<Interview> InterviewSorts = new Sorts<Interview>("starts", false)
@@ -39,11 +39,12 @@ public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator 
         if (jobId != null) q = q.Where(i => i.JobApplication!.JobOpeningId == jobId);
         if (lq.Term.Length > 0) q = q.Where(i => i.JobApplication!.FullName.Contains(lq.Term) || i.Code.Contains(lq.Term));
         var sorts = scope == "past" && lq.Sort == null ? new Sorts<Interview>("starts").Add("starts", i => i.StartsAt) : InterviewSorts;
+        var en = language.English;
         return await q.PageAsync(lq, sorts, i => new
         {
             id = i.Id, code = i.Code, starts_at = i.StartsAt, ends_at = i.EndsAt, status = i.Status, location = i.Location,
-            round = i.InterviewRound!.Name, applicant_id = i.JobApplicationId, applicant = i.JobApplication!.FullName,
-            job_title = i.JobApplication.JobOpening!.Title, panel = i.Panelists.Select(p => p.StaffUser!.FullName).ToList(),
+            round = (en && i.InterviewRound!.NameEn != "" ? i.InterviewRound!.NameEn : i.InterviewRound!.Name), applicant_id = i.JobApplicationId, applicant = i.JobApplication!.FullName,
+            job_title = (en ? i.JobApplication.JobOpening!.Translations.Where(t => t.LanguageCode == "en" && t.Title != "").Select(t => t.Title).FirstOrDefault() ?? i.JobApplication.JobOpening!.Title : i.JobApplication.JobOpening!.Title), panel = i.Panelists.Select(p => p.StaffUser!.FullName).ToList(),
             feedback = i.Feedback.Count,
         }, ct);
     }
@@ -52,7 +53,7 @@ public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator 
     {
         var i = await db.Interviews.AsNoTracking().Where(x => x.Id == id)
                     .Include(x => x.InterviewRound!).ThenInclude(r => r.Skills)
-                    .Include(x => x.JobApplication!).ThenInclude(a => a.JobOpening)
+                    .Include(x => x.JobApplication!).ThenInclude(a => a.JobOpening!).ThenInclude(j => j.Translations)
                     .Include(x => x.Panelists).ThenInclude(p => p.StaffUser)
                     .Include(x => x.Feedback).ThenInclude(f => f.StaffUser)
                     .Include(x => x.Feedback).ThenInclude(f => f.Ratings)
@@ -60,8 +61,8 @@ public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator 
         return new
         {
             id = i.Id, code = i.Code, starts_at = i.StartsAt, ends_at = i.EndsAt, status = i.Status.ToString(), location = i.Location, notes = i.Notes,
-            round = new { id = i.InterviewRoundId, name = i.InterviewRound!.Name, skills = i.InterviewRound.Skills.OrderBy(s => s.SortOrder).Select(s => s.Skill).ToList() },
-            applicant = new { id = i.JobApplicationId, name = i.JobApplication!.FullName, job_title = i.JobApplication.JobOpening!.Title },
+            round = new { id = i.InterviewRoundId, name = language.English && i.InterviewRound!.NameEn != "" ? i.InterviewRound.NameEn : i.InterviewRound!.Name, skills = i.InterviewRound.Skills.OrderBy(s => s.SortOrder).Select(s => s.Skill).ToList() },
+            applicant = new { id = i.JobApplicationId, name = i.JobApplication!.FullName, job_title = i.JobApplication.JobOpening!.In(language.English ? "en" : "ar").Title },
             panel = i.Panelists.Select(p => new { id = p.StaffUserId, name = p.StaffUser!.FullName }).ToList(),
             feedback = i.Feedback.OrderBy(f => f.SubmittedAt).Select(f => new
             {
@@ -151,23 +152,24 @@ public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator 
         var q = db.JobOffers.AsNoTracking().AsQueryable();
         if (Enum.TryParse<OfferStatus>(status, out var st)) q = q.Where(o => o.Status == st);
         if (lq.Term.Length > 0) q = q.Where(o => o.JobApplication!.FullName.Contains(lq.Term) || o.Code.Contains(lq.Term) || o.PositionTitle.Contains(lq.Term));
+        var en = language.English;
         return await q.PageAsync(lq, OfferSorts, o => new
         {
             id = o.Id, code = o.Code, position_title = o.PositionTitle, status = o.Status, offer_date = o.OfferDate,
             start_date = o.StartDate, monthly_salary = o.MonthlySalary, currency = o.Currency,
-            applicant_id = o.JobApplicationId, applicant = o.JobApplication!.FullName, job_title = o.JobApplication.JobOpening!.Title,
+            applicant_id = o.JobApplicationId, applicant = o.JobApplication!.FullName, job_title = (en ? o.JobApplication.JobOpening!.Translations.Where(t => t.LanguageCode == "en" && t.Title != "").Select(t => t.Title).FirstOrDefault() ?? o.JobApplication.JobOpening!.Title : o.JobApplication.JobOpening!.Title),
         }, ct);
     }
 
     public async Task<object> OfferAsync(int id, CancellationToken ct = default)
     {
-        var o = await db.JobOffers.AsNoTracking().Include(x => x.JobApplication!).ThenInclude(a => a.JobOpening)
+        var o = await db.JobOffers.AsNoTracking().Include(x => x.JobApplication!).ThenInclude(a => a.JobOpening!).ThenInclude(j => j.Translations)
                     .FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound();
         return new
         {
             id = o.Id, code = o.Code, position_title = o.PositionTitle, status = o.Status.ToString(), offer_date = o.OfferDate,
             start_date = o.StartDate, monthly_salary = o.MonthlySalary, currency = o.Currency, terms = o.Terms, offer_template_id = o.OfferTemplateId,
-            applicant = new { id = o.JobApplicationId, name = o.JobApplication!.FullName, job_title = o.JobApplication.JobOpening!.Title },
+            applicant = new { id = o.JobApplicationId, name = o.JobApplication!.FullName, job_title = o.JobApplication.JobOpening!.In(language.English ? "en" : "ar").Title },
         };
     }
 

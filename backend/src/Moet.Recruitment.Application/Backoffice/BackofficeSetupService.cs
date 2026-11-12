@@ -20,7 +20,7 @@ public sealed record PortalTextInput(string Lang, string Key, string Text, bool 
 public sealed record NamedInput(string Name, string? NameEn, bool IsActive, string? Description, IReadOnlyList<string>? Skills);
 
 /// <summary>Screening questions, dashboard, lookups and settings.</summary>
-public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor, IClock clock, ContentService content, ITextCatalog catalog, JobQueue jobs)
+public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor, IRequestLanguage language, IClock clock, ContentService content, ITextCatalog catalog, JobQueue jobs)
 {
     const string En = "en";
 
@@ -38,9 +38,10 @@ public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor
         if (english == "Missing") q = q.Where(x => !x.Translations.Any(t => t.LanguageCode == En));
         else if (Enum.TryParse<ReviewStatus>(english, out var rs)) q = q.Where(x => x.Translations.Any(t => t.LanguageCode == En && t.ReviewStatus == rs));
         if (lq.Term.Length > 0) q = q.Where(x => x.Text.Contains(lq.Term) || x.Translations.Any(t => t.Text.Contains(lq.Term)));
+        var en = language.English;
         return await q.PageAsync(lq, ScreeningSorts, x => new
         {
-            id = x.Id, text = x.Text, answer_type = x.AnswerType, category = x.Category, is_active = x.IsActive,
+            id = x.Id, text = en ? x.Translations.Where(t => t.LanguageCode == En && t.Text != "").Select(t => t.Text).FirstOrDefault() ?? x.Text : x.Text, answer_type = x.AnswerType, category = x.Category, is_active = x.IsActive,
             english = x.Translations.Where(t => t.LanguageCode == En).Select(t => (ReviewStatus?)t.ReviewStatus).FirstOrDefault(),
             options = x.Options.OrderBy(o => o.SortOrder).Select(o => o.Text).ToList(),
         }, ct);
@@ -132,6 +133,7 @@ public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor
 
     public async Task<object> DashboardAsync(CancellationToken ct = default)
     {
+        var en = language.English;
         var now = clock.UtcNow;
         var weekAgo = now.AddDays(-7);
         var today = clock.Today();
@@ -147,28 +149,41 @@ public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor
             english_to_review = await db.JobOpeningTranslations.CountAsync(t => t.ReviewStatus == ReviewStatus.Suggested, ct),
             recent = await db.JobApplications.AsNoTracking().OrderByDescending(a => a.CreatedAt).Take(8).Select(a => new
             {
-                id = a.Id, full_name = a.FullName, job_title = a.JobOpening!.Title, created_at = a.CreatedAt,
+                id = a.Id, full_name = a.FullName,
+                job_title = en ? a.JobOpening!.Translations.Where(t => t.LanguageCode == En && t.Title != "").Select(t => t.Title).FirstOrDefault() ?? a.JobOpening.Title : a.JobOpening!.Title,
+                created_at = a.CreatedAt,
                 score = a.CvAnalysis == null ? null : a.CvAnalysis.Score, status = a.Status,
             }).ToListAsync(ct),
             interviews = await db.Interviews.AsNoTracking().Where(i => i.StartsAt >= now && i.Status == InterviewStatus.Scheduled)
-                .OrderBy(i => i.StartsAt).Take(6).Select(i => new { id = i.Id, starts_at = i.StartsAt, applicant = i.JobApplication!.FullName, round = i.InterviewRound!.Name })
+                .OrderBy(i => i.StartsAt).Take(6).Select(i => new { id = i.Id, starts_at = i.StartsAt, applicant = i.JobApplication!.FullName,
+                    round = en && i.InterviewRound!.NameEn != "" ? i.InterviewRound.NameEn : i.InterviewRound!.Name })
                 .ToListAsync(ct),
         };
     }
 
-    public async Task<object> LookupsAsync(CancellationToken ct = default) => new
+    public async Task<object> LookupsAsync(CancellationToken ct = default)
     {
+        var en = language.English;
+        return new
+        {
         departments = await db.Departments.AsNoTracking().Where(d => d.IsActive).OrderBy(d => d.Name)
-            .Select(d => new { id = d.Id, name = d.Name, name_en = d.Translations.Where(t => t.LanguageCode == En).Select(t => t.Name).FirstOrDefault() ?? "" }).ToListAsync(ct),
-        rounds = await db.InterviewRounds.AsNoTracking().Where(r => r.IsActive).OrderBy(r => r.Name).Select(r => new { id = r.Id, name = r.Name }).ToListAsync(ct),
+            .Select(d => new
+            {
+                id = d.Id, name = en ? d.Translations.Where(t => t.LanguageCode == En && t.Name != "").Select(t => t.Name).FirstOrDefault() ?? d.Name : d.Name,
+                name_en = d.Translations.Where(t => t.LanguageCode == En).Select(t => t.Name).FirstOrDefault() ?? "",
+            }).ToListAsync(ct),
+        rounds = await db.InterviewRounds.AsNoTracking().Where(r => r.IsActive).OrderBy(r => r.Name)
+            .Select(r => new { id = r.Id, name = en && r.NameEn != "" ? r.NameEn : r.Name, name_ar = r.Name, name_en = r.NameEn }).ToListAsync(ct),
         staff = await db.StaffUsers.AsNoTracking().Where(u => u.IsEnabled).OrderBy(u => u.FullName).Select(u => new { id = u.Id, name = u.FullName, email = u.Email }).ToListAsync(ct),
-        assessments = await db.Assessments.AsNoTracking().Where(a => a.Status == AssessmentStatus.Published).OrderBy(a => a.Title).Select(a => new { id = a.Id, title = a.Title }).ToListAsync(ct),
+        assessments = await db.Assessments.AsNoTracking().Where(a => a.Status == AssessmentStatus.Published).OrderBy(a => a.Title)
+            .Select(a => new { id = a.Id, title = en ? a.Translations.Where(t => t.LanguageCode == En && t.Title != "").Select(t => t.Title).FirstOrDefault() ?? a.Title : a.Title }).ToListAsync(ct),
         screening_questions = await db.ScreeningQuestions.AsNoTracking().Where(q => q.IsActive).OrderBy(q => q.Text)
             .Select(q => new { id = q.Id, text = q.Text, answer_type = q.AnswerType, options = q.Options.OrderBy(o => o.SortOrder).Select(o => new { id = o.Id, text = o.Text }).ToList() })
             .ToListAsync(ct),
         categories = await db.Questions.AsNoTracking().Where(x => x.Category != "").Select(x => x.Category).Distinct().OrderBy(x => x).ToListAsync(ct),
         job_families = await db.Questions.AsNoTracking().Where(x => x.JobFamily != "").Select(x => x.JobFamily).Distinct().OrderBy(x => x).ToListAsync(ct),
-    };
+        };
+    }
 
     // ---------------- departments and interview rounds ----------------
 
@@ -204,10 +219,10 @@ public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor
     public Task<PageResult<object>> RoundsAsync(ListQuery lq, CancellationToken ct = default)
     {
         var q = db.InterviewRounds.AsNoTracking().AsQueryable();
-        if (lq.Term.Length > 0) q = q.Where(r => r.Name.Contains(lq.Term));
+        if (lq.Term.Length > 0) q = q.Where(r => r.Name.Contains(lq.Term) || r.NameEn.Contains(lq.Term));
         return q.PageAsync(lq, new Sorts<InterviewRound>("name", false).Add("name", r => r.Name).Add("active", r => r.IsActive), r => (object)new
         {
-            id = r.Id, name = r.Name, description = r.Description, is_active = r.IsActive, skills = r.Skills.OrderBy(s => s.SortOrder).Select(s => s.Skill).ToList(),
+            id = r.Id, name = r.Name, name_en = r.NameEn, description = r.Description, is_active = r.IsActive, skills = r.Skills.OrderBy(s => s.SortOrder).Select(s => s.Skill).ToList(),
         }, ct);
     }
 
@@ -218,6 +233,7 @@ public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor
         if (id == null) db.InterviewRounds.Add(r = new InterviewRound());
         else r = await db.InterviewRounds.Include(x => x.Skills).FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound();
         r.Name = TextUtil.Clip(input.Name.Trim(), 140);
+        r.NameEn = TextUtil.Clip(input.NameEn?.Trim(), 140);
         r.Description = TextUtil.Clip(input.Description?.Trim(), 1000);
         r.IsActive = input.IsActive;
         r.Skills.Clear();

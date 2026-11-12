@@ -10,7 +10,7 @@ export const ACTIONS = ["set_applicant_status", "add_note", "schedule_interview"
 
 /** Setup: forms and approval cards that admins design for the recruitment agent. */
 export default function Components() {
-  const { t, to, date } = useLang();
+  const { t, to, date, lang } = useLang();
   usePageTitle(t("nav.components"));
   const go = useGo();
   const list = useList<Row>("/components", ["kind", "active", "action"]);
@@ -26,8 +26,7 @@ export default function Components() {
         ]}
         columns={[
           { key: "name", label: t("comp.name"), sort: "name", render: (x) => <>
-            <Link to={to(`/setup/components/${x.id}`)} className="font-semibold text-primary-700">{x.name}</Link>
-            {x.name_en && <p className="text-xs text-aeblack-500" lang="en" dir="ltr">{x.name_en}</p>}
+            <Link to={to(`/setup/components/${x.id}`)} className="font-semibold text-primary-700">{lang === "en" && x.name_en ? x.name_en : x.name}</Link>
           </> },
           { key: "key", label: t("comp.key"), sort: "key", render: (x) => <code dir="ltr" className="text-xs">{x.key}</code> },
           { key: "kind", label: t("comp.kind"), sort: "kind", render: (x) => <Badge tone={x.kind === "Approval" ? "gold" : "blue"}>{t(`comp.kind.${x.kind}`)}</Badge> },

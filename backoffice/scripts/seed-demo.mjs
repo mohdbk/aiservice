@@ -46,10 +46,10 @@ async function main() {
   for (const [ar, en] of [["إدارة التحول الرقمي", "Digital Transformation"], ["إدارة السياسات الاقتصادية", "Economic Policy"], ["إدارة الموارد البشرية", "Human Resources"], ["إدارة السياحة", "Tourism"]])
     depts.push((await bo("POST", "/departments", { name: ar, name_en: en, is_active: true, description: null, skills: null })).id);
   const rounds = [];
-  for (const [name, skills] of [
-    ["مقابلة فنية", ["المعرفة التقنية", "حل المشكلات", "التواصل"]],
-    ["مقابلة مع لجنة الموارد البشرية", ["الملاءمة الثقافية", "الدافعية", "التواصل"]],
-  ]) rounds.push((await bo("POST", "/rounds", { name, name_en: null, description: "", is_active: true, skills })).id);
+  for (const [name, name_en, skills] of [
+    ["مقابلة فنية", "Technical Interview", ["المعرفة التقنية", "حل المشكلات", "التواصل"]],
+    ["مقابلة مع لجنة الموارد البشرية", "HR Panel Interview", ["الملاءمة الثقافية", "الدافعية", "التواصل"]],
+  ]) rounds.push((await bo("POST", "/rounds", { name, name_en, description: "", is_active: true, skills })).id);
 
   // Screening questions
   const sqLicence = (await bo("POST", "/screening-questions", { text: "هل تحمل رخصة قيادة إماراتية سارية؟", text_en: "Do you hold a valid UAE driving licence?", english_approved: true, answer_type: "YesNo", category: "عام", is_active: true, options: [] })).id;

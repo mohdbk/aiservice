@@ -13,7 +13,7 @@ type JobRow = {
 export const statusTone = (s: string) => (s === "Open" ? "green" : s === "Closed" ? "gray" : "amber");
 
 export default function Jobs() {
-  const { t, to, date } = useLang();
+  const { t, to, date, lang } = useLang();
   usePageTitle(t("jobs.title"));
   const go = useGo();
   const lk = useLookups();
@@ -31,8 +31,7 @@ export default function Jobs() {
         columns={[
           { key: "code", label: t("common.code"), sort: "code", render: (j) => <span dir="ltr" className="whitespace-nowrap text-aeblack-500">{j.code}</span> },
           { key: "title", label: t("jobs.title"), sort: "title", render: (j) => <>
-            <Link to={to(`/jobs/${j.id}`)}>{j.title}</Link>
-            {j.title_en && <p lang="en" dir="ltr" className="text-start text-xs text-aeblack-500">{j.title_en}</p>}
+            <Link to={to(`/jobs/${j.id}`)}>{lang === "en" && j.title_en ? j.title_en : j.title}</Link>
           </> },
           { key: "dep", label: t("jobs.department"), sort: "department", render: (j) => j.department },
           { key: "status", label: t("jobs.status"), sort: "status", render: (j) => <div className="flex flex-wrap gap-1">
