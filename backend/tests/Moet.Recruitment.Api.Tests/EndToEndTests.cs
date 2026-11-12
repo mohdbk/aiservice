@@ -238,6 +238,12 @@ public class EndToEndTests
         }));
         Assert.Equal(HttpStatusCode.BadRequest, badRole.StatusCode);
 
+        // The hiring report: the funnel starts with every application of the period.
+        var report = await Read(await admin.GetAsync("/api/backoffice/reports/hiring"));
+        Assert.Equal(7, report.GetProperty("funnel").GetArrayLength());
+        Assert.True(report.GetProperty("funnel")[0].GetProperty("count").GetInt32() >= 1);
+        Assert.True(report.GetProperty("weeks").GetArrayLength() >= 13);
+
         // Personality settings: band cut-offs and HR's own notes for a type (reset brings back the built-in notes).
         var ps = await Read(await admin.GetAsync("/api/backoffice/personality-settings"));
         Assert.Equal(16, ps.GetProperty("band_cutoffs").GetProperty("high").GetInt32());

@@ -1,7 +1,7 @@
 import { Dialog, Menu } from "@base-ui/react";
 import {
   Briefcase, CalendarCheck, CaretDown, ChatCircleDots, ClipboardText, Exam, FileText, Gear, Handshake, Key, List, ListChecks,
-  Cube, EnvelopeSimple, HardDrives, Robot, Scroll, SignOut, SquaresFour, Target, Tray, Translate, TreeStructure, UserCircle, Users, UsersThree, X, Brain,
+  Cube, EnvelopeSimple, HardDrives, Robot, Scroll, SignOut, SquaresFour, Target, Tray, Translate, TreeStructure, UserCircle, Users, UsersThree, X, Brain, ChartBar,
 } from "@phosphor-icons/react";
 import { ReactNode, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
@@ -16,7 +16,7 @@ function useNav(): { group?: string; items: Item[] }[] {
   const { t } = useLang();
   const i = (C: typeof Briefcase) => <C size={24} aria-hidden="true" />;
   return [
-    { items: [{ to: "/", label: t("nav.dashboard"), icon: i(SquaresFour) }] },
+    { items: [{ to: "/", label: t("nav.dashboard"), icon: i(SquaresFour) }, { to: "/reports", label: t("nav.reports"), icon: i(ChartBar) }] },
     {
       group: t("nav.group.hiring"),
       items: [

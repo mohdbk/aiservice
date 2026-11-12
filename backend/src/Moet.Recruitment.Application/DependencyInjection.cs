@@ -43,6 +43,7 @@ public static class DependencyInjection
         s.AddScoped<BackofficeEmailService>();
         s.AddScoped<DocumentService>();
         s.AddScoped<SelectionService>();
+        s.AddScoped<ReportService>();
         s.AddScoped<PersonalitySettingsService>();
         s.AddScoped<BackofficeSetupService>();
         s.AddScoped<AgentProposalService>();

@@ -50,6 +50,8 @@ public static class BackofficeEndpoints
 
         // dashboard and lookups
         staff.MapGet("/dashboard", (BackofficeSetupService s, CancellationToken ct) => s.DashboardAsync(ct));
+        staff.MapGet("/reports/hiring", (DateOnly? from, DateOnly? to, int? job, int? department, ReportService s, CancellationToken ct) =>
+            s.HiringAsync(from, to, job, department, ct));
         staff.MapGet("/lookups", (BackofficeSetupService s, CancellationToken ct) => s.LookupsAsync(ct));
 
         // jobs

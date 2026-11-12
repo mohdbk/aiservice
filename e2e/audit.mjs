@@ -86,7 +86,7 @@ for (const [view, opts] of Object.entries(VIEWS)) {
   const test = (await get("/assessments?size=1")).items[0];
   const question = (await get("/questions?size=1")).items[0];
   const pages = [
-    ["dashboard", "/"], ["jobs", "/jobs"], ["job", `/jobs/${job.id}`], ["job_new", "/jobs/new"], ["applicants", "/applicants"],
+    ["dashboard", "/"], ["reports", "/reports"], ["jobs", "/jobs"], ["job", `/jobs/${job.id}`], ["job_new", "/jobs/new"], ["applicants", "/applicants"],
     ["applicant", `/applicants/${applicant.id}`], ["applicant_tests", `/applicants/${applicant.id}?tab=tests`], ["interviews", "/interviews"],
     interview && ["interview", `/interviews/${interview.id}`], ["offers", "/offers"], ["screening", "/screening"], ["tests", "/tests"],
     test && ["test", `/tests/${test.id}`], ["questions", "/questions"], question && ["question", `/questions/${question.id}`], ["invitations", "/invitations"],
