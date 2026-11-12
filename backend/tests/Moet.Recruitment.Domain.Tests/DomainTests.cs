@@ -358,3 +358,68 @@ public class AgentComponentTests
         Assert.Equal("component_key_invalid", Assert.Throws<DomainException>(ask.Validate).Code);
     }
 }
+
+public class PersonalityTests
+{
+    static AttemptQuestion Item(string trait, bool reverse, string? answer)
+    {
+        var q = new AttemptQuestion { QuestionType = QuestionType.Likert, Trait = trait, ReverseKeyed = reverse, Options = AttemptBuilder.LikertOptions() };
+        if (answer != null) q.SetAnswer(new AnswerInput(null, [answer], null, null), DateTime.UtcNow);
+        return q;
+    }
+
+    [Fact]
+    public void Traits_are_scored_with_reverse_keying_and_unanswered_items_left_out()
+    {
+        var qs = new[] { Item("C", false, "5"), Item("C", true, "1"), Item("C", false, "4"), Item("C", false, null), Item("E", true, "5") };
+        var profile = Personality.Profile(qs, PersonalityModel.BigFive, new Dictionary<string, TraitNorm>());
+
+        var c = profile.Single(t => t.Code == "C");
+        Assert.Equal(4, c.Items);
+        Assert.Equal(3, c.Answered);
+        Assert.Equal(4.67, c.RawMean);           // 5, 6-1=5, 4
+        Assert.Equal(91.7, c.Score);
+        Assert.Null(c.Percentile);
+        Assert.Equal("High", c.Band);
+        var e = profile.Single(t => t.Code == "E");
+        Assert.Equal(1, e.RawMean);              // strongly agreeing with a reversed statement
+        Assert.Equal(1, e.Sten);
+        Assert.Equal("Low", e.Band);
+        Assert.DoesNotContain(profile, t => t.Code == "O");
+    }
+
+    [Fact]
+    public void Norms_give_percentiles_and_stens()
+    {
+        var qs = new[] { Item("ES", false, "4"), Item("ES", false, "4") };
+        var norms = new Dictionary<string, TraitNorm> { ["ES"] = new(3.0, 0.5) };
+        var es = Personality.Profile(qs, PersonalityModel.BigFive, norms).Single();
+        Assert.Equal(98, es.Percentile);         // z = 2
+        Assert.Equal(10, es.Sten);
+        Assert.Equal(50, Math.Round(Personality.NormalCdf(0) * 100));
+    }
+
+    [Fact]
+    public void Questionnaires_have_no_pass_mark_and_statements_need_a_trait()
+    {
+        var a = new Assessment
+        {
+            Title = "Big Five", AssessmentType = AssessmentType.Personality, PersonalityModel = PersonalityModel.BigFive, PassMark = 60, ShowScoreToCandidate = true,
+            Sections = [new Section { Items = [new SectionItem { QuestionId = 1 }] }],
+        };
+        a.Validate();
+        Assert.Equal(0, a.PassMark);
+        Assert.False(a.ShowScoreToCandidate);
+        a.PersonalityModel = PersonalityModel.None;
+        Assert.Equal("personality_model_required", Assert.Throws<DomainException>(a.Validate).Code);
+        a.PersonalityModel = PersonalityModel.SixteenPF;
+        a.TraitNorms = """{"ES":{"mean":3,"sd":0.5}}""";
+        Assert.Equal("norms_invalid", Assert.Throws<DomainException>(a.Validate).Code);   // ES is a Big Five code
+
+        var q = new Question { QuestionType = QuestionType.Likert, Text = "<p>I like order.</p>", Trait = "" };
+        Assert.Equal("trait_required", Assert.Throws<DomainException>(q.Validate).Code);
+        q.Trait = "q3";
+        q.Validate();
+        Assert.Equal("Q3", q.Trait);
+    }
+}

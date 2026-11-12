@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import {
   ActionMenu, Badge, Button, Card, Empty, ErrorState, Loading, Modal, Note, PageHeader, Score, SectionTabs, SelectInput, Table, TextArea, TextInput, Tick, useSaving,
 } from "../components/ui";
+import { TraitProfile, parseProfile } from "../components/personality";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
 import { appTone, screenTone } from "./Applicants";
 import { useLookups } from "./JobEdit";
@@ -22,8 +23,11 @@ type Detail = {
   offers: { id: number; code: string; position_title: string; status: string; offer_date: string }[];
   invitations: {
     id: number; code: string; assessment_id: number; title: string; status: string; deadline_at: string; attempts_used: number; attempts_allowed: number;
-    score: number | null; result: string | null;
-    attempts: { id: number; attempt_no: number; status: string; percent: number; passed: boolean | null; tab_switches: number; pastes: number; submitted_at: string | null }[];
+    score: number | null; result: string | null; personality_model: string;
+    attempts: {
+      id: number; attempt_no: number; status: string; percent: number; passed: boolean | null; tab_switches: number; pastes: number; submitted_at: string | null;
+      trait_profile: string | null;
+    }[];
   }[];
 };
 
@@ -169,16 +173,20 @@ export default function Applicant() {
               <dl className="mb-4 grid gap-2 text-sm sm:grid-cols-4">
                 <div><dt className="text-aeblack-500">{t("app.deadline")}</dt><dd>{date(inv.deadline_at, true)}</dd></div>
                 <div><dt className="text-aeblack-500">{t("app.attempts")}</dt><dd dir="ltr" className="text-start">{inv.attempts_used} / {inv.attempts_allowed}</dd></div>
-                <div><dt className="text-aeblack-500">{t("apps.score")}</dt><dd><Score value={inv.score} /></dd></div>
+                {inv.personality_model === "None" && <div><dt className="text-aeblack-500">{t("apps.score")}</dt><dd><Score value={inv.score} /></dd></div>}
                 <div><dt className="text-aeblack-500">{t("app.result")}</dt><dd>{inv.result ? t(`res.${inv.result}`) : "-"}</dd></div>
               </dl>
+              {inv.personality_model !== "None" && (() => {
+                const last = [...inv.attempts].reverse().find((at) => at.trait_profile);
+                return last ? <div className="mb-4"><TraitProfile profile={parseProfile(last.trait_profile)} /></div> : null;
+              })()}
               {inv.attempts.length > 0 && (
                 <ul className="space-y-2">
                   {inv.attempts.map((at) => (
                     <li key={at.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-whitely-100 p-3 text-sm">
                       <span>#{at.attempt_no} · {at.status === "InProgress" ? t("inv.status.InProgress") : at.status === "Submitted" ? t("inv.status.Submitted") : t("inv.status.Marked")}
-                        {" · "}<span dir="ltr">{at.percent}%</span>{" · "}{t("app.integrity", { tabs: at.tab_switches, pastes: at.pastes })}</span>
-                      {at.status !== "InProgress" && <Link className="aegov-btn btn-outline btn-sm" to={to(`/marking/${at.id}`)}>{t("app.mark")}</Link>}
+                        {inv.personality_model === "None" && <>{" · "}<span dir="ltr">{at.percent}%</span></>}{" · "}{t("app.integrity", { tabs: at.tab_switches, pastes: at.pastes })}</span>
+                      {at.status !== "InProgress" && <Link className="aegov-btn btn-outline btn-sm" to={to(`/marking/${at.id}`)}>{inv.personality_model === "None" ? t("app.mark") : t("pers.view_answers")}</Link>}
                     </li>
                   ))}
                 </ul>

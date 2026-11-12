@@ -26,6 +26,7 @@ public static class Labels
         QuestionType.ShortAnswer => "Short Answer",
         QuestionType.Number => "Number",
         QuestionType.Essay => "Essay",
+        QuestionType.Likert => "Agreement Scale",
         _ => "File Upload",
     };
 

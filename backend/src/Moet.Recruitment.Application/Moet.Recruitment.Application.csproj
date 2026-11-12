@@ -23,4 +23,8 @@
     <InternalsVisibleTo Include="Moet.Recruitment.Domain.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Assessments\Templates\*.json" />
+  </ItemGroup>
+
 </Project>

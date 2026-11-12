@@ -204,6 +204,16 @@ public class EndToEndTests
         // Assessments load with their sections (computed orderings are not mapped as navigations).
         Assert.Equal(0, (await Read(await admin.GetAsync("/api/backoffice/assessments"))).GetProperty("total").GetInt32());
 
+        // The public-domain IPIP Big Five questionnaire can be added in one step: 50 statements and a draft questionnaire.
+        var templates = await Read(await admin.GetAsync("/api/backoffice/assessment-templates"));
+        Assert.Equal("ipip-big-five-50", templates[0].GetProperty("key").GetString());
+        var bigFive = await Read(await admin.PostAsync("/api/backoffice/assessment-templates/ipip-big-five-50", JsonBody(new { })));
+        Assert.Equal(50, bigFive.GetProperty("questions").GetInt32());
+        var questionnaire = await Read(await admin.GetAsync($"/api/backoffice/assessments/{bigFive.GetProperty("id").GetInt32()}"));
+        Assert.Equal("BigFive", questionnaire.GetProperty("personality_model").GetString());
+        Assert.Equal(50, questionnaire.GetProperty("question_count").GetInt32());
+        Assert.Equal(5, questionnaire.GetProperty("traits").GetArrayLength());
+
         // Changes without the X-Admin header are refused.
         var plain = app.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
         Assert.Equal(HttpStatusCode.Forbidden, (await plain.PostAsync("/api/backoffice/sign-in", JsonBody(new { email = "x", password = "y" }))).StatusCode);

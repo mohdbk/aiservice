@@ -16,6 +16,10 @@ public class Question
     public string Rubric { get; set; } = "";
     public int MaxWords { get; set; }
     public bool IsActive { get; set; } = true;
+    /// <summary>Personality statements: the trait code the statement measures (for example C or Q3).</summary>
+    public string Trait { get; set; } = "";
+    /// <summary>Personality statements: agreeing lowers the trait score.</summary>
+    public bool ReverseKeyed { get; set; }
     public string SourceLanguageCode { get; set; } = "ar";
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
@@ -30,6 +34,16 @@ public class Question
         if (TextUtil.StripHtml(Text).Length == 0) throw DomainException.Invalid("question_required");
         if (Points <= 0) Points = 1;
         if (!IsChoice) Options.Clear();
+        if (QuestionType == QuestionType.Likert)
+        {
+            Trait = Trait.Trim().ToUpperInvariant();
+            if (!Personality.TraitCode().IsMatch(Trait)) throw DomainException.Invalid("trait_required");
+        }
+        else
+        {
+            Trait = "";
+            ReverseKeyed = false;
+        }
         if (IsChoice)
         {
             if (Options.Count < 2) throw DomainException.Invalid("two_options");
@@ -97,6 +111,10 @@ public class Assessment
     public bool ShuffleOptions { get; set; } = true;
     public bool ShowScoreToCandidate { get; set; }
     public byte DefaultDeadlineDays { get; set; } = 7;
+    /// <summary>Personality questionnaires: which trait model scores it.</summary>
+    public PersonalityModel PersonalityModel { get; set; } = PersonalityModel.None;
+    /// <summary>Personality questionnaires: optional reference norms per trait, JSON {"C": {"mean": 3.6, "sd": 0.6}}.</summary>
+    public string TraitNorms { get; set; } = "{}";
     public string SourceLanguageCode { get; set; } = "ar";
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
@@ -106,6 +124,8 @@ public class Assessment
     public IEnumerable<Section> OrderedSections => Sections.OrderBy(s => s.SortOrder);
 
     public int TotalMinutes => Sections.Sum(s => s.Minutes);
+
+    public bool IsPersonality => AssessmentType == AssessmentType.Personality;
 
     public AssessmentTranslation? ApprovedTranslation(string lang) =>
         lang == SourceLanguageCode ? null : Translations.FirstOrDefault(t => t.LanguageCode == lang && t.ReviewStatus == ReviewStatus.Approved);
@@ -129,6 +149,20 @@ public class Assessment
         if (string.IsNullOrWhiteSpace(Title)) throw DomainException.Invalid("title_required");
         if (Sections.Count == 0) throw DomainException.Invalid("section_required");
         if (MaxAttempts < 1) MaxAttempts = 1;
+        if (IsPersonality)
+        {
+            if (PersonalityModel == PersonalityModel.None) throw DomainException.Invalid("personality_model_required");
+            Personality.ValidateNorms(Personality.ParseNorms(TraitNorms), PersonalityModel);
+            // No right answers: no pass mark, and candidates are not shown a score.
+            PassMark = 0;
+            ShowScoreToCandidate = false;
+            ShuffleOptions = false;
+        }
+        else
+        {
+            PersonalityModel = PersonalityModel.None;
+            TraitNorms = "{}";
+        }
         foreach (var s in Sections)
             if (s.Items.Any(i => i.QuestionId == null && i.DrawCount <= 0)) throw DomainException.Invalid("item_incomplete");
     }

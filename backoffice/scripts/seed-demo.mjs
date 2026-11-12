@@ -114,12 +114,14 @@ async function main() {
     ["ليلى أحمد", "layla.ahmed@example.test", "6", 2], ["محمد علي", "mohammed.ali@example.test", "2", 1], ["Aisha Khan", "aisha.khan@example.test", "4", 2],
     ["عمر حسن", "omar.hassan@example.test", "8", 3], ["نورة سالم", "noura.salem@example.test", "1", 1], ["Daniel Smith", "daniel.smith@example.test", "5", 2],
   ];
+  const epochs = {};
   for (const [name, email, years, deg] of people) {
     const s = await portal("POST", "signup", { full_name: name, email, password: "Demo-Applicant-2026", lang: /[a-z]/i.test(name) ? "en" : "ar" });
     const form = new FormData();
     for (const [k, v] of Object.entries({ email, epoch: String(s.message.epoch ?? 0), job: jobCode, phone: "+971501234567", country: "United Arab Emirates", declaration: "1", lang: "ar",
       cover_note: "أتطلع إلى الانضمام إلى فريق الوزارة.", screening: JSON.stringify({ sq1: years, sq2: degreeOption[deg].value }) })) form.append(k, v);
     form.append("cv", pdf, "cv.pdf");
+    epochs[email] = String(s.message.epoch ?? 0);
     await portal("POST", "apply", undefined, form);
   }
 
@@ -132,7 +134,25 @@ async function main() {
   await bo("POST", "/interviews", { application_id: apps[2].id, round_id: rounds[1], date: day(3), from: "13:00", to: "13:45", location: "Microsoft Teams", notes: "", panelists: staff.slice(1, 3).map((x) => x.id) });
   const offer = await bo("POST", "/offers", { application_id: apps[3].id, position_title: "محلل بيانات أول", offer_date: day(0), start_date: day(30), monthly_salary: 30000, currency: "AED", terms: "عقد دائم مع فترة تجربة لمدة ستة أشهر." });
   await bo("POST", `/offers/${offer.id}/status`, { status: "Sent" });
-  console.log(`Demo content created: ${apps.length} applicants for ${jobCode}.`);
+  // Big Five personality questionnaire (public-domain IPIP items): add, publish, and have two applicants complete it.
+  const big5 = await bo("POST", "/assessment-templates/ipip-big-five-50", {});
+  const q5 = await bo("GET", `/assessments/${big5.id}`);
+  await bo("PUT", `/assessments/${big5.id}`, { ...q5, status: "Published" });
+  for (const [k, app] of [apps[0], apps[2]].entries()) {
+    await bo("POST", `/applicants/${app.id}/invite`, { assessment_id: big5.id, deadline_days: 7 });
+    const inv = (await bo("GET", `/applicants/${app.id}`)).invitations.find((x) => x.assessment_id === big5.id);
+    const who = { email: app.email, epoch: epochs[app.email], name: inv.code };
+    const state = (await portal("POST", "start_assessment", { ...who, lang: "ar" })).message;
+    for (const [i, q] of state.section.questions.entries()) {
+      const answer = String(((i * (k + 3)) % 5) + 1);
+      await portal("POST", "save_assessment_answer", { ...who, key: q.key, section: state.section_index, answer: JSON.stringify(answer) });
+    }
+    await portal("POST", "next_assessment_section", { ...who, section: state.section_index, lang: "ar" });
+    const done = (await bo("GET", `/applicants/${app.id}`)).invitations.find((x) => x.assessment_id === big5.id);
+    if (done.result !== "Completed" || !done.attempts[0].trait_profile) throw new Error(`Big Five not scored for ${app.email}: ${JSON.stringify(done)}`);
+  }
+
+  console.log(`Demo content created: ${apps.length} applicants for ${jobCode}, two Big Five profiles.`);
 }
 
 main().catch((e) => {

@@ -13,7 +13,7 @@ public sealed record OptionInput(string Text, string? TextEn, bool Correct);
 public sealed record QuestionInput(
     string QuestionType, string Text, string? TextEn, bool EnglishApproved, string? Category, string? JobFamily, string Difficulty,
     decimal Points, decimal? Tolerance, string? Rubric, int? MaxWords, bool IsActive, IReadOnlyList<OptionInput>? Options,
-    IReadOnlyList<string>? AcceptedAnswers);
+    IReadOnlyList<string>? AcceptedAnswers, string? Trait = null, bool ReverseKeyed = false);
 
 public sealed record ItemInput(int? QuestionId, string? DrawCategory, string? DrawDifficulty, string? DrawJobFamily, int DrawCount, decimal? PointsOverride);
 
@@ -22,7 +22,8 @@ public sealed record SectionInput(int? Id, string Title, string? TitleEn, string
 public sealed record AssessmentInput(
     string Title, string? TitleEn, string? Instructions, string? InstructionsEn, bool EnglishApproved, string AssessmentType, string Status,
     decimal PassMark, int MaxAttempts, string ScorePolicy, bool ShuffleQuestions, bool ShuffleOptions, bool ShowScoreToCandidate,
-    int DefaultDeadlineDays, IReadOnlyList<SectionInput>? Sections);
+    int DefaultDeadlineDays, IReadOnlyList<SectionInput>? Sections, string? PersonalityModel = null,
+    IReadOnlyDictionary<string, TraitNorm>? TraitNorms = null);
 
 public sealed record MarkInput(int QuestionId, decimal? Points, string? Comment);
 
@@ -51,7 +52,7 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
         return await query.PageAsync(lq, QuestionSorts, x => new
         {
             id = x.Id, text = x.Text.Length > 400 ? x.Text.Substring(0, 400) : x.Text, question_type = x.QuestionType, category = x.Category,
-            job_family = x.JobFamily, difficulty = x.Difficulty, points = x.Points, is_active = x.IsActive,
+            job_family = x.JobFamily, difficulty = x.Difficulty, points = x.Points, is_active = x.IsActive, trait = x.Trait, reverse_keyed = x.ReverseKeyed,
             english = x.Translations.Where(t => t.LanguageCode == En).Select(t => (ReviewStatus?)t.ReviewStatus).FirstOrDefault(),
         }, ct);
     }
@@ -65,7 +66,7 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
             id = x.Id, question_type = x.QuestionType.ToString(), text = x.Text, text_en = tr?.Text ?? "",
             english_status = tr?.ReviewStatus.ToString() ?? "Missing", english_approved = tr?.ReviewStatus == ReviewStatus.Approved,
             category = x.Category, job_family = x.JobFamily, difficulty = x.Difficulty.ToString(), points = x.Points, tolerance = x.Tolerance,
-            rubric = x.Rubric, max_words = x.MaxWords, is_active = x.IsActive,
+            rubric = x.Rubric, max_words = x.MaxWords, is_active = x.IsActive, trait = x.Trait, reverse_keyed = x.ReverseKeyed,
             options = x.Options.OrderBy(o => o.SortOrder).Select(o => new
             {
                 text = o.Text, text_en = o.Translations.FirstOrDefault(t => t.LanguageCode == En)?.Text ?? "", correct = o.IsCorrect,
@@ -97,6 +98,8 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
         x.Rubric = TextUtil.Clip(input.Rubric, 8000);
         x.MaxWords = Math.Clamp(input.MaxWords ?? 0, 0, 10000);
         x.IsActive = input.IsActive;
+        x.Trait = input.Trait ?? "";
+        x.ReverseKeyed = input.ReverseKeyed;
         x.UpdatedAt = now;
 
         var opts = (input.Options ?? []).Where(o => o.Text.Trim().Length > 0).ToList();
@@ -187,6 +190,9 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
             assessment_type = a.AssessmentType.ToString(), status = a.Status.ToString(), pass_mark = a.PassMark, max_attempts = (int)a.MaxAttempts,
             score_policy = a.ScorePolicy.ToString(), shuffle_questions = a.ShuffleQuestions, shuffle_options = a.ShuffleOptions,
             show_score_to_candidate = a.ShowScoreToCandidate, default_deadline_days = (int)a.DefaultDeadlineDays,
+            personality_model = a.PersonalityModel.ToString(), trait_norms = Personality.ParseNorms(a.TraitNorms),
+            traits = Personality.Traits(a.PersonalityModel == PersonalityModel.None ? PersonalityModel.BigFive : a.PersonalityModel)
+                .Select(t => new { code = t.Code, name_ar = t.NameAr, name_en = t.NameEn }).ToList(),
             question_count = AttemptBuilder.CountQuestions(a, bank),
             sections = a.OrderedSections.Select(s => new
             {
@@ -224,6 +230,9 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
         a.ShuffleOptions = input.ShuffleOptions;
         a.ShowScoreToCandidate = input.ShowScoreToCandidate;
         a.DefaultDeadlineDays = (byte)Math.Clamp(input.DefaultDeadlineDays, 1, 90);
+        a.PersonalityModel = Enum.TryParse<PersonalityModel>(input.PersonalityModel, out var pm) ? pm : PersonalityModel.None;
+        a.TraitNorms = System.Text.Json.JsonSerializer.Serialize((input.TraitNorms ?? new Dictionary<string, TraitNorm>())
+            .ToDictionary(x => x.Key, x => new { mean = x.Value.Mean, sd = x.Value.Sd }));
         a.UpdatedAt = now;
 
         var keep = (input.Sections ?? []).Where(s => s.Id != null).Select(s => s.Id!.Value).ToHashSet();
@@ -342,7 +351,8 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
         return new
         {
             id = a.Id, attempt_no = (int)a.AttemptNo, status = a.Status.ToString(), percent = a.Percent, earned = a.Earned, total = a.Total,
-            passed = a.Passed, started_at = a.StartedAt, submitted_at = a.SubmittedAt, tab_switches = a.TabSwitches, pastes = a.Pastes,
+            passed = a.Passed, started_at = a.StartedAt, trait_profile = TraitProfile(a.TraitProfile),
+            personality_model = inv.Assessment!.PersonalityModel.ToString(), submitted_at = a.SubmittedAt, tab_switches = a.TabSwitches, pastes = a.Pastes,
             invitation = new { id = inv.Id, code = inv.Code, assessment = inv.Assessment!.Title, pass_mark = inv.Assessment.PassMark },
             applicant = new { id = inv.JobApplicationId, name = inv.JobApplication!.FullName },
             sections = a.SectionScores().Select(s => new { s.SectionNo, s.Title, s.Earned, s.Total, s.Percent, s.Passed }).ToList(),
@@ -357,6 +367,9 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
             }).ToList(),
         };
     }
+
+    internal static IReadOnlyList<TraitScore>? TraitProfile(string? json) =>
+        string.IsNullOrEmpty(json) ? null : System.Text.Json.JsonSerializer.Deserialize<List<TraitScore>>(json);
 
     public async Task<object> SaveMarksAsync(int id, IReadOnlyList<MarkInput> marks, CancellationToken ct = default)
     {

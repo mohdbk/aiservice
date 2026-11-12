@@ -60,7 +60,7 @@ public class Invitation
     }
 
     /// <summary>Recomputes the invitation's status, score and result from its attempts.</summary>
-    public void Summarise(ScorePolicy policy)
+    public void Summarise(ScorePolicy policy, bool personality = false)
     {
         var ordered = Attempts.OrderBy(a => a.AttemptNo).ToList();
         if (ordered.Any(a => a.Status == AttemptStatus.InProgress))
@@ -71,11 +71,12 @@ public class Invitation
         var marked = ordered.Where(a => a.Status == AttemptStatus.Marked).ToList();
         var pending = ordered.Any(a => a.Status == AttemptStatus.Submitted);
         Attempt? counted = marked.Count == 0 ? null
+            : personality ? marked[^1]
             : policy == ScorePolicy.Highest ? marked.OrderByDescending(a => a.Percent).ThenBy(a => a.AttemptNo).First() : marked[^1];
         if (Status != InvitationStatus.Cancelled)
             Status = marked.Count > 0 ? InvitationStatus.Marked : pending ? InvitationStatus.Submitted : Status;
-        Score = counted?.Percent;
-        Result = counted != null ? (counted.Passed == true ? InvitationResult.Pass : InvitationResult.Fail)
+        Score = personality ? null : counted?.Percent;
+        Result = counted != null ? personality ? InvitationResult.Completed : counted.Passed == true ? InvitationResult.Pass : InvitationResult.Fail
             : pending ? InvitationResult.AwaitingMarking : null;
     }
 }
@@ -98,6 +99,8 @@ public class Attempt
     public bool? Passed { get; set; }
     public int TabSwitches { get; set; }
     public int Pastes { get; set; }
+    /// <summary>Personality questionnaires: the trait profile (JSON list of TraitScore) worked out on submission.</summary>
+    public string? TraitProfile { get; set; }
     public byte[] RowVersion { get; set; } = [];
     public List<AttemptSection> Sections { get; set; } = [];
 
@@ -184,6 +187,15 @@ public class Attempt
     }).ToList();
 
     /// <summary>Passes when every answer is marked, the overall pass mark is met and every section pass mark is met.</summary>
+    /// <summary>Works out the trait profile of a personality questionnaire; there is no pass or fail.</summary>
+    public IReadOnlyList<TraitScore> ScorePersonality(PersonalityModel model, IReadOnlyDictionary<string, TraitNorm> norms)
+    {
+        var profile = Personality.Profile(AllQuestions, model, norms);
+        TraitProfile = System.Text.Json.JsonSerializer.Serialize(profile);
+        Passed = null;
+        return profile;
+    }
+
     public void DecidePass(decimal passMark)
     {
         Passed = Status == AttemptStatus.Marked ? Percent >= passMark && SectionScores().All(s => s.Passed != false) : null;
@@ -236,6 +248,8 @@ public class AttemptQuestion
     public decimal Tolerance { get; set; }
     public string Rubric { get; set; } = "";
     public int MaxWords { get; set; }
+    public string Trait { get; set; } = "";
+    public bool ReverseKeyed { get; set; }
     public string? AnswerText { get; set; }
     public Guid? AnswerFileId { get; set; }
     public string? AnswerFileName { get; set; }
@@ -265,7 +279,7 @@ public class AttemptQuestion
         var keys = Options.Select(o => o.OptionKey).ToHashSet();
         switch (QuestionType)
         {
-            case QuestionType.SingleChoice or QuestionType.TrueFalse:
+            case QuestionType.SingleChoice or QuestionType.TrueFalse or QuestionType.Likert:
             {
                 var k = input.OptionKeys?.Where(x => !string.IsNullOrEmpty(x)).ToList() ?? [];
                 if (k.Count > 1 || k.Any(x => !keys.Contains(x))) throw DomainException.Invalid("invalid_answer");
@@ -318,7 +332,7 @@ public class AttemptQuestion
     /// <summary>The answer as plain text, for markers.</summary>
     public string AnswerDisplay() => QuestionType switch
     {
-        QuestionType.SingleChoice or QuestionType.MultipleChoice or QuestionType.TrueFalse =>
+        QuestionType.SingleChoice or QuestionType.MultipleChoice or QuestionType.TrueFalse or QuestionType.Likert =>
             string.Join(", ", OrderedOptions.Where(o => o.IsSelected).Select(o => o.Text)),
         QuestionType.FileUpload => AnswerFileName ?? "",
         _ => AnswerText ?? "",

@@ -139,7 +139,8 @@ public static class AttemptBuilder
                 var aq = new AttemptQuestion
                 {
                     QuestionKey = $"q{n}", SortOrder = order++, QuestionId = q.Id, QuestionType = q.QuestionType, Text = q.Text,
-                    Points = points, Tolerance = q.Tolerance, Rubric = q.Rubric, MaxWords = q.MaxWords,
+                    Points = q.QuestionType == QuestionType.Likert ? 0 : points, Tolerance = q.Tolerance, Rubric = q.Rubric, MaxWords = q.MaxWords,
+                    Trait = q.Trait, ReverseKeyed = q.ReverseKeyed,
                     Translations = q.Translations.Where(t => t.ReviewStatus == ReviewStatus.Approved)
                         .Select(t => new AttemptQuestionTranslation { LanguageCode = t.LanguageCode, Text = t.Text }).ToList(),
                     AcceptedAnswers = q.AcceptedAnswers.OrderBy(a => a.SortOrder).Select(a => new AttemptAcceptedAnswer { Answer = a.Answer }).ToList(),
@@ -151,6 +152,7 @@ public static class AttemptBuilder
                     Translations = o.Translations.Where(t => approved.Contains(t.LanguageCode) && t.Text.Trim().Length > 0)
                         .Select(t => new AttemptOptionTranslation { LanguageCode = t.LanguageCode, Text = t.Text }).ToList(),
                 }).ToList();
+                if (q.QuestionType == QuestionType.Likert) opts = LikertOptions();
                 if (test.ShuffleOptions && q.QuestionType is QuestionType.SingleChoice or QuestionType.MultipleChoice) Shuffle(opts, rng);
                 for (var j = 0; j < opts.Count; j++) opts[j].SortOrder = j;
                 aq.Options = opts;
@@ -160,6 +162,14 @@ public static class AttemptBuilder
         }
         return result;
     }
+
+    /// <summary>The agreement scale, 1 (strongly disagree) to 5 (strongly agree), in Arabic with English. Never shuffled.</summary>
+    public static List<AttemptOption> LikertOptions() =>
+        Enumerable.Range(0, 5).Select(i => new AttemptOption
+        {
+            OptionKey = (i + 1).ToString(System.Globalization.CultureInfo.InvariantCulture), Text = Personality.ScaleAr[i],
+            Translations = [new AttemptOptionTranslation { LanguageCode = "en", Text = Personality.ScaleEn[i] }],
+        }).ToList();
 
     /// <summary>How many questions an attempt would have (for the test summary and publishing check).</summary>
     public static int CountQuestions(Assessment test, IReadOnlyList<Question> bank) =>

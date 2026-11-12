@@ -138,7 +138,7 @@ public sealed class RecruitmentTools(BackofficeApi api)
         return Ui(s, $"Shown {cards.Count} applicant cards.");
     }
 
-    [Description("Shows a side-by-side comparison of 2 to 5 applicants: score, status, screening, years of experience and each criterion.")]
+    [Description("Shows a side-by-side comparison of 2 to 5 applicants: score, status, screening, years of experience, each criterion and, when completed, their personality questionnaire profile.")]
     public async Task<JsonElement> CompareApplicants([Description("Applicant ids, 2 to 5")] int[] applicantIds, CancellationToken ct = default)
     {
         var ids = applicantIds.Distinct().ToArray();
@@ -169,6 +169,19 @@ public sealed class RecruitmentTools(BackofficeApi api)
         foreach (var criterion in criteria)
             rows.Add(RowOf(criterion, p => Analysis(p) is { } an && an.TryGetProperty("criteria", out var c) && c.ValueKind == JsonValueKind.Array
                 ? c.EnumerateArray().Where(x => Str(x, "criterion") == criterion).Select(x => Str(x, "score")).FirstOrDefault() ?? "" : ""));
+        // Personality questionnaire results (trait, sten out of 10, band), when any of them completed one.
+        var profiles = people.Select(TraitProfile).ToList();
+        var traitRows = profiles.SelectMany(x => x.Keys).Distinct().ToList();
+        if (traitRows.Count > 0)
+        {
+            rows.Add(s.Divider());
+            rows.Add(s.Text(L("ملف الشخصية (من 10)", "Personality Profile (out of 10)"), "h5"));
+            foreach (var code in traitRows)
+            {
+                var name = profiles.Select(x => x.TryGetValue(code, out var v) ? v.Name : null).First(n => n != null)!;
+                rows.Add(s.Row([s.Text(name, "caption"), .. profiles.Select(x => s.Text(x.TryGetValue(code, out var v) ? $"{v.Sten} · {v.Band}" : "-"))]));
+            }
+        }
         rows.Add(s.Row([.. people.Select(p => s.Button(L("فتح", "Open"), "open_applicant",
             new JsonObject { ["applicant_id"] = p.GetProperty("id").GetInt32() }, "borderless"))]));
         s.Card(s.Column(rows), id: "root");
@@ -466,6 +479,24 @@ public sealed class RecruitmentTools(BackofficeApi api)
 
     static string Q(params (string Key, string? Value)[] pairs) =>
         string.Join("&", pairs.Where(p => !string.IsNullOrWhiteSpace(p.Value)).Select(p => $"{p.Key}={Uri.EscapeDataString(p.Value!)}"));
+
+    /// <summary>The latest personality questionnaire profile of an applicant: trait code to (name, sten, band).</summary>
+    Dictionary<string, (string Name, int Sten, string Band)> TraitProfile(JsonElement p)
+    {
+        var result = new Dictionary<string, (string, int, string)>();
+        if (!p.TryGetProperty("invitations", out var invs) || invs.ValueKind != JsonValueKind.Array) return result;
+        foreach (var inv in invs.EnumerateArray())
+        {
+            if (Str(inv, "personality_model") is "" or "None" || !inv.TryGetProperty("attempts", out var atts)) continue;
+            var json = atts.EnumerateArray().Select(a => Str(a, "trait_profile")).LastOrDefault(x => x.Length > 0);
+            if (json == null) continue;
+            using var doc = JsonDocument.Parse(json);
+            foreach (var t in doc.RootElement.EnumerateArray())
+                result[Str(t, "Code")] = (Ar ? Str(t, "NameAr") : Str(t, "NameEn"), t.GetProperty("Sten").GetInt32(), Str(t, "Band"));
+            return result;
+        }
+        return result;
+    }
 
     static JsonElement? Analysis(JsonElement p) => p.TryGetProperty("analysis", out var a) && a.ValueKind == JsonValueKind.Object ? a : null;
 

@@ -5,6 +5,7 @@ import {
   Bilingual, Button, Card, EnglishBadge, ErrorState, LangTabs, Loading, PageHeader, RichText, SelectInput, TextArea, TextInput, Toggle, useSaving,
 } from "../components/ui";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
+import { MODELS } from "../components/personality";
 import { useLookups } from "./JobEdit";
 import { plain } from "./Questions";
 
@@ -14,13 +15,14 @@ type Test = {
   title: string; title_en: string; instructions: string; instructions_en: string; english_status: string; english_approved: boolean; assessment_type: string;
   status: string; pass_mark: number; max_attempts: number; score_policy: string; shuffle_questions: boolean; shuffle_options: boolean;
   show_score_to_candidate: boolean; default_deadline_days: number; question_count?: number; sections: Sec[];
+  personality_model: string; trait_norms: Record<string, { mean: number; sd: number }>;
 };
 
 const SECTION: Sec = { title: "", title_en: "", instructions: "", instructions_en: "", minutes: 20, pass_mark: 0, items: [] };
 const EMPTY: Test = {
   title: "", title_en: "", instructions: "", instructions_en: "", english_status: "Missing", english_approved: false, assessment_type: "KnowledgeTest",
   status: "Draft", pass_mark: 60, max_attempts: 1, score_policy: "Highest", shuffle_questions: true, shuffle_options: true, show_score_to_candidate: false,
-  default_deadline_days: 7, sections: [{ ...SECTION }],
+  default_deadline_days: 7, sections: [{ ...SECTION }], personality_model: "None", trait_norms: {},
 };
 
 export default function TestEdit() {
@@ -37,7 +39,7 @@ export default function TestEdit() {
   const { busy, error, run } = useSaving();
   const suggest = useSaving();
   usePageTitle(isNew ? t("test.new") : x.title || t("test.title"));
-  useEffect(() => { if (loaded.data) setX(loaded.data); }, [loaded.data]);
+  useEffect(() => { if (loaded.data) setX({ ...EMPTY, ...loaded.data }); }, [loaded.data]);
   if (loaded.loading) return <Loading />;
   if (loaded.error) return <ErrorState error={loaded.error} retry={loaded.reload} />;
   const set = <K extends keyof Test>(k: K, v: Test[K]) => setX((p) => ({ ...p, [k]: v }));
@@ -55,6 +57,15 @@ export default function TestEdit() {
     if (await suggest.run(() => api(`/suggest-english/assessment/${id}`, { body: {} })) !== undefined) toast(t("common.queued"), "info");
   };
   const ar = lang === "ar";
+  const personality = x.assessment_type === "Personality";
+  const setNorm = (code: string, key: "mean" | "sd", value: string) => {
+    const next = { ...x.trait_norms };
+    const cur = next[code] ?? { mean: 0, sd: 0 };
+    const n = { ...cur, [key]: Number(value) || 0 };
+    if (!n.mean && !n.sd) delete next[code];
+    else next[code] = n;
+    set("trait_norms", next);
+  };
 
   return (
     <>
@@ -139,16 +150,37 @@ export default function TestEdit() {
           <div className="space-y-4">
             <SelectInput label={t("common.status")} value={x.status} onChange={(e) => set("status", e.target.value)}
               options={["Draft", "Published", "Archived"].map((v) => ({ value: v, label: t(`status.${v}`) }))} />
-            <SelectInput label={t("test.type")} value={x.assessment_type} onChange={(e) => set("assessment_type", e.target.value)}
-              options={["KnowledgeTest", "LanguageCheck", "SituationalJudgement", "WorkSample", "Aptitude", "Other"].map((v) => ({ value: v, label: t(`type.${v}`) }))} />
-            <TextInput label={t("test.pass_mark")} type="number" min={0} max={100} value={x.pass_mark} onChange={(e) => set("pass_mark", Number(e.target.value) || 0)} />
+            <SelectInput label={t("test.type")} value={x.assessment_type} onChange={(e) => {
+              const v = e.target.value;
+              setX((p) => ({ ...p, assessment_type: v, personality_model: v === "Personality" ? (p.personality_model === "None" ? "BigFive" : p.personality_model) : "None",
+                ...(v === "Personality" ? { shuffle_options: false, show_score_to_candidate: false, score_policy: "Latest" } : {}) }));
+            }} options={["KnowledgeTest", "LanguageCheck", "SituationalJudgement", "WorkSample", "Aptitude", "Personality", "Other"].map((v) => ({ value: v, label: t(`type.${v}`) }))} />
+            {personality && <>
+              <SelectInput label={t("pers.model")} value={x.personality_model} onChange={(e) => setX((p) => ({ ...p, personality_model: e.target.value, trait_norms: {} }))}
+                options={["BigFive", "SixteenPF"].map((v) => ({ value: v, label: t(`pers.model.${v}`) }))} />
+              <p className="text-xs text-aeblack-500">{t(x.personality_model === "SixteenPF" ? "pers.model_hint_16pf" : "pers.model_hint_big5")}</p>
+              <details className="rounded-xl bg-whitely-100 p-3">
+                <summary className="cursor-pointer text-sm font-semibold">{t("pers.norms")}</summary>
+                <p className="my-2 text-xs text-aeblack-500">{t("pers.norms_hint")}</p>
+                <div className="space-y-2">
+                  {(MODELS[x.personality_model] || []).map((tr) => (
+                    <div key={tr.code} className="grid grid-cols-[1fr_5rem_5rem] items-end gap-2">
+                      <span className="pb-3 text-sm">{tr.code} {ar ? tr.ar : tr.en}</span>
+                      <TextInput label={t("pers.mean")} type="number" step={0.01} min={1} max={5} value={x.trait_norms[tr.code]?.mean ?? ""} onChange={(e) => setNorm(tr.code, "mean", e.target.value)} />
+                      <TextInput label={t("pers.sd")} type="number" step={0.01} min={0} max={4} value={x.trait_norms[tr.code]?.sd ?? ""} onChange={(e) => setNorm(tr.code, "sd", e.target.value)} />
+                    </div>
+                  ))}
+                </div>
+              </details>
+            </>}
+            {!personality && <TextInput label={t("test.pass_mark")} type="number" min={0} max={100} value={x.pass_mark} onChange={(e) => set("pass_mark", Number(e.target.value) || 0)} />}
             <TextInput label={t("test.max_attempts")} type="number" min={1} max={10} value={x.max_attempts} onChange={(e) => set("max_attempts", Number(e.target.value) || 1)} />
             <SelectInput label={t("test.score_policy")} value={x.score_policy} onChange={(e) => set("score_policy", e.target.value)}
               options={["Highest", "Latest"].map((v) => ({ value: v, label: t(`policy.${v}`) }))} />
             <TextInput label={t("test.deadline_days")} type="number" min={1} max={90} value={x.default_deadline_days} onChange={(e) => set("default_deadline_days", Number(e.target.value) || 7)} />
             <Toggle label={t("test.shuffle_questions")} checked={x.shuffle_questions} onChange={(v) => set("shuffle_questions", v)} />
-            <Toggle label={t("test.shuffle_options")} checked={x.shuffle_options} onChange={(v) => set("shuffle_options", v)} />
-            <Toggle label={t("test.show_score")} checked={x.show_score_to_candidate} onChange={(v) => set("show_score_to_candidate", v)} />
+            {!personality && <Toggle label={t("test.shuffle_options")} checked={x.shuffle_options} onChange={(v) => set("shuffle_options", v)} />}
+            {!personality && <Toggle label={t("test.show_score")} checked={x.show_score_to_candidate} onChange={(v) => set("show_score_to_candidate", v)} />}
           </div>
         </Card>
       </div>

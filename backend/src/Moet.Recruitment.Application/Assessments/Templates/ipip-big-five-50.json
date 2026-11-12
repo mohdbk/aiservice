@@ -1,0 +1,316 @@
+{
+ "key": "ipip-big-five-50",
+ "model": "BigFive",
+ "category": "Big Five (IPIP)",
+ "source": "IPIP Big-Five Factor Markers, 50 items (Goldberg, 1992), International Personality Item Pool, ipip.ori.org. Public domain. Arabic wording by the Ministry of Economy & Tourism.",
+ "title": {
+  "ar": "استبيان السمات الشخصية الخمس",
+  "en": "Big Five Personality Questionnaire"
+ },
+ "instructions": {
+  "ar": "<p>اقرأ كل عبارة واختر مدى انطباقها عليك بشكل عام كما أنت الآن، لا كما تتمنى أن تكون. لا توجد إجابات صحيحة أو خاطئة، فأجب بصدق ودون تفكير طويل.</p>",
+  "en": "<p>Read each statement and choose how well it describes you as you generally are now, not as you wish to be. There are no right or wrong answers, so answer honestly and without long thought.</p>"
+ },
+ "items": [
+  {
+   "trait": "E",
+   "reverse": false,
+   "en": "I am the life of the party.",
+   "ar": "أكون مصدر الحيوية في التجمعات."
+  },
+  {
+   "trait": "E",
+   "reverse": true,
+   "en": "I don't talk a lot.",
+   "ar": "لا أتحدث كثيرًا."
+  },
+  {
+   "trait": "E",
+   "reverse": false,
+   "en": "I feel comfortable around people.",
+   "ar": "أشعر بالارتياح بين الناس."
+  },
+  {
+   "trait": "E",
+   "reverse": true,
+   "en": "I keep in the background.",
+   "ar": "أفضّل البقاء بعيدًا عن الأضواء."
+  },
+  {
+   "trait": "E",
+   "reverse": false,
+   "en": "I start conversations.",
+   "ar": "أبادر ببدء الأحاديث."
+  },
+  {
+   "trait": "E",
+   "reverse": true,
+   "en": "I have little to say.",
+   "ar": "ليس لدي الكثير لأقوله."
+  },
+  {
+   "trait": "E",
+   "reverse": false,
+   "en": "I talk to a lot of different people at parties.",
+   "ar": "أتحدث مع أشخاص كثيرين ومختلفين في المناسبات."
+  },
+  {
+   "trait": "E",
+   "reverse": true,
+   "en": "I don't like to draw attention to myself.",
+   "ar": "لا أحب لفت الانتباه إلى نفسي."
+  },
+  {
+   "trait": "E",
+   "reverse": false,
+   "en": "I don't mind being the center of attention.",
+   "ar": "لا أمانع أن أكون محط الأنظار."
+  },
+  {
+   "trait": "E",
+   "reverse": true,
+   "en": "I am quiet around strangers.",
+   "ar": "أكون هادئًا مع من لا أعرفهم."
+  },
+  {
+   "trait": "A",
+   "reverse": true,
+   "en": "I feel little concern for others.",
+   "ar": "لا أهتم كثيرًا بالآخرين."
+  },
+  {
+   "trait": "A",
+   "reverse": false,
+   "en": "I am interested in people.",
+   "ar": "أهتم بالناس."
+  },
+  {
+   "trait": "A",
+   "reverse": true,
+   "en": "I insult people.",
+   "ar": "أوجّه للآخرين كلامًا جارحًا."
+  },
+  {
+   "trait": "A",
+   "reverse": false,
+   "en": "I sympathize with others' feelings.",
+   "ar": "أتعاطف مع مشاعر الآخرين."
+  },
+  {
+   "trait": "A",
+   "reverse": true,
+   "en": "I am not interested in other people's problems.",
+   "ar": "لا تهمني مشكلات الآخرين."
+  },
+  {
+   "trait": "A",
+   "reverse": false,
+   "en": "I have a soft heart.",
+   "ar": "قلبي رقيق."
+  },
+  {
+   "trait": "A",
+   "reverse": true,
+   "en": "I am not really interested in others.",
+   "ar": "لا أهتم حقًا بالآخرين."
+  },
+  {
+   "trait": "A",
+   "reverse": false,
+   "en": "I take time out for others.",
+   "ar": "أخصص من وقتي للآخرين."
+  },
+  {
+   "trait": "A",
+   "reverse": false,
+   "en": "I feel others' emotions.",
+   "ar": "أشعر بمشاعر الآخرين."
+  },
+  {
+   "trait": "A",
+   "reverse": false,
+   "en": "I make people feel at ease.",
+   "ar": "أجعل الناس يشعرون بالراحة."
+  },
+  {
+   "trait": "C",
+   "reverse": false,
+   "en": "I am always prepared.",
+   "ar": "أكون مستعدًا دائمًا."
+  },
+  {
+   "trait": "C",
+   "reverse": true,
+   "en": "I leave my belongings around.",
+   "ar": "أترك أغراضي متناثرة."
+  },
+  {
+   "trait": "C",
+   "reverse": false,
+   "en": "I pay attention to details.",
+   "ar": "أنتبه إلى التفاصيل."
+  },
+  {
+   "trait": "C",
+   "reverse": true,
+   "en": "I make a mess of things.",
+   "ar": "أتسبب في فوضى في الأمور."
+  },
+  {
+   "trait": "C",
+   "reverse": false,
+   "en": "I get chores done right away.",
+   "ar": "أنجز المهام فورًا."
+  },
+  {
+   "trait": "C",
+   "reverse": true,
+   "en": "I often forget to put things back in their proper place.",
+   "ar": "كثيرًا ما أنسى إعادة الأشياء إلى أماكنها."
+  },
+  {
+   "trait": "C",
+   "reverse": false,
+   "en": "I like order.",
+   "ar": "أحب النظام."
+  },
+  {
+   "trait": "C",
+   "reverse": true,
+   "en": "I shirk my duties.",
+   "ar": "أتهرب من واجباتي."
+  },
+  {
+   "trait": "C",
+   "reverse": false,
+   "en": "I follow a schedule.",
+   "ar": "ألتزم بجدول زمني."
+  },
+  {
+   "trait": "C",
+   "reverse": false,
+   "en": "I am exacting in my work.",
+   "ar": "أنا دقيق ومتطلب في عملي."
+  },
+  {
+   "trait": "ES",
+   "reverse": true,
+   "en": "I get stressed out easily.",
+   "ar": "أتوتر بسهولة."
+  },
+  {
+   "trait": "ES",
+   "reverse": false,
+   "en": "I am relaxed most of the time.",
+   "ar": "أكون مسترخيًا معظم الوقت."
+  },
+  {
+   "trait": "ES",
+   "reverse": true,
+   "en": "I worry about things.",
+   "ar": "أقلق بشأن الأمور."
+  },
+  {
+   "trait": "ES",
+   "reverse": false,
+   "en": "I seldom feel blue.",
+   "ar": "نادرًا ما أشعر بالحزن."
+  },
+  {
+   "trait": "ES",
+   "reverse": true,
+   "en": "I am easily disturbed.",
+   "ar": "أنزعج بسهولة."
+  },
+  {
+   "trait": "ES",
+   "reverse": true,
+   "en": "I get upset easily.",
+   "ar": "أتضايق بسهولة."
+  },
+  {
+   "trait": "ES",
+   "reverse": true,
+   "en": "I change my mood a lot.",
+   "ar": "يتغير مزاجي كثيرًا."
+  },
+  {
+   "trait": "ES",
+   "reverse": true,
+   "en": "I have frequent mood swings.",
+   "ar": "تتقلب حالتي المزاجية كثيرًا."
+  },
+  {
+   "trait": "ES",
+   "reverse": true,
+   "en": "I get irritated easily.",
+   "ar": "أُستثار بسهولة."
+  },
+  {
+   "trait": "ES",
+   "reverse": true,
+   "en": "I often feel blue.",
+   "ar": "كثيرًا ما أشعر بالحزن."
+  },
+  {
+   "trait": "O",
+   "reverse": false,
+   "en": "I have a rich vocabulary.",
+   "ar": "لدي حصيلة لغوية غنية."
+  },
+  {
+   "trait": "O",
+   "reverse": true,
+   "en": "I have difficulty understanding abstract ideas.",
+   "ar": "أجد صعوبة في فهم الأفكار المجردة."
+  },
+  {
+   "trait": "O",
+   "reverse": false,
+   "en": "I have a vivid imagination.",
+   "ar": "لدي خيال واسع."
+  },
+  {
+   "trait": "O",
+   "reverse": true,
+   "en": "I am not interested in abstract ideas.",
+   "ar": "لا تستهويني الأفكار المجردة."
+  },
+  {
+   "trait": "O",
+   "reverse": false,
+   "en": "I have excellent ideas.",
+   "ar": "لدي أفكار ممتازة."
+  },
+  {
+   "trait": "O",
+   "reverse": true,
+   "en": "I do not have a good imagination.",
+   "ar": "ليس لدي خيال واسع."
+  },
+  {
+   "trait": "O",
+   "reverse": false,
+   "en": "I am quick to understand things.",
+   "ar": "أفهم الأمور بسرعة."
+  },
+  {
+   "trait": "O",
+   "reverse": false,
+   "en": "I use difficult words.",
+   "ar": "أستخدم كلمات صعبة."
+  },
+  {
+   "trait": "O",
+   "reverse": false,
+   "en": "I spend time reflecting on things.",
+   "ar": "أقضي وقتًا في التأمل في الأمور."
+  },
+  {
+   "trait": "O",
+   "reverse": false,
+   "en": "I am full of ideas.",
+   "ar": "أنا مليء بالأفكار."
+  }
+ ]
+}

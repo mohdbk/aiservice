@@ -105,8 +105,9 @@ public sealed class AssessmentWorkflow(IAppDbContext db, ContentService content,
     public async Task FinaliseAsync(Invitation inv, Attempt a, CancellationToken ct)
     {
         var asm = inv.Assessment ?? await db.Assessments.FirstAsync(x => x.Id == inv.AssessmentId, ct);
-        a.DecidePass(asm.PassMark);
-        inv.Summarise(asm.ScorePolicy);
+        if (asm.IsPersonality) a.ScorePersonality(asm.PersonalityModel, Personality.ParseNorms(asm.TraitNorms));
+        else a.DecidePass(asm.PassMark);
+        inv.Summarise(asm.ScorePolicy, asm.IsPersonality);
         inv.UpdatedAt = clock.UtcNow;
         if (a.Status == AttemptStatus.Submitted && a.AllQuestions.Any(q => q.NeedsMarking && q.QuestionType == QuestionType.Essay))
             await jobs.EnqueueAsync(JobTypes.SuggestMarks, a.Id, ct);
@@ -180,7 +181,7 @@ public sealed class AssessmentWorkflow(IAppDbContext db, ContentService content,
 
     static object? WireAnswer(AttemptQuestion q) => q.QuestionType switch
     {
-        QuestionType.SingleChoice or QuestionType.TrueFalse => q.Options.FirstOrDefault(o => o.IsSelected)?.OptionKey,
+        QuestionType.SingleChoice or QuestionType.TrueFalse or QuestionType.Likert => q.Options.FirstOrDefault(o => o.IsSelected)?.OptionKey,
         QuestionType.MultipleChoice => q.OrderedOptions.Where(o => o.IsSelected).Select(o => o.OptionKey).ToList(),
         QuestionType.FileUpload => new { file = q.AnswerFileId?.ToString("N"), name = q.AnswerFileName },
         _ => q.AnswerText,

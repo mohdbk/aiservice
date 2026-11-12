@@ -29,6 +29,21 @@ function Answer({ q, value, onChange, onUpload, disabled }: {
       </fieldset>
     );
   }
+  if (q.type === "Agreement Scale") {
+    // Five points from strongly disagree to strongly agree, side by side on wide screens and stacked on phones.
+    return (
+      <fieldset><legend className="sr-only">{t("asm.your_answer")}</legend>
+        <div className="grid gap-2 sm:grid-cols-5">
+          {q.options.map((o) => (
+            <label key={o.key} className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 text-sm transition hover:border-primary-400 sm:flex-col sm:justify-center sm:text-center ${value === o.key ? "border-primary-600 bg-primary-50" : "border-aeblack-100 bg-white"}`}>
+              <input type="radio" name={q.key} className="h-5 w-5 accent-primary-600" checked={value === o.key} disabled={disabled} onChange={() => onChange(o.key, true)} />
+              <span>{o.text}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+    );
+  }
   if (q.type === "Multiple Choice") {
     const vals = Array.isArray(value) ? (value as string[]) : [];
     return (
@@ -252,7 +267,7 @@ export default function TakeAssessment() {
       <section className="mc-surface rounded-2xl border border-aeblack-100 bg-white p-6 md:p-8" aria-labelledby="question-title">
         <div className="mb-4 flex items-center justify-between gap-3 text-sm text-aeblack-600">
           <span>{t("asm.question_of", { n: index + 1, count: qs.length })}</span>
-          <span>{t("asm.points", { points: q.points })}</span>
+          {q.type !== "Agreement Scale" && <span>{t("asm.points", { points: q.points })}</span>}
         </div>
         <div id="question-title" className="mc-prose mb-6 text-lg font-medium text-aeblack-900" dir="auto" dangerouslySetInnerHTML={{ __html: q.text }} />
         <Answer q={q} value={answers[q.key]} disabled={moving} onChange={(v, im) => change(q.key, v, im)} onUpload={(f) => upload(q.key, f)} />

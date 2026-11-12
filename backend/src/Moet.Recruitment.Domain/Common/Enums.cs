@@ -34,11 +34,13 @@ public enum Recommendation { Cleared, Rejected }
 
 public enum OfferStatus { Draft, Sent, Accepted, Declined, Withdrawn }
 
-public enum QuestionType { SingleChoice, MultipleChoice, TrueFalse, ShortAnswer, Number, Essay, FileUpload }
+public enum QuestionType { SingleChoice, MultipleChoice, TrueFalse, ShortAnswer, Number, Essay, FileUpload, Likert }
 
 public enum Difficulty { Easy, Medium, Hard }
 
-public enum AssessmentType { KnowledgeTest, LanguageCheck, SituationalJudgement, WorkSample, Aptitude, Other }
+public enum AssessmentType { KnowledgeTest, LanguageCheck, SituationalJudgement, WorkSample, Aptitude, Other, Personality }
+
+public enum PersonalityModel { None, BigFive, SixteenPF }
 
 public enum AssessmentStatus { Draft, Published, Archived }
 
@@ -46,7 +48,7 @@ public enum ScorePolicy { Highest, Latest }
 
 public enum InvitationStatus { Invited, InProgress, Submitted, Marked, Expired, Cancelled }
 
-public enum InvitationResult { Pass, Fail, AwaitingMarking }
+public enum InvitationResult { Pass, Fail, AwaitingMarking, Completed }
 
 public enum AttemptStatus { InProgress, Submitted, Marked }
 

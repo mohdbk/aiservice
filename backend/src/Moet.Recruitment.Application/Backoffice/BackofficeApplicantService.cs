@@ -70,12 +70,13 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
             .OrderByDescending(i => i.CreatedAt).Select(i => new
             {
                 id = i.Id, code = i.Code, assessment_id = i.AssessmentId, title = i.Assessment!.Title, status = i.Status,
+                personality_model = i.Assessment.PersonalityModel,
                 deadline_at = i.DeadlineAt, attempts_used = (int)i.AttemptsUsed, attempts_allowed = (int)i.AttemptsAllowed,
                 score = i.Score, result = i.Result,
                 attempts = i.Attempts.OrderBy(t => t.AttemptNo).Select(t => new
                 {
                     id = t.Id, attempt_no = (int)t.AttemptNo, status = t.Status, percent = t.Percent, passed = t.Passed,
-                    tab_switches = t.TabSwitches, pastes = t.Pastes, submitted_at = t.SubmittedAt,
+                    tab_switches = t.TabSwitches, pastes = t.Pastes, submitted_at = t.SubmittedAt, trait_profile = t.TraitProfile,
                 }).ToList(),
             }).ToListAsync(ct);
         var c = a.CvAnalysis;

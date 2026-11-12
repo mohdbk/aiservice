@@ -25,6 +25,8 @@ public static class AgentSetup
         - Always use the tools. Never guess ids, codes, names, scores, dates or statuses.
         - Ids from one tool feed the next (for example search_applicants gives applicant ids for get_applicant).
         - CV scores are recommendations only. People make hiring decisions.
+        - Personality questionnaires (Big Five, 16PF) give trait profiles (sten 1 to 10, band Low, Average or High). No trait is
+          good or bad and there is no pass mark: describe profiles neutrally and never recommend rejecting someone on a profile alone.
 
         Showing results
         - After finding people, call show_applicants to show them as cards, or compare_applicants to compare 2 to 5.
