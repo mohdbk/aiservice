@@ -7,7 +7,7 @@ export default function Assistant() {
   usePageTitle(t("asst.title"));
   return (
     <>
-      <PageHeader title={t("asst.title")} subtitle={t("asst.intro")} />
+      <PageHeader title={t("asst.title")} subtitle={<span className="hidden sm:inline">{t("asst.intro")}</span>} />
       <AgentChat />
     </>
   );

@@ -229,7 +229,7 @@ export function AgentChat({ panel = false }: { panel?: boolean }) {
   const visible = state.turns.filter((x) => !x.hidden);
   return (
     <>
-      <div className={`flex flex-col bg-whitely-50 ${panel ? "h-full" : "mc-surface h-[calc(100vh-16rem)] min-h-96 rounded-2xl border border-aeblack-100"}`}>
+      <div className={`flex flex-col bg-whitely-50 ${panel ? "h-full" : "mc-surface h-[calc(100dvh-11rem)] min-h-[26rem] rounded-2xl border border-aeblack-100 sm:h-[calc(100vh-16rem)]"}`}>
         {/* The open screen still goes to the assistant with each message; it is not shown here. */}
         <div className="flex items-center justify-end gap-2 border-b border-aeblack-100 bg-white px-4 py-2">
           <Button variant="link" size="sm" disabled={running} onClick={() => setState({ thread: newId(), turns: [], surfaces: {} })}
@@ -276,8 +276,8 @@ export function AgentChat({ panel = false }: { panel?: boolean }) {
             placeholder={t("asst.placeholder")} value={text} onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); (e.currentTarget.form as HTMLFormElement).requestSubmit(); } }} />
           {running
-            ? <Button variant="outline" onClick={() => stop.current?.abort()} icon={<StopCircle size={24} aria-hidden="true" />}>{t("asst.stop")}</Button>
-            : <Button type="submit" disabled={!text.trim()} icon={<ArrowCircleUp size={24} aria-hidden="true" />}>{t("asst.send")}</Button>}
+            ? <Button variant="outline" aria-label={t("asst.stop")} onClick={() => stop.current?.abort()} icon={<StopCircle size={24} aria-hidden="true" />}><span className="hidden sm:inline">{t("asst.stop")}</span></Button>
+            : <Button type="submit" aria-label={t("asst.send")} disabled={!text.trim()} icon={<ArrowCircleUp size={24} aria-hidden="true" />}><span className="hidden sm:inline">{t("asst.send")}</span></Button>}
         </form>
       </div>
     </>
