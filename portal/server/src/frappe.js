@@ -89,6 +89,7 @@ export function createFrappe(cfg, fetchImpl = globalThis.fetch) {
     myData: (u) => call("my_data", { query: { email: u.email, epoch: u.epoch || 0 } }),
     dataRequests: (u) => call("data_requests", { query: { email: u.email, epoch: u.epoch || 0 } }),
     setTalentPool: (u, join) => call("talent_pool", { json: { email: u.email, epoch: u.epoch || 0, join: join ? "1" : "0" } }),
+    respondOffer: (u, name, accept, reason) => call("respond_offer", { json: { email: u.email, epoch: u.epoch || 0, name, accept: accept ? "1" : "0", reason } }),
     bookInterview: (u, name, slot) => call("book_interview", { json: { email: u.email, epoch: u.epoch || 0, name, slot } }),
     requestDeletion: (u, reason) => call("request_deletion", { json: { email: u.email, epoch: u.epoch || 0, reason } }),
     logo: (dark) => call("logo", { query: { dark: dark ? 1 : 0 }, raw: true }),

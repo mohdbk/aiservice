@@ -1154,5 +1154,11 @@
  "setup.locations": "Locations",
  "nav.locations": "Locations",
  "setup.locations_hint": "Places jobs are based in, with a name in each language. The portal shows the name in the reader's language.",
- "jobs.location_hint": "Add places under Settings, Locations."
+ "jobs.location_hint": "Add places under Settings, Locations.",
+ "int.feedback_hidden": "Give your own feedback first. The other panelists' ratings show once you have, so each score is independent.",
+ "int.submitted": "Submitted",
+ "dup.title": "Possibly the same person under another account",
+ "dup.cv": "same CV file",
+ "dup.phone": "same phone",
+ "dup.name": "same name"
 }

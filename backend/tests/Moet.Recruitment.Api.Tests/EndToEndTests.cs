@@ -366,6 +366,18 @@ public class EndToEndTests
         var bookings = await Read(await admin.GetAsync($"/api/backoffice/applicants/{applicantId}/bookings"));
         Assert.Equal("Booked", bookings[0].GetProperty("status").GetString());
 
+        // An offer sent to the candidate can be answered in the portal (declined here; accepting would make them a hire).
+        var offerMade = await Read(await admin.PostAsync("/api/backoffice/offers", JsonBody(new
+        {
+            application_id = applicantId, position_title = "Data Analyst", offer_date = DateTime.UtcNow.ToString("yyyy-MM-dd"), start_date = (string?)null,
+            monthly_salary = 25000, currency = "AED", terms = "", offer_template_id = (int?)null,
+        })));
+        Assert.True((await admin.PostAsync($"/api/backoffice/offers/{offerMade.GetProperty("id").GetInt32()}/status", JsonBody(new { status = "Sent" }))).IsSuccessStatusCode);
+        var withOffer = await Read(await portal.GetAsync($"/api/portal/application?lang=en&email=layla@example.test&epoch={epoch}&name={appCode}"));
+        Assert.Equal("sent", withOffer.GetProperty("message").GetProperty("offer").GetProperty("status").GetString());
+        Assert.Equal("declined", (await Read(await portal.PostAsync("/api/portal/respond_offer", JsonBody(new { email = "layla@example.test", epoch, name = appCode, accept = "0", reason = "Took another role" })))).GetProperty("message").GetProperty("status").GetString());
+        Assert.Equal(HttpStatusCode.Conflict, (await portal.PostAsync("/api/portal/respond_offer", JsonBody(new { email = "layla@example.test", epoch, name = appCode, accept = "1" }))).StatusCode);
+
         // Talent pool: the candidate joins from their account and appears in HR's list; texts can be set up (off by default).
         Assert.True((await Read(await portal.PostAsync("/api/portal/talent_pool", JsonBody(new { email = "layla@example.test", epoch, join = "1" })))).GetProperty("message").GetProperty("in_talent_pool").GetBoolean());
         var pool = await Read(await admin.GetAsync("/api/backoffice/talent-pool"));

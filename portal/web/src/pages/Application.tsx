@@ -1,7 +1,7 @@
 import { Briefcase, CalendarCheck, Certificate, ChatText, Check, GraduationCap, Hourglass, Icon, PaperPlaneTilt, Toolbox, Translate } from "@phosphor-icons/react";
 import { FormEvent, ReactNode, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import { api, ApiError, ApplicationDetail, Booking, Details } from "../api";
+import { api, ApiError, ApplicationDetail, Booking, Details, Offer } from "../api";
 import { IconBox, StatusBadge, Steps } from "../components/Bits";
 import { Breadcrumb } from "../components/Breadcrumb";
 import { Alert, Skeleton, Spinner } from "../components/States";
@@ -96,6 +96,55 @@ function ChooseTime({ booking, appId, onBooked }: { booking: Booking; appId: str
   );
 }
 
+/** The job offer: the letter, then accept or decline (a reason is optional when declining). */
+function OfferCard({ offer, appId, onDone }: { offer: Offer; appId: string; onDone: () => void }) {
+  const { t, formatDate, errorText } = useSite();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const [declining, setDeclining] = useState(false);
+  const [reason, setReason] = useState("");
+  const answer = async (accept: boolean) => {
+    if (accept && !window.confirm(t("offer.confirm_accept"))) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api(`/api/applications/${encodeURIComponent(appId)}/offer`, { body: { accept, reason } });
+      onDone();
+    } catch (e) {
+      setError(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (offer.status !== "sent")
+    return <div className="mt-6"><Alert tone={offer.status === "accepted" ? "success" : "info"} title={t(`offer.${offer.status}`)} /></div>;
+  return (
+    <section className="mc-surface mt-6 rounded-2xl border-2 border-primary-200 bg-white p-6" aria-labelledby="offer-title">
+      <h2 id="offer-title" className="font-heading text-lg font-semibold text-aeblack-900">{t("offer.title")}</h2>
+      <p className="mt-1 text-aeblack-700">{offer.position_title}{offer.start_date && <> · {t("offer.start", { date: formatDate(offer.start_date) })}</>}</p>
+      {offer.letter_html && <div className="mt-4 max-h-[28rem] overflow-auto rounded-xl border border-aeblack-100 p-4" dangerouslySetInnerHTML={{ __html: offer.letter_html }} />}
+      {error ? <div className="mt-4"><Alert tone="error" title={errorText(error)} /></div> : null}
+      {declining ? (
+        <div className="mt-4 space-y-3">
+          <div className="aegov-form-control">
+            <label htmlFor="decline-reason">{t("offer.reason")} <span className="text-sm font-normal text-aeblack-500">({t("common.optional")})</span></label>
+            <div className="form-control-input"><textarea id="decline-reason" rows={3} maxLength={1000} value={reason} onChange={(e) => setReason(e.target.value)} /></div>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button type="button" className="aegov-btn btn-outline" disabled={busy} onClick={() => answer(false)}>{t("offer.confirm_decline")}</button>
+            <button type="button" className="aegov-btn btn-link" onClick={() => setDeclining(false)}>{t("common.back")}</button>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button type="button" className="aegov-btn" disabled={busy} onClick={() => answer(true)}>{t("offer.accept")}</button>
+          <button type="button" className="aegov-btn btn-outline" disabled={busy} onClick={() => setDeclining(true)}>{t("offer.decline")}</button>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function Application() {
   const { id = "" } = useParams();
   const [params] = useSearchParams();
@@ -141,6 +190,7 @@ export default function Application() {
       <h1 className="font-heading text-3xl font-bold text-aeblack-950">{data.title}</h1>
 
       {booked && <div className="mt-6" role="status"><Alert tone="success" title={booked} /></div>}
+      {data.offer && <OfferCard offer={data.offer} appId={id} onDone={reload} />}
       {data.booking && !booked && <ChooseTime booking={data.booking} appId={id} onBooked={(m) => { setBooked(m); reload(); }} />}
 
       <section className="mc-surface mt-6 rounded-2xl border border-aeblack-100 bg-white p-6" aria-labelledby="status-title">

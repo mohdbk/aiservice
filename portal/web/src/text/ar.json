@@ -327,5 +327,16 @@
  "apply.talent_pool": "أرغب أيضا في النظر في ترشيحي لوظائف أخرى مناسبة",
  "error.booking_closed": "هذه المواعيد لم تعد متاحة. يرجى تحديث الصفحة.",
  "error.booking_slot_past": "انتهى هذا الموعد. يرجى اختيار موعد آخر.",
- "error.booking_slot_unknown": "يرجى اختيار أحد المواعيد المعروضة."
+ "error.booking_slot_unknown": "يرجى اختيار أحد المواعيد المعروضة.",
+ "offer.title": "عرض العمل",
+ "offer.start": "تاريخ المباشرة {date}",
+ "offer.accept": "قبول العرض",
+ "offer.decline": "اعتذار",
+ "offer.reason": "السبب",
+ "offer.confirm_accept": "هل تريد قبول هذا العرض؟",
+ "offer.confirm_decline": "الاعتذار عن العرض",
+ "offer.accepted": "لقد قبلت العرض. سيتواصل معك الفريق بشأن الخطوات التالية.",
+ "offer.declined": "لقد اعتذرت عن العرض.",
+ "error.offer_not_open": "هذا العرض لم يعد متاحا.",
+ "common.back": "رجوع"
 }

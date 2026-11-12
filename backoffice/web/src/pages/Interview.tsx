@@ -2,7 +2,7 @@ import { CalendarBlank, FileText, MapPin, PencilSimple, Star } from "@phosphor-i
 import { DocumentDialog } from "../components/DocumentDialog";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ActionMenu, Badge, Button, Card, Empty, ErrorState, Loading, PageHeader, SelectInput, TextArea, useSaving } from "../components/ui";
+import { ActionMenu, Badge, Button, Card, Empty, ErrorState, Loading, Note, PageHeader, SelectInput, TextArea, useSaving } from "../components/ui";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
 import { InterviewDialog } from "./Applicant";
 import { intTone } from "./Interviews";
@@ -12,7 +12,8 @@ type Detail = {
   id: number; code: string; starts_at: string; ends_at: string; status: string; location: string; notes: string;
   round: { id: number; name: string; skills: string[] }; applicant: { id: number; name: string; job_title: string };
   panel: { id: number; name: string }[];
-  feedback: { staff_id: number; staff: string; recommendation: string; comments: string; submitted_at: string; ratings: { skill: string; rating: number }[] }[];
+  feedback: { staff_id: number; staff: string; recommendation: string; comments: string; submitted_at: string; ratings: { skill: string; rating: number }[]; hidden?: boolean }[];
+  feedback_hidden?: boolean;
   can_give_feedback: boolean;
 };
 
@@ -64,13 +65,14 @@ export default function Interview() {
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="space-y-6 xl:col-span-2">
           <Card title={t("int.feedback")}>
+            {i.feedback_hidden && <div className="mb-4"><Note>{t("int.feedback_hidden")}</Note></div>}
             {i.feedback.length === 0 ? <Empty /> : (
               <ul className="space-y-4">
                 {i.feedback.map((f) => (
                   <li key={f.staff_id} className="rounded-xl border border-aeblack-100 p-4">
                     <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                       <p className="font-semibold">{f.staff}</p>
-                      <Badge tone={f.recommendation === "Cleared" ? "green" : "red"}>{t(`rec.${f.recommendation}`)}</Badge>
+                      {f.hidden ? <Badge>{t("int.submitted")}</Badge> : <Badge tone={f.recommendation === "Cleared" ? "green" : "red"}>{t(`rec.${f.recommendation}`)}</Badge>}
                     </div>
                     <p className="mb-3 whitespace-pre-line text-sm" dir="auto">{f.comments}</p>
                     {f.ratings.length > 0 && (

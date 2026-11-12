@@ -95,7 +95,9 @@ export type Details = {
 };
 /** Interview times HR offered; the candidate picks one. */
 export type Booking = { id: number; round: string; location: string; slots: { id: number; date: string; from: string; to: string }[] };
-export type ApplicationDetail = ApplicationSummary & { details_state: "ready" | "preparing" | "unavailable"; details: Details | null; booking?: Booking | null };
+/** A job offer the candidate can accept or decline (with the letter while it is open). */
+export type Offer = { code: string; status: "sent" | "accepted" | "declined"; position_title: string; start_date: string | null; letter_html: string };
+export type ApplicationDetail = ApplicationSummary & { details_state: "ready" | "preparing" | "unavailable"; details: Details | null; booking?: Booking | null; offer?: Offer | null };
 
 // ---------- assessments ----------
 export type AsmStatus = "to_do" | "in_progress" | "submitted" | "completed" | "expired" | "cancelled";

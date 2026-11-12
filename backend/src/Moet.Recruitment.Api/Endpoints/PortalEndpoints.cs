@@ -65,6 +65,7 @@ public static class PortalEndpoints
                 ("my_data", false) => await pdp.ExportAsync(await acc.RequireAsync(input["email"], input["epoch"], ct), ct),
                 ("data_requests", false) => await pdp.MyRequestsAsync(await acc.RequireAsync(input["email"], input["epoch"], ct), ct),
                 ("talent_pool", true) => await pdp.SetTalentPoolAsync(await acc.RequireAsync(input["email"], input["epoch"], ct), input["join"] == "1", "account", ct),
+                ("respond_offer", true) => await apps.RespondOfferAsync(input["email"], input["epoch"], input["name"], input["accept"] == "1", input["reason"], ct),
                 ("book_interview", true) => await sp.GetRequiredService<BookingService>().PickAsync(await acc.RequireAsync(input["email"], input["epoch"], ct),
                     input["name"], input.Int("slot"), ct),
                 ("request_deletion", true) => await pdp.RequestDeletionAsync(await acc.RequireAsync(input["email"], input["epoch"], ct), input["reason"], ct),

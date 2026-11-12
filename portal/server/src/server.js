@@ -285,6 +285,14 @@ export function createApp(cfg = loadConfig(), deps = {}) {
       const b = await readJson(req, 4096);
       return send(res, 200, await frappe.setTalentPool(u, b.join === true));
     }
+    mm = pathname.match(/^\/api\/applications\/([A-Za-z0-9._-]{1,140})\/offer$/);
+    if (m === "POST" && mm) {
+      checkCsrf(req);
+      const u = requireUser(req);
+      limit(`offer:${ip}`, LIMITS.correction);
+      const b = await readJson(req, 8192);
+      return send(res, 200, await frappe.respondOffer(u, mm[1], b.accept === true, str(b.reason, 1000)));
+    }
     mm = pathname.match(/^\/api\/applications\/([A-Za-z0-9._-]{1,140})\/book$/);
     if (m === "POST" && mm) {
       checkCsrf(req);

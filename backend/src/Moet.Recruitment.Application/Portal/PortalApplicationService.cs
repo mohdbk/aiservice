@@ -24,7 +24,8 @@ public sealed record ApplicationSummaryView(string Id, string Job, string Title,
 /// <summary>Applying, the applicant's applications, and corrections to their CV details.</summary>
 public sealed class PortalApplicationService(
     IAppDbContext db, ContentService content, PortalAccountService accounts, PortalSiteService site, AssessmentWorkflow assessments,
-    JobQueue jobs, ICodeGenerator codes, IClock clock, PortalMailer mailer, BookingService bookings)
+    JobQueue jobs, ICodeGenerator codes, IClock clock, PortalMailer mailer, BookingService bookings, DocumentService documents,
+    BackofficeInterviewService offers)
 {
     public async Task<object> ApplyAsync(ApplyInput input, CancellationToken ct = default)
     {
@@ -185,7 +186,39 @@ public sealed class PortalApplicationService(
             id = sum.Id, job = sum.Job, title = sum.Title, submitted = sum.Submitted, reference = sum.Reference, status = sum.Status,
             details_state = state, details = Details(cv?.ProfileJson, cv?.YearsOfExperience),
             booking = await bookings.OpenForCandidateAsync(a.Id, lang, ct),
+            offer = await OfferAsync(a.Id, lang, ct),
         };
+    }
+
+    /// <summary>A sent offer waiting for the candidate's answer, with its letter; or the answer they gave.</summary>
+    async Task<object?> OfferAsync(int appId, string lang, CancellationToken ct)
+    {
+        var o = await db.JobOffers.AsNoTracking().Where(x => x.JobApplicationId == appId && (x.Status == OfferStatus.Sent || x.Status == OfferStatus.Accepted || x.Status == OfferStatus.Declined))
+            .OrderByDescending(x => x.CreatedAt).FirstOrDefaultAsync(ct);
+        if (o == null) return null;
+        var letter = o.Status == OfferStatus.Sent ? await documents.RenderAsync(DocumentKinds.OfferLetter, o.Id, null, lang == "ar" ? "ar" : "en", ct) : null;
+        return new
+        {
+            code = o.Code, status = o.Status.ToString().ToLowerInvariant(), position_title = o.PositionTitle,
+            start_date = o.StartDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), letter_html = letter?.Html ?? "",
+        };
+    }
+
+    /// <summary>The candidate accepts or declines the offer sent to them (as HR would record it, with a note on the application).</summary>
+    public async Task<object> RespondOfferAsync(string? email, string? epoch, string? code, bool accept, string? reason, CancellationToken ct = default)
+    {
+        var user = await accounts.RequireAsync(email, epoch, ct);
+        var a = await OwnAsync(user, code, ct);
+        var o = await db.JobOffers.AsNoTracking().Where(x => x.JobApplicationId == a.Id && x.Status == OfferStatus.Sent).OrderByDescending(x => x.CreatedAt).FirstOrDefaultAsync(ct)
+            ?? throw DomainException.Conflict("offer_not_open");
+        await offers.SetOfferStatusAsync(o.Id, accept ? nameof(OfferStatus.Accepted) : nameof(OfferStatus.Declined), ct);
+        db.ApplicationNotes.Add(new ApplicationNote
+        {
+            JobApplicationId = a.Id, Kind = NoteKind.System, AuthorApplicantId = user.Id, CreatedAt = clock.UtcNow,
+            Text = TextUtil.Clip($"Offer {o.Code} {(accept ? "accepted" : "declined")} by the candidate in the career portal." + (string.IsNullOrWhiteSpace(reason) ? "" : $" Reason: {reason.Trim()}"), 4000),
+        });
+        await db.SaveChangesAsync(ct);
+        return new { status = accept ? "accepted" : "declined" };
     }
 
     /// <summary>The parsed CV details the applicant may check (never scores or reasoning).</summary>

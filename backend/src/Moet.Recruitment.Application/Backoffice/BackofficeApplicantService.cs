@@ -92,6 +92,23 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
             i => RoleProfileService.Summary(i.personality_model, i.attempts.LastOrDefault(t => t.trait_profile != null)?.trait_profile, roles, cutoffs, reports));
         var c = a.CvAnalysis;
         var combined = await selection.ForApplicantAsync(a.Id, ct);
+        // Possible duplicates: other accounts with the same CV file, phone number or name (one person, two accounts).
+        var cvHash = await db.StoredFiles.Where(f => f.Id == a.CvFileId).Select(f => f.Sha256).FirstOrDefaultAsync(ct) ?? "";
+        var phone = new string(a.Phone.Where(char.IsDigit).ToArray());
+        var tail = phone.Length >= 9 ? phone[^9..] : "";
+        var self = a.AnonymisedAt == null;
+        var duplicates = await db.JobApplications.AsNoTracking()
+            .Where(x => self && x.ApplicantAccountId != a.ApplicantAccountId && x.AnonymisedAt == null
+                && ((cvHash.Length > 8 && db.StoredFiles.Any(f => f.Id == x.CvFileId && f.Sha256 == cvHash))
+                    || (tail.Length == 9 && x.Phone.EndsWith(tail))
+                    || x.FullName == a.FullName))
+            .OrderByDescending(x => x.CreatedAt).Take(10)
+            .Select(x => new
+            {
+                id = x.Id, code = x.Code, full_name = x.FullName, email = x.Email, job_id = x.JobOpeningId, created_at = x.CreatedAt,
+                same_cv = cvHash.Length > 8 && db.StoredFiles.Any(f => f.Id == x.CvFileId && f.Sha256 == cvHash),
+                same_phone = tail.Length == 9 && x.Phone.EndsWith(tail), same_name = x.FullName == a.FullName,
+            }).ToListAsync(ct);
         return new
         {
             id = a.Id, code = a.Code, reference = a.Reference, full_name = a.FullName, email = a.Email, phone = a.Phone, country = a.Country,
@@ -115,7 +132,7 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
                 id = n.Id, kind = n.Kind.ToString(), text = n.Text, created_at = n.CreatedAt,
                 author = n.AuthorStaff?.FullName ?? (n.AuthorApplicantId != null ? a.FullName : "System"),
             }).ToList(),
-            interviews, offers, invitations, personality, selection = combined,
+            interviews, offers, invitations, personality, selection = combined, duplicates,
         };
     }
 

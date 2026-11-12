@@ -65,14 +65,24 @@ public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator 
             round = new { id = i.InterviewRoundId, name = language.English && i.InterviewRound!.NameEn != "" ? i.InterviewRound.NameEn : i.InterviewRound!.Name, skills = i.InterviewRound.Skills.OrderBy(s => s.SortOrder).Select(s => s.Skill).ToList() },
             applicant = new { id = i.JobApplicationId, name = i.JobApplication!.FullName, job_title = i.JobApplication.JobOpening!.In(language.English ? "en" : "ar").Title },
             panel = i.Panelists.Select(p => new { id = p.StaffUserId, name = p.StaffUser!.FullName }).ToList(),
-            feedback = i.Feedback.OrderBy(f => f.SubmittedAt).Select(f => new
+            // Independent scoring: a panelist sees the others' feedback only after giving their own, so nobody anchors on a colleague.
+            feedback = i.Feedback.OrderBy(f => f.SubmittedAt).Select(f => Blind(i, f) ? new
+            {
+                staff_id = f.StaffUserId, staff = f.StaffUser!.FullName, recommendation = "", comments = "", submitted_at = f.SubmittedAt,
+                ratings = new List<object>(), hidden = true,
+            } : (object)new
             {
                 staff_id = f.StaffUserId, staff = f.StaffUser!.FullName, recommendation = f.Recommendation.ToString(), comments = f.Comments,
-                submitted_at = f.SubmittedAt, ratings = f.Ratings.Select(r => new { r.Skill, rating = (int)r.Rating }).ToList(),
+                submitted_at = f.SubmittedAt, ratings = f.Ratings.Select(r => (object)new { r.Skill, rating = (int)r.Rating }).ToList(), hidden = false,
             }).ToList(),
+            feedback_hidden = i.Feedback.Any(f => Blind(i, f)),
             can_give_feedback = i.Panelists.Any(p => p.StaffUserId == actor.Id) && i.Status != InterviewStatus.Cancelled,
         };
     }
+
+    /// <summary>Hidden from a panelist who has not yet given feedback on an interview still in progress.</summary>
+    bool Blind(Interview i, InterviewFeedback f) =>
+        f.StaffUserId != actor.Id && i.IsActive && i.Panelists.Any(p => p.StaffUserId == actor.Id) && i.Feedback.All(x => x.StaffUserId != actor.Id);
 
     public async Task<object> ScheduleAsync(int? id, InterviewInput input, CancellationToken ct = default)
     {

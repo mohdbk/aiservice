@@ -317,6 +317,10 @@ export function createMockFrappe() {
       if (join) talentPool.add(u.email); else talentPool.delete(u.email);
       return { in_talent_pool: talentPool.has(u.email) };
     },
+    async respondOffer(u) {
+      current(u);
+      throw new FrappeError("offer_not_open", 409);
+    },
     async bookInterview(u) {
       current(u);
       throw new FrappeError("booking_closed", 409);

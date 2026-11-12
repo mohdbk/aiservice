@@ -25,6 +25,7 @@ type Detail = {
   offers: { id: number; code: string; position_title: string; status: string; offer_date: string }[];
   personality?: Record<string, PersonalitySummary | null>;
   selection?: SelectionView | null;
+  duplicates?: { id: number; code: string; full_name: string; email: string; created_at: string; same_cv: boolean; same_phone: boolean; same_name: boolean }[];
   invitations: {
     id: number; code: string; assessment_id: number; title: string; status: string; deadline_at: string; attempts_used: number; attempts_allowed: number;
     score: number | null; result: string | null; personality_model: string;
@@ -98,6 +99,19 @@ export default function Applicant() {
         { value: "notes", label: t("app.notes") },
       ]} />
 
+      {tab === "overview" && (a.duplicates?.length ?? 0) > 0 && (
+        <div className="mb-6"><Note tone="warning">
+          <p className="m-0 font-semibold">{t("dup.title")}</p>
+          <ul className="mt-2 space-y-1">
+            {a.duplicates!.map((d) => (
+              <li key={d.id}>
+                <Link to={to(`/applicants/${d.id}`)} className="font-semibold">{d.full_name}</Link> <span dir="ltr">{d.email}</span>
+                <span className="text-xs"> · {[d.same_cv && t("dup.cv"), d.same_phone && t("dup.phone"), d.same_name && t("dup.name")].filter(Boolean).join(" · ")} · {date(d.created_at)}</span>
+              </li>
+            ))}
+          </ul>
+        </Note></div>
+      )}
       {tab === "overview" && <div className="mb-6"><SelectionCard s={a.selection} /></div>}
       {tab === "overview" && (
         <div className="grid gap-6 xl:grid-cols-3">

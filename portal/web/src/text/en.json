@@ -327,5 +327,16 @@
  "apply.talent_pool": "Also consider me for other suitable jobs",
  "error.booking_closed": "These times are no longer open. Please refresh the page.",
  "error.booking_slot_past": "This time has passed. Please choose another.",
- "error.booking_slot_unknown": "Please choose one of the times shown."
+ "error.booking_slot_unknown": "Please choose one of the times shown.",
+ "offer.title": "Your Job Offer",
+ "offer.start": "Starting {date}",
+ "offer.accept": "Accept the Offer",
+ "offer.decline": "Decline",
+ "offer.reason": "Reason",
+ "offer.confirm_accept": "Accept this offer?",
+ "offer.confirm_decline": "Decline the Offer",
+ "offer.accepted": "You accepted the offer. The team will contact you about the next steps.",
+ "offer.declined": "You declined the offer.",
+ "error.offer_not_open": "This offer is no longer open.",
+ "common.back": "Back"
 }
