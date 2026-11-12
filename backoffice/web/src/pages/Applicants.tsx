@@ -14,7 +14,7 @@ export const screenTone = (s: string) => (s === "Meets" ? "green" : s === "DoesN
 export default function Applicants() {
   const { t, to, date } = useLang();
   usePageTitle(t("apps.title"));
-  const jobs = useAsync(() => api<{ items: { id: number; title: string }[] }>("/jobs?size=100&sort=title&dir=asc"), []);
+  const jobs = useAsync(() => api<{ items: { id: number; title: string }[] }>("/jobs?size=100&sort=created&dir=desc"), []);
   const list = useList<Row>("/applicants", ["job", "status", "screening", "ai", "minScore", "from", "to"]);
   return (
     <>

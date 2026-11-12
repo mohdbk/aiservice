@@ -2,7 +2,7 @@ import { FloppyDisk, Plus, Shuffle, Trash } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
-  Bilingual, Button, Card, EnglishBadge, ErrorState, LangTabs, Loading, PageHeader, RichText, SelectInput, TextArea, TextInput, Toggle, useSaving,
+  Bilingual, Button, Card, Empty, EnglishBadge, ErrorState, LangTabs, Loading, Modal, PageHeader, RichText, SelectInput, TextArea, TextInput, Toggle, useSaving,
 } from "../components/ui";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
 import { BIG_FIVE, MODEL_KEYS, NORMED, MODELS } from "../components/personality";
@@ -32,7 +32,7 @@ export default function TestEdit() {
   const toast = useToast();
   const nav = useNavigate();
   const lk = useLookups();
-  const questions = useAsync(() => api<{ items: { id: number; text: string; category: string }[] }>("/questions?size=100&active=true&sort=text&dir=asc"), []);
+  const [picking, setPicking] = useState<{ si: number; ii: number | null } | null>(null);
   const loaded = useAsync(() => (isNew ? Promise.resolve(EMPTY) : api<Test>(`/assessments/${id}`)), [id]);
   const [x, setX] = useState<Test>(EMPTY);
   const [lang, setLang] = useState<Bilingual>("ar");
@@ -115,8 +115,13 @@ export default function TestEdit() {
                     {s.items.map((it, ii) => (
                       <li key={ii} className="grid gap-2 rounded-lg bg-whitely-100 p-3 sm:grid-cols-[1fr_6rem_auto] sm:items-end">
                         {it.question_id ? (
-                          <SelectInput label={t("q.pick")} value={it.question_id} onChange={(e) => setItem(si, ii, { question_id: Number(e.target.value) })}
-                            options={(questions.data?.items || []).map((q) => ({ value: q.id, label: plain(q.text).slice(0, 120) }))} />
+                          <div>
+                            <p className="mb-1 text-sm font-semibold">{t("q.pick")}</p>
+                            <button type="button" onClick={() => setPicking({ si, ii })}
+                              className="w-full rounded-lg border border-aeblack-200 bg-white px-3 py-2.5 text-start text-sm hover:border-primary-500">
+                              {it.question ? plain(it.question) : `#${it.question_id}`}
+                            </button>
+                          </div>
                         ) : (
                           <div className="grid gap-2 sm:grid-cols-4">
                             <SelectInput label={t("q.category")} value={it.draw_category} onChange={(e) => setItem(si, ii, { draw_category: e.target.value })}
@@ -135,8 +140,7 @@ export default function TestEdit() {
                     ))}
                   </ul>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <Button variant="outline" size="sm" disabled={!questions.data?.items.length}
-                      onClick={() => setSec(si, { items: [...s.items, { question_id: questions.data!.items[0].id, draw_category: "", draw_difficulty: "", draw_job_family: "", draw_count: 0, points_override: null }] })}
+                    <Button variant="outline" size="sm" onClick={() => setPicking({ si, ii: null })}
                       icon={<Plus size={20} aria-hidden="true" />}>{t("test.add_fixed")}</Button>
                     <Button variant="outline" size="sm" onClick={() => setSec(si, { items: [...s.items, { question_id: null, draw_category: "", draw_difficulty: "", draw_job_family: "", draw_count: 5, points_override: null }] })}
                       icon={<Shuffle size={20} aria-hidden="true" />}>{t("test.add_draw")}</Button>
@@ -189,6 +193,50 @@ export default function TestEdit() {
           </div>
         </Card>
       </div>
+      {picking && (
+        <QuestionPicker onClose={() => setPicking(null)} onPick={(q) => {
+          const { si, ii } = picking;
+          const sec = x.sections[si];
+          if (ii == null) setSec(si, { items: [...sec.items, { question_id: q.id, question: q.text, draw_category: "", draw_difficulty: "", draw_job_family: "", draw_count: 0, points_override: null }] });
+          else setItem(si, ii, { question_id: q.id, question: q.text });
+          setPicking(null);
+        }} />
+      )}
     </>
+  );
+}
+
+/** Searches the whole question bank page by page (the bank can hold thousands of questions). */
+function QuestionPicker({ onPick, onClose }: { onPick: (q: { id: number; text: string }) => void; onClose: () => void }) {
+  const { t } = useLang();
+  const [term, setTerm] = useState("");
+  const [q, setQ] = useState("");
+  const [page, setPage] = useState(1);
+  useEffect(() => { const h = setTimeout(() => { setQ(term); setPage(1); }, 300); return () => clearTimeout(h); }, [term]);
+  const res = useAsync(() => api<{ items: { id: number; text: string; category: string; question_type: string }[]; page: number; pages: number; total: number }>(
+    `/questions?active=true&size=25&sort=text&dir=asc&page=${page}${q ? `&q=${encodeURIComponent(q)}` : ""}`), [q, page]);
+  return (
+    <Modal open onClose={onClose} title={t("q.pick")} footer={<Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>}>
+      <TextInput label={t("common.search")} value={term} onChange={(e) => setTerm(e.target.value)} autoFocus />
+      {res.loading && !res.data ? <Loading /> : res.error ? <ErrorState error={res.error} /> : (res.data?.items.length ?? 0) === 0 ? <Empty /> : (
+        <ul className="max-h-[50vh] divide-y divide-aeblack-100 overflow-auto rounded-xl border border-aeblack-100">
+          {res.data!.items.map((x) => (
+            <li key={x.id}>
+              <button type="button" onClick={() => onPick({ id: x.id, text: x.text })} className="block w-full px-3 py-2.5 text-start text-sm hover:bg-primary-50">
+                <span className="line-clamp-2">{plain(x.text)}</span>
+                <span className="text-xs text-aeblack-500">{t(`qt.${x.question_type}`)}{x.category && ` · ${x.category}`}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {res.data && res.data.pages > 1 && (
+        <div className="flex items-center justify-between text-sm">
+          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>{t("common.previous")}</Button>
+          <span dir="ltr">{page} / {res.data.pages}</span>
+          <Button variant="outline" size="sm" disabled={page >= res.data.pages} onClick={() => setPage(page + 1)}>{t("common.next")}</Button>
+        </div>
+      )}
+    </Modal>
   );
 }
