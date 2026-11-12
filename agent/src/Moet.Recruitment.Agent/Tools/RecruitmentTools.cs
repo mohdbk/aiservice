@@ -160,8 +160,12 @@ public sealed class RecruitmentTools(BackofficeApi api)
             RowOf("", p => Str(p, "full_name"), "h5"),
             s.Divider(),
             RowOf(L("التقييم", "Score"), Score),
-            RowOf(L("الحالة", "Status"), p => Str(p, "status")),
-            RowOf(L("أسئلة الفرز", "Screening"), p => p.TryGetProperty("screening", out var sc) ? Str(sc, "outcome") : ""),
+            RowOf(L("الحالة", "Status"), p => Statuses().Where(x => x.Item1 == Str(p, "status")).Select(x => x.Item2).FirstOrDefault() ?? Str(p, "status")),
+            RowOf(L("أسئلة الفرز", "Screening"), p => (p.TryGetProperty("screening", out var sc) ? Str(sc, "outcome") : "") switch
+            {
+                "Meets" => L("يستوفي المتطلبات", "Meets Requirements"), "DoesNotMeet" => L("لا يستوفي المتطلبات", "Does Not Meet"),
+                "NotApplicable" or "" => "-", var o => o,
+            }),
             RowOf(L("سنوات الخبرة", "Years of Experience"), p => Analysis(p) is { } an ? Str(an, "years") : ""),
         };
         var criteria = people.SelectMany(p => Analysis(p) is { } an && an.TryGetProperty("criteria", out var c) && c.ValueKind == JsonValueKind.Array

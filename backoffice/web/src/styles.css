@@ -143,3 +143,6 @@ html[dir="ltr"] [dir="rtl"] :is(.mh-ui, legend) { direction: ltr; text-align: le
 html[dir="rtl"] [dir="ltr"] :is(.mh-ui, legend) { direction: rtl; text-align: right; }
 /* Previews of what someone else sees (the assistant form preview) keep their own language throughout. */
 html[dir] .mh-native[dir] :is(.mh-ui, legend) { direction: inherit; text-align: start; }
+
+/* Assistant cards that scroll sideways (comparisons): a thin scroll bar for the whole card. */
+.mh-a2-card { scrollbar-width: thin; }
