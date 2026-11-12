@@ -16,7 +16,11 @@ public sealed record OfferInput(int ApplicationId, string PositionTitle, string 
 
 public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator codes, ICurrentActor actor, IClock clock)
 {
-    public async Task<object> ListAsync(string? scope, CancellationToken ct = default)
+    static readonly Sorts<Interview> InterviewSorts = new Sorts<Interview>("starts", false)
+        .Add("starts", i => i.StartsAt).Add("applicant", i => i.JobApplication!.FullName).Add("round", i => i.InterviewRound!.Name)
+        .Add("status", i => i.Status).Add("code", i => i.Code);
+
+    public async Task<object> ListAsync(ListQuery lq, string? scope, string? status, int? roundId, int? jobId, CancellationToken ct = default)
     {
         var now = clock.UtcNow;
         var q = db.Interviews.AsNoTracking().AsQueryable();
@@ -25,16 +29,21 @@ public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator 
             "mine" => q.Where(i => i.Panelists.Any(p => p.StaffUserId == actor.Id) && i.Status != InterviewStatus.Cancelled),
             "past" => q.Where(i => i.EndsAt < now),
             "review" => q.Where(i => i.Status == InterviewStatus.UnderReview),
+            "all" => q,
             _ => q.Where(i => i.EndsAt >= now.AddHours(-12) && i.Status != InterviewStatus.Cancelled),
         };
-        var rows = await (scope == "past" ? q.OrderByDescending(i => i.StartsAt) : q.OrderBy(i => i.StartsAt)).Take(200).Select(i => new
+        if (Enum.TryParse<InterviewStatus>(status, out var st)) q = q.Where(i => i.Status == st);
+        if (roundId != null) q = q.Where(i => i.InterviewRoundId == roundId);
+        if (jobId != null) q = q.Where(i => i.JobApplication!.JobOpeningId == jobId);
+        if (lq.Term.Length > 0) q = q.Where(i => i.JobApplication!.FullName.Contains(lq.Term) || i.Code.Contains(lq.Term));
+        var sorts = scope == "past" && lq.Sort == null ? new Sorts<Interview>("starts").Add("starts", i => i.StartsAt) : InterviewSorts;
+        return await q.PageAsync(lq, sorts, i => new
         {
             id = i.Id, code = i.Code, starts_at = i.StartsAt, ends_at = i.EndsAt, status = i.Status, location = i.Location,
             round = i.InterviewRound!.Name, applicant_id = i.JobApplicationId, applicant = i.JobApplication!.FullName,
             job_title = i.JobApplication.JobOpening!.Title, panel = i.Panelists.Select(p => p.StaffUser!.FullName).ToList(),
             feedback = i.Feedback.Count,
-        }).ToListAsync(ct);
-        return new { interviews = rows };
+        }, ct);
     }
 
     public async Task<object> GetAsync(int id, CancellationToken ct = default)
@@ -115,17 +124,21 @@ public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator 
 
     // ---------------- offers ----------------
 
-    public async Task<object> OffersAsync(string? status, CancellationToken ct = default)
+    static readonly Sorts<JobOffer> OfferSorts = new Sorts<JobOffer>("created")
+        .Add("created", o => o.CreatedAt).Add("code", o => o.Code).Add("offer_date", o => o.OfferDate).Add("start_date", o => o.StartDate)
+        .Add("salary", o => o.MonthlySalary).Add("status", o => o.Status).Add("applicant", o => o.JobApplication!.FullName);
+
+    public async Task<object> OffersAsync(ListQuery lq, string? status, CancellationToken ct = default)
     {
         var q = db.JobOffers.AsNoTracking().AsQueryable();
         if (Enum.TryParse<OfferStatus>(status, out var st)) q = q.Where(o => o.Status == st);
-        var rows = await q.OrderByDescending(o => o.CreatedAt).Take(300).Select(o => new
+        if (lq.Term.Length > 0) q = q.Where(o => o.JobApplication!.FullName.Contains(lq.Term) || o.Code.Contains(lq.Term) || o.PositionTitle.Contains(lq.Term));
+        return await q.PageAsync(lq, OfferSorts, o => new
         {
             id = o.Id, code = o.Code, position_title = o.PositionTitle, status = o.Status, offer_date = o.OfferDate,
             start_date = o.StartDate, monthly_salary = o.MonthlySalary, currency = o.Currency,
             applicant_id = o.JobApplicationId, applicant = o.JobApplication!.FullName, job_title = o.JobApplication.JobOpening!.Title,
-        }).ToListAsync(ct);
-        return new { offers = rows };
+        }, ct);
     }
 
     public async Task<object> OfferAsync(int id, CancellationToken ct = default)

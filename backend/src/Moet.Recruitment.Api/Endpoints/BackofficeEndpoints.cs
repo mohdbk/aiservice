@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Moet.Recruitment.Api.Hosting;
 using Moet.Recruitment.Application.Backoffice;
 using Moet.Recruitment.Application.Ai;
+using Moet.Recruitment.Application.Common;
 
 namespace Moet.Recruitment.Api.Endpoints;
 
@@ -51,16 +52,17 @@ public static class BackofficeEndpoints
         staff.MapGet("/lookups", (BackofficeSetupService s, CancellationToken ct) => s.LookupsAsync(ct));
 
         // jobs
-        staff.MapGet("/jobs", (string? status, string? q, BackofficeJobService s, CancellationToken ct) => s.ListAsync(status, q, ct));
+        staff.MapGet("/jobs", ([AsParameters] ListQuery lq, string? status, bool? published, int? department, string? english, BackofficeJobService s, CancellationToken ct) =>
+            s.ListAsync(lq, status, published, department, english, ct));
         staff.MapGet("/jobs/{id:int}", (int id, BackofficeJobService s, CancellationToken ct) => s.GetAsync(id, ct));
         staff.MapPost("/jobs", (JobInput b, BackofficeJobService s, CancellationToken ct) => s.SaveAsync(null, b, ct));
         staff.MapPut("/jobs/{id:int}", (int id, JobInput b, BackofficeJobService s, CancellationToken ct) => s.SaveAsync(id, b, ct));
         staff.MapPost("/jobs/{id:int}/suggest-english", (int id, BackofficeJobService s, CancellationToken ct) => s.SuggestTranslationAsync(id, ct));
 
         // applicants
-        staff.MapGet("/applicants", (int? job, string? status, string? screening, string? q, decimal? minScore, string? sort, int? page,
-                BackofficeApplicantService s, CancellationToken ct) =>
-            s.ListAsync(new ApplicantFilter(job, status, screening, q, minScore, sort, page ?? 1), ct));
+        staff.MapGet("/applicants", ([AsParameters] ListQuery lq, int? job, string? status, string? screening, string? ai, decimal? minScore, string? country,
+                DateOnly? from, DateOnly? to, BackofficeApplicantService s, CancellationToken ct) =>
+            s.ListAsync(lq, new ApplicantFilter(job, status, screening, ai, minScore, country, from, to), ct));
         staff.MapGet("/applicants/{id:int}", (int id, BackofficeApplicantService s, CancellationToken ct) => s.GetAsync(id, ct));
         staff.MapGet("/applicants/{id:int}/cv", async (int id, bool? download, BackofficeApplicantService s, CancellationToken ct) =>
         {
@@ -73,28 +75,31 @@ public static class BackofficeEndpoints
         staff.MapPost("/applicants/{id:int}/invite", (int id, InviteBody b, BackofficeApplicantService s, CancellationToken ct) => s.InviteAsync(id, b.AssessmentId, b.DeadlineDays, ct));
 
         // interviews and offers
-        staff.MapGet("/interviews", (string? scope, BackofficeInterviewService s, CancellationToken ct) => s.ListAsync(scope, ct));
+        staff.MapGet("/interviews", ([AsParameters] ListQuery lq, string? scope, string? status, int? round, int? job, BackofficeInterviewService s, CancellationToken ct) =>
+            s.ListAsync(lq, scope, status, round, job, ct));
         staff.MapGet("/interviews/{id:int}", (int id, BackofficeInterviewService s, CancellationToken ct) => s.GetAsync(id, ct));
         staff.MapPost("/interviews", (InterviewInput b, BackofficeInterviewService s, CancellationToken ct) => s.ScheduleAsync(null, b, ct));
         staff.MapPut("/interviews/{id:int}", (int id, InterviewInput b, BackofficeInterviewService s, CancellationToken ct) => s.ScheduleAsync(id, b, ct));
         staff.MapPost("/interviews/{id:int}/status", (int id, StatusBody b, BackofficeInterviewService s, CancellationToken ct) => s.SetStatusAsync(id, b.Status, ct));
         staff.MapPost("/interviews/{id:int}/feedback", (int id, FeedbackInput b, BackofficeInterviewService s, CancellationToken ct) => s.FeedbackAsync(id, b, ct));
-        staff.MapGet("/offers", (string? status, BackofficeInterviewService s, CancellationToken ct) => s.OffersAsync(status, ct));
+        staff.MapGet("/offers", ([AsParameters] ListQuery lq, string? status, BackofficeInterviewService s, CancellationToken ct) => s.OffersAsync(lq, status, ct));
         staff.MapGet("/offers/{id:int}", (int id, BackofficeInterviewService s, CancellationToken ct) => s.OfferAsync(id, ct));
         staff.MapPost("/offers", (OfferInput b, BackofficeInterviewService s, CancellationToken ct) => s.SaveOfferAsync(null, b, ct));
         staff.MapPut("/offers/{id:int}", (int id, OfferInput b, BackofficeInterviewService s, CancellationToken ct) => s.SaveOfferAsync(id, b, ct));
         staff.MapPost("/offers/{id:int}/status", (int id, StatusBody b, BackofficeInterviewService s, CancellationToken ct) => s.SetOfferStatusAsync(id, b.Status, ct));
 
         // assessments
-        staff.MapGet("/questions", (string? q, string? category, bool? active, BackofficeAssessmentService s, CancellationToken ct) => s.QuestionsAsync(q, category, active, ct));
+        staff.MapGet("/questions", ([AsParameters] ListQuery lq, string? type, string? category, string? difficulty, string? family, bool? active, string? english,
+            BackofficeAssessmentService s, CancellationToken ct) => s.QuestionsAsync(lq, type, category, difficulty, family, active, english, ct));
         staff.MapGet("/questions/{id:int}", (int id, BackofficeAssessmentService s, CancellationToken ct) => s.QuestionAsync(id, ct));
         staff.MapPost("/questions", (QuestionInput b, BackofficeAssessmentService s, CancellationToken ct) => s.SaveQuestionAsync(null, b, ct));
         staff.MapPut("/questions/{id:int}", (int id, QuestionInput b, BackofficeAssessmentService s, CancellationToken ct) => s.SaveQuestionAsync(id, b, ct));
-        staff.MapGet("/assessments", (BackofficeAssessmentService s, CancellationToken ct) => s.AssessmentsAsync(ct));
+        staff.MapGet("/assessments", ([AsParameters] ListQuery lq, string? status, string? type, BackofficeAssessmentService s, CancellationToken ct) => s.AssessmentsAsync(lq, status, type, ct));
         staff.MapGet("/assessments/{id:int}", (int id, BackofficeAssessmentService s, CancellationToken ct) => s.AssessmentAsync(id, ct));
         staff.MapPost("/assessments", (AssessmentInput b, BackofficeAssessmentService s, CancellationToken ct) => s.SaveAssessmentAsync(null, b, ct));
         staff.MapPut("/assessments/{id:int}", (int id, AssessmentInput b, BackofficeAssessmentService s, CancellationToken ct) => s.SaveAssessmentAsync(id, b, ct));
-        staff.MapGet("/invitations", (string? status, int? assessment, BackofficeAssessmentService s, CancellationToken ct) => s.InvitationsAsync(status, assessment, ct));
+        staff.MapGet("/invitations", ([AsParameters] ListQuery lq, string? status, int? assessment, string? result, int? job, BackofficeAssessmentService s, CancellationToken ct) =>
+            s.InvitationsAsync(lq, status, assessment, result, job, ct));
         staff.MapPost("/invitations/{id:int}/reexam", (int id, ReexamBody b, BackofficeAssessmentService s, CancellationToken ct) => s.ReexamAsync(id, b.ExtraAttempts, b.DeadlineDays, b.Notify, ct));
         staff.MapPost("/invitations/{id:int}/cancel", (int id, BackofficeAssessmentService s, CancellationToken ct) => s.CancelInvitationAsync(id, ct));
         staff.MapGet("/attempts/{id:int}", (int id, BackofficeAssessmentService s, CancellationToken ct) => s.AttemptAsync(id, ct));
@@ -107,7 +112,8 @@ public static class BackofficeEndpoints
         });
 
         // screening questions and English drafts
-        staff.MapGet("/screening-questions", (BackofficeSetupService s, CancellationToken ct) => s.ScreeningQuestionsAsync(ct));
+        staff.MapGet("/screening-questions", ([AsParameters] ListQuery lq, string? type, string? category, bool? active, string? english, BackofficeSetupService s, CancellationToken ct) =>
+            s.ScreeningQuestionsAsync(lq, type, category, active, english, ct));
         staff.MapGet("/screening-questions/{id:int}", (int id, BackofficeSetupService s, CancellationToken ct) => s.ScreeningQuestionAsync(id, ct));
         staff.MapPost("/screening-questions", (ScreeningQuestionInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveScreeningQuestionAsync(null, b, ct));
         staff.MapPut("/screening-questions/{id:int}", (int id, ScreeningQuestionInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveScreeningQuestionAsync(id, b, ct));
@@ -121,20 +127,20 @@ public static class BackofficeEndpoints
 
         // setup (recruitment admins only)
         var setup = api.MapGroup("").RequireAuthorization(StaffPolicies.Admin);
-        setup.MapGet("/departments", (BackofficeSetupService s, CancellationToken ct) => s.DepartmentsAsync(ct));
+        setup.MapGet("/departments", ([AsParameters] ListQuery lq, BackofficeSetupService s, CancellationToken ct) => s.DepartmentsAsync(lq, ct));
         setup.MapPost("/departments", (NamedInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveDepartmentAsync(null, b, ct));
         setup.MapPut("/departments/{id:int}", (int id, NamedInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveDepartmentAsync(id, b, ct));
-        setup.MapGet("/rounds", (BackofficeSetupService s, CancellationToken ct) => s.RoundsAsync(ct));
+        setup.MapGet("/rounds", ([AsParameters] ListQuery lq, BackofficeSetupService s, CancellationToken ct) => s.RoundsAsync(lq, ct));
         setup.MapPost("/rounds", (NamedInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveRoundAsync(null, b, ct));
         setup.MapPut("/rounds/{id:int}", (int id, NamedInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveRoundAsync(id, b, ct));
         setup.MapGet("/settings", (BackofficeSetupService s, CancellationToken ct) => s.SettingsAsync(ct));
         setup.MapPut("/settings", (SettingsInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveSettingsAsync(b, ct));
-        setup.MapGet("/portal-text/{lang}", (string lang, BackofficeSetupService s, CancellationToken ct) => s.PortalTextAsync(lang, ct));
+        setup.MapGet("/portal-text/{lang}", (string lang, [AsParameters] ListQuery lq, string? changed, BackofficeSetupService s, CancellationToken ct) => s.PortalTextAsync(lang, lq, changed, ct));
         setup.MapPut("/portal-text", (PortalTextInput b, BackofficeSetupService s, CancellationToken ct) => s.SavePortalTextAsync(b, ct));
 
         // staff accounts (administrators)
         var sys = api.MapGroup("").RequireAuthorization(StaffPolicies.SystemAdmin);
-        sys.MapGet("/staff", (StaffAuthService s, CancellationToken ct) => s.ListAsync(ct));
+        sys.MapGet("/staff", ([AsParameters] ListQuery lq, string? role, bool? enabled, StaffAuthService s, CancellationToken ct) => s.ListAsync(lq, role, enabled, ct));
         sys.MapPost("/staff", (StaffBody b, StaffAuthService s, CancellationToken ct) => s.SaveAsync(null, b.Email, b.FullName, b.Role, b.IsEnabled, b.Password, ct));
         sys.MapPut("/staff/{id:int}", (int id, StaffBody b, StaffAuthService s, CancellationToken ct) => s.SaveAsync(id, b.Email, b.FullName, b.Role, b.IsEnabled, b.Password, ct));
     }

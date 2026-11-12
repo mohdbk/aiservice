@@ -116,7 +116,19 @@ public class EndToEndTests
 
         // HR sees the applicant, flagged by the screening requirement.
         var list = await Read(await admin.GetAsync("/api/backoffice/applicants"));
-        Assert.Equal("DoesNotMeet", list.GetProperty("applicants")[0].GetProperty("screening").GetString());
+        Assert.Equal("DoesNotMeet", list.GetProperty("items")[0].GetProperty("screening").GetString());
+        Assert.Equal(1, list.GetProperty("total").GetInt32());
+
+        // Every list pages, sorts (only by allowed columns) and filters.
+        var jobs = await Read(await admin.GetAsync("/api/backoffice/jobs?sort=title&dir=asc&size=10&status=Open&q=%D9%85%D8%AD%D9%84%D9%84"));
+        Assert.Equal(10, jobs.GetProperty("size").GetInt32());
+        Assert.Equal("title", jobs.GetProperty("sort").GetString());
+        Assert.Equal("asc", jobs.GetProperty("dir").GetString());
+        Assert.Equal(1, jobs.GetProperty("items")[0].GetProperty("applicants").GetInt32());
+        var odd = await Read(await admin.GetAsync("/api/backoffice/applicants?sort=PasswordHash&size=7&status=Rejected"));
+        Assert.Equal("created", odd.GetProperty("sort").GetString());
+        Assert.Equal(25, odd.GetProperty("size").GetInt32());
+        Assert.Equal(0, odd.GetProperty("total").GetInt32());
 
         // Changes without the X-Admin header are refused.
         var plain = app.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });

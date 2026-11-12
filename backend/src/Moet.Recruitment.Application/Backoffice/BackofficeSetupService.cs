@@ -26,15 +26,24 @@ public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor
 
     // ---------------- screening questions ----------------
 
-    public async Task<object> ScreeningQuestionsAsync(CancellationToken ct = default)
+    static readonly Sorts<ScreeningQuestion> ScreeningSorts = new Sorts<ScreeningQuestion>("updated")
+        .Add("updated", q => q.UpdatedAt).Add("text", q => q.Text).Add("type", q => q.AnswerType).Add("category", q => q.Category);
+
+    public async Task<object> ScreeningQuestionsAsync(ListQuery lq, string? type, string? category, bool? active, string? english, CancellationToken ct = default)
     {
-        var rows = await db.ScreeningQuestions.AsNoTracking().OrderBy(q => q.Category).ThenBy(q => q.Text).Select(q => new
+        var q = db.ScreeningQuestions.AsNoTracking().AsQueryable();
+        if (Enum.TryParse<AnswerType>(type, out var at)) q = q.Where(x => x.AnswerType == at);
+        if (!string.IsNullOrWhiteSpace(category)) q = q.Where(x => x.Category == category);
+        if (active != null) q = q.Where(x => x.IsActive == active);
+        if (english == "Missing") q = q.Where(x => !x.Translations.Any(t => t.LanguageCode == En));
+        else if (Enum.TryParse<ReviewStatus>(english, out var rs)) q = q.Where(x => x.Translations.Any(t => t.LanguageCode == En && t.ReviewStatus == rs));
+        if (lq.Term.Length > 0) q = q.Where(x => x.Text.Contains(lq.Term) || x.Translations.Any(t => t.Text.Contains(lq.Term)));
+        return await q.PageAsync(lq, ScreeningSorts, x => new
         {
-            id = q.Id, text = q.Text, answer_type = q.AnswerType, category = q.Category, is_active = q.IsActive,
-            english = q.Translations.Where(t => t.LanguageCode == En).Select(t => (ReviewStatus?)t.ReviewStatus).FirstOrDefault(),
-            options = q.Options.OrderBy(o => o.SortOrder).Select(o => new { id = o.Id, text = o.Text }).ToList(),
-        }).ToListAsync(ct);
-        return new { questions = rows.Select(r => new { r.id, r.text, r.answer_type, r.category, r.is_active, r.options, english = r.english?.ToString() ?? "Missing" }).ToList() };
+            id = x.Id, text = x.Text, answer_type = x.AnswerType, category = x.Category, is_active = x.IsActive,
+            english = x.Translations.Where(t => t.LanguageCode == En).Select(t => (ReviewStatus?)t.ReviewStatus).FirstOrDefault(),
+            options = x.Options.OrderBy(o => o.SortOrder).Select(o => o.Text).ToList(),
+        }, ct);
     }
 
     public async Task<object> ScreeningQuestionAsync(int id, CancellationToken ct = default)
@@ -163,12 +172,15 @@ public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor
 
     // ---------------- departments and interview rounds ----------------
 
-    public async Task<object> DepartmentsAsync(CancellationToken ct = default) => new
+    public Task<PageResult<object>> DepartmentsAsync(ListQuery lq, CancellationToken ct = default)
     {
-        departments = await db.Departments.AsNoTracking().OrderBy(d => d.Name)
-            .Select(d => new { id = d.Id, name = d.Name, name_en = d.Translations.Where(t => t.LanguageCode == En).Select(t => t.Name).FirstOrDefault() ?? "", is_active = d.IsActive })
-            .ToListAsync(ct),
-    };
+        var q = db.Departments.AsNoTracking().AsQueryable();
+        if (lq.Term.Length > 0) q = q.Where(d => d.Name.Contains(lq.Term) || d.Translations.Any(t => t.Name.Contains(lq.Term)));
+        return q.PageAsync(lq, new Sorts<Department>("name", false).Add("name", d => d.Name).Add("active", d => d.IsActive), d => (object)new
+        {
+            id = d.Id, name = d.Name, name_en = d.Translations.Where(t => t.LanguageCode == En).Select(t => t.Name).FirstOrDefault() ?? "", is_active = d.IsActive,
+        }, ct);
+    }
 
     public async Task<object> SaveDepartmentAsync(int? id, NamedInput input, CancellationToken ct = default)
     {
@@ -189,12 +201,15 @@ public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor
         return new { id = d.Id };
     }
 
-    public async Task<object> RoundsAsync(CancellationToken ct = default) => new
+    public Task<PageResult<object>> RoundsAsync(ListQuery lq, CancellationToken ct = default)
     {
-        rounds = await db.InterviewRounds.AsNoTracking().OrderBy(r => r.Name)
-            .Select(r => new { id = r.Id, name = r.Name, description = r.Description, is_active = r.IsActive, skills = r.Skills.OrderBy(s => s.SortOrder).Select(s => s.Skill).ToList() })
-            .ToListAsync(ct),
-    };
+        var q = db.InterviewRounds.AsNoTracking().AsQueryable();
+        if (lq.Term.Length > 0) q = q.Where(r => r.Name.Contains(lq.Term));
+        return q.PageAsync(lq, new Sorts<InterviewRound>("name", false).Add("name", r => r.Name).Add("active", r => r.IsActive), r => (object)new
+        {
+            id = r.Id, name = r.Name, description = r.Description, is_active = r.IsActive, skills = r.Skills.OrderBy(s => s.SortOrder).Select(s => s.Skill).ToList(),
+        }, ct);
+    }
 
     public async Task<object> SaveRoundAsync(int? id, NamedInput input, CancellationToken ct = default)
     {
@@ -252,24 +267,24 @@ public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor
         return Uri.TryCreate(u, UriKind.Absolute, out var x) && x.Scheme is "https" or "http" ? u : throw DomainException.Invalid("invalid_url");
     }
 
-    public async Task<object> PortalTextAsync(string lang, CancellationToken ct = default)
+    public async Task<object> PortalTextAsync(string lang, ListQuery lq, string? changed, CancellationToken ct = default)
     {
         var shipped = catalog.Shipped(lang);
         var english = catalog.Shipped("en");
         var overrides = await db.PortalTexts.AsNoTracking().Where(t => t.LanguageCode == lang).ToListAsync(ct);
-        return new
+        var rows = english.Keys.Select(k =>
         {
-            texts = english.Keys.Order().Select(k =>
-            {
-                var o = overrides.FirstOrDefault(x => x.TextKey == k);
-                return new
-                {
-                    key = k, english = english[k], shipped = shipped.TryGetValue(k, out var v) ? v : "",
-                    text = o?.Text ?? "", review_status = o?.ReviewStatus.ToString() ?? "", approved = o?.ReviewStatus == ReviewStatus.Approved,
-                };
-            }).ToList(),
-        };
+            var o = overrides.FirstOrDefault(x => x.TextKey == k);
+            return new PortalTextRow(k, english[k], shipped.TryGetValue(k, out var v) ? v : "", o?.Text ?? "", o?.ReviewStatus.ToString() ?? "", o?.ReviewStatus == ReviewStatus.Approved);
+        });
+        if (changed == "1") rows = rows.Where(r => r.Text.Length > 0);
+        if (lq.Term.Length > 0)
+            rows = rows.Where(r => r.Key.Contains(lq.Term, StringComparison.OrdinalIgnoreCase) || r.English.Contains(lq.Term, StringComparison.OrdinalIgnoreCase)
+                                   || r.Shipped.Contains(lq.Term, StringComparison.OrdinalIgnoreCase) || r.Text.Contains(lq.Term, StringComparison.OrdinalIgnoreCase));
+        return rows.Page(lq, new Dictionary<string, Func<PortalTextRow, object?>> { ["key"] = r => r.Key, ["status"] = r => r.ReviewStatus }, "key");
     }
+
+    public sealed record PortalTextRow(string Key, string English, string Shipped, string Text, string ReviewStatus, bool Approved);
 
     public async Task<object> SavePortalTextAsync(PortalTextInput input, CancellationToken ct = default)
     {

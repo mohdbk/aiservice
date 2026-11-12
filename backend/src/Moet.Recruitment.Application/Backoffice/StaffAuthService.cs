@@ -60,12 +60,16 @@ public sealed class StaffAuthService(IAppDbContext db, IPasswordHasher hasher, I
 
     // ---------------- staff accounts (administrators) ----------------
 
-    public async Task<object> ListAsync(CancellationToken ct = default) =>
-        new
-        {
-            staff = await db.StaffUsers.AsNoTracking().OrderBy(u => u.FullName)
-                .Select(u => new { u.Id, u.Email, u.FullName, role = u.Role, u.IsEnabled, u.LastSignInAt }).ToListAsync(ct),
-        };
+    public Task<PageResult<object>> ListAsync(ListQuery lq, string? role, bool? enabled, CancellationToken ct = default)
+    {
+        var q = db.StaffUsers.AsNoTracking().AsQueryable();
+        if (Enum.TryParse<StaffRole>(role, out var r)) q = q.Where(u => u.Role == r);
+        if (enabled != null) q = q.Where(u => u.IsEnabled == enabled);
+        if (lq.Term.Length > 0) q = q.Where(u => u.FullName.Contains(lq.Term) || u.Email.Contains(lq.Term));
+        var sorts = new Sorts<StaffUser>("name", false).Add("name", u => u.FullName).Add("email", u => u.Email).Add("role", u => u.Role)
+            .Add("last_sign_in", u => u.LastSignInAt);
+        return q.PageAsync(lq, sorts, u => (object)new { id = u.Id, email = u.Email, full_name = u.FullName, role = u.Role, is_enabled = u.IsEnabled, last_sign_in_at = u.LastSignInAt }, ct);
+    }
 
     public async Task<object> SaveAsync(int? id, string? email, string? fullName, string? role, bool enabled, string? password, CancellationToken ct = default)
     {

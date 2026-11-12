@@ -7,42 +7,39 @@ using Moet.Recruitment.Domain.Hiring;
 
 namespace Moet.Recruitment.Application.Backoffice;
 
-public sealed record ApplicantFilter(int? JobId, string? Status, string? Screening, string? Q, decimal? MinScore, string? Sort, int Page);
+public sealed record ApplicantFilter(int? JobId, string? Status, string? Screening, string? AiStatus, decimal? MinScore, string? Country, DateOnly? From, DateOnly? To);
 
 /// <summary>The applicant pipeline: lists, the applicant's full record, status changes, notes and re-scoring.</summary>
 public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor actor, IClock clock, JobQueue jobs, AssessmentWorkflow workflow)
 {
-    const int PageSize = 25;
+    static readonly Sorts<JobApplication> AppSorts = new Sorts<JobApplication>("created")
+        .Add("created", a => a.CreatedAt).Add("name", a => a.FullName).Add("code", a => a.Code).Add("status", a => a.Status)
+        .Add("score", a => a.CvAnalysis!.Score).Add("job", a => a.JobOpening!.Title).Add("screening", a => a.ScreeningOutcome);
 
-    public async Task<object> ListAsync(ApplicantFilter f, CancellationToken ct = default)
+    public async Task<object> ListAsync(ListQuery lq, ApplicantFilter f, CancellationToken ct = default)
     {
         var q = db.JobApplications.AsNoTracking().AsQueryable();
         if (f.JobId != null) q = q.Where(a => a.JobOpeningId == f.JobId);
         if (Enum.TryParse<ApplicationStatus>(f.Status, out var st)) q = q.Where(a => a.Status == st);
         if (Enum.TryParse<ScreeningOutcome>(f.Screening, out var so)) q = q.Where(a => a.ScreeningOutcome == so);
+        if (Enum.TryParse<CvAnalysisStatus>(f.AiStatus, out var ai)) q = q.Where(a => a.CvAnalysis!.Status == ai);
         if (f.MinScore != null) q = q.Where(a => a.CvAnalysis!.Score >= f.MinScore);
-        if (!string.IsNullOrWhiteSpace(f.Q))
+        if (!string.IsNullOrEmpty(f.Country)) q = q.Where(a => a.Country == f.Country);
+        if (f.From != null) q = q.Where(a => a.CreatedAt >= f.From.Value.ToDateTime(TimeOnly.MinValue));
+        if (f.To != null) q = q.Where(a => a.CreatedAt < f.To.Value.AddDays(1).ToDateTime(TimeOnly.MinValue));
+        if (lq.Term.Length > 0)
         {
-            var t = f.Q.Trim();
-            q = q.Where(a => a.FullName.Contains(t) || a.Email.Contains(t) || a.Code.Contains(t));
+            var t = lq.Term;
+            q = q.Where(a => a.FullName.Contains(t) || a.Email.Contains(t) || a.Code.Contains(t) || a.Phone.Contains(t));
         }
-        var total = await q.CountAsync(ct);
-        q = f.Sort switch
-        {
-            "score" => q.OrderByDescending(a => a.CvAnalysis!.Score).ThenByDescending(a => a.CreatedAt),
-            "oldest" => q.OrderBy(a => a.CreatedAt),
-            "name" => q.OrderBy(a => a.FullName),
-            _ => q.OrderByDescending(a => a.CreatedAt),
-        };
-        var page = Math.Max(1, f.Page);
-        var rows = await q.Skip((page - 1) * PageSize).Take(PageSize).Select(a => new
+        return await q.PageAsync(lq, AppSorts, a => new
         {
             id = a.Id, code = a.Code, full_name = a.FullName, email = a.Email, job_id = a.JobOpeningId, job_code = a.JobOpening!.Code,
-            job_title = a.JobOpening.Title, status = a.Status, screening = a.ScreeningOutcome,
-            score = a.CvAnalysis == null ? null : a.CvAnalysis.Score, ai_status = a.CvAnalysis == null ? (CvAnalysisStatus?)null : a.CvAnalysis.Status, created_at = a.CreatedAt,
+            job_title = a.JobOpening.Title, status = a.Status, screening = a.ScreeningOutcome, country = a.Country,
+            score = a.CvAnalysis == null ? null : a.CvAnalysis.Score, ai_status = a.CvAnalysis == null ? (CvAnalysisStatus?)null : a.CvAnalysis.Status,
+            created_at = a.CreatedAt,
             interviews = db.Interviews.Count(i => i.JobApplicationId == a.Id && i.Status != InterviewStatus.Cancelled),
-        }).ToListAsync(ct);
-        return new { applicants = rows, total, page, pages = Math.Max(1, (total + PageSize - 1) / PageSize) };
+        }, ct);
     }
 
     public async Task<object> GetAsync(int id, CancellationToken ct = default)

@@ -33,24 +33,27 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
 
     // ---------------- question bank ----------------
 
-    public async Task<object> QuestionsAsync(string? q, string? category, bool? active, CancellationToken ct = default)
+    static readonly Sorts<Question> QuestionSorts = new Sorts<Question>("updated")
+        .Add("updated", x => x.UpdatedAt).Add("text", x => x.Text).Add("type", x => x.QuestionType).Add("category", x => x.Category)
+        .Add("difficulty", x => x.Difficulty).Add("points", x => x.Points);
+
+    public async Task<object> QuestionsAsync(ListQuery lq, string? type, string? category, string? difficulty, string? jobFamily, bool? active, string? english, CancellationToken ct = default)
     {
         var query = db.Questions.AsNoTracking().AsQueryable();
-        if (!string.IsNullOrWhiteSpace(q)) query = query.Where(x => x.Text.Contains(q.Trim()) || x.Category.Contains(q.Trim()));
+        if (lq.Term.Length > 0) query = query.Where(x => x.Text.Contains(lq.Term) || x.Category.Contains(lq.Term));
+        if (Enum.TryParse<QuestionType>(type, out var qt)) query = query.Where(x => x.QuestionType == qt);
         if (!string.IsNullOrWhiteSpace(category)) query = query.Where(x => x.Category == category);
+        if (Enum.TryParse<Difficulty>(difficulty, out var d)) query = query.Where(x => x.Difficulty == d);
+        if (!string.IsNullOrWhiteSpace(jobFamily)) query = query.Where(x => x.JobFamily == jobFamily);
         if (active != null) query = query.Where(x => x.IsActive == active);
-        var rows = await query.OrderByDescending(x => x.UpdatedAt).Take(500).Select(x => new
+        if (english == "Missing") query = query.Where(x => !x.Translations.Any(t => t.LanguageCode == En));
+        else if (Enum.TryParse<ReviewStatus>(english, out var rs)) query = query.Where(x => x.Translations.Any(t => t.LanguageCode == En && t.ReviewStatus == rs));
+        return await query.PageAsync(lq, QuestionSorts, x => new
         {
-            id = x.Id, text = x.Text, question_type = x.QuestionType, category = x.Category, job_family = x.JobFamily,
-            difficulty = x.Difficulty, points = x.Points, is_active = x.IsActive,
+            id = x.Id, text = x.Text.Length > 400 ? x.Text.Substring(0, 400) : x.Text, question_type = x.QuestionType, category = x.Category,
+            job_family = x.JobFamily, difficulty = x.Difficulty, points = x.Points, is_active = x.IsActive,
             english = x.Translations.Where(t => t.LanguageCode == En).Select(t => (ReviewStatus?)t.ReviewStatus).FirstOrDefault(),
-        }).ToListAsync(ct);
-        var categories = await db.Questions.AsNoTracking().Where(x => x.Category != "").Select(x => x.Category).Distinct().OrderBy(x => x).ToListAsync(ct);
-        return new
-        {
-            questions = rows.Select(r => new { r.id, text = TextUtil.Summary(r.text, 160), r.question_type, r.category, r.job_family, r.difficulty, r.points, r.is_active, english = r.english?.ToString() ?? "Missing" }).ToList(),
-            categories,
-        };
+        }, ct);
     }
 
     public async Task<object> QuestionAsync(int id, CancellationToken ct = default)
@@ -149,16 +152,23 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
 
     // ---------------- tests ----------------
 
-    public async Task<object> AssessmentsAsync(CancellationToken ct = default)
+    static readonly Sorts<Assessment> TestSorts = new Sorts<Assessment>("updated")
+        .Add("updated", a => a.UpdatedAt).Add("title", a => a.Title).Add("type", a => a.AssessmentType).Add("status", a => a.Status)
+        .Add("pass_mark", a => a.PassMark);
+
+    public async Task<object> AssessmentsAsync(ListQuery lq, string? status, string? type, CancellationToken ct = default)
     {
-        var rows = await db.Assessments.AsNoTracking().OrderByDescending(a => a.UpdatedAt).Select(a => new
+        var q = db.Assessments.AsNoTracking().AsQueryable();
+        if (Enum.TryParse<AssessmentStatus>(status, out var st)) q = q.Where(a => a.Status == st);
+        if (Enum.TryParse<AssessmentType>(type, out var ty)) q = q.Where(a => a.AssessmentType == ty);
+        if (lq.Term.Length > 0) q = q.Where(a => a.Title.Contains(lq.Term) || a.Translations.Any(t => t.Title.Contains(lq.Term)));
+        return await q.PageAsync(lq, TestSorts, a => new
         {
             id = a.Id, title = a.Title, assessment_type = a.AssessmentType, status = a.Status, pass_mark = a.PassMark,
             sections = a.Sections.Count, minutes = a.Sections.Sum(s => s.Minutes),
             invitations = db.Invitations.Count(i => i.AssessmentId == a.Id),
             english = a.Translations.Where(t => t.LanguageCode == En).Select(t => (ReviewStatus?)t.ReviewStatus).FirstOrDefault(),
-        }).ToListAsync(ct);
-        return new { assessments = rows.Select(r => new { r.id, r.title, r.assessment_type, r.status, r.pass_mark, r.sections, r.minutes, r.invitations, english = r.english?.ToString() ?? "Missing" }).ToList() };
+        }, ct);
     }
 
     IQueryable<Assessment> LoadAssessment(int id) => db.Assessments.Where(a => a.Id == id)
@@ -275,20 +285,27 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
 
     // ---------------- invitations and marking ----------------
 
-    public async Task<object> InvitationsAsync(string? status, int? assessmentId, CancellationToken ct = default)
+    static readonly Sorts<Invitation> InvitationSorts = new Sorts<Invitation>("updated")
+        .Add("updated", i => i.UpdatedAt).Add("deadline", i => i.DeadlineAt).Add("score", i => i.Score).Add("status", i => i.Status)
+        .Add("applicant", i => i.JobApplication!.FullName).Add("test", i => i.Assessment!.Title);
+
+    public async Task<object> InvitationsAsync(ListQuery lq, string? status, int? assessmentId, string? result, int? jobId, CancellationToken ct = default)
     {
         var q = db.Invitations.AsNoTracking().AsQueryable();
         if (Enum.TryParse<InvitationStatus>(status, out var st)) q = q.Where(i => i.Status == st);
         if (assessmentId != null) q = q.Where(i => i.AssessmentId == assessmentId);
-        var rows = await q.OrderByDescending(i => i.UpdatedAt).Take(300).Select(i => new
+        if (Enum.TryParse<InvitationResult>(result, out var r)) q = q.Where(i => i.Result == r);
+        if (jobId != null) q = q.Where(i => i.JobApplication!.JobOpeningId == jobId);
+        if (lq.Term.Length > 0) q = q.Where(i => i.JobApplication!.FullName.Contains(lq.Term) || i.Code.Contains(lq.Term));
+        return await q.PageAsync(lq, InvitationSorts, i => new
         {
             id = i.Id, code = i.Code, status = i.Status, deadline_at = i.DeadlineAt, score = i.Score, result = i.Result,
             attempts_used = (int)i.AttemptsUsed, attempts_allowed = (int)i.AttemptsAllowed,
             assessment = i.Assessment!.Title, applicant_id = i.JobApplicationId, applicant = i.JobApplication!.FullName,
             job_title = i.JobApplication.JobOpening!.Title,
             to_mark = i.Attempts.Where(t => t.Status == AttemptStatus.Submitted).Select(t => (int?)t.Id).FirstOrDefault(),
-        }).ToListAsync(ct);
-        return new { invitations = rows };
+            last_attempt = i.Attempts.OrderByDescending(t => t.AttemptNo).Select(t => (int?)t.Id).FirstOrDefault(),
+        }, ct);
     }
 
     public async Task<object> ReexamAsync(int id, int extraAttempts, int deadlineDays, bool notify, CancellationToken ct = default)

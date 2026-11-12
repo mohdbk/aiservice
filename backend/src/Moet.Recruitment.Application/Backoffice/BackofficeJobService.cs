@@ -21,31 +21,37 @@ public sealed record JobInput(
 
 public sealed class BackofficeJobService(IAppDbContext db, ICodeGenerator codes, ICurrentActor actor, IClock clock, IHtmlCleaner html, JobQueue jobs)
 {
-    public async Task<object> ListAsync(string? status, string? q, CancellationToken ct = default)
+    static readonly Sorts<JobOpening> JobSorts = new Sorts<JobOpening>("created")
+        .Add("created", j => j.CreatedAt).Add("code", j => j.Code).Add("title", j => j.Title).Add("status", j => j.Status)
+        .Add("posted", j => j.PostedOn).Add("closes", j => j.ClosesOn).Add("department", j => j.Department!.Name)
+        .Add("applicants", j => j.Id);
+
+    public async Task<object> ListAsync(ListQuery lq, string? status, bool? published, int? departmentId, string? english, CancellationToken ct = default)
     {
-        var query = db.JobOpenings.AsNoTracking().Include(j => j.Department).Include(j => j.Translations).AsQueryable();
+        var query = db.JobOpenings.AsNoTracking();
         if (Enum.TryParse<JobStatus>(status, out var st)) query = query.Where(j => j.Status == st);
-        if (!string.IsNullOrWhiteSpace(q))
+        if (published != null) query = query.Where(j => j.IsPublished == published);
+        if (departmentId != null) query = query.Where(j => j.DepartmentId == departmentId);
+        if (english == "Missing") query = query.Where(j => !j.Translations.Any(t => t.LanguageCode == "en"));
+        else if (Enum.TryParse<ReviewStatus>(english, out var rs)) query = query.Where(j => j.Translations.Any(t => t.LanguageCode == "en" && t.ReviewStatus == rs));
+        if (lq.Term.Length > 0)
         {
-            var t = q.Trim();
-            query = query.Where(j => j.Title.Contains(t) || j.Code.Contains(t) || j.Translations.Any(x => x.Title.Contains(t)));
+            var t = lq.Term;
+            query = query.Where(j => j.Title.Contains(t) || j.Code.Contains(t) || j.Location.Contains(t) || j.Translations.Any(x => x.Title.Contains(t)));
         }
-        var rows = await query.OrderByDescending(j => j.CreatedAt).Take(300).ToListAsync(ct);
-        var ids = rows.Select(r => r.Id).ToList();
-        var counts = await db.JobApplications.AsNoTracking().Where(a => ids.Contains(a.JobOpeningId))
-            .GroupBy(a => new { a.JobOpeningId, a.Status }).Select(g => new { g.Key.JobOpeningId, g.Key.Status, n = g.Count() }).ToListAsync(ct);
-        return new
+        var sorts = lq.Sort == "applicants"
+            ? new Sorts<JobOpening>("applicants").Add("applicants", j => db.JobApplications.Count(a => a.JobOpeningId == j.Id))
+            : JobSorts;
+        return await query.PageAsync(lq, sorts, j => new
         {
-            jobs = rows.Select(j => new
-            {
-                id = j.Id, code = j.Code, title = j.Title, title_en = j.Translations.FirstOrDefault(t => t.LanguageCode == "en")?.Title ?? "",
-                department = j.Department?.Name ?? "", status = j.Status.ToString(), is_published = j.IsPublished,
-                posted_on = AppTime.Date(j.PostedOn), closes_on = AppTime.Date(j.ClosesOn),
-                applicants = counts.Where(c => c.JobOpeningId == j.Id).Sum(c => c.n),
-                new_applicants = counts.Where(c => c.JobOpeningId == j.Id && c.Status == ApplicationStatus.Open).Sum(c => c.n),
-                english = EnglishState(j.Translations.FirstOrDefault(t => t.LanguageCode == "en")),
-            }).ToList(),
-        };
+            id = j.Id, code = j.Code, title = j.Title,
+            title_en = j.Translations.Where(t => t.LanguageCode == "en").Select(t => t.Title).FirstOrDefault() ?? "",
+            department = j.Department == null ? "" : j.Department.Name, status = j.Status, is_published = j.IsPublished,
+            posted_on = j.PostedOn, closes_on = j.ClosesOn,
+            applicants = db.JobApplications.Count(a => a.JobOpeningId == j.Id),
+            new_applicants = db.JobApplications.Count(a => a.JobOpeningId == j.Id && a.Status == ApplicationStatus.Open),
+            english = j.Translations.Where(t => t.LanguageCode == "en").Select(t => (ReviewStatus?)t.ReviewStatus).FirstOrDefault(),
+        }, ct);
     }
 
     static string EnglishState(ITranslation? t) => t == null ? "Missing" : t.ReviewStatus.ToString();
