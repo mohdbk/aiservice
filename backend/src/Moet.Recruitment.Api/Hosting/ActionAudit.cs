@@ -39,6 +39,8 @@ public sealed partial class ActionAudit(RequestDelegate next, ILogger<ActionAudi
             var values = ctx.GetRouteData().Values;
             var key = values.TryGetValue("id", out var id) ? id?.ToString() ?? "" : values.TryGetValue("thread", out var th) ? th?.ToString() ?? "" : "";
             var record = portalMethod != null ? "Portal" : route.Replace("/api/backoffice/", "").Split('/')[0];
+            // Whatever a failed request left unsaved must not be saved along with its audit line.
+            db.ChangeTracker.Clear();
             db.AuditEntries.Add(new AuditEntry
             {
                 EntityName = record.Length > 100 ? record[..100] : record, EntityKey = key.Length > 60 ? key[..60] : key, Action = AuditAction.Action, Changes = "{}",
