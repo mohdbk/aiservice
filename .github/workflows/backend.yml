@@ -43,6 +43,10 @@ jobs:
         env:
           TEST_DB_CONNECTION: "Server=localhost,1433;Database=MoetRecruitmentCi;User Id=sa;Password=Ci-Strong-Password-123;TrustServerCertificate=True;Encrypt=False"
         run: dotnet test tests/Moet.Recruitment.Api.Tests --no-build -c Release --logger "console;verbosity=normal"
+      - name: Load test (6,000 applicants on one job; pages and assistant tools timed)
+        env:
+          LOAD_DB_CONNECTION: "Server=localhost,1433;Database=MoetRecruitmentLoad;User Id=sa;Password=Ci-Strong-Password-123;TrustServerCertificate=True;Encrypt=False"
+        run: dotnet test tests/Moet.Recruitment.Api.Tests --no-build -c Release --filter "FullyQualifiedName~LoadTests" --logger "console;verbosity=detailed"
       - name: Demo data loads through the real API (catches mapping and contract errors end to end)
         env:
           DB_CONNECTION: "Server=localhost,1433;Database=MoetRecruitmentSeed;User Id=sa;Password=Ci-Strong-Password-123;TrustServerCertificate=True;Encrypt=False"
