@@ -1,5 +1,4 @@
 /* MoET careers portal: UAE Design System 3.0 (TDRA, MIT licence) on Tailwind CSS 4. */
-@import url("https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800&family=Roboto:wght@300;400;500;700&display=swap");
 @import "tailwindcss";
 @plugin "@aegov/design-system";
 
@@ -72,20 +71,21 @@ footer a:hover, nav a.mc-underline-hover:hover { text-decoration: underline; }
 .aegov-form-control .form-control-input > input::placeholder { color: var(--color-aeblack-400); }
 
 /* UAE Design System typography (designsystem.gov.ae/guidelines/typography): content in Roboto (English) and Noto Kufi Arabic
-   (Arabic); headings and titles in Inter (English) and Alexandria (Arabic); operating system fonts as the fallback. One
+   (Arabic); headings and titles in Inter (English) and Alexandria (Arabic); operating system fonts as the fallback. The fonts
+   are bundled with the app (Fontsource, SIL Open Font Licence), so they work on servers without internet access. One
    stack serves both languages: the Latin font has no Arabic letters, so Arabic words on English pages, English words and
    codes on Arabic pages, and anything people type each use their own script's font, and a code such as MOET-2026-11E635
    is never split across two fonts. */
 body, :is(input, textarea, select, button, [role="option"]) {
-  font-family: "Roboto", "Noto Kufi Arabic", -apple-system, BlinkMacSystemFont, system-ui, "Ubuntu", "Fira Sans", sans-serif;
+  font-family: "Roboto Variable", "Roboto", "Noto Kufi Arabic Variable", "Noto Kufi Arabic", -apple-system, BlinkMacSystemFont, system-ui, "Ubuntu", "Fira Sans", sans-serif;
 }
 :is(h1, h2, h3, h4, h5, h6, .font-heading) {
-  font-family: "Inter", "Alexandria", "Noto Kufi Arabic", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-family: "Inter Variable", "Inter", "Alexandria Variable", "Alexandria", "Noto Kufi Arabic Variable", "Noto Kufi Arabic", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 }
 
 /* Text marked with another language keeps its own font (for example "العربية" on English pages) */
-html:not([lang|="ar"]) [lang|="ar"] { font-family: "Noto Kufi Arabic", "Roboto", sans-serif; }
-html[lang|="ar"] [lang|="en"] { font-family: "Roboto", "Noto Kufi Arabic", system-ui, sans-serif; }
+html:not([lang|="ar"]) [lang|="ar"] { font-family: "Noto Kufi Arabic Variable", "Noto Kufi Arabic", "Roboto Variable", sans-serif; }
+html[lang|="ar"] [lang|="en"] { font-family: "Roboto Variable", "Roboto", "Noto Kufi Arabic Variable", system-ui, sans-serif; }
 
 /* Input with a leading icon (design system .control-prefix) */
 .aegov-form-control .form-control-input > .control-prefix + input,

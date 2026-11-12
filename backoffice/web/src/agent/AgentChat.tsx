@@ -88,7 +88,7 @@ function Markdown({ text }: { text: string }) {
     if (l.trim()) out.push(<p key={`p${i}`} className="my-1">{inline(l.replace(/^#+\s*/, ""))}</p>);
     i++;
   }
-  return <div dir="auto">{out}</div>;
+  return <div dir="auto" className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0">{out}</div>;
 }
 
 /** The assistant chat: AG-UI run streaming, A2UI surfaces, and the open screen as context. Used by the page and the side panel. */
@@ -251,7 +251,7 @@ export function AgentChat({ panel = false }: { panel?: boolean }) {
                 : m.surfaces?.some((id) => state.surfaces[id]) ? "w-full py-1" /* cards carry their own frame: no second border around them */ : "mh-chat-bot w-full px-4 py-3"}`}>
                 {m.role === "assistant" && <ChatCircleDots size={20} className="mb-1 text-primary-600" aria-hidden="true" />}
                 {m.tools && m.tools.length > 0 && (
-                  <ul className="mb-2 flex flex-wrap gap-2" aria-label={t("asst.thinking")}>
+                  <ul className={`flex flex-wrap gap-2 ${m.text.trim() || m.surfaces?.length ? "mb-2" : "mb-0"}`} aria-label={t("asst.thinking")}>
                     {m.tools.map((x) => (
                       <li key={x.id} className="inline-flex items-center gap-1 rounded-full bg-whitely-100 px-3 py-1 text-xs text-aeblack-600">
                         {x.done ? <CheckCircle size={16} className="text-aegreen-600" aria-hidden="true" /> : <CircleNotch size={16} className="animate-spin" aria-hidden="true" />}
@@ -260,7 +260,8 @@ export function AgentChat({ panel = false }: { panel?: boolean }) {
                     ))}
                   </ul>
                 )}
-                {m.role === "user" ? <p className="whitespace-pre-line" dir="auto">{m.text}</p> : <Markdown text={m.text} />}
+                {/* m-0: the design system gives paragraphs a bottom margin, which left an empty line inside the bubble. */}
+                {m.role === "user" ? <p className="m-0 whitespace-pre-line" dir="auto">{m.text}</p> : m.text.trim() && <Markdown text={m.text} />}
                 {m.surfaces?.map((id) => state.surfaces[id] && <A2Surface key={id} surface={state.surfaces[id]} busy={acting === id} onAction={onAction} emptyText={t("common.choose")}
                   onData={(sid, path, value) => setState((s) => ({ ...s, surfaces: writeData(s.surfaces, sid, path, value) }))} />)}
               </div>

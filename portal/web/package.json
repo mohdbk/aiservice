@@ -13,6 +13,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource-variable/alexandria": "5.2.6",
+    "@fontsource-variable/inter": "5.2.6",
+    "@fontsource-variable/noto-kufi-arabic": "5.2.6",
+    "@fontsource-variable/roboto": "5.2.6",
     "@phosphor-icons/react": "2.1.7",
     "react": "18.3.1",
     "react-dom": "18.3.1",
