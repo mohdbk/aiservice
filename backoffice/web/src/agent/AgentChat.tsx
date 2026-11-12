@@ -225,15 +225,13 @@ export function AgentChat({ panel = false }: { panel?: boolean }) {
   };
 
   const examples = ((lang === "en" ? info.data?.examples_en : info.data?.examples_ar) || t("asst.examples_default")).split("\n").map((x) => x.trim()).filter(Boolean).slice(0, 6);
-  const current = screen();
-  const screenLabel = t("asst.seeing", { screen: String(current.heading ?? current.page) });
   if (info.data && !info.data.is_enabled) return <Note tone="warning">{t("error.assistant_off")}</Note>;
   const visible = state.turns.filter((x) => !x.hidden);
   return (
     <>
       <div className={`flex flex-col bg-whitely-50 ${panel ? "h-full" : "mc-surface h-[calc(100vh-16rem)] min-h-96 rounded-2xl border border-aeblack-100"}`}>
-        <div className="flex items-center justify-between gap-2 border-b border-aeblack-100 bg-white px-4 py-2">
-          <p className="truncate text-xs text-aeblack-500">{screenLabel}</p>
+        {/* The open screen still goes to the assistant with each message; it is not shown here. */}
+        <div className="flex items-center justify-end gap-2 border-b border-aeblack-100 bg-white px-4 py-2">
           <Button variant="link" size="sm" disabled={running} onClick={() => setState({ thread: newId(), turns: [], surfaces: {} })}
             icon={<Plus size={20} aria-hidden="true" />}>{t("asst.new_chat")}</Button>
         </div>
