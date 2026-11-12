@@ -302,5 +302,18 @@
  "error.screening_required": "يرجى الإجابة عن جميع الأسئلة المطلوبة.",
  "error.screening_invalid": "يرجى مراجعة إجاباتك عن الأسئلة.",
  "asm.language": "لغة الاختبار",
- "asm.language_hint": "اختر اللغة التي تريد أن تظهر بها الأسئلة. تبقى بقية البوابة كما هي."
+ "asm.language_hint": "اختر اللغة التي تريد أن تظهر بها الأسئلة. تبقى بقية البوابة كما هي.",
+ "nav.my_account": "حسابي",
+ "account.title": "حسابي",
+ "account.data_title": "بياناتك",
+ "account.data_body": "نزّل نسخة من المعلومات في حسابك: بياناتك وطلباتك وإجاباتك ومحاولات التقييم.",
+ "account.download": "تنزيل بياناتي",
+ "account.delete_title": "حذف حسابي",
+ "account.delete_body": "سيتم حذف حسابك والبيانات الواردة في طلباتك. تراجع الوزارة الطلب، ولن تتمكن من تسجيل الدخول بعد تنفيذه.",
+ "account.reason": "السبب",
+ "account.confirm": "أفهم أن حسابي وطلباتي سيتم حذفها.",
+ "account.delete": "طلب حذف الحساب",
+ "account.delete_pending": "تم استلام طلبك",
+ "account.delete_pending_body": "ستراجعه الوزارة، ويمكنك استخدام حسابك حتى ذلك الحين.",
+ "error.request_closed": "تمت معالجة هذا الطلب مسبقا."
 }

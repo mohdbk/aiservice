@@ -128,6 +128,7 @@ export function createMockFrappe() {
     if (!x || Number(u.epoch || 0) !== x.epoch) throw new FrappeError("signed_out", 401);
     return x;
   };
+  const deletionRequests = new Set();
   const apps = [
     { id: "HR-APP-2026-00012", job: "HR-OPN-2026-0001", email: "layla@example.com", submitted: "2026-11-05", status: { code: "interview", tone: "success" }, ready: true },
     { id: "HR-APP-2026-00007", job: "HR-OPN-2026-0002", email: "layla@example.com", submitted: "2026-10-30", status: { code: "under_review", tone: "info" }, ready: false },
@@ -301,6 +302,20 @@ export function createMockFrappe() {
     },
     async assessmentEvent() {
       return { ok: true };
+    },
+    async myData(u) {
+      current(u);
+      return { account: { email: u.email }, applications: apps.filter((a) => a.email === u.email).map((a) => ({ reference: reference(a.id), applied_at: a.submitted })), consents: [] };
+    },
+    async dataRequests(u) {
+      current(u);
+      return { deletion_pending: deletionRequests.has(u.email) };
+    },
+    async requestDeletion(u) {
+      current(u);
+      const already = deletionRequests.has(u.email);
+      deletionRequests.add(u.email);
+      return { requested: true, already };
     },
     async logo() {
       throw new FrappeError("not_found", 404);

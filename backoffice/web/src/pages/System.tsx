@@ -1,7 +1,7 @@
 import { ArrowClockwise, CheckCircle, PencilSimple, WarningCircle, XCircle } from "@phosphor-icons/react";
 import { useState } from "react";
 import { DataTable, opts, useList } from "../components/DataTable";
-import { Badge, Button, Card, ErrorState, Loading, Modal, PageHeader, TextInput, useSaving } from "../components/ui";
+import { Badge, Button, Card, ErrorState, Loading, Modal, Note, PageHeader, SectionTabs, TextArea, TextInput, Toggle, useSaving } from "../components/ui";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
 
 // ---------------- audit log ----------------
@@ -209,5 +209,143 @@ export function HealthPage() {
         </Card>
       )}
     </>
+  );
+}
+
+// ---------------- data protection (PDPL) ----------------
+
+type RequestRow = { id: number; kind: string; status: string; requester: string; reason: string; response: string; created_at: string; closed_at: string | null; applications: number };
+type ConsentRow = { id: number; kind: string; granted: boolean; detail: string; at: string; email: string };
+type Retention = {
+  is_enabled: boolean; unsuccessful_months: number; inactive_account_months: number; last_run_at: string | null; last_run_count: number;
+  due_applications: number; due_accounts: number; open_requests: number;
+};
+
+/** Candidates' data requests, how long data is kept, and the consent records. */
+export function DataProtection() {
+  const { t } = useLang();
+  usePageTitle(t("nav.data_protection"));
+  const [tab, setTab] = useState("requests");
+  return (
+    <>
+      <PageHeader title={t("nav.data_protection")} subtitle={t("pdp.subtitle")} />
+      <SectionTabs value={tab} onChange={setTab} tabs={[
+        { value: "requests", label: t("pdp.requests") }, { value: "retention", label: t("pdp.retention") }, { value: "consents", label: t("pdp.consents") },
+      ]} />
+      {tab === "requests" && <DataRequests />}
+      {tab === "retention" && <RetentionSettings />}
+      {tab === "consents" && <Consents />}
+    </>
+  );
+}
+
+function DataRequests() {
+  const { t, date } = useLang();
+  const toast = useToast();
+  const list = useList<RequestRow>("/data-requests", ["status", "kind"]);
+  const [open, setOpen] = useState<{ row: RequestRow; action: "approve" | "decline" } | null>(null);
+  const [response, setResponse] = useState("");
+  const { busy, error, run } = useSaving();
+  const act = async () => {
+    if (!open) return;
+    if (await run(() => api(`/data-requests/${open.row.id}/${open.action}`, { body: { response } })) !== undefined) {
+      toast(t("common.saved"));
+      setOpen(null);
+      setResponse("");
+      list.reload();
+    }
+  };
+  return (
+    <>
+      <DataTable list={list} rowKey={(r) => r.id} searchLabel={t("pdp.search")}
+        filters={[
+          { key: "status", label: t("common.status"), options: opts(t, "pdp.status.", ["Open", "Completed", "Declined"]) },
+          { key: "kind", label: t("pdp.kind"), options: opts(t, "pdp.kind.", ["Deletion", "Export"]) },
+        ]}
+        columns={[
+          { key: "created", label: t("pdp.received"), sort: "created", className: "whitespace-nowrap", render: (r) => date(r.created_at, true) },
+          { key: "requester", label: t("pdp.requester"), render: (r) => <span dir="auto">{r.requester}</span> },
+          { key: "kind", label: t("pdp.kind"), sort: "kind", render: (r) => t(`pdp.kind.${r.kind}`) },
+          { key: "reason", label: t("pdp.reason"), render: (r) => <span className="block max-w-xs truncate text-sm" dir="auto" title={r.reason}>{r.reason || "-"}</span> },
+          { key: "status", label: t("common.status"), sort: "status", render: (r) => (
+            <>
+              <Badge tone={r.status === "Open" ? "amber" : r.status === "Completed" ? "green" : "gray"}>{t(`pdp.status.${r.status}`)}</Badge>
+              {r.response && <p className="mt-1 max-w-xs truncate text-xs text-aeblack-500" dir="auto" title={r.response}>{r.response}</p>}
+            </>
+          ) },
+          { key: "act", label: t("common.actions"), render: (r) => r.status === "Open" && r.kind === "Deletion" && (
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" onClick={() => setOpen({ row: r, action: "approve" })}>{t("pdp.approve")}</Button>
+              <Button size="sm" variant="outline" onClick={() => setOpen({ row: r, action: "decline" })}>{t("pdp.decline")}</Button>
+            </div>
+          ) },
+        ]} />
+      {open && (
+        <Modal open onClose={() => setOpen(null)} title={t(open.action === "approve" ? "pdp.approve_title" : "pdp.decline_title")} footer={<>
+          <Button variant="outline" onClick={() => setOpen(null)}>{t("common.cancel")}</Button>
+          <Button busy={busy} onClick={act}>{t(open.action === "approve" ? "pdp.approve" : "pdp.decline")}</Button></>}>
+          {error && <ErrorState error={error} />}
+          <p className="text-sm" dir="auto">{open.row.requester}</p>
+          {open.action === "approve" && <Note tone="warning">{t("pdp.approve_hint", { n: open.row.applications })}</Note>}
+          <TextArea label={t(open.action === "approve" ? "pdp.note" : "pdp.decline_reason")} rows={3} value={response} onChange={(e) => setResponse(e.target.value)} />
+        </Modal>
+      )}
+    </>
+  );
+}
+
+function RetentionSettings() {
+  const { t, date } = useLang();
+  const toast = useToast();
+  const data = useAsync(() => api<Retention>("/data-protection"), []);
+  const [f, setF] = useState<Retention | null>(null);
+  const { busy, error, run } = useSaving();
+  const r = f || data.data;
+  if (data.loading && !data.data) return <Loading />;
+  if (data.error) return <ErrorState error={data.error} retry={data.reload} />;
+  if (!r) return null;
+  const save = async () => {
+    if (await run(() => api("/data-protection", { method: "PUT", body: r })) !== undefined) { toast(t("common.saved")); setF(null); data.reload(); }
+  };
+  const runNow = async () => {
+    if (!window.confirm(t("pdp.run_confirm", { n: r.due_applications + r.due_accounts }))) return;
+    const res = await run(() => api<{ anonymised: number }>("/data-protection/run", { body: {} }));
+    if (res) { toast(t("pdp.ran", { n: res.anonymised })); data.reload(); }
+  };
+  return (
+    <Card title={t("pdp.retention")} actions={<>
+      <Button variant="outline" size="sm" busy={busy} onClick={runNow}>{t("pdp.run_now")}</Button>
+      <Button size="sm" busy={busy} onClick={save}>{t("common.save")}</Button>
+    </>}>
+      <div className="mb-4"><Note>{t("pdp.retention_hint")}</Note></div>
+      {error && <div className="mb-4"><ErrorState error={error} /></div>}
+      <div className="grid max-w-2xl gap-4">
+        <Toggle label={t("pdp.enabled")} checked={r.is_enabled} onChange={(v) => setF({ ...r, is_enabled: v })} />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <TextInput label={t("pdp.unsuccessful_months")} type="number" min={1} max={240} value={r.unsuccessful_months}
+            onChange={(e) => setF({ ...r, unsuccessful_months: Number(e.target.value) || 0 })} />
+          <TextInput label={t("pdp.inactive_months")} type="number" min={1} max={240} value={r.inactive_account_months}
+            onChange={(e) => setF({ ...r, inactive_account_months: Number(e.target.value) || 0 })} />
+        </div>
+        <p className="text-sm text-aeblack-600">{t("pdp.due", { apps: r.due_applications, accounts: r.due_accounts })}</p>
+        {r.last_run_at && <p className="text-sm text-aeblack-500">{t("pdp.last_run", { at: date(r.last_run_at, true), n: r.last_run_count })}</p>}
+      </div>
+    </Card>
+  );
+}
+
+function Consents() {
+  const { t, date } = useLang();
+  const list = useList<ConsentRow>("/consents", ["kind"]);
+  return (
+    <DataTable list={list} rowKey={(r) => r.id} searchLabel={t("pdp.consent_search")}
+      filters={[{ key: "kind", label: t("pdp.kind"), options: opts(t, "pdp.consent.", ["declaration", "talent_pool"]) }]}
+      columns={[
+        { key: "at", label: t("audit.when"), sort: "at", className: "whitespace-nowrap", render: (r) => date(r.at, true) },
+        { key: "email", label: t("pdp.candidate"), render: (r) => <span dir="ltr">{r.email}</span> },
+        { key: "kind", label: t("pdp.kind"), sort: "kind", render: (r) => t(`pdp.consent.${r.kind}`) },
+        { key: "granted", label: t("pdp.given"), render: (r) => <Badge tone={r.granted ? "green" : "gray"}>{t(r.granted ? "pdp.granted" : "pdp.withdrawn")}</Badge> },
+        { key: "detail", label: t("pdp.detail"), render: (r) => <span dir="ltr">{r.detail}</span> },
+      ]} />
   );
 }

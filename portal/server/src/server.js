@@ -269,6 +269,23 @@ export function createApp(cfg = loadConfig(), deps = {}) {
         }
       }
     }
+    // The candidate's own data: a copy to download, and a request to delete the account.
+    if (m === "GET" && pathname === "/api/account") {
+      const u = requireUser(req);
+      return send(res, 200, await frappe.dataRequests(u));
+    }
+    if (m === "GET" && pathname === "/api/account/data") {
+      const u = requireUser(req);
+      limit(`mydata:${u.email}`, LIMITS.correction);
+      return send(res, 200, await frappe.myData(u), { "Content-Disposition": 'attachment; filename="my-data.json"' });
+    }
+    if (m === "POST" && pathname === "/api/account/delete") {
+      checkCsrf(req);
+      const u = requireUser(req);
+      limit(`delete:${ip}`, LIMITS.correction);
+      const b = await readJson(req, 16_384);
+      return send(res, 200, await frappe.requestDeletion(u, str(b.reason, 2000)));
+    }
     mm = pathname.match(/^\/api\/applications\/([A-Za-z0-9._-]{1,140})\/corrections$/);
     if (m === "POST" && mm) {
       checkCsrf(req);

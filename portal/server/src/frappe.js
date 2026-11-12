@@ -85,6 +85,10 @@ export function createFrappe(cfg, fetchImpl = globalThis.fetch) {
     },
     nextSection: (u, name, section, lang) => call("next_assessment_section", { json: { email: u.email, epoch: u.epoch || 0, name, section, lang } }),
     assessmentEvent: (u, name, kind) => call("assessment_event", { json: { email: u.email, epoch: u.epoch || 0, name, kind } }),
+    // Personal data: a copy, and a request to delete the account (reviewed by the Ministry).
+    myData: (u) => call("my_data", { query: { email: u.email, epoch: u.epoch || 0 } }),
+    dataRequests: (u) => call("data_requests", { query: { email: u.email, epoch: u.epoch || 0 } }),
+    requestDeletion: (u, reason) => call("request_deletion", { json: { email: u.email, epoch: u.epoch || 0, reason } }),
     logo: (dark) => call("logo", { query: { dark: dark ? 1 : 0 }, raw: true }),
   };
 }

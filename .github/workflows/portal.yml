@@ -1,0 +1,39 @@
+name: Portal
+
+on:
+  push:
+    branches: [main, dotnet-backend]
+    paths: ["portal/**", ".github/workflows/portal.yml"]
+  pull_request:
+    paths: ["portal/**", ".github/workflows/portal.yml"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Server tests
+        working-directory: portal/server
+        run: npm test
+      - name: Install web
+        working-directory: portal/web
+        run: npm install --no-audit --no-fund
+      - name: Type check
+        working-directory: portal/web
+        run: npm run typecheck
+      - name: Build
+        working-directory: portal/web
+        run: npm run build
+      - name: No em dashes
+        run: "! grep -rnI $'\\u2014' portal/web/src portal/server/src || (echo 'em dash found' && exit 1)"
+      - name: Container image builds and serves the app
+        run: |
+          docker build -t moet-careers-portal portal
+          docker run -d --name po -p 8089:8080 -e MOCK_FRAPPE=1 -e COOKIE_SECURE=0 -e SESSION_SECRET=ci-only-session-secret-0123456789 moet-careers-portal
+          for i in $(seq 1 20); do curl -sf http://localhost:8089/healthz && break; sleep 1; done
+          curl -sf http://localhost:8089/ar/jobs | grep -q '<div id="root">'
+          docker logs po

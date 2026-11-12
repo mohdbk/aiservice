@@ -302,5 +302,18 @@
  "error.screening_required": "Please answer all required questions.",
  "error.screening_invalid": "Please check your answers to the questions.",
  "asm.language": "Assessment Language",
- "asm.language_hint": "Choose the language you want the questions in. The rest of the portal stays as it is."
+ "asm.language_hint": "Choose the language you want the questions in. The rest of the portal stays as it is.",
+ "nav.my_account": "My Account",
+ "account.title": "My Account",
+ "account.data_title": "Your Data",
+ "account.data_body": "Download a copy of the information in your account: your details, applications, answers and assessment attempts.",
+ "account.download": "Download My Data",
+ "account.delete_title": "Delete My Account",
+ "account.delete_body": "Your account and the details in your applications will be removed. The Ministry reviews the request and you will no longer be able to sign in once it is done.",
+ "account.reason": "Reason",
+ "account.confirm": "I understand that my account and applications will be removed.",
+ "account.delete": "Request Account Deletion",
+ "account.delete_pending": "Your request has been received",
+ "account.delete_pending_body": "The Ministry will review it. You can keep using your account until then.",
+ "error.request_closed": "This request has already been handled."
 }

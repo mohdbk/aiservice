@@ -1,6 +1,6 @@
 import {
   ArrowCounterClockwise, ArrowSquareOut, Briefcase, CaretDown, CircleHalf, Exam, Files, Globe, List, PersonArmsSpread,
-  SignIn as SignInIcon, SignOut, TextAa, UserCircle, UserPlus, X,
+  SignIn as SignInIcon, SignOut, TextAa, UserCircle, UserGear, UserPlus, X,
 } from "@phosphor-icons/react";
 import { ReactNode, RefObject, useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
@@ -181,6 +181,7 @@ function AccountMenu() {
               </div>
               <Link to={path("/applications")} className={item}><Files size={24} className="text-primary-600" aria-hidden="true" />{t("nav.my_applications")}</Link>
               <Link to={path("/assessments")} className={item}><Exam size={24} className="text-primary-600" aria-hidden="true" />{t("nav.my_assessments")}</Link>
+              <Link to={path("/account")} className={item}><UserGear size={24} className="text-primary-600" aria-hidden="true" />{t("nav.my_account")}</Link>
               <button type="button" className={item} onClick={async () => { setOpen(false); await signOut(); navigate(path()); }}>
                 <SignOut size={24} className="text-primary-600 rtl:-scale-x-100" aria-hidden="true" />{t("nav.sign_out")}
               </button>
@@ -215,6 +216,7 @@ function Nav({ onNavigate, mobile }: { onNavigate?: () => void; mobile?: boolean
           <li className="flex items-center gap-2 border-t border-aeblack-100 px-3 pt-3 text-sm text-aeblack-600">
             <UserCircle size={24} weight="fill" className="shrink-0 text-primary-600" aria-hidden="true" /><span className="truncate">{user.full_name || user.email}</span>
           </li>
+          <li><NavLink to={path("/account")} className={link} onClick={onNavigate}><UserGear size={24} aria-hidden="true" />{t("nav.my_account")}</NavLink></li>
           <li>
             <button type="button" className={link({ isActive: false }) + " w-full"} onClick={async () => { await signOut(); onNavigate?.(); navigate(path()); }}>
               <SignOut size={24} className="rtl:-scale-x-100" aria-hidden="true" />{t("nav.sign_out")}
