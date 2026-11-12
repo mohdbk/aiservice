@@ -1,7 +1,7 @@
-import { Briefcase, Certificate, ChatText, Check, GraduationCap, Hourglass, Icon, PaperPlaneTilt, Toolbox, Translate } from "@phosphor-icons/react";
+import { Briefcase, CalendarCheck, Certificate, ChatText, Check, GraduationCap, Hourglass, Icon, PaperPlaneTilt, Toolbox, Translate } from "@phosphor-icons/react";
 import { FormEvent, ReactNode, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import { api, ApiError, ApplicationDetail, Details } from "../api";
+import { api, ApiError, ApplicationDetail, Booking, Details } from "../api";
 import { IconBox, StatusBadge, Steps } from "../components/Bits";
 import { Breadcrumb } from "../components/Breadcrumb";
 import { Alert, Skeleton, Spinner } from "../components/States";
@@ -52,6 +52,50 @@ function DetailsView({ d }: { d: Details }) {
   );
 }
 
+/** The interview times HR offered: the candidate picks one and it is booked. */
+function ChooseTime({ booking, appId, onBooked }: { booking: Booking; appId: string; onBooked: (msg: string) => void }) {
+  const { t, formatDate, errorText } = useSite();
+  const [slot, setSlot] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const book = async (e: FormEvent) => {
+    e.preventDefault();
+    if (slot === null) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await api<{ date: string; from: string; to: string }>(`/api/applications/${encodeURIComponent(appId)}/book`, { body: { slot } });
+      onBooked(t("book.booked", { date: formatDate(r.date), from: r.from, to: r.to }));
+    } catch (err) {
+      setError(err);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <section className="mc-surface mt-6 rounded-2xl border-2 border-primary-200 bg-white p-6" aria-labelledby="book-title">
+      <h2 id="book-title" className="flex items-center gap-3 font-heading text-lg font-semibold text-aeblack-900"><IconBox icon={CalendarCheck} />{t("book.title")}</h2>
+      <p className="mt-2 text-aeblack-700">{t("book.intro", { round: booking.round })}</p>
+      {booking.location && <p className="mt-1 text-sm text-aeblack-600">{t("book.location", { location: booking.location })}</p>}
+      <form onSubmit={book} className="mt-4 space-y-4">
+        <fieldset>
+          <legend className="sr-only">{t("book.title")}</legend>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {booking.slots.map((s) => (
+              <label key={s.id} className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 ${slot === s.id ? "border-primary-600 bg-primary-50" : "border-aeblack-200"}`}>
+                <input type="radio" name="slot" className="h-5 w-5 accent-primary-600" checked={slot === s.id} onChange={() => setSlot(s.id)} />
+                <span><span className="block font-medium">{formatDate(s.date)}</span><span className="text-sm text-aeblack-600" dir="ltr">{s.from} - {s.to}</span></span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        {error ? <Alert tone="error" title={errorText(error)} /> : null}
+        <button type="submit" className="aegov-btn" disabled={slot === null || busy}>{t("book.confirm")}</button>
+      </form>
+    </section>
+  );
+}
+
 export default function Application() {
   const { id = "" } = useParams();
   const [params] = useSearchParams();
@@ -62,6 +106,7 @@ export default function Application() {
   const [note, setNote] = useState("");
   const [sent, setSent] = useState(false);
   const [noteError, setNoteError] = useState<unknown>(null);
+  const [booked, setBooked] = useState("");
 
   // While the CV details are being prepared, check again every few seconds (up to 3 minutes).
   useEffect(() => {
@@ -94,6 +139,9 @@ export default function Application() {
       )}
       <Breadcrumb items={[{ label: t("apps.title"), to: path("/applications") }, { label: data.title }]} />
       <h1 className="font-heading text-3xl font-bold text-aeblack-950">{data.title}</h1>
+
+      {booked && <div className="mt-6" role="status"><Alert tone="success" title={booked} /></div>}
+      {data.booking && !booked && <ChooseTime booking={data.booking} appId={id} onBooked={(m) => { setBooked(m); reload(); }} />}
 
       <section className="mc-surface mt-6 rounded-2xl border border-aeblack-100 bg-white p-6" aria-labelledby="status-title">
         <div className="flex flex-wrap items-center justify-between gap-3">

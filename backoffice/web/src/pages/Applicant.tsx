@@ -1,4 +1,4 @@
-import { ArrowClockwise, CalendarPlus, DownloadSimple, Envelope, Exam, FileText, Handshake, Phone } from "@phosphor-icons/react";
+import { ArrowClockwise, CalendarDots, CalendarPlus, Plus, Trash, DownloadSimple, Envelope, Exam, FileText, Handshake, Phone } from "@phosphor-icons/react";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
@@ -44,7 +44,8 @@ export default function Applicant() {
   const { data, error, loading, reload } = useAsync(() => api<Detail>(`/applicants/${id}`), [id]);
   const lookups = useLookups();
   const [tab, setTab] = useState("overview");
-  const [dialog, setDialog] = useState<"" | "interview" | "offer" | "invite" | "reexam" | "document">("");
+  const [dialog, setDialog] = useState<"" | "interview" | "offer" | "invite" | "reexam" | "document" | "times">("");
+  const [bookingsKey, setBookingsKey] = useState(0);
   const [reexamFor, setReexamFor] = useState<number | null>(null);
   const [note, setNote] = useState("");
   const act = useSaving();
@@ -80,7 +81,10 @@ export default function Applicant() {
             label: t(`app.status.${s}`), onClick: () => post(`/applicants/${a.id}/status`, { status: s }, t("common.saved")),
           }))} />
           <Button variant="outline" size="sm" onClick={() => setDialog("invite")} icon={<Exam size={20} aria-hidden="true" />}>{t("app.invite")}</Button>
-          <Button variant="outline" size="sm" onClick={() => setDialog("interview")} icon={<CalendarPlus size={20} aria-hidden="true" />}>{t("app.schedule")}</Button>
+          <ActionMenu label={t("app.interview")} icon={<CalendarPlus size={20} aria-hidden="true" />} items={[
+            { label: t("app.schedule"), onClick: () => setDialog("interview") },
+            { label: t("book.offer_times"), onClick: () => setDialog("times") },
+          ]} />
           <Button variant="outline" size="sm" onClick={() => setDialog("document")} icon={<FileText size={20} aria-hidden="true" />}>{t("app.letter")}</Button>
           <Button size="sm" onClick={() => setDialog("offer")} icon={<Handshake size={20} aria-hidden="true" />}>{t("app.make_offer")}</Button>
         </>}
@@ -203,6 +207,7 @@ export default function Applicant() {
         </div>
       )}
 
+      {tab === "interviews" && <Bookings key={bookingsKey} applicantId={a.id} onChange={reload} />}
       {tab === "interviews" && (
         a.interviews.length === 0 ? <Empty /> : (
           <Table head={[t("int.round"), t("int.date"), t("common.status"), t("int.feedback")]}>
@@ -256,6 +261,8 @@ export default function Applicant() {
         onSave={(body) => post(`/invitations/${reexamFor}/reexam`, body, t("common.saved"))} />
       <InterviewDialog open={dialog === "interview"} onClose={() => setDialog("")} lookups={lk} busy={act.busy}
         onSave={(body) => post("/interviews", { ...body, application_id: a.id }, t("common.saved"))} />
+      {dialog === "times" && <BookingDialog onClose={() => setDialog("")} lookups={lk} busy={act.busy}
+        onSave={async (body) => { const r = await post("/bookings", { ...body, application_id: a.id }, t("book.sent")); if (r !== undefined) { setTab("interviews"); setBookingsKey((k) => k + 1); } }} />}
       <OfferDialog open={dialog === "offer"} onClose={() => setDialog("")} busy={act.busy} defaultTitle={a.job.title}
         onSave={(body) => post("/offers", { ...body, application_id: a.id }, t("common.saved"))} />
     </>
@@ -355,6 +362,91 @@ export function OfferDialog({ open, onClose, onSave, busy, defaultTitle, initial
         <SelectInput label={t("offer.letter_template")} value={f.offer_template_id ?? ""} onChange={(e) => set("offer_template_id", e.target.value ? Number(e.target.value) : null)}
           options={[{ value: "", label: t("offer.template_default") }, ...(templates.data?.items || []).map((x) => ({ value: x.id, label: lang === "en" ? x.name_en : x.name_ar }))]} />
       )}
+    </Modal>
+  );
+}
+
+type Booking = { id: number; status: string; location: string; round: string; interview_id: number | null; created_at: string; slots: { id: number; starts_at: string; ends_at: string }[] };
+
+/** Interview times offered to the candidate, waiting for their pick or already picked. */
+function Bookings({ applicantId, onChange }: { applicantId: number; onChange: () => void }) {
+  const { t, date, to } = useLang();
+  const toast = useToast();
+  const list = useAsync(() => api<Booking[]>(`/applicants/${applicantId}/bookings`), [applicantId]);
+  const act = useSaving();
+  const items = (list.data || []).filter((b) => b.status !== "Cancelled");
+  if (items.length === 0) return null;
+  const cancel = async (id: number) => {
+    if (await act.run(() => api(`/bookings/${id}/cancel`, { body: {} })) !== undefined) { toast(t("common.saved")); list.reload(); onChange(); }
+  };
+  return (
+    <Card title={t("book.title")} className="mb-6">
+      {act.error && <div className="mb-3"><ErrorState error={act.error} /></div>}
+      <ul className="space-y-3">
+        {items.map((b) => (
+          <li key={b.id} className="rounded-xl border border-aeblack-100 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-semibold">{b.round}{b.location && <span className="font-normal text-aeblack-600"> · {b.location}</span>}</p>
+              <span className="flex items-center gap-2">
+                <Badge tone={b.status === "Open" ? "amber" : "green"}>{t(`book.status.${b.status}`)}</Badge>
+                {b.status === "Open" && <Button variant="link" size="sm" busy={act.busy} onClick={() => cancel(b.id)}>{t("book.withdraw")}</Button>}
+                {b.interview_id && <Link className="text-sm text-primary-700" to={to(`/interviews/${b.interview_id}`)}>{t("book.open_interview")}</Link>}
+              </span>
+            </div>
+            <ul className="mt-2 flex flex-wrap gap-2 text-sm">
+              {b.slots.map((s) => <li key={s.id} className="rounded-lg bg-whitely-100 px-2 py-1" dir="auto">{date(s.starts_at, true)}</li>)}
+            </ul>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+/** Offer the candidate several interview times to choose from (in the portal); the round, place and panel are set here. */
+function BookingDialog({ onClose, lookups, onSave, busy }: {
+  onClose: () => void; lookups?: { rounds: { id: number; name: string }[]; staff: { id: number; name: string }[] }; onSave: (b: any) => void; busy: boolean;
+}) {
+  const { t } = useLang();
+  const [f, setF] = useState({ round_id: 0, location: "", panelists: [] as number[], slots: [{ date: "", from: "10:00", to: "11:00" }] });
+  const setSlot = (i: number, k: string, v: string) => setF((x) => ({ ...x, slots: x.slots.map((s, j) => (j === i ? { ...s, [k]: v } : s)) }));
+  const ready = !!f.round_id && f.slots.length > 0 && f.slots.every((s) => s.date && s.from && s.to);
+  return (
+    <Modal open onClose={onClose} title={t("book.offer_times")} footer={<>
+      <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
+      <Button busy={busy} disabled={!ready} onClick={() => onSave(f)}>{t("book.send")}</Button>
+    </>}>
+      <p className="text-sm text-aeblack-600">{t("book.hint")}</p>
+      <SelectInput label={t("int.round")} value={f.round_id || ""} onChange={(e) => setF({ ...f, round_id: Number(e.target.value) })}
+        options={[{ value: "", label: "" }, ...(lookups?.rounds || []).map((r) => ({ value: r.id, label: r.name }))]} />
+      <fieldset>
+        <legend className="mb-2 text-sm font-semibold">{t("book.times")}</legend>
+        <div className="space-y-2">
+          {f.slots.map((s, i) => (
+            <div key={i} className="grid grid-cols-[1fr_auto] items-end gap-2 sm:grid-cols-[1fr_7rem_7rem_auto]">
+              <TextInput label={t("int.date")} type="date" value={s.date} onChange={(e) => setSlot(i, "date", e.target.value)} wrapClass="col-span-2 sm:col-span-1" />
+              <TextInput label={t("int.from")} type="time" value={s.from} onChange={(e) => setSlot(i, "from", e.target.value)} />
+              <TextInput label={t("int.to")} type="time" value={s.to} onChange={(e) => setSlot(i, "to", e.target.value)} />
+              <Button variant="link" size="sm" aria-label={t("common.remove")} disabled={f.slots.length === 1}
+                onClick={() => setF({ ...f, slots: f.slots.filter((_, j) => j !== i) })}><Trash size={20} aria-hidden="true" /></Button>
+            </div>
+          ))}
+        </div>
+        {f.slots.length < 10 && (
+          <Button variant="outline" size="sm" className="mt-2" icon={<Plus size={20} aria-hidden="true" />}
+            onClick={() => setF({ ...f, slots: [...f.slots, { ...f.slots[f.slots.length - 1] }] })}>{t("book.add_time")}</Button>
+        )}
+      </fieldset>
+      <TextInput label={t("int.location")} value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} />
+      <fieldset>
+        <legend className="mb-2 text-sm font-semibold">{t("int.panel")}</legend>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {(lookups?.staff || []).map((s) => (
+            <Tick key={s.id} label={s.name} checked={f.panelists.includes(s.id)}
+              onChange={(v) => setF({ ...f, panelists: v ? [...f.panelists, s.id] : f.panelists.filter((x) => x !== s.id) })} />
+          ))}
+        </div>
+      </fieldset>
     </Modal>
   );
 }

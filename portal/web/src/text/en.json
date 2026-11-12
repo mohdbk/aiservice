@@ -315,5 +315,17 @@
  "account.delete": "Request Account Deletion",
  "account.delete_pending": "Your request has been received",
  "account.delete_pending_body": "The Ministry will review it. You can keep using your account until then.",
- "error.request_closed": "This request has already been handled."
+ "error.request_closed": "This request has already been handled.",
+ "book.title": "Choose Your Interview Time",
+ "book.intro": "You are invited to the {round}. Choose the time that suits you.",
+ "book.location": "Place: {location}",
+ "book.confirm": "Confirm This Time",
+ "book.booked": "Your interview is booked for {date}, {from} to {to}.",
+ "account.pool_title": "Other Suitable Jobs",
+ "account.pool_body": "The Ministry may contact you about other jobs that match your profile.",
+ "account.pool_join": "Consider me for other suitable jobs",
+ "apply.talent_pool": "Also consider me for other suitable jobs",
+ "error.booking_closed": "These times are no longer open. Please refresh the page.",
+ "error.booking_slot_past": "This time has passed. Please choose another.",
+ "error.booking_slot_unknown": "Please choose one of the times shown."
 }

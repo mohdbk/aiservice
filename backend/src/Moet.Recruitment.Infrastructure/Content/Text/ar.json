@@ -315,5 +315,17 @@
  "account.delete": "طلب حذف الحساب",
  "account.delete_pending": "تم استلام طلبك",
  "account.delete_pending_body": "ستراجعه الوزارة، ويمكنك استخدام حسابك حتى ذلك الحين.",
- "error.request_closed": "تمت معالجة هذا الطلب مسبقا."
+ "error.request_closed": "تمت معالجة هذا الطلب مسبقا.",
+ "book.title": "اختر موعد مقابلتك",
+ "book.intro": "أنت مدعو إلى {round}. اختر الموعد المناسب لك.",
+ "book.location": "المكان: {location}",
+ "book.confirm": "تأكيد هذا الموعد",
+ "book.booked": "تم حجز مقابلتك يوم {date}، من {from} إلى {to}.",
+ "account.pool_title": "وظائف أخرى مناسبة",
+ "account.pool_body": "قد تتواصل معك الوزارة بشأن وظائف أخرى تناسب ملفك.",
+ "account.pool_join": "أرغب في النظر في ترشيحي لوظائف أخرى مناسبة",
+ "apply.talent_pool": "أرغب أيضا في النظر في ترشيحي لوظائف أخرى مناسبة",
+ "error.booking_closed": "هذه المواعيد لم تعد متاحة. يرجى تحديث الصفحة.",
+ "error.booking_slot_past": "انتهى هذا الموعد. يرجى اختيار موعد آخر.",
+ "error.booking_slot_unknown": "يرجى اختيار أحد المواعيد المعروضة."
 }

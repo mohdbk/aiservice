@@ -129,6 +129,7 @@ export function createMockFrappe() {
     return x;
   };
   const deletionRequests = new Set();
+  const talentPool = new Set();
   const apps = [
     { id: "HR-APP-2026-00012", job: "HR-OPN-2026-0001", email: "layla@example.com", submitted: "2026-11-05", status: { code: "interview", tone: "success" }, ready: true },
     { id: "HR-APP-2026-00007", job: "HR-OPN-2026-0002", email: "layla@example.com", submitted: "2026-10-30", status: { code: "under_review", tone: "info" }, ready: false },
@@ -309,7 +310,16 @@ export function createMockFrappe() {
     },
     async dataRequests(u) {
       current(u);
-      return { deletion_pending: deletionRequests.has(u.email) };
+      return { deletion_pending: deletionRequests.has(u.email), in_talent_pool: talentPool.has(u.email) };
+    },
+    async setTalentPool(u, join) {
+      current(u);
+      if (join) talentPool.add(u.email); else talentPool.delete(u.email);
+      return { in_talent_pool: talentPool.has(u.email) };
+    },
+    async bookInterview(u) {
+      current(u);
+      throw new FrappeError("booking_closed", 409);
     },
     async requestDeletion(u) {
       current(u);

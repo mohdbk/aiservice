@@ -88,6 +88,8 @@ export function createFrappe(cfg, fetchImpl = globalThis.fetch) {
     // Personal data: a copy, and a request to delete the account (reviewed by the Ministry).
     myData: (u) => call("my_data", { query: { email: u.email, epoch: u.epoch || 0 } }),
     dataRequests: (u) => call("data_requests", { query: { email: u.email, epoch: u.epoch || 0 } }),
+    setTalentPool: (u, join) => call("talent_pool", { json: { email: u.email, epoch: u.epoch || 0, join: join ? "1" : "0" } }),
+    bookInterview: (u, name, slot) => call("book_interview", { json: { email: u.email, epoch: u.epoch || 0, name, slot } }),
     requestDeletion: (u, reason) => call("request_deletion", { json: { email: u.email, epoch: u.epoch || 0, reason } }),
     logo: (dark) => call("logo", { query: { dark: dark ? 1 : 0 }, raw: true }),
   };

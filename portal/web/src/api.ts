@@ -93,7 +93,9 @@ export type Details = {
   languages: string[];
   certificates: string[];
 };
-export type ApplicationDetail = ApplicationSummary & { details_state: "ready" | "preparing" | "unavailable"; details: Details | null };
+/** Interview times HR offered; the candidate picks one. */
+export type Booking = { id: number; round: string; location: string; slots: { id: number; date: string; from: string; to: string }[] };
+export type ApplicationDetail = ApplicationSummary & { details_state: "ready" | "preparing" | "unavailable"; details: Details | null; booking?: Booking | null };
 
 // ---------- assessments ----------
 export type AsmStatus = "to_do" | "in_progress" | "submitted" | "completed" | "expired" | "cancelled";

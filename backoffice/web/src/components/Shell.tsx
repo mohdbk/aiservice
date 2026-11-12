@@ -1,7 +1,7 @@
 import { Dialog, Menu } from "@base-ui/react";
 import {
   Briefcase, CalendarCheck, CaretDown, ChatCircleDots, ClipboardText, Exam, FileText, Gear, Handshake, Key, List, ListChecks,
-  Cube, EnvelopeSimple, HardDrives, Robot, Scroll, SignOut, SquaresFour, Target, Tray, Translate, TreeStructure, UserCircle, Users, UsersThree, X, Brain, ChartBar, ClockCounterClockwise, Pulse, ChartLine, ShieldCheck,
+  Cube, EnvelopeSimple, HardDrives, Robot, Scroll, SignOut, SquaresFour, Target, Tray, Translate, TreeStructure, UserCircle, Users, UsersThree, X, Brain, ChartBar, ClockCounterClockwise, Pulse, ChartLine, ShieldCheck, ChatText, UsersFour,
 } from "@phosphor-icons/react";
 import { ReactNode, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
@@ -24,6 +24,7 @@ function useNav(): { group?: string; items: Item[] }[] {
         { to: "/applicants", label: t("nav.applicants"), icon: i(Users) },
         { to: "/interviews", label: t("nav.interviews"), icon: i(CalendarCheck) },
         { to: "/offers", label: t("nav.offers"), icon: i(Handshake) },
+        { to: "/talent-pool", label: t("nav.talent_pool"), icon: i(UsersFour) },
       ],
     },
     {
@@ -60,6 +61,7 @@ function useNav(): { group?: string; items: Item[] }[] {
       items: [
         { to: "/setup/staff", label: t("nav.staff"), icon: i(Key), sys: true },
         { to: "/setup/email-server", label: t("nav.email_server"), icon: i(HardDrives), sys: true },
+        { to: "/setup/texts", label: t("nav.texts"), icon: i(ChatText), sys: true },
         { to: "/setup/assistant", label: t("nav.agent_settings"), icon: i(Robot), sys: true },
         { to: "/setup/email-log", label: t("nav.email_log"), icon: i(Tray), sys: true },
         { to: "/setup/assistant-usage", label: t("nav.assistant_usage"), icon: i(ChartLine), sys: true },

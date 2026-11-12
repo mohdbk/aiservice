@@ -12,7 +12,8 @@ export default function Account() {
   const { t, errorText } = useSite();
   const { user } = useAuth();
   usePageTitle(t("account.title"));
-  const status = useAsync((signal) => api<{ deletion_pending: boolean }>("/api/account", { signal }), []);
+  const status = useAsync((signal) => api<{ deletion_pending: boolean; in_talent_pool: boolean }>("/api/account", { signal }), []);
+  const [pool, setPool] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [reason, setReason] = useState("");
@@ -61,6 +62,16 @@ export default function Account() {
   };
 
   const pending = requested || status.data?.deletion_pending;
+  const inPool = pool ?? status.data?.in_talent_pool ?? false;
+  const togglePool = async (join: boolean) => {
+    setError(null);
+    try {
+      const r = await api<{ in_talent_pool: boolean }>("/api/account/talent-pool", { body: { join } });
+      setPool(r.in_talent_pool);
+    } catch (err) {
+      setError(err);
+    }
+  };
   return (
     <div className="container mx-auto max-w-3xl px-4 py-10">
       <div className="mb-6 flex items-center gap-4">
@@ -78,6 +89,17 @@ export default function Account() {
         <button type="button" className="aegov-btn btn-outline mt-4" onClick={download} disabled={busy}>
           <DownloadSimple size={24} aria-hidden="true" />{t("account.download")}
         </button>
+      </section>
+
+      <section className="mc-surface mt-6 rounded-2xl border border-aeblack-100 bg-white p-6" aria-labelledby="pool-title">
+        <h2 id="pool-title" className="font-heading text-lg font-semibold text-aeblack-900">{t("account.pool_title")}</h2>
+        <p className="mt-1 text-aeblack-600">{t("account.pool_body")}</p>
+        {status.data && (
+          <div className="aegov-check-item mt-4">
+            <input id="talent-pool" type="checkbox" checked={inPool} onChange={(e) => togglePool(e.target.checked)} />
+            <label htmlFor="talent-pool">{t("account.pool_join")}</label>
+          </div>
+        )}
       </section>
 
       <section className="mc-surface mt-6 rounded-2xl border border-aeblack-100 bg-white p-6" aria-labelledby="delete-title">

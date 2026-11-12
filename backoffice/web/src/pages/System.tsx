@@ -1,7 +1,7 @@
 import { ArrowClockwise, CheckCircle, PencilSimple, WarningCircle, XCircle } from "@phosphor-icons/react";
 import { useState } from "react";
 import { DataTable, opts, useList } from "../components/DataTable";
-import { Badge, Button, Card, ErrorState, Loading, Modal, Note, PageHeader, SectionTabs, TextArea, TextInput, Toggle, useSaving } from "../components/ui";
+import { Badge, Button, Card, ErrorState, Loading, Modal, Note, PageHeader, SectionTabs, SelectInput, TextArea, TextInput, Toggle, useSaving } from "../components/ui";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
 
 // ---------------- audit log ----------------
@@ -347,5 +347,98 @@ function Consents() {
         { key: "granted", label: t("pdp.given"), render: (r) => <Badge tone={r.granted ? "green" : "gray"}>{t(r.granted ? "pdp.granted" : "pdp.withdrawn")}</Badge> },
         { key: "detail", label: t("pdp.detail"), render: (r) => <span dir="ltr">{r.detail}</span> },
       ]} />
+  );
+}
+
+// ---------------- text messages ----------------
+
+type TextSettings = {
+  is_enabled: boolean; channel: string; provider: string; url: string; account_id: string; has_token: boolean; sender: string; events: string[];
+  all_events: { key: string; name_ar: string; name_en: string }[]; sent_day: number; failed_day: number; queued: number;
+  recent: { id: number; to: string; event: string; status: string; error: string; created_at: string }[];
+};
+
+/** SMS or WhatsApp messages alongside candidate emails, through the Ministry's gateway (a webhook) or Twilio. */
+export function TextMessages() {
+  const { t, lang, date } = useLang();
+  usePageTitle(t("nav.texts"));
+  const toast = useToast();
+  const data = useAsync(() => api<TextSettings>("/text-settings"), []);
+  const [f, setF] = useState<(TextSettings & { token: string }) | null>(null);
+  const [to, setTo] = useState("");
+  const { busy, error, run } = useSaving();
+  if (data.loading && !data.data) return <Loading />;
+  if (data.error) return <ErrorState error={data.error} retry={data.reload} />;
+  const s = f || { ...data.data!, token: "" };
+  const set = (k: string, v: unknown) => setF({ ...s, [k]: v });
+  const save = async () => {
+    if (await run(() => api("/text-settings", { method: "PUT", body: s })) !== undefined) { toast(t("common.saved")); setF(null); data.reload(); }
+  };
+  const test = async () => {
+    const r = await run(() => api<{ ok: boolean; error: string }>("/text-settings/test", { body: { to } }));
+    if (r) toast(r.ok ? t("texts.test_ok") : t("texts.test_failed", { error: r.error }), r.ok ? "success" : "error");
+  };
+  return (
+    <>
+      <PageHeader title={t("nav.texts")} subtitle={t("texts.subtitle")} actions={<Button busy={busy} onClick={save}>{t("common.save")}</Button>} />
+      {error && <div className="mb-4"><ErrorState error={error} /></div>}
+      <div className="grid gap-6 xl:grid-cols-3">
+        <Card title={t("texts.provider")} className="xl:col-span-2">
+          <div className="grid gap-4">
+            <Toggle label={t("texts.enabled")} checked={s.is_enabled} onChange={(v) => set("is_enabled", v)} />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <SelectInput label={t("texts.channel")} value={s.channel} onChange={(e) => set("channel", e.target.value)}
+                options={[{ value: "Sms", label: "SMS" }, { value: "WhatsApp", label: "WhatsApp" }]} />
+              <SelectInput label={t("texts.service")} value={s.provider} onChange={(e) => set("provider", e.target.value)}
+                options={[{ value: "Webhook", label: t("texts.webhook") }, { value: "Twilio", label: "Twilio" }]} />
+            </div>
+            {s.provider === "Webhook" ? (
+              <TextInput label={t("texts.url")} hint={t("texts.url_hint")} type="url" value={s.url} onChange={(e) => set("url", e.target.value)} />
+            ) : (
+              <TextInput label={t("texts.account")} value={s.account_id} dir="ltr" onChange={(e) => set("account_id", e.target.value)} />
+            )}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <TextInput label={t("texts.token")} type="password" autoComplete="new-password" value={s.token}
+                hint={s.has_token ? t("texts.token_kept") : undefined} onChange={(e) => set("token", e.target.value)} />
+              <TextInput label={t("texts.sender")} hint={t("texts.sender_hint")} dir="ltr" value={s.sender} onChange={(e) => set("sender", e.target.value)} />
+            </div>
+            <fieldset>
+              <legend className="mb-2 text-sm font-semibold">{t("texts.events")}</legend>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {s.all_events.map((ev) => (
+                  <Toggle key={ev.key} label={lang === "en" ? ev.name_en : ev.name_ar} checked={s.events.includes(ev.key)}
+                    onChange={(v) => set("events", v ? [...s.events, ev.key] : s.events.filter((x) => x !== ev.key))} />
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-aeblack-500">{t("texts.events_hint")}</p>
+            </fieldset>
+          </div>
+        </Card>
+        <div className="space-y-6">
+          <Card title={t("texts.test")}>
+            <TextInput label={t("texts.test_to")} type="tel" dir="ltr" placeholder="+9715..." value={to} onChange={(e) => setTo(e.target.value)} />
+            <Button variant="outline" className="mt-3" busy={busy} disabled={!to} onClick={test}>{t("texts.send_test")}</Button>
+            <p className="mt-2 text-xs text-aeblack-500">{t("texts.test_hint")}</p>
+          </Card>
+          <Card title={t("texts.activity")}>
+            <dl className="space-y-1 text-sm">
+              {([["health.queued", s.queued], ["health.sent_day", s.sent_day], ["health.failed_day", s.failed_day]] as const).map(([k, v]) => (
+                <div key={k} className="flex justify-between"><dt className="text-aeblack-600">{t(k)}</dt><dd className="tabular-nums">{v}</dd></div>
+              ))}
+            </dl>
+            {s.recent.length > 0 && (
+              <ul className="mt-3 space-y-1 text-xs">
+                {s.recent.map((m) => (
+                  <li key={m.id} className="flex justify-between gap-2" title={m.error}>
+                    <span dir="ltr">{m.to} · {m.event}</span>
+                    <span className={m.status === "Failed" ? "text-aered-700" : "text-aeblack-500"}>{t(`mail.status.${m.status}`)} · {date(m.created_at, true)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        </div>
+      </div>
+    </>
   );
 }

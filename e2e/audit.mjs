@@ -88,12 +88,12 @@ for (const [view, opts] of Object.entries(VIEWS)) {
   const pages = [
     ["dashboard", "/"], ["reports", "/reports"], ["jobs", "/jobs"], ["job", `/jobs/${job.id}`], ["job_new", "/jobs/new"], ["applicants", "/applicants"],
     ["applicant", `/applicants/${applicant.id}`], ["applicant_tests", `/applicants/${applicant.id}?tab=tests`], ["interviews", "/interviews"],
-    interview && ["interview", `/interviews/${interview.id}`], ["offers", "/offers"], ["screening", "/screening"], ["tests", "/tests"],
+    interview && ["interview", `/interviews/${interview.id}`], ["offers", "/offers"], ["talent_pool", "/talent-pool"], ["screening", "/screening"], ["tests", "/tests"],
     test && ["test", `/tests/${test.id}`], ["questions", "/questions"], question && ["question", `/questions/${question.id}`], ["invitations", "/invitations"],
     attempt && ["marking", `/marking/${attempt.id}`], ["role_profiles", "/role-profiles"], ["personality_settings", "/personality-settings"], ["assistant", "/assistant"],
     ["departments", "/setup/departments"], ["rounds", "/setup/rounds"], ["settings", "/setup/settings"], ["portal_text", "/setup/portal-text"],
     ["email_templates", "/setup/email-templates"], ["document_templates", "/setup/document-templates"], ["components", "/setup/components"], ["component_new", "/setup/components/new"],
-    ["staff", "/setup/staff"], ["email_server", "/setup/email-server"], ["agent_settings", "/setup/assistant"], ["email_log", "/setup/email-log"], ["assistant_usage", "/setup/assistant-usage"], ["audit", "/setup/audit"], ["health", "/setup/health"], ["data_protection", "/setup/data-protection"],
+    ["staff", "/setup/staff"], ["email_server", "/setup/email-server"], ["texts", "/setup/texts"], ["agent_settings", "/setup/assistant"], ["email_log", "/setup/email-log"], ["assistant_usage", "/setup/assistant-usage"], ["audit", "/setup/audit"], ["health", "/setup/health"], ["data_protection", "/setup/data-protection"],
     ["password", "/password"],
   ].filter(Boolean);
   for (const lang of ["ar", "en"]) {

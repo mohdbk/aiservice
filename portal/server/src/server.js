@@ -232,7 +232,7 @@ export function createApp(cfg = loadConfig(), deps = {}) {
       const data = Buffer.from(cv.data, "base64");
       if (!data.length) throw new HttpError(400, "cv_empty");
       const result = await frappe.apply({ email: u.email, epoch: u.epoch || 0, job: str(b.job, 140), phone: str(b.phone, 30), country: str(b.country, 140),
-        cover_note: str(b.cover_note, 4000), declaration: b.declaration ? "1" : "0", lang: str(b.lang, 10),
+        cover_note: str(b.cover_note, 4000), declaration: b.declaration ? "1" : "0", talent_pool: b.talent_pool === true ? "1" : "0", lang: str(b.lang, 10),
         screening: JSON.stringify(b.screening && typeof b.screening === "object" && !Array.isArray(b.screening) ? b.screening : {}).slice(0, 20000) },
       { name, data, type: str(cv.type, 100) });
       return send(res, 200, result);
@@ -278,6 +278,20 @@ export function createApp(cfg = loadConfig(), deps = {}) {
       const u = requireUser(req);
       limit(`mydata:${u.email}`, LIMITS.correction);
       return send(res, 200, await frappe.myData(u), { "Content-Disposition": 'attachment; filename="my-data.json"' });
+    }
+    if (m === "POST" && pathname === "/api/account/talent-pool") {
+      checkCsrf(req);
+      const u = requireUser(req);
+      const b = await readJson(req, 4096);
+      return send(res, 200, await frappe.setTalentPool(u, b.join === true));
+    }
+    mm = pathname.match(/^\/api\/applications\/([A-Za-z0-9._-]{1,140})\/book$/);
+    if (m === "POST" && mm) {
+      checkCsrf(req);
+      const u = requireUser(req);
+      limit(`book:${ip}`, LIMITS.correction);
+      const b = await readJson(req, 4096);
+      return send(res, 200, await frappe.bookInterview(u, mm[1], Number.isInteger(b.slot) ? b.slot : -1));
     }
     if (m === "POST" && pathname === "/api/account/delete") {
       checkCsrf(req);

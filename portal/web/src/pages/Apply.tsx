@@ -80,6 +80,7 @@ export default function Apply() {
   const [note, setNote] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [declared, setDeclared] = useState(false);
+  const [talentPool, setTalentPool] = useState(false);
   const [screening, setScreening] = useState<Record<string, unknown>>({});
   const [badQuestions, setBadQuestions] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -105,7 +106,7 @@ export default function Apply() {
     try {
       const data = await fileToBase64(file);
       const r = await api<{ application: string }>("/api/applications", {
-        body: { job: job.id, phone: phone.trim(), country, cover_note: note, declaration: true, lang, screening, cv: { name: file.name, type: file.type, data } },
+        body: { job: job.id, phone: phone.trim(), country, cover_note: note, declaration: true, talent_pool: talentPool, lang, screening, cv: { name: file.name, type: file.type, data } },
       });
       navigate(`${path(`/applications/${encodeURIComponent(r.application)}`)}?new=1`);
     } catch (err) {
@@ -177,6 +178,11 @@ export default function Apply() {
           <Field id="note" label={t("apply.note")} optional>
             <textarea id="note" rows={5} maxLength={4000} value={note} onChange={(e) => setNote(e.target.value)} />
           </Field>
+
+          <div className="aegov-check-item">
+            <input id="talent-pool" type="checkbox" checked={talentPool} onChange={(e) => setTalentPool(e.target.checked)} />
+            <label htmlFor="talent-pool">{t("apply.talent_pool")}</label>
+          </div>
 
           <div className="aegov-check-item">
             <input id="declaration" type="checkbox" checked={declared} onChange={(e) => setDeclared(e.target.checked)} required />
