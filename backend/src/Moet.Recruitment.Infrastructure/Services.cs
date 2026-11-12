@@ -89,7 +89,8 @@ public sealed class SqlCodeGenerator(AppDbContext db, IClock clock) : ICodeGener
             CodeKind.JobOffer => ("hiring.JobOfferCode", "OFR", 4, true),
             _ => ("assessment.InvitationCode", "ASM", 5, false),
         };
-        var n = await db.Database.SqlQueryRaw<int>($"SELECT NEXT VALUE FOR {seq} AS [Value]").SingleAsync(ct);
+        // Not composed (SingleAsync would wrap it in a subquery, where NEXT VALUE FOR is not allowed).
+        var n = (await db.Database.SqlQueryRaw<int>($"SELECT NEXT VALUE FOR {seq} AS [Value]").ToListAsync(ct))[0];
         var num = n.ToString().PadLeft(width, '0');
         return yearly ? $"{prefix}-{clock.Local(clock.UtcNow).Year}-{num}" : $"{prefix}-{num}";
     }
