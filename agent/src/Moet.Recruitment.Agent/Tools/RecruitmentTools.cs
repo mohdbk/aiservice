@@ -21,6 +21,7 @@ public sealed class RecruitmentTools(BackofficeApi api)
     [
         AIFunctionFactory.Create(ListJobs, "list_jobs"),
         AIFunctionFactory.Create(GetJob, "get_job"),
+        AIFunctionFactory.Create(RankApplicants, "rank_applicants"),
         AIFunctionFactory.Create(SearchApplicants, "search_applicants"),
         AIFunctionFactory.Create(GetApplicant, "get_applicant"),
         AIFunctionFactory.Create(ListInterviews, "list_interviews"),
@@ -60,6 +61,14 @@ public sealed class RecruitmentTools(BackofficeApi api)
 
     [Description("One job opening: description, criteria, screening questions, tests and translations.")]
     public Task<JsonElement> GetJob([Description("Job id")] int jobId, CancellationToken ct = default) => Read($"jobs/{jobId}", ct);
+
+    [Description("A job's applicants ranked by combined selection score (out of 100): technical assessments, interview panel ratings and personality fit with the job's role profile, weighted as set on the job (by default 40, 40 and 20). Parts without a result are left out (complete false). Returns items with rank, total and each part, plus the weights.")]
+    public Task<JsonElement> RankApplicants(
+        [Description("Job id")] int jobId,
+        [Description("Include rejected applicants")] bool includeRejected = false,
+        [Description("Page number, from 1")] int page = 1,
+        CancellationToken ct = default) =>
+        Read($"jobs/{jobId}/ranking?{Q(("all", includeRejected ? "true" : null), ("page", page.ToString(CultureInfo.InvariantCulture)), ("size", "25"))}", ct);
 
     [Description("Find applicants. Combine filters freely. Use cv_text for skills, employers or qualifications found in CVs.")]
     public Task<JsonElement> SearchApplicants(
@@ -159,7 +168,8 @@ public sealed class RecruitmentTools(BackofficeApi api)
             s.Text(L("مقارنة المتقدمين", "Applicant Comparison"), "h3"),
             RowOf("", p => Str(p, "full_name"), "h5"),
             s.Divider(),
-            RowOf(L("التقييم", "Score"), Score),
+            RowOf(L("درجة الاختيار", "Selection Score"), SelectionTotal),
+            RowOf(L("تقييم السيرة الذاتية", "CV Score"), Score),
             RowOf(L("الحالة", "Status"), p => Statuses().Where(x => x.Item1 == Str(p, "status")).Select(x => x.Item2).FirstOrDefault() ?? Str(p, "status")),
             RowOf(L("أسئلة الفرز", "Screening"), p => (p.TryGetProperty("screening", out var sc) ? Str(sc, "outcome") : "") switch
             {
@@ -197,7 +207,7 @@ public sealed class RecruitmentTools(BackofficeApi api)
             new JsonObject { ["applicant_id"] = p.GetProperty("id").GetInt32() }, "borderless"))]));
         s.Card(s.Column(rows), id: "root");
 
-        var summary = string.Join("; ", people.Select(p => $"{Str(p, "full_name")} (id {p.GetProperty("id").GetInt32()}): score {Score(p)}, status {Str(p, "status")}"));
+        var summary = string.Join("; ", people.Select(p => $"{Str(p, "full_name")} (id {p.GetProperty("id").GetInt32()}): selection score {SelectionTotal(p)}, CV score {Score(p)}, status {Str(p, "status")}"));
         return Ui(s, $"Comparison shown. {summary}");
     }
 
@@ -565,6 +575,12 @@ public sealed class RecruitmentTools(BackofficeApi api)
     }
 
     static JsonElement? Analysis(JsonElement p) => p.TryGetProperty("analysis", out var a) && a.ValueKind == JsonValueKind.Object ? a : null;
+
+    /// <summary>The combined selection score, marked partial while parts are still missing.</summary>
+    string SelectionTotal(JsonElement p) =>
+        p.TryGetProperty("selection", out var s) && s.ValueKind == JsonValueKind.Object && s.TryGetProperty("total", out var t) && t.ValueKind == JsonValueKind.Number
+            ? $"{t.GetDecimal():0.#}" + (s.TryGetProperty("complete", out var c) && c.ValueKind == JsonValueKind.False ? L(" (جزئية)", " (partial)") : "")
+            : "-";
 
     static string Score(JsonElement p) => Analysis(p) is { } a && a.TryGetProperty("score", out var s) && s.ValueKind == JsonValueKind.Number ? $"{s.GetDecimal():0.#}" : "-";
 

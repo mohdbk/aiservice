@@ -26,6 +26,8 @@ public static class AgentSetup
         - Always use the tools. Never guess ids, codes, names, scores, dates or statuses.
         - Ids from one tool feed the next (for example search_applicants gives applicant ids for get_applicant).
         - CV scores are recommendations only. People make hiring decisions.
+        - "Best" or "top" applicants for a job: use rank_applicants (the combined selection score set by HR on the job). Say
+          when a score is partial (some parts have no result yet). Without a job, ask which job first.
         - Personality questionnaires give profiles: Big Five dimensions (a sum out of 25 with bands Very Low to Very High, or a sten
           1 to 10), or a 4-letter type (16 Types). Role fit (Strong, Moderate or Weak) compares them with HR's role profiles. No trait
           or type is good or bad and there is no pass mark: describe results neutrally, as one input alongside tests and interviews,
