@@ -817,5 +817,10 @@
  "pers.scoring.WorkplaceBigFive": "Sum and Bands (5 to 25)",
  "pers.scoring.BigFive": "Scale 1 to 10 (Optional Norms)",
  "roles.model.WorkplaceBigFive": "Big Five",
- "roles.model.WorkplaceType16": "16 Types"
+ "roles.model.WorkplaceType16": "16 Types",
+ "list.filters": "Filters",
+ "test.name": "Name",
+ "pers.ready_made": "Add Ready-Made Questionnaire",
+ "q.text": "Question",
+ "sq.text": "Question"
 }

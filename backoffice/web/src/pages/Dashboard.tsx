@@ -13,11 +13,11 @@ type Dash = {
 
 function Stat({ icon, label, value, to }: { icon: ReactNode; label: string; value: number; to: string }) {
   return (
-    <Link to={to} className="mc-surface flex items-center gap-4 rounded-2xl border border-aeblack-100 bg-white p-5 text-aeblack-900 no-underline transition hover:border-primary-300 hover:shadow-sm [&_*]:no-underline">
-      <span className="flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-primary-50 text-primary-700">{icon}</span>
-      <span>
+    <Link to={to} className="mc-surface flex flex-col gap-2 rounded-2xl border border-aeblack-100 bg-white p-4 text-aeblack-900 no-underline transition hover:border-primary-300 hover:shadow-sm sm:flex-row sm:items-center sm:gap-4 sm:p-5 [&_*]:no-underline">
+      <span className="flex h-10 w-10 flex-none items-center justify-center rounded-xl bg-primary-50 text-primary-700 sm:h-12 sm:w-12">{icon}</span>
+      <span className="min-w-0">
         <span className="block text-2xl font-bold tabular-nums text-aeblack-900">{value}</span>
-        <span className="text-sm text-aeblack-600">{label}</span>
+        <span className="block text-sm leading-5 text-aeblack-600">{label}</span>
       </span>
     </Link>
   );
@@ -34,7 +34,7 @@ export default function Dashboard() {
   return (
     <>
       <PageHeader title={t("dash.title")} subtitle={me?.full_name} />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <Stat icon={i(Briefcase)} label={t("dash.open_jobs")} value={data.open_jobs} to={to("/jobs?status=Open")} />
         <Stat icon={i(Globe)} label={t("dash.published_jobs")} value={data.published_jobs} to={to("/jobs?status=Open")} />
         <Stat icon={i(UserPlus)} label={t("dash.new_applicants")} value={data.new_applicants} to={to("/applicants")} />
@@ -49,10 +49,10 @@ export default function Dashboard() {
           {data.recent.length === 0 ? <Empty /> : (
             <ul className="divide-y divide-aeblack-100">
               {data.recent.map((a) => (
-                <li key={a.id} className="flex items-center justify-between gap-3 py-3">
+                <li key={a.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-3">
                   <div className="min-w-0">
                     <Link to={to(`/applicants/${a.id}`)} className="font-semibold text-primary-700 hover:underline">{a.full_name}</Link>
-                    <p className="truncate text-sm text-aeblack-500">{a.job_title} · {date(a.created_at)}</p>
+                    <p className="truncate text-sm text-aeblack-500"><bdi>{a.job_title}</bdi> · <bdi>{date(a.created_at)}</bdi></p>
                   </div>
                   <div className="flex items-center gap-3">
                     <Badge tone={a.status === "Open" ? "blue" : "gray"}>{t(`app.status.${a.status}`)}</Badge>
@@ -68,9 +68,9 @@ export default function Dashboard() {
             <ul className="space-y-3">
               {data.interviews.map((iv) => (
                 <li key={iv.id}>
-                  <Link to={to(`/interviews/${iv.id}`)} className="block rounded-xl border border-aeblack-100 p-3 hover:border-primary-300">
+                  <Link to={to(`/interviews/${iv.id}`)} className="block rounded-xl border border-aeblack-100 p-3 no-underline hover:border-primary-300 [&_*]:no-underline">
                     <p className="font-semibold text-aeblack-900">{iv.applicant}</p>
-                    <p className="text-sm text-aeblack-500">{iv.round} · {date(iv.starts_at, true)}</p>
+                    <p className="text-sm text-aeblack-500"><bdi>{iv.round}</bdi> · <bdi>{date(iv.starts_at, true)}</bdi></p>
                   </Link>
                 </li>
               ))}

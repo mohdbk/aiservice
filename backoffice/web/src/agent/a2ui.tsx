@@ -94,7 +94,8 @@ export function A2Surface({ surface, busy, onAction, onData, emptyText = "" }: {
     if (!c) return null;
     seen.add(id);
     const v = (p: string) => resolve(c[p], surface.data);
-    const kids = (): ReactNode[] => (Array.isArray(c.children) ? c.children.map((k: string) => <div key={k} className="min-w-40 flex-1">{draw(k)}</div>) : []);
+    // Row cells keep a readable width and the row scrolls sideways in a narrow chat (comparisons line up as columns).
+    const kids = (): ReactNode[] => (Array.isArray(c.children) ? c.children.map((k: string) => <div key={k} className="min-w-32 flex-1 shrink-0">{draw(k)}</div>) : []);
     switch (c.component) {
       case "Text": {
         const variant = (v("variant") as string) || "body";
@@ -103,7 +104,7 @@ export function A2Surface({ surface, busy, onAction, onData, emptyText = "" }: {
         return <Tag dir="auto" className={TEXT[variant] ?? TEXT.body}>{text}</Tag>;
       }
       case "Row":
-        return <div className={`flex flex-wrap items-center gap-3 ${JUSTIFY[c.justify] ?? ""}`}>{kids()}</div>;
+        return <div className={`flex items-center gap-3 overflow-x-auto ${JUSTIFY[c.justify] ?? ""}`}>{kids()}</div>;
       case "Column":
       case "List":
         return <div className="flex flex-col gap-3">{Array.isArray(c.children) ? c.children.map((k: string) => <div key={k}>{draw(k)}</div>) : null}</div>;

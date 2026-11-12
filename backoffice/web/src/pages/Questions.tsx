@@ -28,7 +28,7 @@ export default function Questions() {
           { key: "english", label: t("common.english_state"), options: opts(t, "english.", ["Missing", "Suggested", "Approved"]) },
         ]}
         columns={[
-          { key: "text", label: t("q.text_ar"), sort: "text", className: "max-w-md", render: (x) => <>
+          { key: "text", label: t("q.text"), sort: "text", className: "max-w-md", render: (x) => <>
             <Link to={to(`/questions/${x.id}`)} className="line-clamp-2">{plain(x.text) || `#${x.id}`}</Link>
             {!x.is_active && <Badge>{t("common.inactive")}</Badge>}
           </> },

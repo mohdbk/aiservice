@@ -59,6 +59,7 @@ async function shoot(ctx, name, url, after, full = false) {
     if (errors.length) note(`ERROR ${name}: ${errors.slice(0, 3).join(" | ")}`);
   } catch (e) {
     note(`FAIL  ${name}: ${e.message.split("\n")[0]}`);
+    try { await page.screenshot({ path: `shots/${name}-FAILED.png`, fullPage: true }); } catch { /* page gone */ }
   }
   await page.close();
 }
@@ -124,7 +125,7 @@ if (PORTAL) {
     const guest = await browser.newContext({ ...opts });
     const jobs = await (await guest.request.get(`${PORTAL}/api/jobs?lang=ar`)).json();
     const list = jobs.jobs || jobs.items || jobs.message?.jobs || jobs;
-    const code = list[0]?.name || list[0]?.code;
+    const code = list[0]?.id || list[0]?.name || list[0]?.code;
     for (const lang of ["ar", "en"]) {
       for (const [name, path] of [["jobs", ""], ["job", `/jobs/${code}`], ["sign_in", "/sign-in"], ["create_account", "/create-account"],
         ["forgot_password", "/forgot-password"], ["not_found", "/nothing-here"]]) await shoot(guest, `po_${view}_${lang}_${name}`, `${PORTAL}/${lang}${path}`);
@@ -137,7 +138,7 @@ if (PORTAL) {
       const apps = await (await user.request.get(`${PORTAL}/api/applications?lang=ar`)).json();
       const app = (apps.applications || apps.items || apps.message || apps)[0];
       for (const lang of ["ar", "en"]) {
-        for (const [name, path] of [["applications", "/applications"], app && ["application", `/applications/${app.name || app.id || app.code}`],
+        for (const [name, path] of [["applications", "/applications"], app && ["application", `/applications/${app.id || app.name || app.code}`],
           ["assessments", "/assessments"], ["apply", `/jobs/${code}/apply`]].filter(Boolean)) await shoot(user, `po_${view}_${lang}_${name}`, `${PORTAL}/${lang}${path}`);
       }
     }

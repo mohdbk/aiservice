@@ -817,5 +817,10 @@
  "pers.scoring.WorkplaceBigFive": "المجموع والمستويات (من 5 إلى 25)",
  "pers.scoring.BigFive": "مقياس من 1 إلى 10 (مع معايير اختيارية)",
  "roles.model.WorkplaceBigFive": "السمات الخمس",
- "roles.model.WorkplaceType16": "الأنماط الستة عشر"
+ "roles.model.WorkplaceType16": "الأنماط الستة عشر",
+ "list.filters": "عوامل التصفية",
+ "test.name": "الاسم",
+ "pers.ready_made": "إضافة استبيان جاهز",
+ "q.text": "السؤال",
+ "sq.text": "السؤال"
 }

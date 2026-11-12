@@ -48,7 +48,7 @@ export default function Screening() {
           { key: "english", label: t("common.english_state"), options: opts(t, "english.", ["Missing", "Suggested", "Approved"]) },
         ]}
         columns={[
-          { key: "text", label: t("sq.text_ar"), sort: "text", render: (x) => <>
+          { key: "text", label: t("sq.text"), sort: "text", render: (x) => <>
             <button type="button" className="text-start font-semibold text-primary-700" onClick={() => open(x.id)}>{x.text}</button>
             {x.options.length > 0 && <p className="text-xs text-aeblack-500">{x.options.join(" · ")}</p>}
             {!x.is_active && <Badge>{t("common.inactive")}</Badge>}

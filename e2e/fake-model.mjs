@@ -9,7 +9,7 @@ http.createServer(async (req, res) => {
   for await (const c of req) body += c;
   if (!req.url.endsWith("/chat/completions")) { res.writeHead(404).end(); return; }
   const input = JSON.parse(body || "{}");
-  if (process.env.SCENARIO && Array.isArray(input.tools) && input.tools.length > 0 && input.stream) return scenario(input, res);
+  if (process.env.SCENARIO && Array.isArray(input.tools) && input.tools.length > 0) return scenario(input, res);
   const hasTool = (input.messages || []).some((m) => m.role === "tool");
   const wantsTools = Array.isArray(input.tools) && input.tools.length > 0;
   if (!input.stream) {
@@ -58,9 +58,20 @@ function scenario(input, res) {
   const text = typeof msgs[lastUser]?.content === "string" ? msgs[lastUser].content : JSON.stringify(msgs[lastUser]?.content || "");
   const plan = PLANS.find(([re]) => re.test(text)) || [null, [["list_jobs", () => ({})]], "Here are the open jobs."];
   const done = msgs.slice(lastUser + 1).filter((m) => m.role === "tool");
-  const ids = [...(done.at(-1)?.content || "").toString().matchAll(/"id"\s*:\s*(\d+)/g)].map((m) => Number(m[1]));
-  res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" });
+  const last = done.at(-1)?.content;
+  const raw = (typeof last === "string" ? last : JSON.stringify(last ?? "")).replace(/\\"/g, '"');
+  const ids = [...raw.matchAll(/"id"\s*:\s*(\d+)/g)].map((m) => Number(m[1]));
   const step = plan[1][done.length];
+  console.log(`scenario: "${text.slice(0, 40)}" step ${done.length} ids ${ids.slice(0, 4)} stream ${!!input.stream} -> ${step ? step[0] : "text"}`);
+  if (!input.stream) {
+    const message = step
+      ? { role: "assistant", content: null, tool_calls: [{ id: `call_${done.length + 1}`, type: "function", function: { name: step[0], arguments: JSON.stringify(step[1](ids)) } }] }
+      : { role: "assistant", content: plan[2] };
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ id: "c1", object: "chat.completion", created: 0, model: "fake", choices: [{ index: 0, message, finish_reason: step ? "tool_calls" : "stop" }], usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 } }));
+    return;
+  }
+  res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" });
   if (step) {
     const [name, args] = step;
     res.write(chunk({ role: "assistant", content: null, tool_calls: [{ index: 0, id: `call_${done.length + 1}`, type: "function", function: { name, arguments: "" } }] }));

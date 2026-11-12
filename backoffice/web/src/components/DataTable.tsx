@@ -1,4 +1,4 @@
-import { CaretDown, CaretUp, CaretUpDown, MagnifyingGlass, X } from "@phosphor-icons/react";
+import { CaretDown, CaretUp, CaretUpDown, FunnelSimple, MagnifyingGlass, X } from "@phosphor-icons/react";
 import { FormEvent, ReactNode, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, ApiError, useAsync, useLang } from "../core";
@@ -45,6 +45,7 @@ export function DataTable<T>({ list, columns, rowKey, filters = [], searchLabel,
 }) {
   const { t } = useLang();
   const [q, setQ] = useState(list.get("q"));
+  const [showFilters, setShowFilters] = useState(false);
   useEffect(() => setQ(list.get("q")), [list.get("q")]);
   const data = list.data;
   const active = filters.some((f) => list.get(f.key)) || !!list.get("q");
@@ -56,30 +57,58 @@ export function DataTable<T>({ list, columns, rowKey, filters = [], searchLabel,
     const current = data?.sort === key ? data.dir : null;
     list.set({ sort: key, dir: current === "asc" ? "desc" : "asc" });
   };
+  const filtersOn = filters.filter((f) => list.get(f.key)).length;
+  const header = (c: Column<T>) => {
+    const sorted = c.sort && data?.sort === c.sort ? data.dir : null;
+    return c.sort ? (
+      <button type="button" onClick={() => sortBy(c.sort!)} className="inline-flex items-center gap-1 font-semibold hover:text-primary-700">
+        {c.label}
+        {sorted === "asc" ? <CaretUp size={16} aria-hidden="true" /> : sorted === "desc" ? <CaretDown size={16} aria-hidden="true" /> : <CaretUpDown size={16} className="text-aeblack-300" aria-hidden="true" />}
+      </button>
+    ) : c.label;
+  };
+  const [first, ...rest] = columns;
+  const actions = rest.filter((c) => c.key === "act");
+  const details = rest.filter((c) => c.key !== "act");
   return (
     <div>
-      <form onSubmit={submit} role="search" className="mb-4 flex flex-wrap items-end gap-3">
-        <div className="aegov-form-control min-w-56 flex-1">
-          <label htmlFor="list-q" className="mb-1 block text-sm font-semibold">{searchLabel || t("common.search")}</label>
-          <div className="form-control-input">
-            <span className="control-prefix"><MagnifyingGlass size={20} aria-hidden="true" /></span>
-            <input id="list-q" type="search" value={q} onChange={(e) => setQ(e.target.value)} />
+      <form onSubmit={submit} role="search" className="mb-4 space-y-3">
+        <div className="flex items-end gap-2">
+          <div className="aegov-form-control min-w-0 flex-1">
+            <label htmlFor="list-q" className="mb-1 block text-sm font-semibold">{searchLabel || t("common.search")}</label>
+            <div className="form-control-input">
+              <span className="control-prefix"><MagnifyingGlass size={20} aria-hidden="true" /></span>
+              <input id="list-q" type="search" value={q} onChange={(e) => setQ(e.target.value)} />
+            </div>
           </div>
+          <Button type="submit" variant="outline" aria-label={t("common.search")} icon={<MagnifyingGlass size={20} aria-hidden="true" />}>
+            <span className="hidden sm:inline">{t("common.search")}</span>
+          </Button>
+          {(filters.length > 0 || toolbar) && (
+            <Button variant="outline" className="sm:hidden" aria-expanded={showFilters} onClick={() => setShowFilters(!showFilters)}
+              icon={<FunnelSimple size={20} aria-hidden="true" />} aria-label={t("list.filters")}>
+              {filtersOn > 0 && <span className="rounded-full bg-primary-600 px-1.5 text-xs text-white" dir="ltr">{filtersOn}</span>}
+            </Button>
+          )}
         </div>
-        {filters.map((f) => (
-          <SelectInput key={f.key} wrapClass="min-w-40" label={f.label} value={list.get(f.key)} onChange={(e) => list.set({ [f.key]: e.target.value || null })}
-            options={[{ value: "", label: t("common.all") }, ...f.options]} />
-        ))}
-        <Button type="submit" variant="outline" icon={<MagnifyingGlass size={20} aria-hidden="true" />}>{t("common.search")}</Button>
-        {active && (
-          <Button variant="link" onClick={() => { setQ(""); list.set(Object.fromEntries(["q", ...filters.map((f) => f.key)].map((k) => [k, null]))); }}
-            icon={<X size={20} aria-hidden="true" />}>{t("list.clear")}</Button>
+        {(filters.length > 0 || active || toolbar) && (
+          <div className={`${showFilters ? "grid" : "hidden"} grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-end`}>
+            {filters.map((f) => (
+              <SelectInput key={f.key} wrapClass="sm:min-w-40" label={f.label} value={list.get(f.key)} onChange={(e) => list.set({ [f.key]: e.target.value || null })}
+                options={[{ value: "", label: t("common.all") }, ...f.options]} />
+            ))}
+            {active && (
+              <Button variant="link" onClick={() => { setQ(""); list.set(Object.fromEntries(["q", ...filters.map((f) => f.key)].map((k) => [k, null]))); }}
+                icon={<X size={20} aria-hidden="true" />}>{t("list.clear")}</Button>
+            )}
+            {toolbar}
+          </div>
         )}
-        {toolbar}
       </form>
       {list.loading && !data ? <Loading /> : list.error ? <ErrorState error={list.error as ApiError} retry={list.reload} /> : !data || data.items.length === 0 ? <Empty>{empty}</Empty> : (
         <>
-          <div className={`overflow-x-auto rounded-2xl border border-aeblack-100 bg-white transition ${list.loading ? "opacity-60" : ""}`}>
+          {/* Wide screens: a table. */}
+          <div className={`hidden overflow-x-auto rounded-2xl border border-aeblack-100 bg-white transition md:block ${list.loading ? "opacity-60" : ""}`}>
             <table className="mh-table">
               <caption className="sr-only">{t("list.total", { count: data.total })}</caption>
               <thead>
@@ -87,14 +116,7 @@ export function DataTable<T>({ list, columns, rowKey, filters = [], searchLabel,
                   {columns.map((c) => {
                     const sorted = c.sort && data.sort === c.sort ? data.dir : null;
                     return (
-                      <th key={c.key} scope="col" aria-sort={sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : undefined} className={c.className}>
-                        {c.sort ? (
-                          <button type="button" onClick={() => sortBy(c.sort!)} className="inline-flex items-center gap-1 font-semibold hover:text-primary-700">
-                            {c.label}
-                            {sorted === "asc" ? <CaretUp size={16} aria-hidden="true" /> : sorted === "desc" ? <CaretDown size={16} aria-hidden="true" /> : <CaretUpDown size={16} className="text-aeblack-300" aria-hidden="true" />}
-                          </button>
-                        ) : c.label}
-                      </th>
+                      <th key={c.key} scope="col" aria-sort={sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : undefined} className={c.className}>{header(c)}</th>
                     );
                   })}
                 </tr>
@@ -106,6 +128,23 @@ export function DataTable<T>({ list, columns, rowKey, filters = [], searchLabel,
               </tbody>
             </table>
           </div>
+          {/* Phones: one card per row, the first column as its title and the others as labelled values. */}
+          <ul className={`space-y-3 transition md:hidden ${list.loading ? "opacity-60" : ""}`} aria-label={t("list.total", { count: data.total })}>
+            {data.items.map((row) => (
+              <li key={rowKey(row)} className="mc-surface rounded-2xl border border-aeblack-100 bg-white p-4">
+                {first && <div className="mb-3 text-base font-semibold [&_a]:font-semibold">{first.render(row)}</div>}
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                  {details.map((c) => (
+                    <div key={c.key} className="min-w-0">
+                      <dt className="text-xs text-aeblack-500">{c.label}</dt>
+                      <dd className="mt-0.5 break-words">{c.render(row)}</dd>
+                    </div>
+                  ))}
+                </dl>
+                {actions.map((c) => <div key={c.key} className="mt-3 border-t border-aeblack-100 pt-3">{c.render(row)}</div>)}
+              </li>
+            ))}
+          </ul>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-aeblack-600">
             <span>{t("list.showing", { from: (data.page - 1) * data.size + 1, to: Math.min(data.page * data.size, data.total), total: data.total })}</span>
             <div className="flex flex-wrap items-center gap-3">
@@ -115,11 +154,13 @@ export function DataTable<T>({ list, columns, rowKey, filters = [], searchLabel,
                   {[10, 25, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
                 </select>
               </label>
-              <nav className="flex items-center gap-2" aria-label={t("list.pages")}>
-                <Button variant="outline" size="sm" disabled={data.page <= 1} onClick={() => list.set({ page: String(data.page - 1) })}>{t("common.previous")}</Button>
-                <span>{t("common.page", { page: data.page, pages: data.pages })}</span>
-                <Button variant="outline" size="sm" disabled={data.page >= data.pages} onClick={() => list.set({ page: String(data.page + 1) })}>{t("common.next")}</Button>
-              </nav>
+              {data.pages > 1 && (
+                <nav className="flex items-center gap-2" aria-label={t("list.pages")}>
+                  <Button variant="outline" size="sm" disabled={data.page <= 1} onClick={() => list.set({ page: String(data.page - 1) })}>{t("common.previous")}</Button>
+                  <span>{t("common.page", { page: data.page, pages: data.pages })}</span>
+                  <Button variant="outline" size="sm" disabled={data.page >= data.pages} onClick={() => list.set({ page: String(data.page + 1) })}>{t("common.next")}</Button>
+                </nav>
+              )}
             </div>
           </div>
         </>

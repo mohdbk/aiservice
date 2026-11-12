@@ -65,7 +65,7 @@ jobs:
       - name: Logs
         if: always()
         run: |
-          echo "--- api errors"; grep -n -A8 "fail:\|Exception" api.log | head -60; echo "--- agent"; grep -n -A8 "fail:\|Exception" agent.log | head -40; echo "--- portal"; tail -30 portal.log; echo "--- web"; tail -10 web.log
+          echo "--- api errors"; grep -n -A8 "fail:\|Exception" api.log | head -60; echo "--- agent"; grep -n -A8 "fail:\|Exception" agent.log | head -40; echo "--- model"; tail -40 model.log; echo "--- portal"; tail -30 portal.log; echo "--- web"; tail -10 web.log
       - name: Push to the audit branch
         if: always()
         run: |

@@ -1,7 +1,7 @@
 import { Brain, Plus } from "@phosphor-icons/react";
 import { Link } from "react-router-dom";
 import { DataTable, opts, useList } from "../components/DataTable";
-import { Badge, Button, EnglishBadge, ErrorState, PageHeader, useSaving } from "../components/ui";
+import { ActionMenu, Badge, Button, EnglishBadge, ErrorState, PageHeader, useSaving } from "../components/ui";
 import { api, useAsync, useGo, useLang, usePageTitle, useToast } from "../core";
 
 type Row = { id: number; title: string; assessment_type: string; status: string; pass_mark: number; sections: number; minutes: number; invitations: number; english: string | null };
@@ -28,11 +28,10 @@ export default function Tests() {
   return (
     <>
       <PageHeader title={t("test.title")} actions={<>
-        {(templates.data || []).map((tp) => (
-          <Button key={tp.key} variant="outline" busy={adding.busy} onClick={() => addTemplate(tp)} icon={<Brain size={20} aria-hidden="true" />}>
-            {t("pers.add_template", { name: lang === "en" ? tp.title_en : tp.title })}
-          </Button>
-        ))}
+        {(templates.data || []).length > 0 && (
+          <ActionMenu label={t("pers.ready_made")} icon={<Brain size={20} aria-hidden="true" />}
+            items={(templates.data || []).map((tp) => ({ label: lang === "en" ? tp.title_en : tp.title, onClick: () => addTemplate(tp), disabled: adding.busy }))} />
+        )}
         <Button onClick={() => go("/tests/new")} icon={<Plus size={20} aria-hidden="true" />}>{t("test.new")}</Button>
       </>} />
       {adding.error && <div className="mb-4"><ErrorState error={adding.error} /></div>}
@@ -42,7 +41,7 @@ export default function Tests() {
           { key: "type", label: t("test.type"), options: opts(t, "type.", TYPES) },
         ]}
         columns={[
-          { key: "title", label: t("test.name_ar"), sort: "title", render: (x) => <Link to={to(`/tests/${x.id}`)}>{x.title}</Link> },
+          { key: "title", label: t("test.name"), sort: "title", render: (x) => <Link to={to(`/tests/${x.id}`)}>{x.title}</Link> },
           { key: "type", label: t("test.type"), sort: "type", render: (x) => t(`type.${x.assessment_type}`) },
           { key: "status", label: t("common.status"), sort: "status", render: (x) => <Badge tone={x.status === "Published" ? "green" : x.status === "Draft" ? "amber" : "gray"}>{t(`status.${x.status}`)}</Badge> },
           { key: "sections", label: t("test.sections"), render: (x) => <span className="text-sm">{x.sections} · {t("test.minutes_total", { minutes: x.minutes })}</span> },
