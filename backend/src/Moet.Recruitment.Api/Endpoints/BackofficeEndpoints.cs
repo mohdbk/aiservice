@@ -69,6 +69,11 @@ public static class BackofficeEndpoints
                 DateOnly? from, DateOnly? to, string? cv, BackofficeApplicantService s, CancellationToken ct) =>
             s.ListAsync(lq, new ApplicantFilter(job, status, screening, ai, minScore, country, from, to, cv), ct));
         staff.MapGet("/applicants/{id:int}", (int id, BackofficeApplicantService s, CancellationToken ct) => s.GetAsync(id, ct));
+        staff.MapGet("/applicants/{id:int}/bookings", (int id, BookingService s, CancellationToken ct) => s.ForApplicantAsync(id, ct));
+        staff.MapPost("/bookings", (BookingInput b, BookingService s, CancellationToken ct) => s.CreateAsync(b, ct));
+        staff.MapPost("/bookings/{id:int}/cancel", (int id, BookingService s, CancellationToken ct) => s.CancelAsync(id, ct));
+        staff.MapGet("/talent-pool", ([AsParameters] ListQuery lq, string? cv, int? job, TalentPoolService s, CancellationToken ct) => s.ListAsync(lq, cv, job, ct));
+        staff.MapPost("/talent-pool/{id:int}/invite", (int id, TalentInviteBody b, TalentPoolService s, CancellationToken ct) => s.InviteAsync(id, b.JobId, ct));
         staff.MapGet("/applicants/{id:int}/cv", async (int id, bool? download, BackofficeApplicantService s, CancellationToken ct) =>
         {
             var (content, type, name) = await s.CvAsync(id, ct);
@@ -190,6 +195,9 @@ public static class BackofficeEndpoints
         sys.MapPost("/data-requests/{id:int}/approve", (int id, ResponseBody b, DataProtectionService s, CancellationToken ct) => s.ApproveAsync(id, b.Response, ct));
         sys.MapPost("/data-requests/{id:int}/decline", (int id, ResponseBody b, DataProtectionService s, CancellationToken ct) => s.DeclineAsync(id, b.Response, ct));
         sys.MapGet("/consents", ([AsParameters] ListQuery lq, string? kind, DataProtectionService s, CancellationToken ct) => s.ConsentsAsync(lq, kind, ct));
+        sys.MapGet("/text-settings", (TextService s, CancellationToken ct) => s.GetAsync(ct));
+        sys.MapPut("/text-settings", (TextSettingInput b, TextService s, CancellationToken ct) => s.SaveAsync(b, ct));
+        sys.MapPost("/text-settings/test", (TextTestBody b, TextService s, CancellationToken ct) => s.TestAsync(b.To, ct));
         sys.MapGet("/assistant-usage", (SystemService s, CancellationToken ct) => s.AssistantUsageAsync(ct));
         sys.MapPut("/assistant-usage/{staffId:int}", (int staffId, AssistantLimitBody b, SystemService s, CancellationToken ct) => s.SetAssistantLimitAsync(staffId, b.Limit, ct));
         sys.MapGet("/health", async (SystemService s, IHttpClientFactory http, IConfiguration cfg, CancellationToken ct) =>
@@ -233,3 +241,5 @@ public static class BackofficeEndpoints
 public sealed record AssistantLimitBody(int? Limit);
 
 public sealed record ResponseBody(string? Response);
+public sealed record TalentInviteBody(int JobId);
+public sealed record TextTestBody(string? To);

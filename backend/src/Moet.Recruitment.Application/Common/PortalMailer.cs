@@ -31,7 +31,7 @@ public sealed class MailConfig(IAppDbContext db, ISecretProtector secrets, IMail
 /// Queues candidate emails from the email templates (edited by HR in the backoffice), in the candidate's language:
 /// Arabic uses the Arabic wording and every other language the English wording.
 /// </summary>
-public sealed class PortalMailer(IAppDbContext db, ContentService content, IClock clock, MailConfig mail)
+public sealed class PortalMailer(IAppDbContext db, ContentService content, IClock clock, MailConfig mail, TextService texts)
 {
     public Task<bool> CanSendAsync(CancellationToken ct = default) => mail.IsConfiguredAsync(ct);
 
@@ -56,9 +56,17 @@ public sealed class PortalMailer(IAppDbContext db, ContentService content, ICloc
     public async Task<bool> QueueAsync(string to, string name, string lang, string eventKey, string link,
         IDictionary<string, string>? values = null, CancellationToken ct = default)
     {
-        if (!await mail.IsConfiguredAsync(ct)) return false;
         var template = await db.EmailTemplates.AsNoTracking().FirstOrDefaultAsync(t => t.Event == eventKey, ct);
         if (template is { IsEnabled: false }) return false;
+        // A text message (SMS or WhatsApp) goes too when it is set up for this event, with or without an email server.
+        if (template != null)
+        {
+            var (sub, _) = template.In(lang == "ar" ? "ar" : "en");
+            var filled = new Dictionary<string, string> { ["name"] = name, ["link"] = link };
+            foreach (var (k, v) in values ?? new Dictionary<string, string>()) filled[k] = v;
+            await texts.QueueAsync(to, eventKey, TextUtil.NoEmDash(EmailTemplates.Fill(sub, filled)), link, ct);
+        }
+        if (!await mail.IsConfiguredAsync(ct)) return false;
         string subject, body;
         if (template != null) (subject, body) = template.In(lang == "ar" ? "ar" : "en");
         else

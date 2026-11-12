@@ -96,6 +96,8 @@ public static partial class EmailTemplates
         ["interview_scheduled"] = new("موعد المقابلة", "Interview Scheduled", false, ["name", "job_title", "round", "date", "time", "location"]),
         ["offer_sent"] = new("عرض العمل", "Job Offer", false, ["name", "job_title", "position_title", "start_date", "offer_letter", "link"]),
         ["not_selected"] = new("عدم الاختيار", "Not Selected", false, ["name", "job_title", "reference"]),
+        ["interview_booking"] = new("اختيار موعد المقابلة", "Choose an Interview Time", false, ["name", "job_title", "round", "link"]),
+        ["talent_invite"] = new("دعوة للتقديم", "Invitation to Apply", false, ["name", "job_title", "link"]),
     };
 
     /// <summary>Placeholders every email can use.</summary>

@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Moet.Recruitment.Application.Assessments;
+using Moet.Recruitment.Application.Backoffice;
 using Moet.Recruitment.Application.Common;
 using Moet.Recruitment.Domain;
 using Moet.Recruitment.Domain.Common;
@@ -14,7 +15,7 @@ namespace Moet.Recruitment.Application.Portal;
 
 public sealed record ApplyInput(
     string? Email, string? Epoch, string? Job, string? Phone, string? Country, string? CoverNote, string? Declaration,
-    string? Lang, string? Screening, string? FileName, byte[]? Cv);
+    string? Lang, string? Screening, string? FileName, byte[]? Cv, string? TalentPool = null);
 
 public sealed record StatusView(string Code, string Tone);
 
@@ -23,7 +24,7 @@ public sealed record ApplicationSummaryView(string Id, string Job, string Title,
 /// <summary>Applying, the applicant's applications, and corrections to their CV details.</summary>
 public sealed class PortalApplicationService(
     IAppDbContext db, ContentService content, PortalAccountService accounts, PortalSiteService site, AssessmentWorkflow assessments,
-    JobQueue jobs, ICodeGenerator codes, IClock clock, PortalMailer mailer)
+    JobQueue jobs, ICodeGenerator codes, IClock clock, PortalMailer mailer, BookingService bookings)
 {
     public async Task<object> ApplyAsync(ApplyInput input, CancellationToken ct = default)
     {
@@ -80,6 +81,17 @@ public sealed class PortalApplicationService(
             AuthorApplicantId = user.Id, CreatedAt = now,
         });
         db.JobApplications.Add(app);
+        // "Consider me for other suitable jobs" on the form joins the talent pool (a consent record is kept).
+        if (input.TalentPool == "1")
+        {
+            var acc = await db.ApplicantAccounts.FirstAsync(x => x.Id == user.Id, ct);
+            if (!acc.InTalentPool)
+            {
+                acc.InTalentPool = true;
+                acc.TalentPoolAt = now;
+                db.ConsentRecords.Add(new ConsentRecord { ApplicantAccountId = user.Id, Kind = ConsentRecord.TalentPool, Granted = true, Detail = app.Code, At = now });
+            }
+        }
         await db.SaveChangesAsync(ct);
 
         if (s.AutoScoreApplications) await jobs.EnqueueAsync(JobTypes.ScoreApplication, app.Id, ct);
@@ -172,6 +184,7 @@ public sealed class PortalApplicationService(
         {
             id = sum.Id, job = sum.Job, title = sum.Title, submitted = sum.Submitted, reference = sum.Reference, status = sum.Status,
             details_state = state, details = Details(cv?.ProfileJson, cv?.YearsOfExperience),
+            booking = await bookings.OpenForCandidateAsync(a.Id, lang, ct),
         };
     }
 

@@ -214,3 +214,39 @@ public sealed class AesSecretProtector(IConfiguration cfg) : ISecretProtector
         catch (Exception e) when (e is FormatException or CryptographicException or ArgumentException) { return null; }
     }
 }
+
+/// <summary>
+/// Sends texts through the chosen provider: a generic webhook (JSON POST of to, channel, body and sender, with the token as a
+/// bearer token) or Twilio's Messages API (WhatsApp numbers get the whatsapp: prefix).
+/// </summary>
+public sealed class HttpTextSender(IHttpClientFactory http) : ITextSender
+{
+    public async Task SendAsync(TextConfig config, string to, string body, CancellationToken ct = default)
+    {
+        var client = http.CreateClient("texts");
+        using var req = config.Provider == "Twilio"
+            ? new HttpRequestMessage(HttpMethod.Post, $"https://api.twilio.com/2010-04-01/Accounts/{Uri.EscapeDataString(config.AccountId)}/Messages.json")
+            {
+                Content = new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    ["To"] = config.Channel == Domain.Operations.TextChannel.WhatsApp ? "whatsapp:" + to : to,
+                    ["From"] = config.Channel == Domain.Operations.TextChannel.WhatsApp && !config.Sender.StartsWith("whatsapp:", StringComparison.Ordinal) ? "whatsapp:" + config.Sender : config.Sender,
+                    ["Body"] = body,
+                }),
+            }
+            : new HttpRequestMessage(HttpMethod.Post, config.Url)
+            {
+                Content = System.Net.Http.Json.JsonContent.Create(new { to, channel = config.Channel == Domain.Operations.TextChannel.WhatsApp ? "whatsapp" : "sms", body, sender = config.Sender }),
+            };
+        if (config.Provider == "Twilio")
+            req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic",
+                Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{config.AccountId}:{config.Token}")));
+        else if (config.Token.Length > 0) req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", config.Token);
+        using var res = await client.SendAsync(req, ct);
+        if (!res.IsSuccessStatusCode)
+        {
+            var text = await res.Content.ReadAsStringAsync(ct);
+            throw new HttpRequestException($"HTTP {(int)res.StatusCode}: {(text.Length > 200 ? text[..200] : text)}");
+        }
+    }
+}

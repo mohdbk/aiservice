@@ -37,6 +37,9 @@ public class ApplicantAccount
     public DateTime? LastSignInAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? AnonymisedAt { get; set; }
+    /// <summary>The candidate agreed to be considered for other suitable jobs (the talent pool), and when.</summary>
+    public bool InTalentPool { get; set; }
+    public DateTime? TalentPoolAt { get; set; }
 
     /// <summary>A password reset signs the applicant out of every session.</summary>
     public void PasswordChanged()

@@ -45,6 +45,9 @@ public interface IAppDbContext
     DbSet<RoleProfile> RoleProfiles { get; }
     DbSet<TypeNote> TypeNotes { get; }
     DbSet<DataRequest> DataRequests { get; }
+    DbSet<InterviewBooking> InterviewBookings { get; }
+    DbSet<TextSetting> TextSettings { get; }
+    DbSet<TextMessage> TextMessages { get; }
     DbSet<ConsentRecord> ConsentRecords { get; }
     DbSet<RetentionSetting> RetentionSettings { get; }
     DbSet<PersonalitySetting> PersonalitySettings { get; }
@@ -111,6 +114,15 @@ public interface IMailEnvironment
 }
 
 /// <summary>Sends one email straight away (the outbox worker and the Send Test Email button).</summary>
+/// <summary>The provider settings a text is sent with (the token already decrypted).</summary>
+public sealed record TextConfig(string Provider, TextChannel Channel, string Url, string AccountId, string Token, string Sender);
+
+/// <summary>Sends one SMS or WhatsApp message; throws on failure.</summary>
+public interface ITextSender
+{
+    Task SendAsync(TextConfig config, string to, string body, CancellationToken ct = default);
+}
+
 public interface IMailSender
 {
     Task SendAsync(SmtpConfig config, string to, string subject, string html, string text, CancellationToken ct = default);

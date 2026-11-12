@@ -24,6 +24,7 @@ public sealed class EmailOutboxWorker(IServiceScopeFactory scopes, ILogger<Email
             try
             {
                 await SendDueAsync(stop);
+                await SendTextsAsync(stop);
             }
             catch (Exception e) when (!stop.IsCancellationRequested)
             {
@@ -59,6 +60,36 @@ public sealed class EmailOutboxWorker(IServiceScopeFactory scopes, ILogger<Email
             {
                 m.Failed(e.Message, clock.UtcNow);
                 log.LogWarning("Email {Id} to {To} failed: {Error}", m.Id, m.ToAddress, e.Message);
+            }
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Text messages (SMS or WhatsApp) waiting in the outbox, when a provider is set up.</summary>
+    async Task SendTextsAsync(CancellationToken ct)
+    {
+        using var scope = scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var clock = scope.ServiceProvider.GetRequiredService<IClock>();
+        var now = clock.UtcNow;
+        if (!await db.TextMessages.AnyAsync(m => m.Status == EmailStatus.Queued && m.NextAttemptAt <= now, ct)) return;
+        var config = await scope.ServiceProvider.GetRequiredService<TextService>().ConfigAsync(ct);
+        if (config == null) return;
+        var sender = scope.ServiceProvider.GetRequiredService<ITextSender>();
+        var due = await db.TextMessages.Where(m => m.Status == EmailStatus.Queued && m.NextAttemptAt <= now).OrderBy(m => m.Id).Take(20).ToListAsync(ct);
+        foreach (var m in due)
+        {
+            try
+            {
+                await sender.SendAsync(config, m.ToNumber, m.Body, ct);
+                m.Status = EmailStatus.Sent;
+                m.SentAt = clock.UtcNow;
+                m.Attempts++;
+            }
+            catch (Exception e) when (e is HttpRequestException or TaskCanceledException or InvalidOperationException)
+            {
+                m.Failed(e.Message, clock.UtcNow);
+                log.LogWarning("Text {Id} failed: {Error}", m.Id, e.Message);
             }
         }
         await db.SaveChangesAsync(ct);

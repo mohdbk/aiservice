@@ -39,6 +39,8 @@ public static class DependencyInjection
         s.AddSingleton<IHtmlCleaner, HtmlCleaner>();
         s.AddSingleton<IMailEnvironment, EnvironmentMail>();
         s.AddSingleton<IMailSender, SmtpMailSender>();
+        s.AddHttpClient("texts", c => c.Timeout = TimeSpan.FromSeconds(30));
+        s.AddSingleton<ITextSender, HttpTextSender>();
         s.AddSingleton<ISecretProtector, AesSecretProtector>();
         s.AddHttpClient<ILanguageModel, OpenAiCompatibleModel>(c => c.Timeout = TimeSpan.FromMinutes(5));
         s.AddHttpClient<ICvReader, CvReader>(c => c.Timeout = TimeSpan.FromMinutes(5));

@@ -301,9 +301,9 @@ public class EndToEndTests
         var withSelection = await Read(await admin.GetAsync($"/api/backoffice/applicants/{ranking.GetProperty("items")[0].GetProperty("id").GetInt32()}"));
         Assert.Equal(4, withSelection.GetProperty("selection").GetProperty("parts").GetArrayLength());
 
-        // Email templates: the eight events exist; the sign-in emails cannot be switched off.
+        // Email templates: the ten events exist; the sign-in emails cannot be switched off.
         var emailTemplates = await Read(await admin.GetAsync("/api/backoffice/email-templates"));
-        Assert.Equal(8, emailTemplates.GetProperty("items").EnumerateArray().Count(t => t.GetProperty("event").ValueKind == JsonValueKind.String));
+        Assert.Equal(10, emailTemplates.GetProperty("items").EnumerateArray().Count(t => t.GetProperty("event").ValueKind == JsonValueKind.String));
         var verifyId = emailTemplates.GetProperty("items").EnumerateArray().First(t => t.GetProperty("event").GetString() == "verify").GetProperty("id").GetInt32();
         var verify = await Read(await admin.GetAsync($"/api/backoffice/email-templates/{verifyId}"));
         Assert.Contains("{link}", verify.GetProperty("body_en").GetString());
@@ -340,11 +340,41 @@ public class EndToEndTests
         Assert.Equal(3, kinds.GetProperty("kinds").GetArrayLength());
         Assert.Equal(3, kinds.GetProperty("items").EnumerateArray().Count(t => t.GetProperty("is_default").GetBoolean()));
 
+        // Interview times to choose from: HR offers two, the candidate picks one in the portal and it becomes an interview.
+        var round = await Read(await admin.PostAsync("/api/backoffice/rounds", JsonBody(new { name = "مقابلة فنية", name_en = "Technical Interview", is_active = true, description = "", skills = new[] { "Analysis" } })));
+        var tomorrow = DateTime.UtcNow.AddDays(2).ToString("yyyy-MM-dd");
+        var offered = await admin.PostAsync("/api/backoffice/bookings", JsonBody(new
+        {
+            application_id = applicantId, round_id = round.GetProperty("id").GetInt32(), location = "Room 3", panelists = Array.Empty<int>(),
+            slots = new[] { new { date = tomorrow, from = "10:00", to = "10:45" }, new { date = tomorrow, from = "13:00", to = "13:45" } },
+        }));
+        Assert.True(offered.IsSuccessStatusCode, await offered.Content.ReadAsStringAsync());
+        var appCode = applied.GetProperty("message").GetProperty("application").GetString();
+        var detailWithTimes = await Read(await portal.GetAsync($"/api/portal/application?lang=en&email=layla@example.test&epoch={epoch}&name={appCode}"));
+        var slots = detailWithTimes.GetProperty("message").GetProperty("booking").GetProperty("slots");
+        Assert.Equal(2, slots.GetArrayLength());
+        var picked = await Read(await portal.PostAsync("/api/portal/book_interview", JsonBody(new { email = "layla@example.test", epoch, name = appCode, slot = slots[1].GetProperty("id").GetInt32() })));
+        Assert.Equal("13:00", picked.GetProperty("message").GetProperty("from").GetString());
+        Assert.Equal(HttpStatusCode.Conflict, (await portal.PostAsync("/api/portal/book_interview", JsonBody(new { email = "layla@example.test", epoch, name = appCode, slot = slots[0].GetProperty("id").GetInt32() }))).StatusCode);
+        var bookings = await Read(await admin.GetAsync($"/api/backoffice/applicants/{applicantId}/bookings"));
+        Assert.Equal("Booked", bookings[0].GetProperty("status").GetString());
+
+        // Talent pool: the candidate joins from their account and appears in HR's list; texts can be set up (off by default).
+        Assert.True((await Read(await portal.PostAsync("/api/portal/talent_pool", JsonBody(new { email = "layla@example.test", epoch, join = "1" })))).GetProperty("message").GetProperty("in_talent_pool").GetBoolean());
+        var pool = await Read(await admin.GetAsync("/api/backoffice/talent-pool"));
+        Assert.Equal(1, pool.GetProperty("total").GetInt32());
+        var texts = await Read(await admin.GetAsync("/api/backoffice/text-settings"));
+        Assert.False(texts.GetProperty("is_enabled").GetBoolean());
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsync("/api/backoffice/text-settings", JsonBody(new
+        {
+            is_enabled = true, channel = "Sms", provider = "Webhook", url = "http://not-https.example", account_id = "", token = "", sender = "MOET", events = new[] { "offer_sent" },
+        }))).StatusCode);
+
         // PDPL: the candidate gets a copy of their data and asks to delete their account; an administrator approves it and the
         // application keeps its dates and statuses without the personal data. Retention settings are kept.
         var myData = await Read(await portal.GetAsync($"/api/portal/my_data?email=layla@example.test&epoch={epoch}"));
         Assert.Equal("layla@example.test", myData.GetProperty("message").GetProperty("account").GetProperty("email").GetString());
-        Assert.Equal(1, myData.GetProperty("message").GetProperty("consents").GetArrayLength());
+        Assert.Equal(2, myData.GetProperty("message").GetProperty("consents").GetArrayLength());   // the declaration and the talent pool
         var del = await Read(await portal.PostAsync("/api/portal/request_deletion", JsonBody(new { email = "layla@example.test", epoch, reason = "No longer looking" })));
         Assert.False(del.GetProperty("message").GetProperty("already").GetBoolean());
         var requests = await Read(await admin.GetAsync("/api/backoffice/data-requests?status=Open"));

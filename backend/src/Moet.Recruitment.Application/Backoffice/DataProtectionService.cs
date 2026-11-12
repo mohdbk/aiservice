@@ -85,7 +85,22 @@ public sealed class DataProtectionService(IAppDbContext db, ICurrentActor actor,
         new
         {
             deletion_pending = await db.DataRequests.AnyAsync(r => r.ApplicantAccountId == user.Id && r.Kind == DataRequestKind.Deletion && r.Status == DataRequestStatus.Open, ct),
+            in_talent_pool = user.InTalentPool,
         };
+
+    /// <summary>Joins or leaves the talent pool (other suitable jobs may be suggested to the candidate); kept as a consent record.</summary>
+    public async Task<object> SetTalentPoolAsync(ApplicantAccount user, bool join, string detail, CancellationToken ct = default)
+    {
+        var u = await db.ApplicantAccounts.FirstAsync(x => x.Id == user.Id, ct);
+        if (u.InTalentPool != join)
+        {
+            u.InTalentPool = join;
+            u.TalentPoolAt = join ? clock.UtcNow : null;
+            db.ConsentRecords.Add(new ConsentRecord { ApplicantAccountId = u.Id, Kind = ConsentRecord.TalentPool, Granted = join, Detail = TextUtil.Clip(detail, 200), At = clock.UtcNow });
+            await db.SaveChangesAsync(ct);
+        }
+        return new { in_talent_pool = u.InTalentPool };
+    }
 
     static string Who(ApplicantAccount u) => TextUtil.Clip($"{u.FullName} <{u.Email}>", 400);
 
@@ -241,6 +256,7 @@ public sealed class DataProtectionService(IAppDbContext db, ICurrentActor actor,
         u.IsEnabled = false;
         u.IsEmailVerified = false;
         u.SessionVersion++;
+        u.InTalentPool = false;
         u.AnonymisedAt = clock.UtcNow;
         await db.SaveChangesAsync(ct);
     }

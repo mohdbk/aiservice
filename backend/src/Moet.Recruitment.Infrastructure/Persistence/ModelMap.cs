@@ -232,6 +232,14 @@ static class ModelMap
             e.Property(x => x.RowVersion).IsRowVersion();
         });
         m.Entity<DataRequest>(e => e.ToTable("DataRequest", "ops"));
+        m.Entity<InterviewBooking>(e =>
+        {
+            e.ToTable("InterviewBooking", "hiring");
+            e.HasMany(x => x.Slots).WithOne().HasForeignKey(s => s.InterviewBookingId).OnDelete(DeleteBehavior.Cascade);
+        });
+        m.Entity<InterviewBookingSlot>(e => e.ToTable("InterviewBookingSlot", "hiring"));
+        m.Entity<TextSetting>(e => { e.ToTable("TextSetting", "ops"); e.Property(x => x.Id).ValueGeneratedNever(); });
+        m.Entity<TextMessage>(e => e.ToTable("TextMessage", "ops"));
         m.Entity<ConsentRecord>(e => e.ToTable("ConsentRecord", "ops"));
         m.Entity<RetentionSetting>(e => { e.ToTable("RetentionSetting", "ops"); e.Property(x => x.Id).ValueGeneratedNever(); });
         m.Entity<TypeNote>(e => { e.ToTable("TypeNote", "assessment"); e.HasKey(x => x.Type); });
