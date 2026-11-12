@@ -287,6 +287,8 @@ public sealed class RecruitmentTools(BackofficeApi api)
         try { component = (await FindComponentAsync(c => Str(c, "key") == key && Str(c, "kind") == "Ask", ct)) ?? default; }
         catch (BackofficeException e) { return Error(e.Code); }
         if (component.ValueKind != JsonValueKind.Object) return Error("component_not_found");
+        if (!api.FirstInRun("ask_user"))
+            return JsonSerializer.SerializeToElement(new { error = "form_already_shown", hint = "A form is already showing. Stop now and wait for the user's answer." });
         var definition = component.GetProperty("definition");
         var lookups = await LookupsIfNeededAsync(definition, ct);
         var s = new Surface($"form-{key}-{Guid.NewGuid():N}"[..Math.Min(60, 14 + key.Length)]);
