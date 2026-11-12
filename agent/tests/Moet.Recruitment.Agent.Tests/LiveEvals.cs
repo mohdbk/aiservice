@@ -114,6 +114,6 @@ public class LiveEvals
     public async Task Replies_never_use_em_dashes()
     {
         var (sse, _) = await AskAsync("Compare the applicants and tell me which one looks stronger and why");
-        Assert.DoesNotContain("—", Said(sse));
+        Assert.DoesNotContain(((char)0x2014).ToString(), Said(sse));
     }
 }
