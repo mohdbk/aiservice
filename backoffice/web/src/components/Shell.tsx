@@ -152,10 +152,15 @@ function UserMenu() {
       <Menu.Portal>
         <Menu.Positioner sideOffset={6} align="end">
           <Menu.Popup className="mh-popup">
-            <div className="px-3 py-2 text-xs text-aeblack-500">
-              <p className="font-semibold text-aeblack-800">{me.full_name}</p>
-              <p dir="ltr" className="text-start">{me.email}</p>
-              <p>{t(`role.${me.role}`)}</p>
+            <div className="flex items-center gap-3 px-3 py-3">
+              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary-100 text-sm font-bold text-primary-800" aria-hidden="true">
+                {me.full_name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase()}
+              </span>
+              <div className="min-w-0 leading-tight">
+                <div className="truncate text-sm font-bold text-aeblack-900">{me.full_name}</div>
+                <div dir="ltr" className="mt-0.5 truncate text-left rtl:text-right text-xs text-aeblack-500">{me.email}</div>
+                <span className="mt-1.5 inline-flex rounded-full bg-primary-50 px-2 py-0.5 text-xs font-semibold text-primary-800">{t(`role.${me.role}`)}</span>
+              </div>
             </div>
             <Menu.Separator className="my-1 h-px bg-aeblack-100" />
             <Menu.Item className="mh-item" onClick={() => nav(to("/password"))}><Key size={20} aria-hidden="true" />{t("auth.change_password")}</Menu.Item>

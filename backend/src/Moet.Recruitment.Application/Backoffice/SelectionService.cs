@@ -20,10 +20,21 @@ public sealed class SelectionService(IAppDbContext db, IRequestLanguage language
     /// <summary>Scores for the given applications (all of the same job or not).</summary>
     public async Task<Dictionary<int, (SelectionScore Score, RoleFit? Fit)>> ScoresAsync(IReadOnlyCollection<int> appIds, CancellationToken ct = default)
     {
+        if (appIds.Count == 0) return [];
+        return await ScoresAsync(db.JobApplications.Where(a => appIds.Contains(a.Id)), ct);
+    }
+
+    /// <summary>
+    /// Scores for every application the query selects. The related rows are read with the query as a subquery (not a list
+    /// of ids), so a job with many thousands of applicants is scored in a few round trips.
+    /// </summary>
+    async Task<Dictionary<int, (SelectionScore Score, RoleFit? Fit)>> ScoresAsync(IQueryable<JobApplication> which, CancellationToken ct)
+    {
         var result = new Dictionary<int, (SelectionScore, RoleFit?)>();
-        if (appIds.Count == 0) return result;
-        var apps = await db.JobApplications.AsNoTracking().Where(a => appIds.Contains(a.Id))
+        var appIds = which.Select(a => a.Id);
+        var apps = await which.AsNoTracking()
             .Select(a => new { a.Id, a.JobOpeningId, Cv = a.CvAnalysis == null ? null : a.CvAnalysis.Score }).ToListAsync(ct);
+        if (apps.Count == 0) return result;
         var jobIds = apps.Select(a => a.JobOpeningId).Distinct().ToList();
         var jobs = await db.JobOpenings.AsNoTracking().Where(j => jobIds.Contains(j.Id)).ToDictionaryAsync(j => j.Id, ct);
         var invitations = await db.Invitations.AsNoTracking().Where(i => appIds.Contains(i.JobApplicationId))
@@ -32,21 +43,23 @@ public sealed class SelectionService(IAppDbContext db, IRequestLanguage language
                 i.JobApplicationId, i.Score, i.Assessment!.PersonalityModel,
                 Trait = i.Attempts.Where(t => t.TraitProfile != null).OrderByDescending(t => t.AttemptNo).Select(t => t.TraitProfile).FirstOrDefault(),
             }).ToListAsync(ct);
+        var invitationsOf = invitations.ToLookup(i => i.JobApplicationId);
         var feedback = await db.Interviews.AsNoTracking().Where(i => appIds.Contains(i.JobApplicationId) && i.Status != InterviewStatus.Cancelled)
             .SelectMany(i => i.Feedback.Select(f => new { i.JobApplicationId, f.Recommendation, Ratings = f.Ratings.Select(r => r.Rating).ToList() }))
             .ToListAsync(ct);
+        var feedbackOf = feedback.ToLookup(f => f.JobApplicationId);
         var profiles = jobs.Values.Any(j => j.RoleProfileId != null)
             ? await db.RoleProfiles.AsNoTracking().Where(r => r.IsActive).ToListAsync(ct) : [];
         var cutoffs = await personality.CutoffsAsync(ct);
         foreach (var a in apps)
         {
             var job = jobs[a.JobOpeningId];
-            var tests = Selection.TestsPercent(invitations.Where(i => i.JobApplicationId == a.Id && i.PersonalityModel == PersonalityModel.None).Select(i => i.Score));
-            var interview = Selection.InterviewPercent(feedback.Where(f => f.JobApplicationId == a.Id).Select(f => (f.Recommendation, (IReadOnlyList<byte>)f.Ratings)));
+            var tests = Selection.TestsPercent(invitationsOf[a.Id].Where(i => i.PersonalityModel == PersonalityModel.None).Select(i => i.Score));
+            var interview = Selection.InterviewPercent(feedbackOf[a.Id].Select(f => (f.Recommendation, (IReadOnlyList<byte>)f.Ratings)));
             RoleFit? fit = null;
             if (job.RoleProfileId is { } rp && profiles.FirstOrDefault(p => p.Id == rp) is { } chosen)
             {
-                foreach (var inv in invitations.Where(i => i.JobApplicationId == a.Id && i.PersonalityModel != PersonalityModel.None && i.Trait != null))
+                foreach (var inv in invitationsOf[a.Id].Where(i => i.PersonalityModel != PersonalityModel.None && i.Trait != null))
                 {
                     var traits = JsonSerializer.Deserialize<List<TraitScore>>(inv.Trait!) ?? [];
                     // The job family's profile for this questionnaire: the chosen one, or its sibling with the same English name.
@@ -85,10 +98,10 @@ public sealed class SelectionService(IAppDbContext db, IRequestLanguage language
         var q = db.JobApplications.AsNoTracking().Where(a => a.JobOpeningId == jobId);
         if (!all) q = q.Where(a => a.Status != ApplicationStatus.Rejected);
         if (lq.Term.Length > 0) q = q.Where(a => a.FullName.Contains(lq.Term) || a.Code.Contains(lq.Term) || a.Email.Contains(lq.Term));
-        // Bounded: a job's applicant list is ranked in memory.
-        var rows = await q.OrderBy(a => a.Id).Take(5000)
+        // The whole job is ranked (a combined score cannot be sorted in SQL): every applicant counts, however many there are.
+        var rows = await q.AsNoTracking()
             .Select(a => new Row(a.Id, a.Code, a.FullName, a.JobOpeningId, a.Status, a.CvAnalysis == null ? null : a.CvAnalysis.Score, a.CreatedAt)).ToListAsync(ct);
-        var scores = await ScoresAsync(rows.Select(r => r.Id).ToList(), ct);
+        var scores = await ScoresAsync(q, ct);
         var ranked = rows.Select(r => (Row: r, S: scores[r.Id])).OrderByDescending(x => x.S.Score.Total ?? -1).ThenBy(x => x.Row.CreatedAt)
             .Select((x, i) => new RankRow(i + 1, x.Row.Id, x.Row.Code, x.Row.Name, x.Row.Status.ToString(), x.S.Score.Total, x.S.Score.Complete,
                 Part(x.S.Score, Selection.Cv), Part(x.S.Score, Selection.Tests), Part(x.S.Score, Selection.Interview), Part(x.S.Score, Selection.Personality),

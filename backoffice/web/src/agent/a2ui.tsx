@@ -118,7 +118,7 @@ export function A2Surface({ surface, busy, onAction, onData, emptyText = "" }: {
         return <img src={String(v("url") ?? "")} alt={String(v("description") ?? "")} className="max-h-60 rounded-lg" />;
       case "TextField": {
         const path = c.value?.["@path"] as string | undefined;
-        const label = <>{String(v("label") ?? "")}{c.required && <span className="text-aered-600" aria-hidden="true"> *</span>}</>;
+        const label = <>{String(v("label") ?? "")}</>;
         const value = String(v("value") ?? "");
         return c.textFieldType === "longText"
           ? <TextArea label={label} rows={4} dir="auto" value={value} disabled={locked} required={!!c.required} onChange={(e) => write(path, e.target.value)} />
@@ -127,14 +127,14 @@ export function A2Surface({ surface, busy, onAction, onData, emptyText = "" }: {
       }
       case "DateTimeInput": {
         const path = c.value?.["@path"] as string | undefined;
-        const label = <>{String(v("label") ?? "")}{c.required && <span className="text-aered-600" aria-hidden="true"> *</span>}</>;
+        const label = <>{String(v("label") ?? "")}</>;
         return <TextInput label={label} type={c.enableDate === false ? "time" : "date"} value={String(v("value") ?? "")} disabled={locked}
           required={!!c.required} onChange={(e) => write(path, e.target.value)} />;
       }
       case "ChoicePicker": {
         const path = c.value?.["@path"] as string | undefined;
         const options: { value: string; label: string }[] = (Array.isArray(c.options) ? c.options : []).map((o: any) => ({ value: String(o.value), label: String(resolve(o.label, surface.data) ?? o.value) }));
-        const label = <>{String(v("label") ?? "")}{c.required && <span className="text-aered-600" aria-hidden="true"> *</span>}</>;
+        const label = <>{String(v("label") ?? "")}</>;
         const current = v("value");
         // Nothing to choose from (an incomplete form): let the user type the answer instead of showing an empty list.
         if (options.length === 0)

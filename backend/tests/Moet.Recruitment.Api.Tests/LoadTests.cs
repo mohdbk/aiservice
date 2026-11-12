@@ -164,7 +164,8 @@ public class LoadTests(ITestOutputHelper output)
             if (path.Contains("ranking") || path.Contains("applicants?job"))
             {
                 using var doc = JsonDocument.Parse(body);
-                Assert.True(doc.RootElement.GetProperty("total").GetInt32() >= Applicants * 9 / 10, $"{name}: total");
+                var total = doc.RootElement.GetProperty("total").GetInt32();
+                if (total < Applicants * 9 / 10) problems.Add($"{name} counts {total} applicants, not all of them");
             }
         }
         output.WriteLine(report.ToString());

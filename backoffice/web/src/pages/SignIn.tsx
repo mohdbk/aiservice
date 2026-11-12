@@ -50,8 +50,8 @@ export default function SignIn() {
           {error && <ErrorState error={error} />}
           <TextInput label={t("auth.email")} type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} />
           <div className="relative">
-            <TextInput label={t("auth.password")} type={show ? "text" : "password"} dir="ltr" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-            <button type="button" onClick={() => setShow((s) => !s)} className="absolute end-3 top-9 rounded p-1 text-aeblack-500 hover:text-primary-700"
+            <TextInput label={t("auth.password")} type={show ? "text" : "password"} dir="ltr" autoComplete="current-password" required style={{ paddingRight: "3.25rem" }} value={password} onChange={(e) => setPassword(e.target.value)} />
+            <button type="button" onClick={() => setShow((s) => !s)} className="absolute right-3 top-9 rounded p-1 text-aeblack-500 hover:text-primary-700"
               aria-label={show ? t("auth.hide_password") : t("auth.show_password")} aria-pressed={show}>
               {show ? <EyeSlash size={24} /> : <Eye size={24} />}
             </button>
