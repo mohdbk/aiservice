@@ -24,7 +24,7 @@ public sealed class SystemClock : IClock
     }
 }
 
-/// <summary>The staff member signed in to the admin panel, the applicant (via the portal key), or the system.</summary>
+/// <summary>The staff member signed in to the backoffice, the applicant (via the portal key), or the system.</summary>
 public sealed class HttpCurrentActor(IHttpContextAccessor http) : ICurrentActor
 {
     public const string ApplicantHeader = "X-Applicant";

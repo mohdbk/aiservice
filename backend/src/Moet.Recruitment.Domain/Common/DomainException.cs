@@ -1,7 +1,7 @@
 namespace Moet.Recruitment.Domain.Common;
 
 /// <summary>
-/// A rule was broken. Carries a stable code (the portal and the admin panel turn it into text in the user's
+/// A rule was broken. Carries a stable code (the portal and the backoffice turn it into text in the user's
 /// language), the HTTP status the API should answer with, and parameters for the message.
 /// </summary>
 public sealed class DomainException : Exception

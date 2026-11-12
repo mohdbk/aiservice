@@ -8,7 +8,7 @@ using Moet.Recruitment.Domain.Hiring;
 
 namespace Moet.Recruitment.Application.Assessments;
 
-/// <summary>Invitations and attempts, shared by the careers portal (candidates) and the admin panel (HR).</summary>
+/// <summary>Invitations and attempts, shared by the career portal (candidates) and the backoffice (HR).</summary>
 public sealed class AssessmentWorkflow(IAppDbContext db, ContentService content, PortalMailer mailer, JobQueue jobs, ICodeGenerator codes, IClock clock)
 {
     // ---------------- invitations ----------------

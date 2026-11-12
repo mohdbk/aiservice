@@ -75,7 +75,7 @@ public sealed class PortalApplicationService(
         }
         app.Notes.Add(new ApplicationNote
         {
-            Kind = NoteKind.System, Text = $"Applied via the careers portal ({lang}). Applicant declaration recorded.",
+            Kind = NoteKind.System, Text = $"Applied via the career portal ({lang}). Applicant declaration recorded.",
             AuthorApplicantId = user.Id, CreatedAt = now,
         });
         db.JobApplications.Add(app);

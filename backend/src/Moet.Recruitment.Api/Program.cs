@@ -10,7 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 var cfg = builder.Configuration;
 
 builder.Services.AddApplication();
-builder.Services.AddAdminApplication();
+builder.Services.AddBackofficeApplication();
 builder.Services.AddInfrastructure(cfg, runWorkers: cfg["RUN_WORKERS"] != "0");
 builder.Services.ConfigureHttpJsonOptions(o => Json.Configure(o.SerializerOptions));
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
@@ -22,7 +22,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(o =>
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(o =>
 {
-    o.Cookie.Name = "moet_admin";
+    o.Cookie.Name = "moet_backoffice";
     o.Cookie.HttpOnly = true;
     o.Cookie.SameSite = SameSiteMode.Strict;
     o.Cookie.SecurePolicy = cfg["COOKIE_SECURE"] == "0" ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
@@ -50,11 +50,11 @@ app.UseStaticFiles();
 app.UseAuthentication();
 app.UseRateLimiter();
 app.UseAuthorization();
-app.UseMiddleware<AdminCsrf>();
+app.UseMiddleware<BackofficeCsrf>();
 
 app.MapGet("/healthz", () => Results.Ok(new { ok = true }));
 PortalEndpoints.Map(app);
-AdminEndpoints.Map(app);
+BackofficeEndpoints.Map(app);
 app.MapFallback(SpaFallback.Handle);
 
 if (cfg["MIGRATE_ON_START"] != "0")

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <!-- Api: HTTP endpoints for the careers portal backend (service key) and the HR admin panel (staff sign-in),
-       and the host for the admin panel's static files. -->
+  <!-- Api: HTTP endpoints for the career portal backend (service key) and the recruitment backoffice (staff sign-in),
+       and the host for the backoffice's static files. -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>

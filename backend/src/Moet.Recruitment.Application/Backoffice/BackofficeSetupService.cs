@@ -5,7 +5,7 @@ using Moet.Recruitment.Domain.Common;
 using Moet.Recruitment.Domain.Content;
 using Moet.Recruitment.Domain.Hiring;
 
-namespace Moet.Recruitment.Application.Admin;
+namespace Moet.Recruitment.Application.Backoffice;
 
 public sealed record ScreeningOptionInput(int? Id, string Text, string? TextEn);
 
@@ -20,7 +20,7 @@ public sealed record PortalTextInput(string Lang, string Key, string Text, bool 
 public sealed record NamedInput(string Name, string? NameEn, bool IsActive, string? Description, IReadOnlyList<string>? Skills);
 
 /// <summary>Screening questions, dashboard, lookups and settings.</summary>
-public sealed class AdminSetupService(IAppDbContext db, ICurrentActor actor, IClock clock, ContentService content, ITextCatalog catalog, JobQueue jobs)
+public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor, IClock clock, ContentService content, ITextCatalog catalog, JobQueue jobs)
 {
     const string En = "en";
 
@@ -64,7 +64,7 @@ public sealed class AdminSetupService(IAppDbContext db, ICurrentActor actor, ICl
         }
         else q = await LoadScreening(id.Value).FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
         q.Text = TextUtil.Clip(input.Text?.Trim(), 1000);
-        q.AnswerType = AdminJobService.Parse<AnswerType>(input.AnswerType, "answer_type");
+        q.AnswerType = BackofficeJobService.Parse<AnswerType>(input.AnswerType, "answer_type");
         q.Category = TextUtil.Clip(input.Category?.Trim(), 100);
         q.IsActive = input.IsActive;
         q.UpdatedAt = now;

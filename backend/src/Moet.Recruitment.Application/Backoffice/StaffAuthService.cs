@@ -4,11 +4,11 @@ using Moet.Recruitment.Domain;
 using Moet.Recruitment.Domain.Common;
 using Moet.Recruitment.Domain.Identity;
 
-namespace Moet.Recruitment.Application.Admin;
+namespace Moet.Recruitment.Application.Backoffice;
 
 public sealed record StaffSession(int Id, string Email, string FullName, StaffRole Role, int SessionVersion);
 
-/// <summary>Staff sign-in for the admin panel, and managing staff accounts (administrators only).</summary>
+/// <summary>Staff sign-in for the backoffice, and managing staff accounts (administrators only).</summary>
 public sealed class StaffAuthService(IAppDbContext db, IPasswordHasher hasher, IClock clock)
 {
     public async Task<StaffSession> SignInAsync(string? email, string? password, CancellationToken ct = default)

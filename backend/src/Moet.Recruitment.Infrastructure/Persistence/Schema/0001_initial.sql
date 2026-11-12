@@ -358,7 +358,7 @@ CREATE TABLE hiring.JobApplication (
     Country               nvarchar(100)  NOT NULL CONSTRAINT DF_JobApplication_Country DEFAULT (N''),
     CoverNote             nvarchar(4000) NOT NULL CONSTRAINT DF_JobApplication_CoverNote DEFAULT (N''),
     Status                varchar(10)    NOT NULL CONSTRAINT CK_JobApplication_Status CHECK (Status IN ('Open', 'Replied', 'Hold', 'Accepted', 'Rejected')),
-    Source                varchar(30)    NOT NULL CONSTRAINT DF_JobApplication_Source DEFAULT ('CareersPortal'),
+    Source                varchar(30)    NOT NULL CONSTRAINT DF_JobApplication_Source DEFAULT ('Portal'),
     LanguageCode          varchar(10)    NOT NULL CONSTRAINT FK_JobApplication_Language REFERENCES core.Language (Code),
     DeclarationAcceptedAt datetime2(0)   NOT NULL,
     CvFileId              uniqueidentifier NOT NULL CONSTRAINT FK_JobApplication_CvFile REFERENCES ops.StoredFile (Id),

@@ -4,7 +4,7 @@ using Moet.Recruitment.Domain;
 using Moet.Recruitment.Domain.Common;
 using Moet.Recruitment.Domain.Hiring;
 
-namespace Moet.Recruitment.Application.Admin;
+namespace Moet.Recruitment.Application.Backoffice;
 
 public sealed record InterviewInput(int ApplicationId, int RoundId, string Date, string From, string To, string? Location, string? Notes, IReadOnlyList<int>? Panelists);
 
@@ -14,7 +14,7 @@ public sealed record RatingInput(string Skill, int Rating);
 
 public sealed record OfferInput(int ApplicationId, string PositionTitle, string OfferDate, string? StartDate, decimal? MonthlySalary, string? Currency, string? Terms);
 
-public sealed class AdminInterviewService(IAppDbContext db, ICodeGenerator codes, ICurrentActor actor, IClock clock)
+public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator codes, ICurrentActor actor, IClock clock)
 {
     public async Task<object> ListAsync(string? scope, CancellationToken ct = default)
     {
@@ -96,7 +96,7 @@ public sealed class AdminInterviewService(IAppDbContext db, ICodeGenerator codes
     public async Task<object> SetStatusAsync(int id, string? status, CancellationToken ct = default)
     {
         var i = await db.Interviews.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound();
-        i.Status = AdminJobService.Parse<InterviewStatus>(status, "status");
+        i.Status = BackofficeJobService.Parse<InterviewStatus>(status, "status");
         i.UpdatedAt = clock.UtcNow;
         await db.SaveChangesAsync(ct);
         return new { status = i.Status.ToString() };
@@ -107,7 +107,7 @@ public sealed class AdminInterviewService(IAppDbContext db, ICodeGenerator codes
         var i = await db.Interviews.Include(x => x.Panelists).Include(x => x.Feedback).ThenInclude(f => f.Ratings)
                     .FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound();
         if (actor.Id is not { } staffId || i.Panelists.All(p => p.StaffUserId != staffId)) throw DomainException.Forbidden("not_on_panel");
-        i.GiveFeedback(staffId, AdminJobService.Parse<Recommendation>(input.Recommendation, "recommendation"), input.Comments,
+        i.GiveFeedback(staffId, BackofficeJobService.Parse<Recommendation>(input.Recommendation, "recommendation"), input.Comments,
             (input.Ratings ?? []).Select(r => (r.Skill, (byte)Math.Clamp(r.Rating, 0, 9))), clock.UtcNow);
         await db.SaveChangesAsync(ct);
         return new { ok = true };
@@ -157,8 +157,8 @@ public sealed class AdminInterviewService(IAppDbContext db, ICodeGenerator codes
         }
         if (string.IsNullOrWhiteSpace(input.PositionTitle)) throw DomainException.Invalid("title_required");
         o.PositionTitle = TextUtil.Clip(input.PositionTitle.Trim(), 140);
-        o.OfferDate = AdminJobService.ParseDate(input.OfferDate) ?? clock.Today();
-        o.StartDate = AdminJobService.ParseDate(input.StartDate);
+        o.OfferDate = BackofficeJobService.ParseDate(input.OfferDate) ?? clock.Today();
+        o.StartDate = BackofficeJobService.ParseDate(input.StartDate);
         o.MonthlySalary = input.MonthlySalary;
         o.Currency = string.IsNullOrWhiteSpace(input.Currency) ? "AED" : TextUtil.Clip(input.Currency.Trim().ToUpperInvariant(), 3);
         o.Terms = TextUtil.Clip(input.Terms, 20000);
@@ -170,7 +170,7 @@ public sealed class AdminInterviewService(IAppDbContext db, ICodeGenerator codes
     public async Task<object> SetOfferStatusAsync(int id, string? status, CancellationToken ct = default)
     {
         var o = await db.JobOffers.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound();
-        o.MoveTo(AdminJobService.Parse<OfferStatus>(status, "status"), clock.UtcNow);
+        o.MoveTo(BackofficeJobService.Parse<OfferStatus>(status, "status"), clock.UtcNow);
         if (o.Status == OfferStatus.Accepted)
         {
             var app = await db.JobApplications.FirstAsync(a => a.Id == o.JobApplicationId, ct);

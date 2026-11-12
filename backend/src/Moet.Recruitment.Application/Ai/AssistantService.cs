@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Moet.Recruitment.Application.Admin;
+using Moet.Recruitment.Application.Backoffice;
 using Moet.Recruitment.Application.Common;
 using Moet.Recruitment.Domain;
 using Moet.Recruitment.Domain.Common;
@@ -16,14 +16,14 @@ namespace Moet.Recruitment.Application.Ai;
 /// </summary>
 public sealed class AssistantService(
     IAppDbContext db, ILanguageModel model, ICurrentActor actor, IClock clock, ContentService content,
-    AdminApplicantService applicants, AdminInterviewService interviews, PortalMailer mailer)
+    BackofficeApplicantService applicants, BackofficeInterviewService interviews, PortalMailer mailer)
 {
     const int MaxSteps = 8;
     const int DailyMessages = 200;
     static readonly TimeSpan ActionLifetime = TimeSpan.FromMinutes(30);
 
     const string SystemPrompt = $"""
-        You are the Ministry of Economy & Tourism's recruitment assistant inside the HR admin panel.
+        You are the Ministry of Economy & Tourism's recruitment assistant inside the recruitment backoffice.
         - Writing style: {Prompts.WritingRule}
         - Reply in the user's language (Arabic or English). Be concise. Markdown is rendered: use short lists, **bold** and small tables.
         - Use the tools; never guess codes, scores, people or statuses. Applicants are referenced by code (APP-...), jobs by code (JOB-...).

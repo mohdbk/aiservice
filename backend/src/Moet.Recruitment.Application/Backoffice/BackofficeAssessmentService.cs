@@ -6,7 +6,7 @@ using Moet.Recruitment.Domain.Assessments;
 using Moet.Recruitment.Domain.Common;
 using Moet.Recruitment.Domain.Content;
 
-namespace Moet.Recruitment.Application.Admin;
+namespace Moet.Recruitment.Application.Backoffice;
 
 public sealed record OptionInput(string Text, string? TextEn, bool Correct);
 
@@ -27,7 +27,7 @@ public sealed record AssessmentInput(
 public sealed record MarkInput(int QuestionId, decimal? Points, string? Comment);
 
 /// <summary>Question bank, tests, invitations and marking for HR.</summary>
-public sealed class AdminAssessmentService(IAppDbContext db, ICurrentActor actor, IClock clock, IHtmlCleaner html, AssessmentWorkflow workflow, JobQueue jobs)
+public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor actor, IClock clock, IHtmlCleaner html, AssessmentWorkflow workflow, JobQueue jobs)
 {
     const string En = "en";
 
@@ -84,11 +84,11 @@ public sealed class AdminAssessmentService(IAppDbContext db, ICurrentActor actor
             db.Questions.Add(x);
         }
         else x = await LoadQuestion(id.Value).FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
-        x.QuestionType = AdminJobService.Parse<QuestionType>(input.QuestionType, "question_type");
+        x.QuestionType = BackofficeJobService.Parse<QuestionType>(input.QuestionType, "question_type");
         x.Text = html.Clean(input.Text);
         x.Category = TextUtil.Clip(input.Category?.Trim(), 100);
         x.JobFamily = TextUtil.Clip(input.JobFamily?.Trim(), 100);
-        x.Difficulty = AdminJobService.Parse<Difficulty>(input.Difficulty, "difficulty");
+        x.Difficulty = BackofficeJobService.Parse<Difficulty>(input.Difficulty, "difficulty");
         x.Points = input.Points <= 0 ? 1 : Math.Min(input.Points, 1000);
         x.Tolerance = Math.Max(0, input.Tolerance ?? 0);
         x.Rubric = TextUtil.Clip(input.Rubric, 8000);
@@ -205,11 +205,11 @@ public sealed class AdminAssessmentService(IAppDbContext db, ICurrentActor actor
         else a = await LoadAssessment(id.Value).FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
         a.Title = TextUtil.Clip(input.Title?.Trim(), 140);
         a.Instructions = html.Clean(input.Instructions);
-        a.AssessmentType = AdminJobService.Parse<AssessmentType>(input.AssessmentType, "assessment_type");
-        a.Status = AdminJobService.Parse<AssessmentStatus>(input.Status, "status");
+        a.AssessmentType = BackofficeJobService.Parse<AssessmentType>(input.AssessmentType, "assessment_type");
+        a.Status = BackofficeJobService.Parse<AssessmentStatus>(input.Status, "status");
         a.PassMark = Math.Clamp(input.PassMark, 0, 100);
         a.MaxAttempts = (byte)Math.Clamp(input.MaxAttempts, 1, 10);
-        a.ScorePolicy = AdminJobService.Parse<ScorePolicy>(input.ScorePolicy, "score_policy");
+        a.ScorePolicy = BackofficeJobService.Parse<ScorePolicy>(input.ScorePolicy, "score_policy");
         a.ShuffleQuestions = input.ShuffleQuestions;
         a.ShuffleOptions = input.ShuffleOptions;
         a.ShowScoreToCandidate = input.ShowScoreToCandidate;
@@ -332,7 +332,7 @@ public sealed class AdminAssessmentService(IAppDbContext db, ICurrentActor actor
             questions = a.AllQuestions.Select(q => new
             {
                 id = q.Id, key = q.QuestionKey, question_type = q.QuestionType.ToString(), text = q.Text, points = q.Points,
-                rubric = q.Rubric, answer = q.AnswerDisplay(), file_url = q.AnswerFileId == null ? null : $"/api/admin/attempts/{a.Id}/files/{q.Id}",
+                rubric = q.Rubric, answer = q.AnswerDisplay(), file_url = q.AnswerFileId == null ? null : $"/api/backoffice/attempts/{a.Id}/files/{q.Id}",
                 options = q.OrderedOptions.Select(o => new { key = o.OptionKey, text = o.Text, correct = o.IsCorrect, selected = o.IsSelected }).ToList(),
                 accepted = q.AcceptedAnswers.Select(x => x.Answer).ToList(),
                 auto_points = q.AutoPoints, needs_marking = q.NeedsMarking, marker_points = q.MarkerPoints, marker_comment = q.MarkerComment,

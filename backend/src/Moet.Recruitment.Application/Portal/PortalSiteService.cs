@@ -25,7 +25,7 @@ public sealed record JobListView(IReadOnlyList<JobView> Jobs, int Total, int Pag
 
 public sealed record JobFilters(IReadOnlyList<string> Departments, IReadOnlyList<string> Locations);
 
-/// <summary>What the careers portal shows publicly: languages, wording, settings and published jobs.</summary>
+/// <summary>What the career portal shows publicly: languages, wording, settings and published jobs.</summary>
 public sealed class PortalSiteService(IAppDbContext db, ContentService content, IClock clock, IHtmlCleaner html)
 {
     public const int PageSize = 10;

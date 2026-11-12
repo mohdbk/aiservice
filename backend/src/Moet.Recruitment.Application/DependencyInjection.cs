@@ -1,5 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
-using Moet.Recruitment.Application.Admin;
+using Moet.Recruitment.Application.Backoffice;
 using Moet.Recruitment.Application.Ai;
 using Moet.Recruitment.Application.Assessments;
 using Moet.Recruitment.Application.Common;
@@ -29,15 +29,15 @@ public static class DependencyInjection
         return s;
     }
 
-    /// <summary>Use cases for the HR admin panel.</summary>
-    public static IServiceCollection AddAdminApplication(this IServiceCollection s)
+    /// <summary>Use cases for the recruitment backoffice.</summary>
+    public static IServiceCollection AddBackofficeApplication(this IServiceCollection s)
     {
         s.AddScoped<StaffAuthService>();
-        s.AddScoped<AdminJobService>();
-        s.AddScoped<AdminApplicantService>();
-        s.AddScoped<AdminInterviewService>();
-        s.AddScoped<AdminAssessmentService>();
-        s.AddScoped<AdminSetupService>();
+        s.AddScoped<BackofficeJobService>();
+        s.AddScoped<BackofficeApplicantService>();
+        s.AddScoped<BackofficeInterviewService>();
+        s.AddScoped<BackofficeAssessmentService>();
+        s.AddScoped<BackofficeSetupService>();
         s.AddScoped<AssistantService>();
         return s;
     }

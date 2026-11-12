@@ -5,12 +5,12 @@ using Moet.Recruitment.Domain;
 using Moet.Recruitment.Domain.Common;
 using Moet.Recruitment.Domain.Hiring;
 
-namespace Moet.Recruitment.Application.Admin;
+namespace Moet.Recruitment.Application.Backoffice;
 
 public sealed record ApplicantFilter(int? JobId, string? Status, string? Screening, string? Q, decimal? MinScore, string? Sort, int Page);
 
 /// <summary>The applicant pipeline: lists, the applicant's full record, status changes, notes and re-scoring.</summary>
-public sealed class AdminApplicantService(IAppDbContext db, ICurrentActor actor, IClock clock, JobQueue jobs, AssessmentWorkflow workflow)
+public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor actor, IClock clock, JobQueue jobs, AssessmentWorkflow workflow)
 {
     const int PageSize = 25;
 
@@ -82,7 +82,7 @@ public sealed class AdminApplicantService(IAppDbContext db, ICurrentActor actor,
             id = a.Id, code = a.Code, reference = a.Reference, full_name = a.FullName, email = a.Email, phone = a.Phone, country = a.Country,
             cover_note = a.CoverNote, status = a.Status.ToString(), language = a.LanguageCode, created_at = a.CreatedAt,
             job = new { id = a.JobOpeningId, code = a.JobOpening!.Code, title = a.JobOpening.Title },
-            cv = cv == null ? null : new { file_name = cv.FileName, content_type = cv.ContentType, size = cv.SizeBytes, url = $"/api/admin/applicants/{a.Id}/cv" },
+            cv = cv == null ? null : new { file_name = cv.FileName, content_type = cv.ContentType, size = cv.SizeBytes, url = $"/api/backoffice/applicants/{a.Id}/cv" },
             screening = new
             {
                 outcome = a.ScreeningOutcome.ToString(),
@@ -114,7 +114,7 @@ public sealed class AdminApplicantService(IAppDbContext db, ICurrentActor actor,
     public async Task<object> SetStatusAsync(int id, string? status, CancellationToken ct = default)
     {
         var a = await db.JobApplications.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound();
-        var next = AdminJobService.Parse<ApplicationStatus>(status, "status");
+        var next = BackofficeJobService.Parse<ApplicationStatus>(status, "status");
         if (a.Status == next) return new { status = a.Status.ToString() };
         var now = clock.UtcNow;
         db.ApplicationNotes.Add(new ApplicationNote

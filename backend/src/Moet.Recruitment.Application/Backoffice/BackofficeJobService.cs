@@ -5,7 +5,7 @@ using Moet.Recruitment.Domain.Common;
 using Moet.Recruitment.Domain.Content;
 using Moet.Recruitment.Domain.Hiring;
 
-namespace Moet.Recruitment.Application.Admin;
+namespace Moet.Recruitment.Application.Backoffice;
 
 public sealed record TranslationInput(string Lang, string Title, string Description, bool Approved);
 
@@ -19,7 +19,7 @@ public sealed record JobInput(
     IReadOnlyList<TranslationInput>? Translations, IReadOnlyList<JobScreeningInput>? Screening, IReadOnlyList<JobStageInput>? Stages,
     string? RowVersion);
 
-public sealed class AdminJobService(IAppDbContext db, ICodeGenerator codes, ICurrentActor actor, IClock clock, IHtmlCleaner html, JobQueue jobs)
+public sealed class BackofficeJobService(IAppDbContext db, ICodeGenerator codes, ICurrentActor actor, IClock clock, IHtmlCleaner html, JobQueue jobs)
 {
     public async Task<object> ListAsync(string? status, string? q, CancellationToken ct = default)
     {

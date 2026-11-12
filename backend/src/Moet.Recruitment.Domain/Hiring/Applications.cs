@@ -17,7 +17,7 @@ public class JobApplication
     public string Country { get; set; } = "";
     public string CoverNote { get; set; } = "";
     public ApplicationStatus Status { get; set; } = ApplicationStatus.Open;
-    public string Source { get; set; } = "CareersPortal";
+    public string Source { get; set; } = "Portal";
     public string LanguageCode { get; set; } = "ar";
     public DateTime DeclarationAcceptedAt { get; set; }
     public Guid CvFileId { get; set; }

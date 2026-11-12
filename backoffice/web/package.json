@@ -1,0 +1,32 @@
+{
+  "name": "moet-recruitment-backoffice",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Ministry of Economy & Tourism recruitment backoffice (React, Base UI, UAE Design System)",
+  "author": "Ministry of Economy & Tourism",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@base-ui/react": "1.4.1",
+    "@phosphor-icons/react": "2.1.7",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-router-dom": "6.28.0"
+  },
+  "devDependencies": {
+    "@aegov/design-system": "3.0.7",
+    "@tailwindcss/vite": "4.1.17",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "@vitejs/plugin-react": "4.3.4",
+    "tailwindcss": "4.1.17",
+    "typescript": "5.6.3",
+    "vite": "5.4.11"
+  }
+}

@@ -2,7 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Moet.Recruitment.Api.Endpoints;
-using Moet.Recruitment.Application.Admin;
+using Moet.Recruitment.Application.Backoffice;
 using Moet.Recruitment.Domain;
 using Moet.Recruitment.Domain.Common;
 
@@ -55,7 +55,7 @@ public static class StaffCookie
     };
 }
 
-/// <summary>Writes request rule failures as {"error": {"code", "params"}} for the admin API.</summary>
+/// <summary>Writes request rule failures as {"error": {"code", "params"}} for the backoffice API.</summary>
 public sealed class ErrorEnvelope(RequestDelegate next, ILogger<ErrorEnvelope> log)
 {
     public async Task InvokeAsync(HttpContext ctx)
@@ -83,17 +83,17 @@ public sealed class ErrorEnvelope(RequestDelegate next, ILogger<ErrorEnvelope> l
     }
 }
 
-/// <summary>Changes to the admin API need the X-Admin header (a cross-site form cannot send it) and a same-origin request.</summary>
-public sealed class AdminCsrf(RequestDelegate next)
+/// <summary>Changes to the backoffice API need the X-Backoffice header (a cross-site form cannot send it) and a same-origin request.</summary>
+public sealed class BackofficeCsrf(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext ctx)
     {
         var req = ctx.Request;
-        if (req.Path.StartsWithSegments("/api/admin") && !HttpMethods.IsGet(req.Method) && !HttpMethods.IsHead(req.Method))
+        if (req.Path.StartsWithSegments("/api/backoffice") && !HttpMethods.IsGet(req.Method) && !HttpMethods.IsHead(req.Method))
         {
             var origin = req.Headers.Origin.ToString();
             var sameOrigin = origin.Length == 0 || Uri.TryCreate(origin, UriKind.Absolute, out var o) && o.Authority == req.Host.Value;
-            if (req.Headers["X-Admin"] != "1" || !sameOrigin)
+            if (req.Headers["X-Backoffice"] != "1" || !sameOrigin)
             {
                 ctx.Response.StatusCode = 403;
                 await ctx.Response.WriteAsJsonAsync(new { error = new { code = "forbidden", @params = new { } } }, Json.Options);
@@ -122,7 +122,7 @@ public sealed class SecurityHeaders(RequestDelegate next)
     }
 }
 
-/// <summary>Serves the admin panel's index.html for its client-side routes; unknown API paths get 404.</summary>
+/// <summary>Serves the backoffice's index.html for its client-side routes; unknown API paths get 404.</summary>
 public static class SpaFallback
 {
     public static async Task Handle(HttpContext ctx, IWebHostEnvironment env)

@@ -1,0 +1,119 @@
+/* MoET recruitment backoffice: UAE Design System 3.0 (TDRA, MIT licence) on Tailwind CSS 4, Base UI components. */
+@import "tailwindcss";
+@plugin "@aegov/design-system";
+
+/* The design system theme replaces the palette; keep plain white and black available. */
+@theme {
+  --color-white: #ffffff;
+  --color-black: #000000;
+}
+@source "./";
+
+/* Accessibility tools: text size and contrast classes are set on <html> */
+html.mc-text-sm { font-size: 87.5%; }
+html.mc-text-lg { font-size: 112.5%; }
+html.mc-text-xl { font-size: 125%; }
+html.mc-contrast body { background: #000; color: #fff; }
+html.mc-contrast a { color: #ffeb3b !important; text-decoration: underline !important; }
+html.mc-contrast .aegov-card, html.mc-contrast header, html.mc-contrast footer, html.mc-contrast .mc-surface,
+html.mc-contrast .mc-hero { background: #000 !important; color: #fff !important; border-color: #fff !important; }
+html.mc-contrast .mc-hero * { color: #fff !important; }
+html.mc-contrast .aegov-btn { background: #ffeb3b !important; color: #000 !important; }
+
+/* Hero with a soft gold pattern */
+.mc-hero {
+  background:
+    radial-gradient(1200px 400px at 85% -10%, color-mix(in oklch, var(--color-primary-200) 70%, transparent), transparent 60%),
+    radial-gradient(900px 300px at -10% 110%, color-mix(in oklch, var(--color-primary-100) 80%, transparent), transparent 60%),
+    var(--color-whitely-50);
+}
+
+/* The design system gives paragraphs margins; components here set their own spacing */
+@layer base {
+  :where(.mc-surface, header, footer, .aegov-alert) p { margin-block: 0; }
+}
+
+/* Job description content written by HR */
+.mc-prose h1, .mc-prose h2, .mc-prose h3, .mc-prose h4 { font-weight: 700; font-size: 1.125rem; margin: 1.5rem 0 .5rem; color: var(--color-aeblack-900); }
+.mc-prose p { margin: 0 0 1rem; line-height: 1.8; }
+.mc-prose ul { list-style: disc; padding-inline-start: 1.5rem; margin: 0 0 1rem; }
+.mc-prose ol { list-style: decimal; padding-inline-start: 1.5rem; margin: 0 0 1rem; }
+.mc-prose li { margin: .35rem 0; line-height: 1.7; }
+.mc-prose a { color: var(--color-primary-700); text-decoration: underline; }
+
+/* Skip link */
+.mc-skip { position: absolute; inset-inline-start: -999px; top: 0; }
+.mc-skip:focus { inset-inline-start: 1rem; top: 1rem; z-index: 100; }
+
+/* Loading placeholders */
+@keyframes mc-pulse { 50% { opacity: .5; } }
+.mc-skeleton { background: var(--color-aeblack-100); border-radius: .5rem; animation: mc-pulse 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .mc-skeleton { animation: none; } }
+
+:focus-visible { outline: 3px solid var(--color-primary-support-600, #1a6fb5); outline-offset: 2px; }
+
+/* Links: the design system underlines every link; keep underlines for links in body text only */
+header a, footer a, nav a, .aegov-card a, a.aegov-btn { text-decoration: none; }
+footer a:hover, nav a.mc-underline-hover:hover { text-decoration: underline; }
+
+/* Form controls: one height, one arrow, no native styling (the design system draws the frame) */
+.aegov-form-control .form-control-input > input,
+.aegov-form-control .form-control-input > select,
+.aegov-form-control .form-control-input > textarea {
+  appearance: none; -webkit-appearance: none; width: 100%; min-height: 3rem; padding: .625rem 1rem;
+  border: 0; background-color: transparent; border-radius: .5rem; font: inherit; color: var(--color-aeblack-900); outline: none;
+}
+.aegov-form-control .form-control-input > select {
+  padding-inline-end: 2.5rem; background-repeat: no-repeat; background-size: 1.25rem; background-position: right .75rem center; cursor: pointer;
+}
+[dir="rtl"] .aegov-form-control .form-control-input > select { background-position: left .75rem center; }
+.aegov-form-control .form-control-input > textarea { min-height: 7rem; resize: vertical; }
+.aegov-form-control .form-control-input > input::placeholder { color: var(--color-aeblack-400); }
+
+/* Text in another language keeps its own font (for example "العربية" on English pages) */
+html:not([lang|="ar"]) [lang|="ar"] { font-family: var(--font-notokufi), "Noto Kufi Arabic", sans-serif; }
+html[lang|="ar"] [lang|="en"] { font-family: var(--font-inter), "Inter", sans-serif; }
+
+/* Input with a leading icon (design system .control-prefix) */
+.aegov-form-control .form-control-input > .control-prefix + input,
+.aegov-form-control .form-control-input > .control-prefix + select { padding-inline-start: .5rem; }
+
+/* Tables */
+.mh-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: .875rem; }
+.mh-table th { text-align: start; font-weight: 600; color: var(--color-aeblack-600); background: var(--color-whitely-100, #f7f7f7); padding: .75rem 1rem; border-bottom: 1px solid var(--color-aeblack-100); white-space: nowrap; }
+.mh-table td { padding: .75rem 1rem; border-bottom: 1px solid var(--color-aeblack-50, #eee); vertical-align: middle; }
+.mh-table tbody tr:hover td { background: var(--color-primary-50); }
+.mh-table a { color: var(--color-primary-700); font-weight: 600; }
+
+/* Base UI popups */
+.mh-popup { background: #fff; border: 1px solid var(--color-aeblack-100); border-radius: .75rem; box-shadow: 0 12px 32px rgb(0 0 0 / .12); padding: .25rem; min-width: 12rem; outline: none; z-index: 50; }
+.mh-item { display: flex; align-items: center; gap: .5rem; padding: .625rem .75rem; border-radius: .5rem; cursor: pointer; font-size: .875rem; color: var(--color-aeblack-800); outline: none; }
+.mh-item[data-highlighted] { background: var(--color-primary-50); color: var(--color-primary-800); }
+.mh-backdrop { position: fixed; inset: 0; background: rgb(0 0 0 / .4); z-index: 40; }
+.mh-dialog { position: fixed; z-index: 50; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(40rem, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); overflow: auto; background: #fff; border-radius: 1rem; padding: 1.5rem; box-shadow: 0 24px 64px rgb(0 0 0 / .2); }
+.mh-drawer { position: fixed; z-index: 50; top: 0; bottom: 0; inset-inline-start: 0; width: min(18rem, 85vw); background: #fff; overflow: auto; box-shadow: 0 0 40px rgb(0 0 0 / .2); }
+
+/* Language tabs (Base UI Tabs) */
+.mh-tabs { display: flex; gap: .25rem; border-bottom: 1px solid var(--color-aeblack-100); }
+.mh-tab { position: relative; display: inline-flex; align-items: center; gap: .5rem; padding: .75rem 1rem; font-weight: 600; color: var(--color-aeblack-500); border-bottom: 3px solid transparent; margin-bottom: -1px; }
+.mh-tab[data-selected] { color: var(--color-primary-700); border-bottom-color: var(--color-primary-600); }
+.mh-tab:hover { color: var(--color-primary-700); }
+
+/* Switch (Base UI Switch) */
+.mh-switch { position: relative; display: inline-flex; width: 2.75rem; height: 1.5rem; border-radius: 999px; background: var(--color-aeblack-200); transition: background .15s; flex: none; }
+.mh-switch[data-checked] { background: var(--color-primary-600); }
+.mh-switch-thumb { position: absolute; top: .125rem; inset-inline-start: .125rem; width: 1.25rem; height: 1.25rem; border-radius: 999px; background: #fff; transition: transform .15s; box-shadow: 0 1px 3px rgb(0 0 0 / .3); }
+.mh-switch[data-checked] .mh-switch-thumb { transform: translateX(1.25rem); }
+[dir="rtl"] .mh-switch[data-checked] .mh-switch-thumb { transform: translateX(-1.25rem); }
+
+/* Checkbox (Base UI Checkbox) */
+.mh-check { display: inline-flex; align-items: center; justify-content: center; width: 1.25rem; height: 1.25rem; border-radius: .25rem; border: 2px solid var(--color-aeblack-300); background: #fff; flex: none; }
+.mh-check[data-checked] { background: var(--color-primary-600); border-color: var(--color-primary-600); color: #fff; }
+
+/* Rich text editor */
+.mh-editor { min-height: 10rem; padding: .75rem 1rem; outline: none; }
+.mh-editor:empty::before { content: attr(data-placeholder); color: var(--color-aeblack-400); }
+
+/* Chat */
+.mh-chat-user { background: var(--color-primary-600); color: #fff; }
+.mh-chat-bot { background: #fff; border: 1px solid var(--color-aeblack-100); }

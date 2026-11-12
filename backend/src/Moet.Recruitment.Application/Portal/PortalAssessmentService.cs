@@ -9,7 +9,7 @@ using Moet.Recruitment.Domain.Operations;
 
 namespace Moet.Recruitment.Application.Portal;
 
-/// <summary>A candidate's tests on the careers portal.</summary>
+/// <summary>A candidate's tests on the career portal.</summary>
 public sealed class PortalAssessmentService(
     IAppDbContext db, ContentService content, PortalAccountService accounts, AssessmentWorkflow workflow, IClock clock)
 {

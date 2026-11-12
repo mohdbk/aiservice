@@ -8,7 +8,7 @@ using Moet.Recruitment.Infrastructure;
 namespace Moet.Recruitment.Api.Endpoints;
 
 /// <summary>
-/// The API the careers portal backend (in the DMZ) calls: /api/portal/{method}. Authenticated with the portal
+/// The API the career portal backend (in the DMZ) calls: /api/portal/{method}. Authenticated with the portal
 /// service key ("Authorization: token KEY:SECRET"); browsers never reach it. The portal backend has already
 /// signed the applicant in and passes their email and session version. Replies are {"message": ...}; failures are
 /// {"message": {"error": {"code", "params"}}} with a 4xx status, so the portal shows them in the visitor's language.

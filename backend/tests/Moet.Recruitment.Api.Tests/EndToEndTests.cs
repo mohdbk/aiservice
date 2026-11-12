@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 namespace Moet.Recruitment.Api.Tests;
 
 /// <summary>
-/// Runs the real API against SQL Server: schema scripts, staff sign-in, a job created in the admin API, and an
+/// Runs the real API against SQL Server: schema scripts, staff sign-in, a job created in the backoffice API, and an
 /// applicant signing up and applying through the portal API. Set TEST_DB_CONNECTION to run (CI does).
 /// </summary>
 public class EndToEndTests
@@ -48,21 +48,21 @@ public class EndToEndTests
         if (string.IsNullOrEmpty(Db)) return;
         using var app = new App();
         var admin = app.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
-        admin.DefaultRequestHeaders.Add("X-Admin", "1");
+        admin.DefaultRequestHeaders.Add("X-Backoffice", "1");
 
         // Sign-in is required, and refuses a wrong password.
-        Assert.Equal(HttpStatusCode.Unauthorized, (await admin.GetAsync("/api/admin/me")).StatusCode);
-        Assert.Equal(HttpStatusCode.Unauthorized, (await admin.PostAsync("/api/admin/sign-in", JsonBody(new { email = "admin@moet.test", password = "wrong" }))).StatusCode);
-        var me = await Read(await admin.PostAsync("/api/admin/sign-in", JsonBody(new { email = "admin@moet.test", password = "Admin-Password-123" })));
+        Assert.Equal(HttpStatusCode.Unauthorized, (await admin.GetAsync("/api/backoffice/me")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await admin.PostAsync("/api/backoffice/sign-in", JsonBody(new { email = "admin@moet.test", password = "wrong" }))).StatusCode);
+        var me = await Read(await admin.PostAsync("/api/backoffice/sign-in", JsonBody(new { email = "admin@moet.test", password = "Admin-Password-123" })));
         Assert.Equal("Administrator", me.GetProperty("role").GetString());
 
         // A screening question and a published job with an approved English version.
-        var sq = await Read(await admin.PostAsync("/api/admin/screening-questions", JsonBody(new
+        var sq = await Read(await admin.PostAsync("/api/backoffice/screening-questions", JsonBody(new
         {
             text = "هل لديك رخصة قيادة إماراتية؟", text_en = "Do you have a UAE driving licence?", english_approved = true,
             answer_type = "YesNo", category = "", is_active = true, options = Array.Empty<object>(),
         })));
-        var job = await Read(await admin.PostAsync("/api/admin/jobs", JsonBody(new
+        var job = await Read(await admin.PostAsync("/api/backoffice/jobs", JsonBody(new
         {
             title = "محلل بيانات", description = "<p>تحليل البيانات الاقتصادية</p>", department_id = (int?)null, location = "دبي",
             employment_type = "FullTime", status = "Open", is_published = true, posted_on = (string?)null, closes_on = (string?)null,
@@ -115,11 +115,11 @@ public class EndToEndTests
         Assert.Equal("under_review", mine.GetProperty("message").GetProperty("applications")[0].GetProperty("status").GetProperty("code").GetString());
 
         // HR sees the applicant, flagged by the screening requirement.
-        var list = await Read(await admin.GetAsync("/api/admin/applicants"));
+        var list = await Read(await admin.GetAsync("/api/backoffice/applicants"));
         Assert.Equal("DoesNotMeet", list.GetProperty("applicants")[0].GetProperty("screening").GetString());
 
         // Changes without the X-Admin header are refused.
         var plain = app.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
-        Assert.Equal(HttpStatusCode.Forbidden, (await plain.PostAsync("/api/admin/sign-in", JsonBody(new { email = "x", password = "y" }))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await plain.PostAsync("/api/backoffice/sign-in", JsonBody(new { email = "x", password = "y" }))).StatusCode);
     }
 }

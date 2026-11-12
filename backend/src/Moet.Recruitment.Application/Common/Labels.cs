@@ -5,7 +5,7 @@ namespace Moet.Recruitment.Application.Common;
 /// <summary>Names used on the portal's wire format and labels shown to people.</summary>
 public static class Labels
 {
-    /// <summary>Type names the careers portal expects for screening questions.</summary>
+    /// <summary>Type names the career portal expects for screening questions.</summary>
     public static string Wire(AnswerType t) => t switch
     {
         AnswerType.YesNo => "Yes or No",
@@ -17,7 +17,7 @@ public static class Labels
         _ => "Long Text",
     };
 
-    /// <summary>Type names the careers portal expects for test questions.</summary>
+    /// <summary>Type names the career portal expects for test questions.</summary>
     public static string Wire(QuestionType t) => t switch
     {
         QuestionType.SingleChoice => "Single Choice",

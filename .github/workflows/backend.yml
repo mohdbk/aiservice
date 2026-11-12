@@ -3,9 +3,9 @@ name: Backend
 on:
   push:
     branches: [main, dotnet-backend]
-    paths: ["backend/**", "admin/**", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "backoffice/**", ".github/workflows/backend.yml"]
   pull_request:
-    paths: ["backend/**", "admin/**", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "backoffice/**", ".github/workflows/backend.yml"]
   workflow_dispatch:
 
 jobs:

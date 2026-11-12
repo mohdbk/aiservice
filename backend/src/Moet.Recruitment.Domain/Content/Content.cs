@@ -10,7 +10,7 @@ public class Language
     public int SortOrder { get; set; }
 }
 
-/// <summary>Portal and assistant settings (a single row).</summary>
+/// <summary>Career portal and assistant settings (a single row).</summary>
 public class PortalSetting
 {
     public byte Id { get; set; } = 1;
