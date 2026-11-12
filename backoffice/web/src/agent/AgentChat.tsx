@@ -226,7 +226,8 @@ export function AgentChat({ panel = false }: { panel?: boolean }) {
 
   const examples = ((lang === "en" ? info.data?.examples_en : info.data?.examples_ar) || t("asst.examples_default")).split("\n").map((x) => x.trim()).filter(Boolean).slice(0, 6);
   if (info.data && !info.data.is_enabled) return <Note tone="warning">{t("error.assistant_off")}</Note>;
-  const visible = state.turns.filter((x) => !x.hidden);
+  // An assistant turn shows once something arrives (a step, text or a card); until then the typing dots stand in for it.
+  const visible = state.turns.filter((x) => !x.hidden && (x.role === "user" || x.text.trim() || x.tools?.length || x.surfaces?.length));
   return (
     <>
       <div className={`flex flex-col bg-whitely-50 ${panel ? "h-full" : "mc-surface h-[calc(100dvh-11rem)] min-h-[26rem] rounded-2xl border border-aeblack-100 sm:h-[calc(100vh-16rem)]"}`}>
@@ -267,7 +268,12 @@ export function AgentChat({ panel = false }: { panel?: boolean }) {
               </div>
             </div>
           ))}
-          {running && <p className="flex items-center gap-2 text-sm text-aeblack-500"><CircleNotch size={20} className="animate-spin" aria-hidden="true" />{t("asst.thinking")}</p>}
+          {running && (
+            <div className="flex justify-start" role="status">
+              <span className="mh-typing" aria-hidden="true"><i /><i /><i /></span>
+              <span className="sr-only">{t("asst.thinking")}</span>
+            </div>
+          )}
           {error && <ErrorState error={error} />}
           <div ref={end} />
         </div>
