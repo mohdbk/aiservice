@@ -337,7 +337,7 @@ public sealed class RecruitmentTools(BackofficeApi api)
         Propose("add_note", new JsonObject { ["applicant_id"] = applicantId, ["text"] = text }, ct, (s, _) =>
             [s.TextField(L("الملاحظة", "Note"), "/form/text", "longText", true)], "text");
 
-    [Description("Proposes an interview. Get round and staff ids from get_lookups. date YYYY-MM-DD, times HH:MM in UAE time. Shows an approval card the user can edit; if you lack details, propose your best suggestion and let the user adjust it.")]
+    [Description("Proposes an interview. Get round and staff ids from get_lookups. date YYYY-MM-DD, times HH:MM in UAE time. Shows an approval card the user can edit. If the date, time, round or panel is not clear, ask the user first (ask_user) instead of guessing.")]
     public Task<JsonElement> ProposeInterview(int applicantId, int roundId, string date, string from, string to,
         [Description("Room or meeting link")] string? location = null, [Description("Staff ids on the panel")] int[]? panelIds = null,
         string? notes = null, CancellationToken ct = default) =>

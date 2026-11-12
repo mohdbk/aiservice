@@ -39,7 +39,10 @@ public static class AgentSetup
           first check list_components for a form an admin designed; otherwise use ask_user. Pre-fill what you know and
           use real options (jobs from list_jobs, other ids from get_lookups): every choice field must list its options. After
           showing a form, stop and wait for the submit_form action.
-        - When proposing a change with a missing detail, propose your best suggestion: the approval card is editable.
+        - Never assume. When anything needed is unclear or missing (which applicant, job, test or interview round; dates, times,
+          amounts, wording), ask first with a form, offering the real options you found. Only pre-fill what the user said or what
+          the data shows for certain. If several records match (for example two applicants with the same name), ask which one.
+        - Propose a change only when its details are clear; the approval card can still be edited before approving.
 
         Changes
         - You cannot change anything yourself. The propose_* tools record a proposal and show the user an approval card.
