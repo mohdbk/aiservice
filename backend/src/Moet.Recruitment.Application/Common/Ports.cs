@@ -39,6 +39,8 @@ public interface IAppDbContext
     DbSet<AuditEntry> AuditEntries { get; }
     DbSet<AgentProposal> AgentProposals { get; }
     DbSet<AgentComponent> AgentComponents { get; }
+    DbSet<AgentSetting> AgentSettings { get; }
+    DbSet<AgentRun> AgentRuns { get; }
 
     Task<int> SaveChangesAsync(CancellationToken ct = default);
 }
@@ -118,3 +120,12 @@ public interface ICvReader
 }
 
 public sealed record CvText(string Text, string Method);
+
+/// <summary>Encrypts small secrets (such as the assistant's model key) before they are stored.</summary>
+public interface ISecretProtector
+{
+    bool IsConfigured { get; }
+    string Protect(string plain);
+    /// <summary>Null when the value cannot be read (for example the key changed).</summary>
+    string? Unprotect(string protectedValue);
+}

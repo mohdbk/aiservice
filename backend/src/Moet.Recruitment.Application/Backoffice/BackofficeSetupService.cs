@@ -13,7 +13,7 @@ public sealed record ScreeningQuestionInput(string Text, string? TextEn, bool En
     IReadOnlyList<ScreeningOptionInput>? Options);
 
 public sealed record SettingsInput(string MainSiteUrl, string PortalUrl, string DefaultLanguageCode, bool AllowSignup, bool RequireEmailVerification,
-    int MaxCvMb, bool AutoScoreApplications, bool AssistantEnabled);
+    int MaxCvMb, bool AutoScoreApplications);
 
 public sealed record PortalTextInput(string Lang, string Key, string Text, bool Approved);
 
@@ -236,7 +236,7 @@ public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor
         return new
         {
             s.MainSiteUrl, s.PortalUrl, s.DefaultLanguageCode, s.AllowSignup, s.RequireEmailVerification, max_cv_mb = (int)s.MaxCvMb,
-            s.AutoScoreApplications, s.AssistantEnabled, has_logo = s.LogoFileId != null,
+            s.AutoScoreApplications, has_logo = s.LogoFileId != null,
             languages = await db.Languages.AsNoTracking().OrderBy(l => l.SortOrder).Select(l => new { l.Code, l.NativeName, l.IsEnabled }).ToListAsync(ct),
         };
     }
@@ -252,7 +252,6 @@ public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor
         s.RequireEmailVerification = input.RequireEmailVerification;
         s.MaxCvMb = (byte)Math.Clamp(input.MaxCvMb, 1, 50);
         s.AutoScoreApplications = input.AutoScoreApplications;
-        s.AssistantEnabled = input.AssistantEnabled;
         s.UpdatedAt = clock.UtcNow;
         s.UpdatedByStaffId = actor.Id;
         await db.SaveChangesAsync(ct);

@@ -348,8 +348,10 @@ public class AgentComponentTests
         Assert.Equal("component_options_required", Assert.Throws<DomainException>(ask.Validate).Code);
         ask.Definition = """{"nodes":[{"type":"field","name":"a","input":"text"},{"type":"field","name":"a","input":"text"}]}""";
         Assert.Equal("component_field_name", Assert.Throws<DomainException>(ask.Validate).Code);
-        ask.Definition = """{"nodes":[{"type":"row","children":[{"type":"row","children":[]}]}]}""";
+        ask.Definition = """{"nodes":[{"type":"row","children":[]}]}""";
         Assert.Equal("component_row_invalid", Assert.Throws<DomainException>(ask.Validate).Code);
+        ask.Definition = """{"nodes":[{"type":"row","children":[{"type":"row","children":[{"type":"field","name":"a","input":"text"}]}]}]}""";
+        Assert.Equal("component_invalid", Assert.Throws<DomainException>(ask.Validate).Code);
         ask.Definition = """{"nodes":[{"type":"heading","text":{"ar":"x"}}]}""";
         Assert.Equal("component_needs_field", Assert.Throws<DomainException>(ask.Validate).Code);
         ask.Key = "Bad Key";

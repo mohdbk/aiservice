@@ -18,7 +18,7 @@ public sealed record ProposalInput(string? Action, JsonElement Arguments, string
 /// same person approves it. Everything the approval changes goes through the usual audit trail.
 /// </summary>
 public sealed class AgentProposalService(
-    IAppDbContext db, ICurrentActor actor, IClock clock, ContentService content, PortalMailer mailer,
+    IAppDbContext db, ICurrentActor actor, IClock clock, ContentService content, PortalMailer mailer, AgentSettingsService settings,
     BackofficeApplicantService applicants, BackofficeInterviewService interviews, BackofficeJobService jobs, BackofficeSetupService setup)
 {
 
@@ -27,7 +27,8 @@ public sealed class AgentProposalService(
     public async Task<object> ProposeAsync(ProposalInput input, CancellationToken ct = default)
     {
         var staffId = actor.Id ?? throw DomainException.Forbidden();
-        if (!(await content.SettingsAsync(ct)).AssistantEnabled) throw DomainException.Forbidden("assistant_off");
+        var config = await settings.CurrentAsync(ct);
+        if (!config.IsEnabled) throw DomainException.Forbidden("assistant_off");
         var name = input.Action ?? "";
         if (!Editable.ContainsKey(name)) throw DomainException.Invalid("invalid_value");
         var a = input.Arguments.ValueKind == JsonValueKind.Object ? input.Arguments : throw DomainException.Invalid("invalid_value");
@@ -38,7 +39,7 @@ public sealed class AgentProposalService(
         {
             Id = Guid.NewGuid(), StaffUserId = staffId, ThreadId = TextUtil.Clip(input.ThreadId ?? "", 64), ActionName = name,
             Arguments = a.GetRawText(), Label = TextUtil.Clip(TextUtil.NoEmDash(label), 600), Status = ProposalStatus.Pending,
-            CreatedAt = now, ExpiresAt = now + AgentProposal.Lifetime,
+            CreatedAt = now, ExpiresAt = now.AddMinutes(config.ProposalMinutes),
         };
         db.AgentProposals.Add(p);
         await db.SaveChangesAsync(ct);

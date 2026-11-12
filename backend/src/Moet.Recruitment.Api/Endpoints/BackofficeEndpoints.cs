@@ -123,6 +123,7 @@ public static class BackofficeEndpoints
         staff.MapPost("/agent/run", AgentProxy.RunAsync).RequireRateLimiting("assistant");
         staff.MapPost("/agent/proposals", (ProposalInput b, AgentProposalService s, CancellationToken ct) => s.ProposeAsync(b, ct));
         staff.MapPost("/agent/proposals/{id:guid}/approve", (Guid id, string? lang, ApproveBody? b, AgentProposalService s, CancellationToken ct) => s.ApproveAsync(id, lang, b?.Changes, ct));
+        staff.MapGet("/agent/info", (AgentSettingsService s, CancellationToken ct) => s.InfoAsync(ct));
         staff.MapGet("/agent/components", (BackofficeComponentService s, CancellationToken ct) => s.ActiveAsync(ct));
         staff.MapPost("/agent/proposals/{id:guid}/cancel", (Guid id, AgentProposalService s, CancellationToken ct) => s.CancelAsync(id, ct));
 
@@ -134,6 +135,8 @@ public static class BackofficeEndpoints
         setup.MapGet("/rounds", ([AsParameters] ListQuery lq, BackofficeSetupService s, CancellationToken ct) => s.RoundsAsync(lq, ct));
         setup.MapPost("/rounds", (NamedInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveRoundAsync(null, b, ct));
         setup.MapPut("/rounds/{id:int}", (int id, NamedInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveRoundAsync(id, b, ct));
+        setup.MapGet("/agent-settings", (AgentSettingsService s, CancellationToken ct) => s.GetAsync(ct));
+        setup.MapPut("/agent-settings", (AgentSettingsInput b, AgentSettingsService s, CancellationToken ct) => s.SaveAsync(b, ct));
         setup.MapGet("/components", ([AsParameters] ListQuery lq, string? kind, bool? active, string? action, BackofficeComponentService s, CancellationToken ct) =>
             s.ListAsync(lq, kind, active, action, ct));
         setup.MapGet("/components/{id:int}", (int id, BackofficeComponentService s, CancellationToken ct) => s.GetAsync(id, ct));

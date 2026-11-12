@@ -61,11 +61,12 @@ public static class AgentSetup
         services.AddSingleton<BackofficeApi>();
         services.AddSingleton<RecruitmentTools>();
         services.AddSingleton(_ => CreateChatClient(cfg));
+        services.AddSingleton<AgentSettingsProvider>();
         services.AddSingleton<AIAgent>(sp =>
         {
-            var chat = new ChatClientBuilder(sp.GetRequiredService<IChatClient>())
-                .Use(inner => new UaeDateContext(inner))
-                .Build(sp);
+            // The environment's model is the fallback; admins can point the assistant elsewhere in the backoffice.
+            var chat = new SettingsChatClient(sp.GetRequiredService<IChatClient>(), sp.GetRequiredService<AgentSettingsProvider>(),
+                sp.GetRequiredService<IHttpContextAccessor>());
             return chat.AsAIAgent(instructions: Instructions, name: Name, tools: sp.GetRequiredService<RecruitmentTools>().All());
         });
         return services;
@@ -79,24 +80,6 @@ public static class AgentSetup
         var key = string.IsNullOrWhiteSpace(cfg["LLM_API_KEY"]) ? "not-needed" : cfg["LLM_API_KEY"]!;
         return new OpenAIClient(new ApiKeyCredential(key), options).GetChatClient(cfg["LLM_MODEL"] ?? "gpt-4o-mini").AsIChatClient();
     }
-}
-
-/// <summary>Tells the model today's date in the UAE, so "next Tuesday" and deadlines resolve correctly.</summary>
-sealed class UaeDateContext(IChatClient inner) : DelegatingChatClient(inner)
-{
-    static readonly TimeZoneInfo Zone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Dubai");
-
-    static IEnumerable<ChatMessage> With(IEnumerable<ChatMessage> messages)
-    {
-        var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, Zone);
-        return [new ChatMessage(ChatRole.System, $"Now in the UAE: {now:yyyy-MM-dd HH:mm} ({now:dddd})."), .. messages];
-    }
-
-    public override Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default) =>
-        base.GetResponseAsync(With(messages), options, cancellationToken);
-
-    public override IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default) =>
-        base.GetStreamingResponseAsync(With(messages), options, cancellationToken);
 }
 
 /// <summary>

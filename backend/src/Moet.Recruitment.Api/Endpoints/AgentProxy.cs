@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Http.Features;
-using Moet.Recruitment.Application.Common;
+using Moet.Recruitment.Application.Ai;
 using Moet.Recruitment.Domain.Common;
 
 namespace Moet.Recruitment.Api.Endpoints;
@@ -13,11 +13,27 @@ public static class AgentProxy
 {
     public const string Client = "agent";
 
-    public static async Task RunAsync(HttpContext ctx, IHttpClientFactory factory, IConfiguration cfg, ContentService content, CancellationToken ct)
+    /// <summary>
+    /// Endpoints only the agent service may call (X-Agent-Key): its settings, including the model key, read on each run.
+    /// </summary>
+    public static void MapInternal(WebApplication app)
+    {
+        var cfg = app.Configuration;
+        app.MapGet("/api/internal/agent/settings", async Task<IResult> (HttpContext ctx, AgentSettingsService s, CancellationToken ct) =>
+        {
+            var expected = System.Text.Encoding.UTF8.GetBytes(cfg["AGENT_KEY"] ?? "");
+            var given = System.Text.Encoding.UTF8.GetBytes(ctx.Request.Headers["X-Agent-Key"].ToString());
+            if (expected.Length < 16 || !System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(expected, given))
+                return Results.Json(new { error = new { code = "unauthorised" } }, statusCode: 401);
+            return Results.Ok(await s.ForAgentAsync(ct));
+        });
+    }
+
+    public static async Task RunAsync(HttpContext ctx, IHttpClientFactory factory, IConfiguration cfg, AgentSettingsService settings, CancellationToken ct)
     {
         var baseUrl = cfg["AGENT_URL"];
-        if (string.IsNullOrWhiteSpace(baseUrl) || !(await content.SettingsAsync(ct)).AssistantEnabled)
-            throw DomainException.Forbidden("assistant_off");
+        if (string.IsNullOrWhiteSpace(baseUrl)) throw DomainException.Forbidden("assistant_off");
+        await settings.StartRunAsync(ct);
 
         using var req = new HttpRequestMessage(HttpMethod.Post, baseUrl.TrimEnd('/') + "/agent");
         req.Content = new StreamContent(ctx.Request.Body);
@@ -25,6 +41,9 @@ public static class AgentProxy
         req.Headers.Accept.ParseAdd("text/event-stream");
         req.Headers.TryAddWithoutValidation("Cookie", ctx.Request.Headers.Cookie.ToString());
         req.Headers.TryAddWithoutValidation("X-Agent-Key", cfg["AGENT_KEY"] ?? "");
+        // The screen the staff member has open (page, record), so "this applicant" can be resolved by the agent.
+        var screen = ctx.Request.Headers["X-Agent-Context"].ToString();
+        if (screen.Length is > 0 and <= 4000) req.Headers.TryAddWithoutValidation("X-Agent-Context", screen);
         req.Headers.TryAddWithoutValidation("X-Lang", ctx.Request.Headers["X-Lang"].ToString() == "en" ? "en" : "ar");
 
         HttpResponseMessage res;

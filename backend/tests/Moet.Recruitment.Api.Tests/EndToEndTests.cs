@@ -17,6 +17,7 @@ public class EndToEndTests
     static readonly string? Db = Environment.GetEnvironmentVariable("TEST_DB_CONNECTION");
     const string Key = "test-portal-key";
     const string Secret = "test-portal-secret-0123456789";
+    const string AgentKey = "test-agent-key-0123456789";
 
     sealed class App : WebApplicationFactory<Program>
     {
@@ -30,6 +31,7 @@ public class EndToEndTests
             b.UseSetting("COOKIE_SECURE", "0");
             b.UseSetting("RUN_WORKERS", "0");
             b.UseSetting("PORTAL_URL", "https://careers.example");
+            b.UseSetting("AGENT_KEY", AgentKey);
         }
     }
 
@@ -167,6 +169,37 @@ public class EndToEndTests
         var forAgent = await Read(await admin.GetAsync("/api/backoffice/agent/components"));
         Assert.Equal("note_card", forAgent.GetProperty("items")[0].GetProperty("key").GetString());
         Assert.Equal(HttpStatusCode.OK, (await admin.DeleteAsync($"/api/backoffice/components/{created.GetProperty("id").GetInt32()}")).StatusCode);
+
+        // Assistant settings: the model key is stored encrypted, never shown, and only the agent service can read it.
+        var settings = await Read(await admin.GetAsync("/api/backoffice/agent-settings"));
+        Assert.True(settings.GetProperty("is_enabled").GetBoolean());
+        Assert.Equal(23, settings.GetProperty("tools").GetArrayLength());
+        var put = new
+        {
+            is_enabled = true, model_base_url = "http://llm.internal/v1", model_name = "qwen3", api_key = "sk-secret-123", clear_api_key = false,
+            temperature = 0.2, max_steps = 6, extra_instructions = "Prefer Arabic.", disabled_tools = new[] { "propose_email", "not_a_tool" },
+            proposal_minutes = 60, daily_run_limit = 50, history_turns = 20, examples_ar = "من أفضل المتقدمين؟", examples_en = "Who are the best applicants?",
+        };
+        await Read(await admin.PutAsync("/api/backoffice/agent-settings", JsonBody(put)));
+        var saved = await admin.GetAsync("/api/backoffice/agent-settings");
+        var savedText = await saved.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("sk-secret-123", savedText);
+        var savedJson = JsonDocument.Parse(savedText).RootElement;
+        Assert.True(savedJson.GetProperty("has_api_key").GetBoolean());
+        Assert.Equal("propose_email", Assert.Single(savedJson.GetProperty("disabled_tools").EnumerateArray()).GetString());
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsync("/api/backoffice/agent-settings", JsonBody(put with { max_steps = 99 }))).StatusCode);
+
+        var anon = app.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anon.GetAsync("/api/internal/agent/settings")).StatusCode);
+        using (var internalReq = new HttpRequestMessage(HttpMethod.Get, "/api/internal/agent/settings"))
+        {
+            internalReq.Headers.Add("X-Agent-Key", AgentKey);
+            var forAgent2 = await Read(await anon.SendAsync(internalReq));
+            Assert.Equal("sk-secret-123", forAgent2.GetProperty("model_api_key").GetString());
+            Assert.Equal(6, forAgent2.GetProperty("max_steps").GetInt32());
+        }
+        var info = await Read(await admin.GetAsync("/api/backoffice/agent/info"));
+        Assert.Equal(20, info.GetProperty("history_turns").GetInt32());
 
         // Changes without the X-Admin header are refused.
         var plain = app.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });

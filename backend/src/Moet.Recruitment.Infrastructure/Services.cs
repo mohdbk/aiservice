@@ -143,3 +143,37 @@ public sealed class SmtpMailStatus(IConfiguration cfg) : IMailStatus
 {
     public bool IsConfigured => !string.IsNullOrWhiteSpace(cfg["SMTP_HOST"]);
 }
+
+/// <summary>AES-GCM with a key derived from AGENT_KEY (the secret the API and the agent service already share).</summary>
+public sealed class AesSecretProtector(IConfiguration cfg) : ISecretProtector
+{
+    byte[]? Key => (cfg["AGENT_KEY"] ?? "") is { Length: >= 16 } k ? SHA256.HashData(System.Text.Encoding.UTF8.GetBytes("moet-recruitment-secrets|" + k)) : null;
+
+    public bool IsConfigured => Key != null;
+
+    public string Protect(string plain)
+    {
+        var key = Key ?? throw new Domain.Common.DomainException("agent_key_missing", 409);
+        var nonce = RandomNumberGenerator.GetBytes(12);
+        var data = System.Text.Encoding.UTF8.GetBytes(plain);
+        var cipher = new byte[data.Length];
+        var tag = new byte[16];
+        using (var aes = new AesGcm(key, 16)) aes.Encrypt(nonce, data, cipher, tag);
+        return "v1." + Convert.ToBase64String([.. nonce, .. tag, .. cipher]);
+    }
+
+    public string? Unprotect(string protectedValue)
+    {
+        var key = Key;
+        if (key == null || !protectedValue.StartsWith("v1.")) return null;
+        try
+        {
+            var all = Convert.FromBase64String(protectedValue[3..]);
+            var plain = new byte[all.Length - 28];
+            using var aes = new AesGcm(key, 16);
+            aes.Decrypt(all.AsSpan(0, 12), all.AsSpan(28), all.AsSpan(12, 16), plain);
+            return System.Text.Encoding.UTF8.GetString(plain);
+        }
+        catch (Exception e) when (e is FormatException or CryptographicException or ArgumentException) { return null; }
+    }
+}

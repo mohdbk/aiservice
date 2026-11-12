@@ -56,6 +56,7 @@ app.UseMiddleware<BackofficeCsrf>();
 app.MapGet("/healthz", () => Results.Ok(new { ok = true }));
 PortalEndpoints.Map(app);
 BackofficeEndpoints.Map(app);
+AgentProxy.MapInternal(app);
 app.MapFallback(SpaFallback.Handle);
 
 if (cfg["MIGRATE_ON_START"] != "0")

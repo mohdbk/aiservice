@@ -73,8 +73,6 @@ public class AuditEntry
 /// </summary>
 public class AgentProposal
 {
-    public static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(30);
-
     public Guid Id { get; set; }
     public int StaffUserId { get; set; }
     public string ThreadId { get; set; } = "";

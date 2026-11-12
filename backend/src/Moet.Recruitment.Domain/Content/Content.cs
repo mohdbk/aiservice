@@ -23,7 +23,6 @@ public class PortalSetting
     public Guid? LogoFileId { get; set; }
     public Guid? LogoDarkFileId { get; set; }
     public bool AutoScoreApplications { get; set; } = true;
-    public bool AssistantEnabled { get; set; } = true;
     public DateTime UpdatedAt { get; set; }
     public int? UpdatedByStaffId { get; set; }
 }

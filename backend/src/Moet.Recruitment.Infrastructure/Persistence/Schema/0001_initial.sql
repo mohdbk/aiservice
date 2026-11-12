@@ -62,7 +62,6 @@ CREATE TABLE core.PortalSetting (
     LogoFileId               uniqueidentifier NULL CONSTRAINT FK_PortalSetting_LogoFile REFERENCES ops.StoredFile (Id),
     LogoDarkFileId           uniqueidentifier NULL CONSTRAINT FK_PortalSetting_LogoDarkFile REFERENCES ops.StoredFile (Id),
     AutoScoreApplications    bit           NOT NULL CONSTRAINT DF_PortalSetting_AutoScore DEFAULT (1),
-    AssistantEnabled         bit           NOT NULL CONSTRAINT DF_PortalSetting_AssistantEnabled DEFAULT (1),
     UpdatedAt                datetime2(0)  NOT NULL,
     UpdatedByStaffId         int           NULL CONSTRAINT FK_PortalSetting_UpdatedBy REFERENCES [identity].StaffUser (Id)
 );
@@ -675,6 +674,34 @@ CREATE TABLE ops.AgentProposal (
     Result        nvarchar(600)  NOT NULL CONSTRAINT DF_AgentProposal_Result DEFAULT (N'')
 );
 CREATE INDEX IX_AgentProposal_Staff ON ops.AgentProposal (StaffUserId, CreatedAt);
+
+/* How the recruitment agent behaves (one row, edited on the Assistant Settings page). The model key is stored encrypted. */
+CREATE TABLE ops.AgentSetting (
+    Id                   tinyint        NOT NULL CONSTRAINT PK_AgentSetting PRIMARY KEY CONSTRAINT CK_AgentSetting_Single CHECK (Id = 1),
+    IsEnabled            bit            NOT NULL,
+    ModelBaseUrl         nvarchar(300)  NOT NULL,
+    ModelName            nvarchar(100)  NOT NULL,
+    ModelApiKeyProtected nvarchar(1000) NOT NULL,
+    Temperature          decimal(3,2)   NULL CONSTRAINT CK_AgentSetting_Temperature CHECK (Temperature BETWEEN 0 AND 2),
+    MaxSteps             tinyint        NOT NULL CONSTRAINT CK_AgentSetting_MaxSteps CHECK (MaxSteps BETWEEN 1 AND 20),
+    ExtraInstructions    nvarchar(4000) NOT NULL,
+    DisabledTools        nvarchar(2000) NOT NULL CONSTRAINT CK_AgentSetting_DisabledTools CHECK (ISJSON(DisabledTools) = 1),
+    ProposalMinutes      smallint       NOT NULL CONSTRAINT CK_AgentSetting_ProposalMinutes CHECK (ProposalMinutes BETWEEN 5 AND 1440),
+    DailyRunLimit        smallint       NOT NULL CONSTRAINT CK_AgentSetting_DailyRunLimit CHECK (DailyRunLimit BETWEEN 1 AND 5000),
+    HistoryTurns         tinyint        NOT NULL CONSTRAINT CK_AgentSetting_HistoryTurns CHECK (HistoryTurns BETWEEN 2 AND 100),
+    ExamplesAr           nvarchar(2000) NOT NULL,
+    ExamplesEn           nvarchar(2000) NOT NULL,
+    UpdatedAt            datetime2(0)   NOT NULL,
+    UpdatedByStaffId     int            NULL CONSTRAINT FK_AgentSetting_UpdatedBy REFERENCES [identity].StaffUser (Id)
+);
+
+/* One row per assistant run, for the daily limit and usage figures. */
+CREATE TABLE ops.AgentRun (
+    Id          bigint IDENTITY(1,1) NOT NULL CONSTRAINT PK_AgentRun PRIMARY KEY,
+    StaffUserId int          NOT NULL CONSTRAINT FK_AgentRun_Staff REFERENCES [identity].StaffUser (Id),
+    StartedAt   datetime2(0) NOT NULL
+);
+CREATE INDEX IX_AgentRun_Staff ON ops.AgentRun (StaffUserId, StartedAt);
 
 /* Forms HR admins design in the component builder; the agent draws them in the chat as A2UI surfaces. */
 CREATE TABLE ops.AgentComponent (

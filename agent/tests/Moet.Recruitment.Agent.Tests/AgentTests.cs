@@ -73,6 +73,17 @@ public class AgUiEndToEndTests
     /// <summary>First asks for propose_note, then answers in text once the tool result is back.</summary>
     sealed class ScriptedModel : IChatClient
     {
+        public List<string> SeenTools { get; } = [];
+        public List<string> SeenSystem { get; } = [];
+        void See(IEnumerable<ChatMessage> messages, ChatOptions? options)
+        {
+            lock (SeenTools)
+            {
+                SeenTools.AddRange((options?.Tools ?? []).Select(t => t.Name));
+                SeenSystem.AddRange(messages.Where(m => m.Role == ChatRole.System).Select(m => m.Text));
+            }
+        }
+
         static bool HasToolResult(IEnumerable<ChatMessage> m) => m.Any(x => x.Contents.OfType<FunctionResultContent>().Any());
 
         static ChatResponseUpdate Next(IEnumerable<ChatMessage> messages) => HasToolResult(messages)
@@ -80,12 +91,16 @@ public class AgUiEndToEndTests
             : new ChatResponseUpdate(ChatRole.Assistant,
                 [new FunctionCallContent("call_1", "propose_note", new Dictionary<string, object?> { ["applicantId"] = 7, ["text"] = "Strong candidate" })]) { MessageId = "m1" };
 
-        public Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new[] { Next(messages) }.ToChatResponse());
+        public Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
+        {
+            See(messages, options);
+            return Task.FromResult(new[] { Next(messages) }.ToChatResponse());
+        }
 
         public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
+            See(messages, options);
             await Task.Yield();
             yield return Next(messages);
         }
@@ -94,7 +109,7 @@ public class AgUiEndToEndTests
         public void Dispose() { }
     }
 
-    sealed class FakeBackoffice(string components = """{"items":[]}""") : HttpMessageHandler
+    sealed class FakeBackoffice(string components = """{"items":[]}""", string? settings = null) : HttpMessageHandler
     {
         public List<(string Path, string? Cookie, string Body)> Calls { get; } = [];
 
@@ -102,8 +117,14 @@ public class AgUiEndToEndTests
         {
             var body = request.Content == null ? "" : await request.Content.ReadAsStringAsync(cancellationToken);
             Calls.Add((request.RequestUri!.AbsolutePath, request.Headers.TryGetValues("Cookie", out var c) ? c.First() : null, body));
-            Assert.Equal("1", request.Headers.GetValues("X-Backoffice").First());
             var path = request.RequestUri.AbsolutePath;
+            if (path == "/api/internal/agent/settings")
+            {
+                Assert.Equal(Key, request.Headers.GetValues("X-Agent-Key").First());
+                return settings == null ? new HttpResponseMessage(HttpStatusCode.NotFound)
+                    : new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(settings, Encoding.UTF8, "application/json") };
+            }
+            Assert.Equal("1", request.Headers.GetValues("X-Backoffice").First());
             var json = path.EndsWith("/agent/proposals")
                 ? """{"id":"9a6c1d1e-0000-4000-8000-000000000001","action":"add_note","label":"Add a note to Layla (APP-2026-00001): Strong candidate","expires_at":"2026-11-12T10:30:00Z"}"""
                 : path.EndsWith("/agent/components") ? components
@@ -112,15 +133,16 @@ public class AgUiEndToEndTests
         }
     }
 
-    sealed class App(FakeBackoffice backoffice) : WebApplicationFactory<Program>
+    sealed class App(FakeBackoffice backoffice, ScriptedModel? model = null) : WebApplicationFactory<Program>
     {
+        public ScriptedModel Model { get; } = model ?? new ScriptedModel();
         protected override void ConfigureWebHost(IWebHostBuilder b)
         {
             b.UseSetting("AGENT_KEY", Key);
             b.UseSetting("BACKEND_URL", "http://backend.test");
             b.ConfigureTestServices(s =>
             {
-                s.AddSingleton<IChatClient>(new ScriptedModel());
+                s.AddSingleton<IChatClient>(Model);
                 s.AddHttpClient(BackofficeApi.Client).ConfigurePrimaryHttpMessageHandler(() => backoffice);
             });
         }
@@ -189,6 +211,28 @@ public class AgUiEndToEndTests
         Assert.Contains("Note for the Team", sse);
         Assert.Contains("Team Note", sse);
         Assert.Contains("Strong candidate", sse);
+    }
+
+    [Fact]
+    public async Task Admin_settings_and_the_open_screen_reach_the_model()
+    {
+        const string settings = """
+            {"is_enabled":true,"model_base_url":"","model_name":"","model_api_key":"","temperature":0.1,"max_steps":5,
+             "extra_instructions":"Always mention the job code.","disabled_tools":["propose_email","propose_offer"]}
+            """;
+        using var app = new App(new FakeBackoffice(settings: settings));
+        using var req = new HttpRequestMessage(HttpMethod.Post, "/agent") { Content = Run("summarise this applicant") };
+        req.Headers.Add("X-Agent-Key", Key);
+        req.Headers.Add("Cookie", "moet_backoffice=session-cookie");
+        req.Headers.Add("X-Agent-Context", Uri.EscapeDataString("""{"page":"Applicant","applicant_id":7,"title":"Layla Hassan"}"""));
+        var res = await app.CreateClient().SendAsync(req);
+        await res.Content.ReadAsStringAsync();
+
+        Assert.Contains("propose_note", app.Model.SeenTools);
+        Assert.DoesNotContain("propose_email", app.Model.SeenTools);
+        Assert.DoesNotContain("propose_offer", app.Model.SeenTools);
+        Assert.Contains(app.Model.SeenSystem, m => m.Contains("Always mention the job code."));
+        Assert.Contains(app.Model.SeenSystem, m => m.Contains("applicant_id: 7") && m.Contains("Layla Hassan"));
     }
 
     [Fact]
