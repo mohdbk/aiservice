@@ -131,3 +131,10 @@ html[lang|="ar"] [lang|="en"] { font-family: var(--font-inter), "Inter", sans-se
 
 /* Ministry logo: keep its proportions at any size (never stretched or squeezed by the layout). */
 .mh-logo { width: auto; max-width: none; flex-shrink: 0; object-fit: contain; aspect-ratio: 906 / 227; }
+
+/* Field labels and hints are in the page's language even inside a block written in the other language (the Arabic tab of an
+   English page, or the English tab of an Arabic page): only the text people type follows the block's direction. */
+html[dir="ltr"] [dir="rtl"] :is(.mh-ui, legend) { direction: ltr; text-align: left; }
+html[dir="rtl"] [dir="ltr"] :is(.mh-ui, legend) { direction: rtl; text-align: right; }
+/* Previews of what someone else sees (the assistant form preview) keep their own language throughout. */
+html[dir] .mh-native[dir] :is(.mh-ui, legend) { direction: inherit; text-align: start; }

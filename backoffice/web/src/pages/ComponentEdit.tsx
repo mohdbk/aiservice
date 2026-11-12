@@ -320,7 +320,7 @@ export default function ComponentEdit() {
               { value: "ar", label: <FlagLabel lang="ar"><span lang="ar">العربية</span></FlagLabel> },
               { value: "en", label: <FlagLabel lang="en"><span lang="en">English</span></FlagLabel> },
             ]} />
-            <div dir={previewLang === "ar" ? "rtl" : "ltr"} lang={previewLang} className="rounded-2xl bg-whitely-50 p-3">
+            <div dir={previewLang === "ar" ? "rtl" : "ltr"} lang={previewLang} className="mh-native rounded-2xl bg-whitely-50 p-3">
               <div className="mh-chat-bot rounded-2xl px-4 py-3 text-sm">
                 {surfaces.preview && <A2Surface surface={surfaces.preview} onAction={() => toast(t("comp.preview_only"), "info")} emptyText={t(`comp.preview.choose.${previewLang}`)}
                   onData={(sid, path, value) => setSurfaces((s) => writeData(s, sid, path, value))} />}

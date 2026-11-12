@@ -101,9 +101,9 @@ export function Note({ children, tone = "info" }: { children: ReactNode; tone?: 
 export function Field({ label, hint, error, children, className = "", id }: { label: ReactNode; hint?: ReactNode; error?: string; children: ReactNode; className?: string; id?: string }) {
   return (
     <div className={`aegov-form-control ${error ? "control-error" : ""} ${className}`}>
-      <label htmlFor={id} className="mb-1 block text-sm font-semibold text-aeblack-800">{label}</label>
+      <label htmlFor={id} className="mh-ui mb-1 block text-sm font-semibold text-aeblack-800">{label}</label>
       <div className="form-control-input">{children}</div>
-      {hint && <p className="mt-1 text-xs text-aeblack-500">{hint}</p>}
+      {hint && <p className="mh-ui mt-1 text-xs text-aeblack-500">{hint}</p>}
       {error && <p className="mt-1 text-sm text-aered-700" role="alert">{error}</p>}
     </div>
   );
@@ -152,8 +152,8 @@ export function Toggle({ label, hint, checked, onChange }: { label: ReactNode; h
         <Switch.Thumb className="mh-switch-thumb" />
       </Switch.Root>
       <div>
-        <label htmlFor={id} className="cursor-pointer font-semibold text-aeblack-800">{label}</label>
-        {hint && <p className="text-xs text-aeblack-500">{hint}</p>}
+        <label htmlFor={id} className="mh-ui cursor-pointer font-semibold text-aeblack-800">{label}</label>
+        {hint && <p className="mh-ui text-xs text-aeblack-500">{hint}</p>}
       </div>
     </div>
   );
@@ -167,7 +167,7 @@ export function Tick({ label, checked, onChange }: { label: ReactNode; checked: 
       <Checkbox.Root id={id} checked={checked} onCheckedChange={(v) => onChange(!!v)} className="mh-check">
         <Checkbox.Indicator><Check size={14} weight="bold" aria-hidden="true" /></Checkbox.Indicator>
       </Checkbox.Root>
-      <label htmlFor={id} className="cursor-pointer text-sm">{label}</label>
+      <label htmlFor={id} className="mh-ui cursor-pointer text-sm">{label}</label>
     </span>
   );
 }
@@ -187,7 +187,7 @@ export function RichText({ label, hint, value, onChange, dir }: { label: ReactNo
   const tool = "rounded p-1.5 text-aeblack-600 hover:bg-primary-50 hover:text-primary-700";
   return (
     <div>
-      <p id={id} className="mb-1 text-sm font-semibold text-aeblack-800">{label}</p>
+      <p id={id} className="mh-ui mb-1 text-sm font-semibold text-aeblack-800">{label}</p>
       <div className="rounded-lg border border-aeblack-200 bg-white focus-within:border-primary-500">
         <div className="flex gap-1 border-b border-aeblack-100 p-1" role="toolbar" aria-labelledby={id}>
           <button type="button" className={tool} onClick={() => cmd("bold")} aria-label="Bold"><TextB size={20} /></button>
@@ -198,7 +198,7 @@ export function RichText({ label, hint, value, onChange, dir }: { label: ReactNo
         <div ref={ref} dir={dir} contentEditable role="textbox" aria-multiline="true" aria-labelledby={id} className="mh-editor mc-prose"
           onInput={(e) => onChange((e.target as HTMLDivElement).innerHTML)} suppressContentEditableWarning />
       </div>
-      {hint && <p className="mt-1 text-xs text-aeblack-500">{hint}</p>}
+      {hint && <p className="mh-ui mt-1 text-xs text-aeblack-500">{hint}</p>}
     </div>
   );
 }
