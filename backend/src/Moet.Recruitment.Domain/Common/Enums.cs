@@ -60,7 +60,8 @@ public enum EmailStatus { Queued, Sent, Failed }
 
 public enum BackgroundJobStatus { Queued, Running, Done, Failed }
 
-public enum AuditAction { Created, Updated, Deleted }
+/// <summary>Record changes (Created, Updated, Deleted) and other actions people take (Action: sign-ins, downloads, sending, views of personal data).</summary>
+public enum AuditAction { Created, Updated, Deleted, Action }
 
 public enum ActorType { Staff, Applicant, System }
 

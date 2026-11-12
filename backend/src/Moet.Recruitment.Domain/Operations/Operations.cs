@@ -69,6 +69,28 @@ public class AuditEntry
     public int? ActorId { get; set; }
     public string ActorName { get; set; } = "";
     public DateTime OccurredAt { get; set; }
+    /// <summary>For actions: what was done, for example "POST applicants/{id}/status (200)".</summary>
+    public string Description { get; set; } = "";
+    /// <summary>"Assistant" when it came from the AI assistant (an approved proposal, or a read by the assistant for the person).</summary>
+    public string Via { get; set; } = "";
+    /// <summary>The reason or note given with it (for an approved assistant proposal, what was approved).</summary>
+    public string Comment { get; set; } = "";
+    public Guid? ProposalId { get; set; }
+    /// <summary>Entries from the same request share it, so an action can be seen with the record changes it made.</summary>
+    public string RequestId { get; set; } = "";
+    public string IpAddress { get; set; } = "";
+    public List<AuditComment> Comments { get; set; } = [];
+}
+
+/// <summary>A reviewer's comment on an audit entry (system administrators).</summary>
+public class AuditComment
+{
+    public long Id { get; set; }
+    public long AuditEntryId { get; set; }
+    public int StaffUserId { get; set; }
+    public string StaffName { get; set; } = "";
+    public string Text { get; set; } = "";
+    public DateTime CreatedAt { get; set; }
 }
 
 /// <summary>

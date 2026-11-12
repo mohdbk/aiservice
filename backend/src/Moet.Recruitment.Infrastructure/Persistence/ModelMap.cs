@@ -219,7 +219,12 @@ static class ModelMap
         m.Entity<StoredFile>(e => { e.ToTable("StoredFile", "ops"); e.Property(x => x.Id).ValueGeneratedNever(); });
         m.Entity<EmailMessage>(e => e.ToTable("EmailMessage", "ops"));
         m.Entity<BackgroundJob>(e => e.ToTable("BackgroundJob", "ops"));
-        m.Entity<AuditEntry>(e => e.ToTable("AuditEntry", "ops"));
+        m.Entity<AuditEntry>(e =>
+        {
+            e.ToTable("AuditEntry", "ops");
+            e.HasMany(x => x.Comments).WithOne().HasForeignKey(c => c.AuditEntryId).OnDelete(DeleteBehavior.Cascade);
+        });
+        m.Entity<AuditComment>(e => e.ToTable("AuditComment", "ops"));
         m.Entity<AgentSetting>(e => { e.ToTable("AgentSetting", "ops"); e.Property(x => x.Id).ValueGeneratedNever(); e.Property(x => x.Temperature).HasPrecision(3, 2); });
         m.Entity<AgentRun>(e => e.ToTable("AgentRun", "ops"));
         m.Entity<Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey>(e => e.ToTable("DataProtectionKey", "ops"));

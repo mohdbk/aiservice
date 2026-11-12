@@ -268,3 +268,21 @@ public sealed class HttpWebhookClient(IHttpClientFactory http) : IWebhookClient
         }
     }
 }
+
+/// <summary>The audit details of the current request: request id, address, and whether it came through the assistant.</summary>
+public sealed class HttpAuditContext(IHttpContextAccessor http) : IAuditContext
+{
+    public const string AssistantHeader = "X-Via-Assistant";
+    string? via;
+
+    public string Via
+    {
+        get => via ?? (http.HttpContext?.Request.Headers[AssistantHeader].ToString() == "1" ? "Assistant" : "");
+        set => via = value;
+    }
+
+    public string Comment { get; set; } = "";
+    public Guid? ProposalId { get; set; }
+    public string RequestId => http.HttpContext?.TraceIdentifier is { } t ? (t.Length > 40 ? t[..40] : t) : "";
+    public string IpAddress => http.HttpContext?.Connection.RemoteIpAddress?.ToString() is { } ip ? (ip.Length > 45 ? ip[..45] : ip) : "";
+}

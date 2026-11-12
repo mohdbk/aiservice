@@ -211,8 +211,10 @@ public static class BackofficeEndpoints
         var sys = api.MapGroup("").RequireAuthorization(StaffPolicies.SystemAdmin);
         sys.MapGet("/staff", ([AsParameters] ListQuery lq, string? role, bool? enabled, StaffAuthService s, CancellationToken ct) => s.ListAsync(lq, role, enabled, ct));
         sys.MapPost("/staff", (StaffBody b, StaffAuthService s, CancellationToken ct) => s.SaveAsync(null, b.Email, b.FullName, b.Role, b.IsEnabled, b.Password, ct));
-        sys.MapGet("/audit", ([AsParameters] ListQuery lq, string? record, string? action, string? key, DateOnly? from, DateOnly? to, SystemService s, CancellationToken ct) =>
-            s.AuditAsync(lq, record, action, key, from, to, ct));
+        sys.MapGet("/audit", ([AsParameters] ListQuery lq, string? record, string? action, string? key, DateOnly? from, DateOnly? to, string? via, string? kind,
+                int? staff, string? request, SystemService s, CancellationToken ct) =>
+            s.AuditAsync(lq, record, action, key, from, to, ct, via, kind, staff, request));
+        sys.MapPost("/audit/{id:long}/comments", (long id, NoteBody b, SystemService s, CancellationToken ct) => s.CommentAsync(id, b.Text, ct));
         sys.MapGet("/data-protection", (DataProtectionService s, CancellationToken ct) => s.RetentionViewAsync(ct));
         sys.MapPut("/data-protection", (RetentionInput b, DataProtectionService s, CancellationToken ct) => s.SaveRetentionAsync(b, ct));
         sys.MapPost("/data-protection/run", async (DataProtectionService s, CancellationToken ct) => new { anonymised = await s.RunRetentionAsync(true, ct) });

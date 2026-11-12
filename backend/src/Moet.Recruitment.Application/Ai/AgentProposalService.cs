@@ -18,7 +18,7 @@ public sealed record ProposalInput(string? Action, JsonElement Arguments, string
 /// same person approves it. Everything the approval changes goes through the usual audit trail.
 /// </summary>
 public sealed class AgentProposalService(
-    IAppDbContext db, ICurrentActor actor, IClock clock, ContentService content, PortalMailer mailer, AgentSettingsService settings,
+    IAppDbContext db, ICurrentActor actor, IClock clock, ContentService content, PortalMailer mailer, AgentSettingsService settings, IAuditContext audit,
     BackofficeApplicantService applicants, BackofficeInterviewService interviews, BackofficeJobService jobs, BackofficeSetupService setup,
     BookingService bookings, TalentPoolService talent)
 {
@@ -73,6 +73,10 @@ public sealed class AgentProposalService(
             p.Arguments = merged.ToJsonString();
         }
         p.Claim(staffId, clock.UtcNow, approve: true);
+        // Everything this approval changes is logged as done through the assistant, with what was approved.
+        audit.Via = "Assistant";
+        audit.ProposalId = p.Id;
+        audit.Comment = $"Approved assistant proposal: {p.Label}";
         await db.SaveChangesAsync(ct);
         using var doc = JsonDocument.Parse(p.Arguments);
         var ar = lang != "en";

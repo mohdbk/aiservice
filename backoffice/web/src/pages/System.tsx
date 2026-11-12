@@ -6,13 +6,19 @@ import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
 
 // ---------------- audit log ----------------
 
-type AuditRow = { id: number; record: string; key: string; action: string; by: string; actor_type: string; when: string; changes: string };
+type AuditRow = {
+  id: number; record: string; key: string; action: string; by: string; actor_type: string; when: string; changes: string; description: string;
+  via: string; comment: string; proposal_id: string | null; request_id: string; ip: string; comments: { id: number; by: string; text: string; at: string }[];
+};
 
 /** Who changed what: every change to the records people care about, with the values before and after. */
 export function AuditLog() {
   const { t, date } = useLang();
   usePageTitle(t("nav.audit"));
-  const list = useList<AuditRow>("/audit", ["record", "action", "from", "to"]);
+  const list = useList<AuditRow>("/audit", ["record", "action", "from", "to", "via", "kind", "request"]);
+  const toast = useToast();
+  const [note, setNote] = useState("");
+  const noteSave = useSaving();
   const records = (list.data as unknown as { records?: string[] } | undefined)?.records || [];
   const [shown, setShown] = useState<AuditRow | null>(null);
   const changes = (row: AuditRow) => {
@@ -24,8 +30,10 @@ export function AuditLog() {
       <PageHeader title={t("nav.audit")} subtitle={t("audit.subtitle")} />
       <DataTable list={list} rowKey={(r) => r.id} searchLabel={t("audit.search")}
         filters={[
+          { key: "kind", label: t("audit.kind"), options: [{ value: "actions", label: t("audit.kind.actions") }, { value: "changes", label: t("audit.kind.changes") }] },
+          { key: "via", label: t("audit.via"), options: [{ value: "Assistant", label: t("audit.via.Assistant") }] },
           { key: "record", label: t("audit.record"), options: records.map((r) => ({ value: r, label: r })) },
-          { key: "action", label: t("audit.action"), options: opts(t, "audit.act.", ["Created", "Updated", "Deleted"]) },
+          { key: "action", label: t("audit.action"), options: opts(t, "audit.act.", ["Created", "Updated", "Deleted", "Action"]) },
         ]}
         columns={[
           { key: "when", label: t("audit.when"), sort: "when", className: "whitespace-nowrap", render: (r) => date(r.when, true) },
@@ -35,17 +43,28 @@ export function AuditLog() {
             </button>
           ) },
           { key: "action", label: t("audit.action"), sort: "action", render: (r) => (
-            <Badge tone={r.action === "Created" ? "green" : r.action === "Deleted" ? "red" : "blue"}>{t(`audit.act.${r.action}`)}</Badge>
+            <span className="inline-flex flex-wrap items-center gap-1">
+              <Badge tone={r.action === "Created" ? "green" : r.action === "Deleted" ? "red" : r.action === "Action" ? "gray" : "blue"}>{t(`audit.act.${r.action}`)}</Badge>
+              {r.via === "Assistant" && <Badge tone="gold">{t("audit.via.Assistant")}</Badge>}
+            </span>
           ) },
-          { key: "by", label: t("audit.by"), sort: "by", render: (r) => r.by || t(`audit.actor.${r.actor_type}`) },
-          { key: "fields", label: t("audit.fields"), render: (r) => (
-            <span className="block max-w-xs truncate text-xs text-aeblack-500" dir="ltr">{changes(r).map(([k]) => k).join(", ")}</span>
+          { key: "by", label: t("audit.by"), sort: "by", render: (r) => <>{r.by || t(`audit.actor.${r.actor_type}`)}{r.ip && <span className="block text-xs text-aeblack-400" dir="ltr">{r.ip}</span>}</> },
+          { key: "fields", label: t("audit.details"), render: (r) => (
+            <div className="max-w-sm text-xs">
+              <span className="block truncate text-aeblack-600" dir="ltr">{r.description || changes(r).map(([k]) => k).join(", ")}</span>
+              {r.comment && <span className="block truncate text-aeblack-500" dir="auto" title={r.comment}>{r.comment}</span>}
+              {r.comments.length > 0 && <span className="text-primary-700">{t("audit.comments_count", { n: r.comments.length })}</span>}
+            </div>
           ) },
         ]} />
       {shown && (
         <Modal open onClose={() => setShown(null)} title={<span dir="ltr">{shown.record} #{shown.key}</span>}
           footer={<Button variant="outline" onClick={() => setShown(null)}>{t("common.close")}</Button>}>
-          <p className="text-sm text-aeblack-600">{t(`audit.act.${shown.action}`)} · {shown.by} · {date(shown.when, true)}</p>
+          <p className="text-sm text-aeblack-600">{t(`audit.act.${shown.action}`)} · {shown.by} · {date(shown.when, true)}{shown.ip && <> · <span dir="ltr">{shown.ip}</span></>}</p>
+          {shown.via === "Assistant" && <Note>{t("audit.via_note")}</Note>}
+          {shown.description && <p className="text-sm" dir="ltr">{shown.description}</p>}
+          {shown.comment && <p className="rounded-xl bg-whitely-100 p-3 text-sm" dir="auto">{shown.comment}</p>}
+          {shown.request_id && <button type="button" className="text-sm text-primary-700" onClick={() => { list.set({ request: shown.request_id }); setShown(null); }}>{t("audit.same_request")}</button>}
           <div className="overflow-x-auto">
             <table className="w-full min-w-[28rem] text-sm" dir="ltr">
               <thead><tr className="border-b border-aeblack-100 text-aeblack-500">
@@ -62,6 +81,25 @@ export function AuditLog() {
               </tbody>
             </table>
           </div>
+          <section aria-label={t("audit.comments")}>
+            <h3 className="mb-2 text-sm font-semibold">{t("audit.comments")}</h3>
+            {shown.comments.length === 0 ? <p className="text-sm text-aeblack-500">{t("audit.no_comments")}</p> : (
+              <ul className="mb-3 space-y-2 text-sm">
+                {shown.comments.map((c) => <li key={c.id} className="rounded-xl border border-aeblack-100 p-2"><p className="m-0" dir="auto">{c.text}</p><p className="m-0 mt-1 text-xs text-aeblack-500">{c.by} · {date(c.at, true)}</p></li>)}
+              </ul>
+            )}
+            {noteSave.error && <ErrorState error={noteSave.error} />}
+            <TextArea label={t("audit.add_comment")} rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
+            <Button size="sm" className="mt-2" busy={noteSave.busy} disabled={!note.trim()} onClick={async () => {
+              const text = note.trim();
+              if (await noteSave.run(() => api(`/audit/${shown.id}/comments`, { body: { text } })) !== undefined) {
+                setShown({ ...shown, comments: [...shown.comments, { id: Date.now(), by: "", text, at: new Date().toISOString() }] });
+                setNote("");
+                toast(t("common.saved"));
+                list.reload();
+              }
+            }}>{t("audit.save_comment")}</Button>
+          </section>
         </Modal>
       )}
     </>

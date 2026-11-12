@@ -46,6 +46,8 @@ var app = builder.Build();
 
 if (cfg["TRUST_PROXY"] == "1") app.UseForwardedHeaders();
 app.UseMiddleware<SecurityHeaders>();
+// Outside the error envelope, so it records the final result of every action, refusals included.
+app.UseMiddleware<ActionAudit>();
 app.UseMiddleware<ErrorEnvelope>();
 app.UseAuthentication();
 app.UseRateLimiter();

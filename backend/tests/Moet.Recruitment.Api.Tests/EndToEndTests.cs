@@ -404,6 +404,16 @@ public class EndToEndTests
         Assert.StartsWith("Selection settings for", selProposal.GetProperty("label").GetString());
         Assert.True((await admin.PostAsync($"/api/backoffice/agent/proposals/{selProposal.GetProperty("id").GetString()}/approve?lang=en", JsonBody(new { }))).IsSuccessStatusCode);
         Assert.Equal(10, (await Read(await admin.GetAsync($"/api/backoffice/jobs/{jobId}"))).GetProperty("weights").GetProperty("cv").GetInt32());
+        // The audit log shows the change as made through the assistant, with what was approved, and the action itself.
+        var viaAi = await Read(await admin.GetAsync("/api/backoffice/audit?via=Assistant&record=JobOpening"));
+        var aiEntry = viaAi.GetProperty("items")[0];
+        Assert.Equal("Assistant", aiEntry.GetProperty("via").GetString());
+        Assert.StartsWith("Approved assistant proposal: Selection settings for", aiEntry.GetProperty("comment").GetString());
+        var actions = await Read(await admin.GetAsync("/api/backoffice/audit?kind=actions&q=approve"));
+        Assert.True(actions.GetProperty("total").GetInt32() >= 1);
+        Assert.True((await admin.PostAsync($"/api/backoffice/audit/{aiEntry.GetProperty("id").GetInt64()}/comments", JsonBody(new { text = "Checked with the hiring manager" }))).IsSuccessStatusCode);
+        var commented = await Read(await admin.GetAsync($"/api/backoffice/audit?request={aiEntry.GetProperty("request_id").GetString()}"));
+        Assert.Contains(commented.GetProperty("items").EnumerateArray(), x => x.GetProperty("comments").GetArrayLength() == 1);
 
         // HR system hand-off: off by default; it needs an https address and a secret; hires export as CSV.
         var handoff = await Read(await admin.GetAsync("/api/backoffice/handoff-settings"));

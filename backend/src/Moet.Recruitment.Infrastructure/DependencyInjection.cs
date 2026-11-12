@@ -32,6 +32,7 @@ public static class DependencyInjection
         s.AddDataProtection().SetApplicationName("MoET Recruitment").PersistKeysToDbContext<AppDbContext>();
         s.AddSingleton<IClock, SystemClock>();
         s.AddScoped<ICurrentActor, HttpCurrentActor>();
+        s.AddScoped<IAuditContext, HttpAuditContext>();
         s.AddScoped<IRequestLanguage, HttpRequestLanguage>();
         s.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
         s.AddScoped<ICodeGenerator, SqlCodeGenerator>();

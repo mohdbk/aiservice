@@ -37,6 +37,8 @@ public sealed class BackofficeApi(IHttpClientFactory factory, IHttpContextAccess
     {
         using var req = new HttpRequestMessage(method, path.TrimStart('/'));
         req.Headers.TryAddWithoutValidation("X-Backoffice", "1");
+        // The audit log marks what the assistant read or proposed on the person's behalf.
+        req.Headers.TryAddWithoutValidation("X-Via-Assistant", "1");
         // Names and titles come back in the staff member's language (English job titles when they use English).
         req.Headers.TryAddWithoutValidation("X-Lang", Lang);
         var cookie = context.HttpContext?.Request.Headers.Cookie.ToString();

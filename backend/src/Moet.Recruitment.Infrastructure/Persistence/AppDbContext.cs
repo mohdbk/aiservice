@@ -8,6 +8,7 @@ using Moet.Recruitment.Domain;
 using Moet.Recruitment.Domain.Assessments;
 using Moet.Recruitment.Domain.Content;
 using Moet.Recruitment.Domain.Hiring;
+using Moet.Recruitment.Domain.Common;
 using Moet.Recruitment.Domain.Identity;
 using Moet.Recruitment.Domain.Operations;
 
@@ -17,7 +18,8 @@ namespace Moet.Recruitment.Infrastructure.Persistence;
 /// EF Core mapping onto the hand-written schema in Persistence/Schema (the schema scripts are the source of truth;
 /// EF never creates or migrates tables). Enums are stored as their names; times are UTC.
 /// </summary>
-public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentActor actor, IClock clock) : DbContext(options), IAppDbContext, IDataProtectionKeyContext
+public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentActor actor, IClock clock, IAuditContext audit)
+    : DbContext(options), IAppDbContext, IDataProtectionKeyContext
 {
     public DbSet<Language> Languages => Set<Language>();
     public DbSet<PortalSetting> PortalSettings => Set<PortalSetting>();
@@ -48,6 +50,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
     public DbSet<DocumentTemplate> DocumentTemplates => Set<DocumentTemplate>();
     public DbSet<BackgroundJob> BackgroundJobs => Set<BackgroundJob>();
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
+    public DbSet<AuditComment> AuditComments => Set<AuditComment>();
     public DbSet<AgentProposal> AgentProposals => Set<AgentProposal>();
     public DbSet<AgentComponent> AgentComponents => Set<AgentComponent>();
     public DbSet<RoleProfile> RoleProfiles => Set<RoleProfile>();
@@ -94,7 +97,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
 
     public override async Task<int> SaveChangesAsync(CancellationToken ct = default)
     {
-        var entries = Audit.Collect(ChangeTracker, actor, clock.UtcNow);
+        var entries = Audit.Collect(ChangeTracker, actor, audit, clock.UtcNow);
         var n = await base.SaveChangesAsync(ct);
         if (entries.Count > 0)
         {
@@ -106,15 +109,17 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
     }
 }
 
-/// <summary>Records who changed what on the records people care about (not attempts' answers or outbox rows).</summary>
+/// <summary>
+/// Records who changed what, on every kind of record except the log itself and high-volume plumbing (outboxes, background
+/// jobs, sign-in keys, stored file bytes, single test answers, chat history).
+/// </summary>
 static class Audit
 {
-    static readonly HashSet<Type> Audited =
+    static readonly HashSet<string> NotAudited =
     [
-        typeof(JobOpening), typeof(JobOpeningTranslation), typeof(JobApplication), typeof(Interview), typeof(InterviewFeedback),
-        typeof(JobOffer), typeof(Question), typeof(Assessment), typeof(Invitation), typeof(ScreeningQuestion), typeof(PortalSetting),
-        typeof(PortalText), typeof(StaffUser), typeof(Department), typeof(InterviewRound), typeof(AgentComponent), typeof(AgentSetting), typeof(RoleProfile),
-        typeof(EmailSetting), typeof(EmailTemplate), typeof(DocumentTemplate), typeof(TypeNote), typeof(PersonalitySetting), typeof(DataRequest), typeof(RetentionSetting), typeof(InterviewBooking), typeof(TextSetting), typeof(HandOffSetting),
+        nameof(AuditEntry), nameof(AuditComment), nameof(BackgroundJob), nameof(EmailMessage), nameof(TextMessage), nameof(AgentRun),
+        nameof(StoredFile), "DataProtectionKey", nameof(AccountToken), nameof(AttemptQuestion), "AttemptOption", "AttemptQuestionTranslation",
+        "AttemptAcceptedAnswer", "AttemptSection", nameof(AgentConversation), "CodeSequence",
     ];
 
     static readonly HashSet<string> Secret = ["PasswordHash", "RowVersion", "Content", "ModelApiKeyProtected", "PasswordProtected", "TokenProtected", "SecretProtected"];
@@ -131,12 +136,12 @@ static class Audit
         }
     }
 
-    public static List<Pending> Collect(ChangeTracker tracker, ICurrentActor actor, DateTime now)
+    public static List<Pending> Collect(ChangeTracker tracker, ICurrentActor actor, IAuditContext ctx, DateTime now)
     {
         var list = new List<Pending>();
         foreach (var e in tracker.Entries())
         {
-            if (!Audited.Contains(e.Entity.GetType()) || e.State is EntityState.Unchanged or EntityState.Detached) continue;
+            if (NotAudited.Contains(e.Entity.GetType().Name) || e.Metadata.IsOwned() || e.State is EntityState.Unchanged or EntityState.Detached) continue;
             var changes = new Dictionary<string, object?>();
             foreach (var p in e.Properties)
             {
@@ -156,6 +161,7 @@ static class Audit
             {
                 EntityName = e.Metadata.ClrType.Name, EntityKey = Key(e), Action = action, Changes = JsonSerializer.Serialize(changes),
                 ActorType = actor.Type, ActorId = actor.Id, ActorName = actor.Name, OccurredAt = now,
+                Via = ctx.Via, Comment = TextUtil.Clip(ctx.Comment, 1000), ProposalId = ctx.ProposalId, RequestId = ctx.RequestId, IpAddress = ctx.IpAddress,
             }, e.State == EntityState.Added));
         }
         return list;

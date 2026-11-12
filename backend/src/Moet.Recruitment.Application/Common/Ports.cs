@@ -40,6 +40,7 @@ public interface IAppDbContext
     DbSet<DocumentTemplate> DocumentTemplates { get; }
     DbSet<BackgroundJob> BackgroundJobs { get; }
     DbSet<AuditEntry> AuditEntries { get; }
+    DbSet<AuditComment> AuditComments { get; }
     DbSet<AgentProposal> AgentProposals { get; }
     DbSet<AgentComponent> AgentComponents { get; }
     DbSet<RoleProfile> RoleProfiles { get; }
@@ -139,6 +140,19 @@ public interface IBackups
     double IntervalHours { get; }
     Task<(string Key, long Size)> BackUpAsync(CancellationToken ct);
     Task<List<(string Key, long Size, DateTime Modified)>> ListAsync(CancellationToken ct);
+}
+
+/// <summary>
+/// Who and what is behind the changes of the current request, for the audit log: whether it came through the assistant, the
+/// comment given, the proposal approved, and the request id and address.
+/// </summary>
+public interface IAuditContext
+{
+    string Via { get; set; }
+    string Comment { get; set; }
+    Guid? ProposalId { get; set; }
+    string RequestId { get; }
+    string IpAddress { get; }
 }
 
 /// <summary>A file sent with an email.</summary>

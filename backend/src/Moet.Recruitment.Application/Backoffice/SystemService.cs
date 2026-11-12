@@ -8,27 +8,50 @@ using Moet.Recruitment.Domain.Operations;
 namespace Moet.Recruitment.Application.Backoffice;
 
 /// <summary>System administration pages: the audit log, assistant usage with per-person limits, and the health of the service.</summary>
-public sealed class SystemService(IAppDbContext db, IClock clock, MailConfig mail)
+public sealed class SystemService(IAppDbContext db, IClock clock, MailConfig mail, ICurrentActor actor)
 {
     static readonly Sorts<AuditEntry> AuditSorts = new Sorts<AuditEntry>("when").Add("when", a => a.OccurredAt).Add("record", a => a.EntityName)
         .Add("action", a => a.Action).Add("by", a => a.ActorName);
 
-    public async Task<object> AuditAsync(ListQuery lq, string? record, string? action, string? key, DateOnly? from, DateOnly? to, CancellationToken ct = default)
+    public async Task<object> AuditAsync(ListQuery lq, string? record, string? action, string? key, DateOnly? from, DateOnly? to, CancellationToken ct = default,
+        string? via = null, string? kind = null, int? staff = null, string? request = null)
     {
         var q = db.AuditEntries.AsNoTracking().AsQueryable();
+        if (via == "Assistant") q = q.Where(a => a.Via == "Assistant");
+        if (kind == "changes") q = q.Where(a => a.Action != AuditAction.Action);
+        if (kind == "actions") q = q.Where(a => a.Action == AuditAction.Action);
+        if (staff != null) q = q.Where(a => a.ActorType == ActorType.Staff && a.ActorId == staff);
+        if (!string.IsNullOrEmpty(request)) q = q.Where(a => a.RequestId == request);
         if (!string.IsNullOrEmpty(record)) q = q.Where(a => a.EntityName == record);
         if (Enum.TryParse<AuditAction>(action, out var ac)) q = q.Where(a => a.Action == ac);
         if (!string.IsNullOrEmpty(key)) q = q.Where(a => a.EntityKey == key);
         if (from != null) q = q.Where(a => a.OccurredAt >= from.Value.ToDateTime(TimeOnly.MinValue));
         if (to != null) q = q.Where(a => a.OccurredAt < to.Value.AddDays(1).ToDateTime(TimeOnly.MinValue));
-        if (lq.Term.Length > 0) q = q.Where(a => a.ActorName.Contains(lq.Term) || a.EntityKey == lq.Term || a.Changes.Contains(lq.Term));
+        if (lq.Term.Length > 0) q = q.Where(a => a.ActorName.Contains(lq.Term) || a.EntityKey == lq.Term || a.Changes.Contains(lq.Term)
+            || a.Description.Contains(lq.Term) || a.Comment.Contains(lq.Term));
         var page = await q.PageAsync(lq, AuditSorts, a => new
         {
             id = a.Id, record = a.EntityName, key = a.EntityKey, action = a.Action.ToString(), by = a.ActorName, actor_type = a.ActorType.ToString(),
-            when = a.OccurredAt, changes = a.Changes,
+            when = a.OccurredAt, changes = a.Changes, description = a.Description, via = a.Via, comment = a.Comment, proposal_id = a.ProposalId,
+            request_id = a.RequestId, ip = a.IpAddress,
+            comments = a.Comments.OrderBy(c => c.CreatedAt).Select(c => new { id = c.Id, by = c.StaffName, text = c.Text, at = c.CreatedAt }).ToList(),
         }, ct);
         var records = await db.AuditEntries.AsNoTracking().Select(a => a.EntityName).Distinct().OrderBy(x => x).ToListAsync(ct);
         return new { page.Items, page.Total, page.Page, page.Size, page.Pages, page.Sort, page.Dir, records };
+    }
+
+    /// <summary>A reviewer's comment on an audit entry; entries themselves never change.</summary>
+    public async Task<object> CommentAsync(long id, string? text, CancellationToken ct = default)
+    {
+        text = (text ?? "").Trim();
+        if (text.Length is < 1 or > 2000) throw DomainException.Invalid("note_length");
+        if (!await db.AuditEntries.AnyAsync(a => a.Id == id, ct)) throw DomainException.NotFound();
+        db.AuditComments.Add(new AuditComment
+        {
+            AuditEntryId = id, StaffUserId = actor.Id ?? throw DomainException.Forbidden(), StaffName = actor.Name, Text = TextUtil.NoEmDash(text), CreatedAt = clock.UtcNow,
+        });
+        await db.SaveChangesAsync(ct);
+        return new { ok = true };
     }
 
     /// <summary>Assistant messages per person (last day, week and month) with their daily limit, and the daily total for 30 days.</summary>
