@@ -28,14 +28,14 @@ const EMPTY: Test = {
 export default function TestEdit() {
   const { id } = useParams();
   const isNew = !id;
-  const { t, to } = useLang();
+  const { t, to, lang: panel } = useLang();
   const toast = useToast();
   const nav = useNavigate();
   const lk = useLookups();
   const [picking, setPicking] = useState<{ si: number; ii: number | null } | null>(null);
   const loaded = useAsync(() => (isNew ? Promise.resolve(EMPTY) : api<Test>(`/assessments/${id}`)), [id]);
   const [x, setX] = useState<Test>(EMPTY);
-  const [lang, setLang] = useState<Bilingual>("ar");
+  const [lang, setLang] = useState<Bilingual>(panel === "en" ? "en" : "ar");
   const { busy, error, run } = useSaving();
   const suggest = useSaving();
   usePageTitle(isNew ? t("test.new") : x.title || t("test.title"));

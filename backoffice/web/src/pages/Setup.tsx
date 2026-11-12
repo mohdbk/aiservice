@@ -139,10 +139,10 @@ export function Settings() {
 type TextRow = { key: string; english: string; shipped: string; text: string; review_status: string; approved: boolean };
 
 export function PortalText() {
-  const { t } = useLang();
+  const { t, lang: panel } = useLang();
   usePageTitle(t("setup.portal_text"));
   const toast = useToast();
-  const [lang, setLang] = useState("ar");
+  const [lang, setLang] = useState(panel === "en" ? "en" : "ar");
   const list = useList<TextRow>(`/portal-text/${lang}`, ["changed"]);
   const [edit, setEdit] = useState<TextRow | null>(null);
   const { busy, error, run } = useSaving();

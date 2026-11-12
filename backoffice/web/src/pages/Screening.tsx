@@ -12,12 +12,12 @@ const TYPES = ["YesNo", "SingleChoice", "MultipleChoice", "Number", "Date", "Sho
 const EMPTY: Form = { text: "", text_en: "", english_status: "Missing", english_approved: false, answer_type: "YesNo", category: "", is_active: true, options: [] };
 
 export default function Screening() {
-  const { t } = useLang();
+  const { t, lang: panel } = useLang();
   usePageTitle(t("sq.title"));
   const toast = useToast();
   const list = useList<Row>("/screening-questions", ["type", "active", "english"]);
   const [form, setForm] = useState<Form | null>(null);
-  const [lang, setLang] = useState<Bilingual>("ar");
+  const [lang, setLang] = useState<Bilingual>(panel === "en" ? "en" : "ar");
   const { busy, error, run, setError } = useSaving();
   const suggest = useSaving();
   const open = async (id?: number) => {

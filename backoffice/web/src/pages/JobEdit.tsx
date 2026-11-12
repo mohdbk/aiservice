@@ -46,7 +46,7 @@ function move<T>(list: T[], i: number, d: number) {
 
 export default function JobEdit() {
   const { id } = useParams();
-  const { t, to } = useLang();
+  const { t, to, lang: panel } = useLang();
   const toast = useToast();
   const nav = useNavigate();
   const isNew = !id;
@@ -59,7 +59,7 @@ export default function JobEdit() {
       english: en?.review_status || "Missing", english_approved: !!en?.approved } as Job;
   }, [id]);
   const [job, setJob] = useState<Job>(EMPTY);
-  const [lang, setLang] = useState<Bilingual>("ar");
+  const [lang, setLang] = useState<Bilingual>(panel === "en" ? "en" : "ar");
   const [tab, setTab] = useState("details");
   const { busy, error, run } = useSaving();
   const suggest = useSaving();

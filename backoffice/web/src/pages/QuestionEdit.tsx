@@ -24,12 +24,12 @@ const CHOICE = ["SingleChoice", "MultipleChoice", "TrueFalse"];
 export default function QuestionEdit() {
   const { id } = useParams();
   const isNew = !id;
-  const { t, to } = useLang();
+  const { t, to, lang: panel } = useLang();
   const toast = useToast();
   const nav = useNavigate();
   const loaded = useAsync(() => (isNew ? Promise.resolve(EMPTY) : api<Q>(`/questions/${id}`)), [id]);
   const [q, setQ] = useState<Q>(EMPTY);
-  const [lang, setLang] = useState<Bilingual>("ar");
+  const [lang, setLang] = useState<Bilingual>(panel === "en" ? "en" : "ar");
   const { busy, error, run } = useSaving();
   const suggest = useSaving();
   usePageTitle(isNew ? t("q.new") : t("q.title"));
