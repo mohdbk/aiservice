@@ -142,7 +142,7 @@ function Brand() {
   const { config, t, path, lang } = useSite();
   return (
     <Link to={path()} className="flex min-w-0 items-center gap-2 sm:gap-3 md:gap-4" aria-label={`${t("site.portal")}, ${t("site.ministry")}`}>
-      <img src={logoSrc(lang, config.logo)} alt={t("site.ministry")} className="h-9 w-auto max-w-[40vw] sm:h-14 sm:max-w-none md:h-[72px]" width={907} height={228} />
+      <img src={logoSrc(lang, config.logo)} alt={t("site.ministry")} className="h-auto w-auto max-h-9 max-w-[40vw] shrink-0 object-contain sm:max-h-14 sm:max-w-none md:max-h-[72px]" width={907} height={228} />
       <span className="hidden h-10 w-px shrink-0 bg-aeblack-200 sm:block md:h-12" aria-hidden="true" />
       <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-primary-600 px-2.5 py-1 text-xs font-bold text-whitely-50 shadow-sm sm:gap-2 sm:px-3 sm:py-1.5 sm:text-sm md:px-4 md:py-2 md:text-lg" dir={config.dir}>
         <Briefcase size={24} className="hidden sm:block" aria-hidden="true" />
@@ -281,7 +281,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       <footer className="mc-surface bg-aeblack-900 text-aeblack-200">
         <div className="container mx-auto grid gap-8 px-4 py-10 md:grid-cols-2" dir="ltr">
           <div className="flex flex-col items-start">
-            <img src={logoSrc(lang, config.logo_dark || config.logo, Boolean(config.logo_dark))} alt={t("site.ministry")} className="mb-4 h-16 w-auto max-w-full md:h-20" width={907} height={228} />
+            <img src={logoSrc(lang, config.logo_dark || config.logo, Boolean(config.logo_dark))} alt={t("site.ministry")} className="mb-4 h-auto w-auto max-h-16 max-w-full object-contain md:max-h-20" width={907} height={228} />
             <p className="max-w-md text-sm leading-6" dir={config.dir}>{t("site.tagline")}</p>
           </div>
           <nav aria-label={t("footer.portal_links")} dir={config.dir} className="md:justify-self-end">

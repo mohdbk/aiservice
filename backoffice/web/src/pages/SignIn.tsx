@@ -33,8 +33,8 @@ export default function SignIn() {
   const other = lang === "ar" ? "en" : "ar";
   return (
     <div className="mc-hero flex min-h-screen flex-col">
-      <header className="flex items-center justify-between px-4 py-4 sm:px-8">
-        <img src={lang === "ar" ? "/logo-ar.png" : "/logo-en.png"} alt={t("app.ministry")} className="h-12 w-auto" />
+      <header dir="ltr" className="flex items-center justify-between gap-3 px-4 py-4 sm:px-8">
+        <img src={lang === "ar" ? "/logo-ar.png" : "/logo-en.png"} alt={t("app.ministry")} width={906} height={227} className="mh-logo h-10 sm:h-12" />
         <Link to={`/${other}/sign-in${loc.search}`} lang={other} className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold hover:bg-white/70">
           <LangFlag lang={other} />
           {t("lang.switch")}

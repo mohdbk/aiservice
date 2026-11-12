@@ -84,7 +84,7 @@ function Brand() {
   const { t, lang, to } = useLang();
   return (
     <Link to={to("/")} className="flex items-center gap-3" dir="ltr" aria-label={`${t("app.ministry")}, ${t("app.badge")}`}>
-      <img src={lang === "ar" ? "/logo-ar.png" : "/logo-en.png"} alt="" className="h-10 w-auto sm:h-12" />
+      <img src={lang === "ar" ? "/logo-ar.png" : "/logo-en.png"} alt="" width={906} height={227} className="mh-logo h-10 sm:h-12" />
       <span className="hidden h-8 w-px bg-aeblack-200 sm:block" aria-hidden="true" />
       <span dir={lang === "ar" ? "rtl" : "ltr"} className="hidden rounded-full bg-primary-100 px-3 py-1 text-sm font-bold text-primary-800 sm:inline">{t("app.badge")}</span>
     </Link>
@@ -178,8 +178,9 @@ export function Shell({ children }: { children: ReactNode }) {
     <div className="min-h-screen">
       <a href="#main" className="mc-skip aegov-btn btn-sm">{t("app.skip")}</a>
       <header className="sticky top-0 z-30 border-b border-aeblack-100 bg-white">
-        <div className="flex h-16 items-center justify-between gap-3 px-4 sm:h-20 sm:px-6">
-          <div className="flex items-center gap-2">
+        {/* The logo is always on the left, in Arabic and English: the bar is laid out left to right. */}
+        <div dir="ltr" className="flex h-16 items-center justify-between gap-3 px-4 sm:h-20 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2">
             <Dialog.Root open={open} onOpenChange={setOpen}>
               <Dialog.Trigger className="rounded-lg p-2 text-aeblack-700 hover:bg-aeblack-100 lg:hidden" aria-label={t("app.menu")}><List size={24} /></Dialog.Trigger>
               <Dialog.Portal>
@@ -195,7 +196,7 @@ export function Shell({ children }: { children: ReactNode }) {
             </Dialog.Root>
             <Brand />
           </div>
-          <div className="flex items-center gap-1">
+          <div dir={dir} className="flex shrink-0 items-center gap-1">
             <LanguageSwitch />
             <UserMenu />
           </div>
