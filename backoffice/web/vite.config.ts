@@ -6,5 +6,7 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: { port: 5174, proxy: { "/api": "http://localhost:5080" } },
+  // Used by the end-to-end check in CI (same origin as nginx in production).
+  preview: { port: 4173, proxy: { "/api": process.env.API_URL || "http://localhost:5080" } },
   build: { outDir: "dist", sourcemap: false, assetsInlineLimit: 0 },
 });

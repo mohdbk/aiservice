@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,6 +28,8 @@ public static class DependencyInjection
             sql.CommandTimeout(60);
         }));
         s.AddScoped<IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+        // Sign-in cookies stay valid across restarts and between API instances: the key ring lives in SQL Server.
+        s.AddDataProtection().SetApplicationName("MoET Recruitment").PersistKeysToDbContext<AppDbContext>();
         s.AddSingleton<IClock, SystemClock>();
         s.AddScoped<ICurrentActor, HttpCurrentActor>();
         s.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();

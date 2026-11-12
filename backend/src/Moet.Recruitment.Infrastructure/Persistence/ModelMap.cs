@@ -222,6 +222,7 @@ static class ModelMap
         m.Entity<AuditEntry>(e => e.ToTable("AuditEntry", "ops"));
         m.Entity<AgentSetting>(e => { e.ToTable("AgentSetting", "ops"); e.Property(x => x.Id).ValueGeneratedNever(); e.Property(x => x.Temperature).HasPrecision(3, 2); });
         m.Entity<AgentRun>(e => e.ToTable("AgentRun", "ops"));
+        m.Entity<Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey>(e => e.ToTable("DataProtectionKey", "ops"));
         m.Entity<AgentComponent>(e =>
         {
             e.ToTable("AgentComponent", "ops");

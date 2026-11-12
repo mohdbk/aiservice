@@ -218,4 +218,26 @@ public class EndToEndTests
         var plain = app.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
         Assert.Equal(HttpStatusCode.Forbidden, (await plain.PostAsync("/api/backoffice/sign-in", JsonBody(new { email = "x", password = "y" }))).StatusCode);
     }
+
+    [Fact]
+    public async Task A_staff_session_survives_an_api_restart()
+    {
+        if (string.IsNullOrEmpty(Db)) return;
+        string cookie;
+        using (var first = new App())
+        {
+            var http = first.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+            http.DefaultRequestHeaders.Add("X-Backoffice", "1");
+            var res = await http.PostAsync("/api/backoffice/sign-in", JsonBody(new { email = "admin@moet.test", password = "Admin-Password-123" }));
+            Assert.True(res.IsSuccessStatusCode, await res.Content.ReadAsStringAsync());
+            cookie = res.Headers.GetValues("Set-Cookie").First(c => c.StartsWith("moet_backoffice=")).Split(';')[0];
+        }
+        // A new instance (as after a redeploy) reads the key ring from SQL Server and accepts the same cookie.
+        using var second = new App();
+        var again = second.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+        using var req = new HttpRequestMessage(HttpMethod.Get, "/api/backoffice/me");
+        req.Headers.Add("Cookie", cookie);
+        var me = await again.SendAsync(req);
+        Assert.Equal(HttpStatusCode.OK, me.StatusCode);
+    }
 }

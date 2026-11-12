@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -16,7 +17,7 @@ namespace Moet.Recruitment.Infrastructure.Persistence;
 /// EF Core mapping onto the hand-written schema in Persistence/Schema (the schema scripts are the source of truth;
 /// EF never creates or migrates tables). Enums are stored as their names; times are UTC.
 /// </summary>
-public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentActor actor, IClock clock) : DbContext(options), IAppDbContext
+public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentActor actor, IClock clock) : DbContext(options), IAppDbContext, IDataProtectionKeyContext
 {
     public DbSet<Language> Languages => Set<Language>();
     public DbSet<PortalSetting> PortalSettings => Set<PortalSetting>();
@@ -48,6 +49,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
     public DbSet<AgentComponent> AgentComponents => Set<AgentComponent>();
     public DbSet<AgentSetting> AgentSettings => Set<AgentSetting>();
     public DbSet<AgentRun> AgentRuns => Set<AgentRun>();
+    /// <summary>The key ring that protects sign-in cookies, shared by every API instance and kept across restarts.</summary>
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder b)
     {

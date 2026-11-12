@@ -1,0 +1,68 @@
+name: End to End
+
+# The whole stack in CI: SQL Server, the API, the agent (with a stand-in model), the backoffice; then a phone browser
+# signs in and uses the assistant panel.
+on:
+  push:
+    branches: [main, dotnet-backend]
+    paths: ["backend/**", "agent/**", "backoffice/**", "e2e/**", ".github/workflows/e2e.yml"]
+  workflow_dispatch:
+
+jobs:
+  assistant:
+    runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "Ci-Strong-Password-123"
+          MSSQL_PID: Developer
+        ports: ["1433:1433"]
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Ci-Strong-Password-123 -Q 'SELECT 1' || exit 1"
+          --health-interval 10s --health-timeout 5s --health-retries 20
+    env:
+      DOTNET_NOLOGO: "1"
+      ADMIN_EMAIL: admin@moet.test
+      ADMIN_PASSWORD: Admin-Password-123
+      AGENT_KEY: e2e-agent-key-0123456789
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build
+        run: |
+          dotnet build backend/src/Moet.Recruitment.Api -c Release
+          dotnet build agent/src/Moet.Recruitment.Agent -c Release
+          cd backoffice/web && npm install --no-audit --no-fund && npm run build
+      - name: Start the stack
+        run: |
+          node e2e/fake-model.mjs > model.log 2>&1 &
+          DB_CONNECTION="Server=localhost,1433;Database=MoetE2e;User Id=sa;Password=Ci-Strong-Password-123;TrustServerCertificate=True;Encrypt=False" \
+          PORTAL_API_KEY=e2e-key PORTAL_API_SECRET=e2e-secret-0123456789 PORTAL_URL=https://careers.example COOKIE_SECURE=0 RUN_WORKERS=0 \
+          AGENT_URL=http://localhost:5090 \
+            dotnet backend/src/Moet.Recruitment.Api/bin/Release/net10.0/Moet.Recruitment.Api.dll --urls http://localhost:5080 > api.log 2>&1 &
+          BACKEND_URL=http://localhost:5080 LLM_BASE_URL=http://localhost:9000/v1 LLM_MODEL=fake LLM_API_KEY=none \
+            dotnet agent/src/Moet.Recruitment.Agent/bin/Release/net10.0/Moet.Recruitment.Agent.dll --urls http://localhost:5090 > agent.log 2>&1 &
+          (cd backoffice/web && npx vite preview --host 127.0.0.1 > ../../web.log 2>&1 &)
+          for i in $(seq 1 60); do curl -sf http://localhost:5080/healthz && curl -sf http://localhost:5090/healthz && curl -sf http://127.0.0.1:4173/ >/dev/null && break; sleep 2; done
+          API=http://localhost:5080 PORTAL_KEY=e2e-key:e2e-secret-0123456789 node backoffice/scripts/seed-demo.mjs
+      - name: Assistant on a phone
+        run: |
+          mkdir -p e2e/run/shots && cd e2e/run && npm init -y >/dev/null && npm install playwright@1.49.1 --no-audit --no-fund >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          cp ../assistant.mjs . && BASE_URL=http://127.0.0.1:4173 node assistant.mjs
+      - name: Logs
+        if: always()
+        run: |
+          echo "--- api"; tail -60 api.log; echo "--- agent"; tail -80 agent.log; echo "--- model"; tail -20 model.log; echo "--- web"; tail -20 web.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-screenshots
+          path: e2e/run/shots/

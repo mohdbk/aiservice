@@ -7,6 +7,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { api, useAuth, useLang } from "../core";
 import { AgentChat } from "../agent/AgentChat";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { LangFlag } from "./flags";
 
 type Item = { to: string; label: string; icon: ReactNode; admin?: boolean; sys?: boolean };
@@ -158,7 +159,7 @@ function AssistantPanel() {
             <Dialog.Title className="inline-flex items-center gap-2 font-bold"><ChatCircleDots size={24} className="text-primary-600" aria-hidden="true" />{t("asst.title")}</Dialog.Title>
             <Dialog.Close className="rounded p-1 hover:bg-aeblack-100" aria-label={t("app.close")}><X size={24} /></Dialog.Close>
           </div>
-          <div className="min-h-0 flex-1"><AgentChat panel /></div>
+          <div className="min-h-0 flex-1"><ErrorBoundary compact><AgentChat panel /></ErrorBoundary></div>
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>
@@ -206,7 +207,7 @@ export function Shell({ children }: { children: ReactNode }) {
         <aside className="sticky top-20 hidden h-[calc(100vh-5rem)] w-64 flex-none overflow-y-auto border-e border-aeblack-100 bg-white lg:block">
           <NavList />
         </aside>
-        <main id="main" className="min-w-0 flex-1 px-4 py-6 sm:px-8 sm:py-8">{children}</main>
+        <main id="main" className="min-w-0 flex-1 px-4 py-6 sm:px-8 sm:py-8"><ErrorBoundary key={loc.pathname}>{children}</ErrorBoundary></main>
       </div>
       {!/\/assistant$/.test(loc.pathname) && <AssistantPanel />}
     </div>
