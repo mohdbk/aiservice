@@ -10,11 +10,13 @@ for (const lang of ["ar", "en"]) {
   const page = await ctx.newPage();
   page.on("pageerror", (e) => errors.push(`${lang} pageerror: ${e.message}`));
   page.on("console", (m) => { if (m.type() === "error") errors.push(`${lang} console: ${m.text()}`); });
+  page.on("response", (r) => { if (r.url().includes("/api/") && r.status() >= 400 && !r.url().endsWith("/me")) errors.push(`${lang} ${r.status()} ${r.url()}`); });
   await page.goto(`${BASE}/${lang}/sign-in`);
   await page.fill('input[type="email"]', process.env.ADMIN_EMAIL);
   await page.fill('input[type="password"]', process.env.ADMIN_PASSWORD);
   await page.locator('form button[type="submit"]').click();
-  await page.waitForURL(new RegExp(`/${lang}/?$`));
+  try { await page.waitForURL(new RegExp(`/${lang}/?$`), { timeout: 15000 }); }
+  catch { console.error(errors.join("\n")); await page.screenshot({ path: `shots/signin-failed-${lang}.png` }); throw new Error(`sign-in did not complete (${lang})`); }
   await page.goto(`${BASE}/${lang}/applicants`);
   const vw = page.viewportSize().width;
   const logo = await page.locator("header img").first().boundingBox();
