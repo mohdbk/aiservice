@@ -1,7 +1,7 @@
 import { ArrowCircleUp, ChatCircleDots, CheckCircle, CircleNotch, Plus, StopCircle } from "@phosphor-icons/react";
 import { FormEvent, ReactElement, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { A2Action, A2Surface, A2Surfaces, applyMessages } from "../agent/a2ui";
+import { A2Action, A2Surface, A2Surfaces, applyMessages, writeData } from "../agent/a2ui";
 import { AgEvent, AgMessage, newId, parseToolResult, runAgent } from "../agent/agui";
 import { Button, ErrorState, Note, PageHeader } from "../components/ui";
 import { ApiError, api, useAuth, useLang, usePageTitle, useToast } from "../core";
@@ -84,9 +84,9 @@ export default function Assistant() {
   useEffect(() => end.current?.scrollIntoView({ behavior: "smooth", block: "end" }), [state.turns.length, running]);
   useEffect(() => () => stop.current?.abort(), []);
 
-  const ask = async (q: string) => {
+  const ask = async (q: string, hidden = false) => {
     setError(null);
-    const user: Turn = { id: newId(), role: "user", text: q };
+    const user: Turn = { id: newId(), role: "user", text: q, hidden };
     const reply: Turn = { id: newId(), role: "assistant", text: "", tools: [], surfaces: [] };
     const history: AgMessage[] = [...state.turns, user]
       .filter((x) => x.text.trim())
@@ -154,12 +154,25 @@ export default function Assistant() {
   /** Button events from A2UI surfaces. Approvals go to the backend, which carries the change out; the agent is told afterwards. */
   const onAction = async (a: A2Action) => {
     if (a.name === "open_applicant") return nav(`/${lang}/applicants/${a.context.applicant_id}`);
+    if (a.name === "submit_form") {
+      // The answers go back to the agent as an A2UI action, and it carries on.
+      if (running) return;
+      setState((s) => ({
+        ...s,
+        surfaces: applyMessages(s.surfaces, [
+          { version: "1.0", updateDataModel: { surfaceId: a.surfaceId, path: "/state", value: "submitted" } },
+          { version: "1.0", updateComponents: { surfaceId: a.surfaceId, components: [{ id: "actions", component: "Text", text: t("asst.sent"), variant: "h5" }] } },
+        ]).surfaces,
+      }));
+      return ask(JSON.stringify({ version: "1.0", action: a }), true);
+    }
     if (a.name !== "approve_proposal" && a.name !== "cancel_proposal") return;
     const approve = a.name === "approve_proposal";
     setActing(a.surfaceId);
     try {
       const r = await api<{ status: string; result: string; link?: string | null }>(
-        `/agent/proposals/${encodeURIComponent(a.context.proposal_id)}/${approve ? "approve" : "cancel"}?lang=${lang}`, { body: {} });
+        `/agent/proposals/${encodeURIComponent(a.context.proposal_id)}/${approve ? "approve" : "cancel"}?lang=${lang}`,
+        { body: approve && a.context.changes && typeof a.context.changes === "object" ? { changes: a.context.changes } : {} });
       const done = approve ? r.result : t("asst.cancelled");
       const event: Turn = { id: newId(), role: "user", hidden: true, text: JSON.stringify({ version: "1.0", action: { ...a, context: { ...a.context, status: r.status, result: r.result } } }) };
       setState((s) => ({
@@ -202,7 +215,8 @@ export default function Assistant() {
                   </ul>
                 )}
                 {m.role === "user" ? <p className="whitespace-pre-line" dir="auto">{m.text}</p> : <Markdown text={m.text} />}
-                {m.surfaces?.map((id) => state.surfaces[id] && <A2Surface key={id} surface={state.surfaces[id]} busy={acting === id} onAction={onAction} />)}
+                {m.surfaces?.map((id) => state.surfaces[id] && <A2Surface key={id} surface={state.surfaces[id]} busy={acting === id} onAction={onAction} emptyText={t("common.choose")}
+                  onData={(sid, path, value) => setState((s) => ({ ...s, surfaces: writeData(s.surfaces, sid, path, value) }))} />)}
               </div>
             </div>
           ))}

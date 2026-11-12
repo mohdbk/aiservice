@@ -5,6 +5,8 @@ import { useAuth } from "./core";
 import Applicant from "./pages/Applicant";
 import Applicants from "./pages/Applicants";
 import Assistant from "./pages/Assistant";
+import ComponentEdit from "./pages/ComponentEdit";
+import Components from "./pages/Components";
 import Dashboard from "./pages/Dashboard";
 import Interview from "./pages/Interview";
 import Interviews from "./pages/Interviews";
@@ -56,6 +58,8 @@ function Guarded() {
         <Route path="setup/settings" element={<Settings />} />
         <Route path="setup/portal-text" element={<PortalText />} />
         <Route path="setup/staff" element={<Staff />} />
+        <Route path="setup/components" element={<Components />} />
+        <Route path="setup/components/:id" element={<ComponentEdit />} />
         <Route path="*" element={<Navigate to={`/${lang}`} replace />} />
       </Routes>
     </Shell>

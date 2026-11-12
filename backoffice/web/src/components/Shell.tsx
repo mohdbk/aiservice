@@ -1,7 +1,7 @@
 import { Dialog, Menu } from "@base-ui/react";
 import {
   Briefcase, CalendarCheck, CaretDown, ChatCircleDots, ClipboardText, Exam, FileText, Gear, Handshake, Key, List, ListChecks,
-  SignOut, SquaresFour, Translate, TreeStructure, UserCircle, Users, UsersThree, X,
+  Cube, SignOut, SquaresFour, Translate, TreeStructure, UserCircle, Users, UsersThree, X,
 } from "@phosphor-icons/react";
 import { ReactNode, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
@@ -41,6 +41,7 @@ function useNav(): { group?: string; items: Item[] }[] {
         { to: "/setup/rounds", label: t("nav.rounds"), icon: i(UsersThree), admin: true },
         { to: "/setup/settings", label: t("nav.settings"), icon: i(Gear), admin: true },
         { to: "/setup/portal-text", label: t("nav.portal_text"), icon: i(Translate), admin: true },
+        { to: "/setup/components", label: t("nav.components"), icon: i(Cube), admin: true },
         { to: "/setup/staff", label: t("nav.staff"), icon: i(Key), sys: true },
       ],
     },

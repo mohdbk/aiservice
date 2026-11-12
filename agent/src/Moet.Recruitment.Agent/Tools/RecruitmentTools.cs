@@ -273,7 +273,7 @@ public sealed class RecruitmentTools(BackofficeApi api)
 
     static IEnumerable<JsonElement> Fields(JsonElement definition) =>
         definition.TryGetProperty("nodes", out var nodes) && nodes.ValueKind == JsonValueKind.Array
-            ? nodes.EnumerateArray().SelectMany(n => Str(n, "type") == "row" && n.TryGetProperty("children", out var k) ? k.EnumerateArray() : [n]).Where(n => Str(n, "type") == "field")
+            ? nodes.EnumerateArray().SelectMany<JsonElement, JsonElement>(n => Str(n, "type") == "row" && n.TryGetProperty("children", out var k) ? k.EnumerateArray() : new[] { n }).Where(n => Str(n, "type") == "field")
             : [];
 
     async Task<JsonElement> LookupsIfNeededAsync(JsonElement definition, CancellationToken ct) =>

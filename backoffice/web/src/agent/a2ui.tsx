@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Button } from "../components/ui";
+import { Button, SelectInput, TextArea, TextInput, Tick } from "../components/ui";
 
 /**
  * A2UI v1.0 renderer (https://a2ui.org) for the basic catalog, drawn with UAE Design System (aegov) styles.
@@ -67,15 +67,34 @@ const TEXT: Record<string, string> = {
 };
 const JUSTIFY: Record<string, string> = { start: "justify-start", center: "justify-center", end: "justify-end", spaceBetween: "justify-between", spaceAround: "justify-around" };
 
-export function A2Surface({ surface, busy, onAction }: { surface: A2Surface; busy?: boolean; onAction: (a: A2Action) => void }) {
+/** Whether a value counts as filled for a "required" check. */
+const filled = (v: any) => (Array.isArray(v) ? v.length > 0 : v !== undefined && v !== null && String(v).trim() !== "");
+
+/** Evaluates a component's checks (A2UI function calls); only "required" is supported. */
+function passes(checks: any, data: any) {
+  return !Array.isArray(checks) || checks.every((c) => c?.["@call"] !== "required" || filled(resolve(c.args?.value, data)));
+}
+
+/** Writes a value into a surface's data model (what an input does when the user types). */
+export function writeData(surfaces: A2Surfaces, surfaceId: string, path: string, value: any): A2Surfaces {
+  const s = surfaces[surfaceId];
+  return s ? { ...surfaces, [surfaceId]: { ...s, data: setAt(s.data, path, value) } } : surfaces;
+}
+
+export function A2Surface({ surface, busy, onAction, onData, emptyText = "" }: {
+  surface: A2Surface; busy?: boolean; onAction: (a: A2Action) => void; onData?: (surfaceId: string, path: string, value: any) => void; emptyText?: string;
+}) {
   const seen = new Set<string>();
+  // Inputs lock once the surface is decided (approved, cancelled or submitted).
+  const locked = !onData || (surface.data.state !== undefined && !["pending", "open"].includes(surface.data.state));
+  const write = (path: string | undefined, value: any) => path && onData?.(surface.id, path, value);
   const draw = (id: string | undefined): ReactNode => {
     if (!id || seen.has(id)) return null; // guards against cycles
     const c = surface.components[id];
     if (!c) return null;
     seen.add(id);
     const v = (p: string) => resolve(c[p], surface.data);
-    const kids = (): ReactNode[] => (Array.isArray(c.children) ? c.children.map((k: string) => <div key={k} className="min-w-0 flex-1">{draw(k)}</div>) : []);
+    const kids = (): ReactNode[] => (Array.isArray(c.children) ? c.children.map((k: string) => <div key={k} className="min-w-40 flex-1">{draw(k)}</div>) : []);
     switch (c.component) {
       case "Text": {
         const variant = (v("variant") as string) || "body";
@@ -94,12 +113,53 @@ export function A2Surface({ surface, busy, onAction }: { surface: A2Surface; bus
         return <hr className="border-aeblack-100" />;
       case "Image":
         return <img src={String(v("url") ?? "")} alt={String(v("description") ?? "")} className="max-h-60 rounded-lg" />;
+      case "TextField": {
+        const path = c.value?.["@path"] as string | undefined;
+        const label = <>{String(v("label") ?? "")}{c.required && <span className="text-aered-600" aria-hidden="true"> *</span>}</>;
+        const value = String(v("value") ?? "");
+        return c.textFieldType === "longText"
+          ? <TextArea label={label} rows={4} dir="auto" value={value} disabled={locked} required={!!c.required} onChange={(e) => write(path, e.target.value)} />
+          : <TextInput label={label} type={c.textFieldType === "number" ? "number" : "text"} dir="auto" value={value} disabled={locked} required={!!c.required}
+              onChange={(e) => write(path, e.target.value)} />;
+      }
+      case "DateTimeInput": {
+        const path = c.value?.["@path"] as string | undefined;
+        const label = <>{String(v("label") ?? "")}{c.required && <span className="text-aered-600" aria-hidden="true"> *</span>}</>;
+        return <TextInput label={label} type={c.enableDate === false ? "time" : "date"} value={String(v("value") ?? "")} disabled={locked}
+          required={!!c.required} onChange={(e) => write(path, e.target.value)} />;
+      }
+      case "ChoicePicker": {
+        const path = c.value?.["@path"] as string | undefined;
+        const options: { value: string; label: string }[] = (Array.isArray(c.options) ? c.options : []).map((o: any) => ({ value: String(o.value), label: String(resolve(o.label, surface.data) ?? o.value) }));
+        const label = <>{String(v("label") ?? "")}{c.required && <span className="text-aered-600" aria-hidden="true"> *</span>}</>;
+        const current = v("value");
+        if (c.maxAllowedSelections === 1) {
+          return <SelectInput label={label} value={String(current ?? "")} disabled={locked} required={!!c.required}
+            options={[{ value: "", label: emptyText }, ...options]} onChange={(e) => write(path, e.target.value)} />;
+        }
+        const chosen: string[] = Array.isArray(current) ? current.map(String) : [];
+        return (
+          <fieldset>
+            <legend className="mb-1 text-sm font-semibold text-aeblack-800">{label}</legend>
+            <div className="flex flex-wrap gap-x-4 gap-y-2">
+              {options.map((o) => (
+                <Tick key={o.value} label={o.label} checked={chosen.includes(o.value)}
+                  onChange={(on) => !locked && write(path, on ? [...chosen, o.value] : chosen.filter((x) => x !== o.value))} />
+              ))}
+            </div>
+          </fieldset>
+        );
+      }
+      case "CheckBox": {
+        const path = c.value?.["@path"] as string | undefined;
+        return <Tick label={String(v("label") ?? "")} checked={!!v("value")} onChange={(on) => !locked && write(path, on)} />;
+      }
       case "Button": {
         const ev = c.action?.event;
         const label = surface.components[c.child];
         return (
           <Button size="sm" variant={c.variant === "borderless" ? "link" : "primary"} busy={busy && c.variant !== "borderless"}
-            disabled={!ev || busy}
+            disabled={!ev || busy || !passes(c.checks, surface.data)}
             onClick={() => ev && onAction({
               name: ev.name, surfaceId: surface.id, sourceComponentId: c.id, timestamp: new Date().toISOString(), context: resolve(ev.context ?? {}, surface.data),
             })}>

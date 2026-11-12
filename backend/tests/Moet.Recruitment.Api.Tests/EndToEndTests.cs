@@ -156,12 +156,12 @@ public class EndToEndTests
         var created = await Read(await admin.PostAsync("/api/backoffice/components", JsonBody(card)));
         var second = await admin.PostAsync("/api/backoffice/components", JsonBody(card with { }));
         Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
-        var bad = await admin.PostAsync("/api/backoffice/components", JsonBody(new
+        var badCard = await admin.PostAsync("/api/backoffice/components", JsonBody(new
         {
             key = "bad_card", name = "x", kind = "Approval", action_name = "add_note", is_active = true,
             definition = new { nodes = new object[] { new { type = "field", name = "applicant_id", input = "number" } } },
         }));
-        Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, badCard.StatusCode);
         var comps = await Read(await admin.GetAsync("/api/backoffice/components?kind=Approval&sort=name"));
         Assert.Equal(1, comps.GetProperty("total").GetInt32());
         var forAgent = await Read(await admin.GetAsync("/api/backoffice/agent/components"));
