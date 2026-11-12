@@ -1106,5 +1106,12 @@
  "dash.suggested": "الخطوات التالية المقترحة",
  "dash.ask_assistant": "اسأل المساعد",
  "doc.pdf": "تنزيل PDF",
- "mail.attach_offer_pdf": "إرفاق خطاب العرض بصيغة PDF مع رسائل العروض"
+ "mail.attach_offer_pdf": "إرفاق خطاب العرض بصيغة PDF مع رسائل العروض",
+ "backup.title": "النسخ الاحتياطية لقاعدة البيانات",
+ "backup.now": "نسخ احتياطي الآن",
+ "backup.done": "تم أخذ نسخة احتياطية.",
+ "backup.off": "النسخ الاحتياطي غير مهيأ. اضبط BACKUP_S3_ENDPOINT وBACKUP_S3_BUCKET وBACKUP_S3_ACCESS_KEY وBACKUP_S3_SECRET_KEY في خدمة الواجهة البرمجية.",
+ "backup.every": "تؤخذ كل {n} ساعات. تملأ قاعدة البيانات الجديدة الفارغة من أحدث نسخة عند تشغيل الخدمة.",
+ "backup.none": "لا توجد نسخ بعد.",
+ "error.backups_off": "النسخ الاحتياطي غير مهيأ."
 }

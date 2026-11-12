@@ -196,6 +196,7 @@ export function HealthPage() {
         {box(t("health.email"), h.email.state, [["health.queued", h.email.queued], ["health.sent_day", h.email.sent_day], ["health.failed_day", h.email.failed_day]])}
         {box(t("health.cv"), h.cv_scoring.state, [["health.waiting", h.cv_scoring.waiting], ["health.failed", h.cv_scoring.failed]])}
       </div>
+      <Backups />
       {h.background.recent_failures.length > 0 && (
         <Card title={t("health.failures")} className="mt-6">
           <ul className="space-y-2 text-sm">
@@ -492,5 +493,38 @@ export function HandOffSettings() {
         </Card>
       </div>
     </>
+  );
+}
+
+/** Database backups in the bucket: the newest first, and taking one now. */
+function Backups() {
+  const { t, date } = useLang();
+  const toast = useToast();
+  const data = useAsync(() => api<{ configured: boolean; interval_hours: number; items: { key: string; size: number; modified: string }[] }>("/backups"), []);
+  const { busy, error, run } = useSaving();
+  const now = async () => {
+    if (await run(() => api("/backups", { body: {} })) !== undefined) { toast(t("backup.done")); data.reload(); }
+  };
+  if (!data.data) return null;
+  const b = data.data;
+  return (
+    <Card title={t("backup.title")} className="mt-6" actions={b.configured && <Button variant="outline" size="sm" busy={busy} onClick={now}>{t("backup.now")}</Button>}>
+      {error && <div className="mb-3"><ErrorState error={error} /></div>}
+      {!b.configured ? <Note tone="warning">{t("backup.off")}</Note> : (
+        <>
+          <p className="mb-3 text-sm text-aeblack-600">{t("backup.every", { n: b.interval_hours })}</p>
+          {b.items.length === 0 ? <p className="text-sm text-aeblack-500">{t("backup.none")}</p> : (
+            <ul className="divide-y divide-aeblack-100 text-sm">
+              {b.items.slice(0, 10).map((x) => (
+                <li key={x.key} className="flex justify-between gap-3 py-2">
+                  <span>{date(x.modified, true)}</span>
+                  <span className="tabular-nums text-aeblack-500" dir="ltr">{(x.size / 1024 / 1024).toFixed(1)} MB</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </Card>
   );
 }
