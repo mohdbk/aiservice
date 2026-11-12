@@ -215,7 +215,7 @@ public sealed class RecruitmentTools(BackofficeApi api)
         [Description("Label shown to the user, in the user's language")] public string Label { get; set; } = "";
         [Description("text, longtext, number, date, time, choice, multichoice or checkbox")] public string Type { get; set; } = "text";
         [Description("Options for choice and multichoice")] public List<AskOption>? Options { get; set; }
-        [Description("Pre-filled value, if you can suggest one")] public string? Value { get; set; }
+        [Description("Pre-filled value, only when the user said it or the data makes it certain. Never pre-select a record (job, applicant, test) the user has not named: leave the choice empty so they pick it.")] public string? Value { get; set; }
         [Description("Whether an answer is needed")] public bool Required { get; set; }
     }
 
@@ -225,6 +225,9 @@ public sealed class RecruitmentTools(BackofficeApi api)
         [Description("The fields, at most 8")] List<AskField> fields)
     {
         if (fields.Count is 0 or > 8) return Error("give_1_to_8_fields");
+        // One form per answer: a second form in the same reply would ask the same thing twice.
+        if (!api.FirstInRun("ask_user"))
+            return JsonSerializer.SerializeToElement(new { error = "form_already_shown", hint = "A form is already showing. Stop now and wait for the user's answer." });
         // A choice with nothing to choose from is a dead end for the user: send the model back to fetch real options first.
         var empty = fields.Where(f => f.Type is "choice" or "multichoice" && (f.Options == null || !f.Options.Any(o => o.Label.Trim().Length > 0))).Select(f => f.Name).ToList();
         if (empty.Count > 0)

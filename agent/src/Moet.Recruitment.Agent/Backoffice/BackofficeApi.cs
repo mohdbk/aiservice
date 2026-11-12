@@ -19,6 +19,16 @@ public sealed class BackofficeApi(IHttpClientFactory factory, IHttpContextAccess
     public string Lang => context.HttpContext?.Items[Hosting.SettingsChatClient.MessageLangKey] as string
         ?? (context.HttpContext?.Request.Headers["X-Lang"].ToString() == "en" ? "en" : "ar");
 
+    /// <summary>True the first time it is called with this key during the current run (one user message).</summary>
+    public bool FirstInRun(string key)
+    {
+        var items = context.HttpContext?.Items;
+        if (items == null) return true;
+        if (items.ContainsKey("once:" + key)) return false;
+        items["once:" + key] = true;
+        return true;
+    }
+
     public Task<JsonElement> GetAsync(string path, CancellationToken ct = default) => SendAsync(HttpMethod.Get, path, null, ct);
 
     public Task<JsonElement> PostAsync(string path, object body, CancellationToken ct = default) => SendAsync(HttpMethod.Post, path, body, ct);
