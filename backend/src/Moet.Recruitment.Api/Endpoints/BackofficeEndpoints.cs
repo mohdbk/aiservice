@@ -6,6 +6,7 @@ using Moet.Recruitment.Application.Backoffice;
 using Moet.Recruitment.Application.Ai;
 using Moet.Recruitment.Application.Assessments;
 using Moet.Recruitment.Application.Common;
+using Moet.Recruitment.Domain.Common;
 
 namespace Moet.Recruitment.Api.Endpoints;
 
@@ -210,6 +211,21 @@ public static class BackofficeEndpoints
         sys.MapGet("/consents", ([AsParameters] ListQuery lq, string? kind, DataProtectionService s, CancellationToken ct) => s.ConsentsAsync(lq, kind, ct));
         sys.MapGet("/handoff-settings", (HandOffService s, CancellationToken ct) => s.GetAsync(ct));
         sys.MapPut("/handoff-settings", (HandOffInput b, HandOffService s, CancellationToken ct) => s.SaveAsync(b, ct));
+        sys.MapGet("/backups", async (IBackups b, CancellationToken ct) =>
+        {
+            var items = b.IsConfigured ? await b.ListAsync(ct) : [];
+            return new
+            {
+                configured = b.IsConfigured, interval_hours = b.IntervalHours,
+                items = items.Select(x => new { key = x.Key, size = x.Size, modified = x.Modified }),
+            };
+        });
+        sys.MapPost("/backups", async (IBackups b, CancellationToken ct) =>
+        {
+            if (!b.IsConfigured) throw DomainException.Conflict("backups_off");
+            var (key, size) = await b.BackUpAsync(ct);
+            return new { key, size };
+        });
         sys.MapGet("/text-settings", (TextService s, CancellationToken ct) => s.GetAsync(ct));
         sys.MapPut("/text-settings", (TextSettingInput b, TextService s, CancellationToken ct) => s.SaveAsync(b, ct));
         sys.MapPost("/text-settings/test", (TextTestBody b, TextService s, CancellationToken ct) => s.TestAsync(b.To, ct));

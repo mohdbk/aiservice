@@ -105,6 +105,8 @@ public sealed class JobWorker(IServiceScopeFactory scopes, ILogger<JobWorker> lo
     static readonly string Owner = Environment.MachineName + ":" + Environment.ProcessId;
     DateTime _nextHourly = DateTime.MinValue;
     DateTime _nextDaily = DateTime.MinValue;
+    // The first backup waits a while after start, so a restore or a seed can finish first.
+    DateTime _nextBackup = DateTime.UtcNow.AddMinutes(30);
 
     protected override async Task ExecuteAsync(CancellationToken stop)
     {
@@ -169,8 +171,21 @@ public sealed class JobWorker(IServiceScopeFactory scopes, ILogger<JobWorker> lo
     async Task SchedulesAsync(CancellationToken ct)
     {
         var now = DateTime.UtcNow;
-        if (now < _nextHourly && now < _nextDaily) return;
+        if (now < _nextHourly && now < _nextDaily && now < _nextBackup) return;
         using var scope = scopes.CreateScope();
+        if (now >= _nextBackup)
+        {
+            var backups = scope.ServiceProvider.GetRequiredService<BackupService>();
+            _nextBackup = now.AddHours(backups.IntervalHours);
+            if (backups.IsConfigured)
+            {
+                try { await backups.BackUpAsync(ct); }
+                catch (Exception e) when (e is HttpRequestException or Microsoft.Data.SqlClient.SqlException or TaskCanceledException)
+                {
+                    log.LogError(e, "Scheduled backup failed");
+                }
+            }
+        }
         if (now >= _nextHourly)
         {
             _nextHourly = now.AddHours(1);

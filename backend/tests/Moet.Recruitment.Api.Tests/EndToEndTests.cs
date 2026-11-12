@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Moet.Recruitment.Api.Tests;
 
@@ -414,6 +415,19 @@ public class EndToEndTests
         Assert.True((await admin.PutAsync("/api/backoffice/data-protection", JsonBody(new { is_enabled = true, unsuccessful_months = 12, inactive_account_months = 36 }))).IsSuccessStatusCode);
         Assert.True((await admin.PostAsync("/api/backoffice/data-protection/run", JsonBody(new { }))).IsSuccessStatusCode);
         Assert.True((await admin.GetAsync("/api/backoffice/consents")).IsSuccessStatusCode);
+
+        // Backups: off without a bucket; a backup of every table restores into the same tables with the same rows.
+        var backups = await Read(await admin.GetAsync("/api/backoffice/backups"));
+        Assert.False(backups.GetProperty("configured").GetBoolean());
+        Assert.Equal(HttpStatusCode.Conflict, (await admin.PostAsync("/api/backoffice/backups", JsonBody(new { }))).StatusCode);
+        var backupService = app.Services.GetRequiredService<Moet.Recruitment.Infrastructure.BackupService>();
+        var before = await Read(await admin.GetAsync("/api/backoffice/applicants?size=100"));
+        var zipped = await backupService.ExportAsync(CancellationToken.None);
+        await backupService.RestoreAsync(zipped, CancellationToken.None);
+        var after = await Read(await admin.GetAsync("/api/backoffice/applicants?size=100"));
+        Assert.Equal(before.GetProperty("total").GetInt32(), after.GetProperty("total").GetInt32());
+        Assert.Equal(before.GetProperty("items")[0].GetProperty("full_name").GetString(), after.GetProperty("items")[0].GetProperty("full_name").GetString());
+        Assert.True((await admin.GetAsync("/api/backoffice/jobs")).IsSuccessStatusCode);   // the session survived (its keys were restored too)
 
         // Changes without the X-Admin header are refused.
         var plain = app.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });

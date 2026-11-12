@@ -131,6 +131,15 @@ public interface ITextSender
     Task SendAsync(TextConfig config, string to, string body, CancellationToken ct = default);
 }
 
+/// <summary>Database backups in a bucket (see the infrastructure's BackupService).</summary>
+public interface IBackups
+{
+    bool IsConfigured { get; }
+    double IntervalHours { get; }
+    Task<(string Key, long Size)> BackUpAsync(CancellationToken ct);
+    Task<List<(string Key, long Size, DateTime Modified)>> ListAsync(CancellationToken ct);
+}
+
 /// <summary>A file sent with an email.</summary>
 public sealed record MailAttachment(string FileName, string ContentType, byte[] Content);
 

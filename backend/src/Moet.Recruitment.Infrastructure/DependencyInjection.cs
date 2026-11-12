@@ -44,6 +44,9 @@ public static class DependencyInjection
         s.AddHttpClient("webhooks", c => c.Timeout = TimeSpan.FromSeconds(30));
         s.AddSingleton<IWebhookClient, HttpWebhookClient>();
         s.AddSingleton<IPdfRenderer, QuestPdfRenderer>();
+        s.AddHttpClient("backups", c => c.Timeout = TimeSpan.FromMinutes(10));
+        s.AddSingleton<BackupService>();
+        s.AddSingleton<IBackups>(sp => sp.GetRequiredService<BackupService>());
         s.AddSingleton<ISecretProtector, AesSecretProtector>();
         s.AddHttpClient<ILanguageModel, OpenAiCompatibleModel>(c => c.Timeout = TimeSpan.FromMinutes(5));
         s.AddHttpClient<ICvReader, CvReader>(c => c.Timeout = TimeSpan.FromMinutes(5));
@@ -59,6 +62,12 @@ public static class DependencyInjection
     public static async Task PrepareDatabaseAsync(IServiceProvider services, IConfiguration cfg, ILogger logger, CancellationToken ct = default)
     {
         await SchemaMigrator.MigrateAsync(ConnectionString(cfg), logger, ct);
+        // A new, empty database is filled from the newest backup when backups are set up.
+        try { await services.GetRequiredService<BackupService>().RestoreIfEmptyAsync(ct); }
+        catch (Exception e) when (e is HttpRequestException or Microsoft.Data.SqlClient.SqlException or InvalidDataException or System.Xml.XmlException)
+        {
+            logger.LogError(e, "Restoring the newest backup failed; starting with an empty database");
+        }
         using var scope = services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var portalUrl = (cfg["PORTAL_URL"] ?? "").Trim().TrimEnd('/');
