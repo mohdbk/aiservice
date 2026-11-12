@@ -58,10 +58,12 @@ public sealed class EmailOutboxWorker(IServiceScopeFactory scopes, ILogger<Email
                 m.Status = EmailStatus.Sent;
                 m.SentAt = clock.UtcNow;
                 m.Attempts++;
+                AppMetrics.EmailsSent.Add(1);
             }
             catch (Exception e) when (e is SmtpException or InvalidOperationException or FormatException or System.Net.Sockets.SocketException)
             {
                 m.Failed(e.Message, clock.UtcNow);
+                AppMetrics.EmailsFailed.Add(1);
                 log.LogWarning("Email {Id} to {To} failed: {Error}", m.Id, m.ToAddress, e.Message);
             }
         }
@@ -88,10 +90,12 @@ public sealed class EmailOutboxWorker(IServiceScopeFactory scopes, ILogger<Email
                 m.Status = EmailStatus.Sent;
                 m.SentAt = clock.UtcNow;
                 m.Attempts++;
+                AppMetrics.TextsSent.Add(1);
             }
             catch (Exception e) when (e is HttpRequestException or TaskCanceledException or InvalidOperationException)
             {
                 m.Failed(e.Message, clock.UtcNow);
+                AppMetrics.TextsFailed.Add(1);
                 log.LogWarning("Text {Id} failed: {Error}", m.Id, e.Message);
             }
         }
@@ -147,6 +151,7 @@ public sealed class JobWorker(IServiceScopeFactory scopes, ILogger<JobWorker> lo
         {
             if (handler == null) throw new InvalidOperationException($"No handler for {job.JobType}");
             await handler.RunAsync(job.TargetId, ct);
+            AppMetrics.JobsDone.Add(1, new KeyValuePair<string, object?>("type", job.JobType));
             db.ChangeTracker.Clear();
             await db.BackgroundJobs.Where(j => j.Id == job.Id).ExecuteUpdateAsync(u => u
                 .SetProperty(j => j.Status, BackgroundJobStatus.Done).SetProperty(j => j.CompletedAt, DateTime.UtcNow)
@@ -154,6 +159,7 @@ public sealed class JobWorker(IServiceScopeFactory scopes, ILogger<JobWorker> lo
         }
         catch (Exception e) when (!ct.IsCancellationRequested)
         {
+            AppMetrics.JobsFailed.Add(1, new KeyValuePair<string, object?>("type", job.JobType));
             log.LogWarning(e, "Job {Type} {Target} failed (attempt {Attempt})", job.JobType, job.TargetId, job.Attempts);
             db.ChangeTracker.Clear();
             var failed = job.Attempts >= Domain.Operations.BackgroundJob.MaxAttempts;
@@ -179,7 +185,7 @@ public sealed class JobWorker(IServiceScopeFactory scopes, ILogger<JobWorker> lo
             _nextBackup = now.AddHours(backups.IntervalHours);
             if (backups.IsConfigured)
             {
-                try { await backups.BackUpAsync(ct); }
+                try { await backups.BackUpAsync(ct); AppMetrics.Backups.Add(1); }
                 catch (Exception e) when (e is HttpRequestException or Microsoft.Data.SqlClient.SqlException or TaskCanceledException)
                 {
                     log.LogError(e, "Scheduled backup failed");

@@ -3,6 +3,8 @@ name: Design Audit
 # The whole stack with demo content, then screenshots of every backoffice and portal page in Arabic and English, on a
 # desktop and a phone, with a report of anything wider than the screen. Images go to the "audit" branch.
 on:
+  schedule:
+    - cron: "41 23 * * *"
   workflow_dispatch:
   push:
     branches: [dotnet-backend]

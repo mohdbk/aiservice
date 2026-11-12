@@ -3,6 +3,7 @@ using Microsoft.Agents.AI.Hosting.AGUI.AspNetCore;
 using Moet.Recruitment.Agent.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddTelemetry("moet-recruitment-agent", "Microsoft.Agents.AI", "Experimental.Microsoft.Extensions.AI");
 
 builder.Services.AddAGUIServer();
 builder.Services.AddRecruitmentAgent(builder.Configuration);

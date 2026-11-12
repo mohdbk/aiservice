@@ -8,6 +8,7 @@ using Moet.Recruitment.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 var cfg = builder.Configuration;
+builder.AddTelemetry("moet-recruitment-api", Moet.Recruitment.Infrastructure.AppMetrics.MeterName);
 
 builder.Services.AddApplication();
 builder.Services.AddBackofficeApplication();
