@@ -45,7 +45,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
     public DbSet<EmailMessage> EmailMessages => Set<EmailMessage>();
     public DbSet<EmailSetting> EmailSettings => Set<EmailSetting>();
     public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
-    public DbSet<OfferTemplate> OfferTemplates => Set<OfferTemplate>();
+    public DbSet<DocumentTemplate> DocumentTemplates => Set<DocumentTemplate>();
     public DbSet<BackgroundJob> BackgroundJobs => Set<BackgroundJob>();
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
     public DbSet<AgentProposal> AgentProposals => Set<AgentProposal>();
@@ -103,7 +103,7 @@ static class Audit
         typeof(JobOpening), typeof(JobOpeningTranslation), typeof(JobApplication), typeof(Interview), typeof(InterviewFeedback),
         typeof(JobOffer), typeof(Question), typeof(Assessment), typeof(Invitation), typeof(ScreeningQuestion), typeof(PortalSetting),
         typeof(PortalText), typeof(StaffUser), typeof(Department), typeof(InterviewRound), typeof(AgentComponent), typeof(AgentSetting), typeof(RoleProfile),
-        typeof(EmailSetting), typeof(EmailTemplate), typeof(OfferTemplate),
+        typeof(EmailSetting), typeof(EmailTemplate), typeof(DocumentTemplate),
     ];
 
     static readonly HashSet<string> Secret = ["PasswordHash", "RowVersion", "Content", "ModelApiKeyProtected", "PasswordProtected"];

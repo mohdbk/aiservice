@@ -3,6 +3,7 @@ using Moet.Recruitment.Application.Common;
 using Moet.Recruitment.Domain;
 using Moet.Recruitment.Domain.Common;
 using Moet.Recruitment.Domain.Hiring;
+using Moet.Recruitment.Domain.Operations;
 
 namespace Moet.Recruitment.Application.Backoffice;
 
@@ -15,7 +16,7 @@ public sealed record RatingInput(string Skill, int Rating);
 public sealed record OfferInput(int ApplicationId, string PositionTitle, string OfferDate, string? StartDate, decimal? MonthlySalary, string? Currency, string? Terms,
     int? OfferTemplateId = null);
 
-public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator codes, ICurrentActor actor, IRequestLanguage language, IClock clock, OfferLetterService letters,
+public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator codes, ICurrentActor actor, IRequestLanguage language, IClock clock, DocumentService letters,
     PortalMailer mailer, ContentService content)
 {
     static readonly Sorts<Interview> InterviewSorts = new Sorts<Interview>("starts", false)
@@ -197,10 +198,10 @@ public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator 
         o.Terms = TextUtil.Clip(input.Terms, 20000);
         if (input.OfferTemplateId is { } tid)
         {
-            if (!await db.OfferTemplates.AnyAsync(t => t.Id == tid && t.IsActive, ct)) throw DomainException.Invalid("offer_template_invalid");
+            if (!await db.DocumentTemplates.AnyAsync(t => t.Id == tid && t.IsActive && t.Kind == DocumentKinds.OfferLetter, ct)) throw DomainException.Invalid("offer_template_invalid");
             o.OfferTemplateId = tid;
         }
-        else o.OfferTemplateId ??= await db.OfferTemplates.Where(t => t.IsDefault && t.IsActive).Select(t => (int?)t.Id).FirstOrDefaultAsync(ct);
+        else o.OfferTemplateId ??= await db.DocumentTemplates.Where(t => t.Kind == DocumentKinds.OfferLetter && t.IsDefault && t.IsActive).Select(t => (int?)t.Id).FirstOrDefaultAsync(ct);
         o.UpdatedAt = now;
         await db.SaveChangesAsync(ct);
         return new { id = o.Id, code = o.Code };

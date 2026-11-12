@@ -154,7 +154,8 @@ public sealed class EnvironmentMail(IConfiguration cfg) : IMailEnvironment
 
 public sealed class SmtpMailSender : IMailSender
 {
-    public async Task SendAsync(SmtpConfig c, string to, string subject, string html, CancellationToken ct = default)
+    /// <summary>multipart/alternative: plain text first, then HTML (mail clients show the richest part they support).</summary>
+    public async Task SendAsync(SmtpConfig c, string to, string subject, string html, string text, CancellationToken ct = default)
     {
         using var smtp = new System.Net.Mail.SmtpClient(c.Host, c.Port)
         {
@@ -162,10 +163,19 @@ public sealed class SmtpMailSender : IMailSender
             Credentials = c.UserName.Length == 0 ? null : new System.Net.NetworkCredential(c.UserName, c.Password),
             Timeout = 30_000,
         };
-        using var msg = new System.Net.Mail.MailMessage
+        using var msg = new System.Net.Mail.MailMessage { From = new System.Net.Mail.MailAddress(c.FromAddress, c.FromName), Subject = subject };
+        if (text.Length > 0)
         {
-            From = new System.Net.Mail.MailAddress(c.FromAddress, c.FromName), Subject = subject, Body = html, IsBodyHtml = true,
-        };
+            msg.Body = text;
+            msg.BodyEncoding = System.Text.Encoding.UTF8;
+            msg.AlternateViews.Add(System.Net.Mail.AlternateView.CreateAlternateViewFromString(html, System.Text.Encoding.UTF8, "text/html"));
+        }
+        else
+        {
+            msg.Body = html;
+            msg.IsBodyHtml = true;
+        }
+        msg.SubjectEncoding = System.Text.Encoding.UTF8;
         msg.To.Add(to);
         await smtp.SendMailAsync(msg, ct);
     }

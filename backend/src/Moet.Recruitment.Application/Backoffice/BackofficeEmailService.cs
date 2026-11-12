@@ -10,11 +10,11 @@ public sealed record EmailSettingInput(string? Host, int Port, bool UseTls, stri
     string? FromAddress, string? FromName, string? SignatureAr, string? SignatureEn);
 public sealed record TestEmailInput(string? To, string? Lang);
 public sealed record EmailTemplateInput(string? Key, string? NameAr, string? NameEn, string? SubjectAr, string? BodyAr, string? SubjectEn, string? BodyEn,
-    bool IsEnabled, string? RowVersion);
+    bool IsEnabled, string? RowVersion, string? BodyHtmlAr = null, string? BodyHtmlEn = null);
 
 /// <summary>The email server (administrators), the email templates (recruitment admins) and the email log.</summary>
 public sealed class BackofficeEmailService(IAppDbContext db, ICurrentActor actor, IClock clock, ISecretProtector secrets, MailConfig mail,
-    IMailSender sender, PortalMailer mailer)
+    IMailSender sender, PortalMailer mailer, IHtmlCleaner cleaner)
 {
     // ---------------- server ----------------
 
@@ -71,14 +71,15 @@ public sealed class BackofficeEmailService(IAppDbContext db, ICurrentActor actor
         var ar = input.Lang == "ar";
         var subject = ar ? "رسالة تجريبية من نظام التوظيف" : "Test Email from the Recruitment System";
         var body = ar ? "هذه رسالة تجريبية للتأكد من إعدادات خادم البريد." : "This is a test email to check the email server settings.";
-        return await TrySendAsync(config, input.To!.Trim(), subject, PortalMailer.Html(body, subject, "", await mailer.SignatureAsync(ar ? "ar" : "en", ct), ar), ct);
+        var signature = await mailer.SignatureAsync(ar ? "ar" : "en", ct);
+        return await TrySendAsync(config, input.To!.Trim(), subject, PortalMailer.Html(body, subject, "", signature, ar), $"{body}\n\n{signature}", ct);
     }
 
-    async Task<object> TrySendAsync(SmtpConfig config, string to, string subject, string html, CancellationToken ct)
+    async Task<object> TrySendAsync(SmtpConfig config, string to, string subject, string html, string text, CancellationToken ct)
     {
         try
         {
-            await sender.SendAsync(config, to, subject, html, ct);
+            await sender.SendAsync(config, to, subject, html, text, ct);
             return new { ok = true, server = config.Host };
         }
         catch (Exception e) when (e is System.Net.Mail.SmtpException or InvalidOperationException or FormatException or System.Net.Sockets.SocketException)
@@ -116,7 +117,7 @@ public sealed class BackofficeEmailService(IAppDbContext db, ICurrentActor actor
         return new
         {
             id = t.Id, key = t.Key, @event = t.Event, name_ar = t.NameAr, name_en = t.NameEn, subject_ar = t.SubjectAr, body_ar = t.BodyAr,
-            subject_en = t.SubjectEn, body_en = t.BodyEn, is_enabled = t.IsEnabled, required = ev?.Required ?? false,
+            subject_en = t.SubjectEn, body_en = t.BodyEn, body_html_ar = t.BodyHtmlAr, body_html_en = t.BodyHtmlEn, is_enabled = t.IsEnabled, required = ev?.Required ?? false,
             placeholders = ev?.Placeholders ?? ["name", "job_title", "reference"], row_version = Convert.ToBase64String(t.RowVersion),
         };
     }
@@ -144,6 +145,8 @@ public sealed class BackofficeEmailService(IAppDbContext db, ICurrentActor actor
         t.SubjectEn = TextUtil.NoEmDash(TextUtil.Clip(input.SubjectEn?.Trim(), 300));
         t.BodyAr = TextUtil.NoEmDash(TextUtil.Clip(input.BodyAr?.Trim(), 20000));
         t.BodyEn = TextUtil.NoEmDash(TextUtil.Clip(input.BodyEn?.Trim(), 20000));
+        t.BodyHtmlAr = CleanHtml(input.BodyHtmlAr);
+        t.BodyHtmlEn = CleanHtml(input.BodyHtmlEn);
         t.IsEnabled = input.IsEnabled;
         t.UpdatedAt = now;
         t.UpdatedByStaffId = actor.Id;
@@ -151,6 +154,13 @@ public sealed class BackofficeEmailService(IAppDbContext db, ICurrentActor actor
         if (await db.EmailTemplates.AnyAsync(x => x.Id != t.Id && x.Key == t.Key, ct)) throw DomainException.Conflict("template_key_taken");
         await db.SaveChangesAsync(ct);
         return new { id = t.Id };
+    }
+
+    /// <summary>A designed HTML version, cleaned like all staff HTML; empty when it has no text (an emptied editor).</summary>
+    string CleanHtml(string? html)
+    {
+        var clean = TextUtil.NoEmDash(cleaner.Clean(TextUtil.Clip(html, 100000)));
+        return TextUtil.StripHtml(clean).Trim().Length == 0 ? "" : clean;
     }
 
     public async Task<object> DeleteTemplateAsync(int id, CancellationToken ct = default)
@@ -182,8 +192,8 @@ public sealed class BackofficeEmailService(IAppDbContext db, ICurrentActor actor
         var (subject, body) = t.In(lang);
         var values = Samples(lang == "ar");
         subject = EmailTemplates.Fill(subject, values);
-        return await TrySendAsync(config, input.To!.Trim(), subject,
-            PortalMailer.Html(EmailTemplates.Fill(body, values), subject, values["link"], await mailer.SignatureAsync(lang, ct), lang == "ar"), ct);
+        var (html, text) = PortalMailer.Compose(body, t.HtmlIn(lang), values, subject, values["link"], await mailer.SignatureAsync(lang, ct), lang == "ar");
+        return await TrySendAsync(config, input.To!.Trim(), subject, html, text, ct);
     }
 
     /// <summary>The templates for the assistant and for staff writing to a candidate: wording and placeholders.</summary>
@@ -224,7 +234,7 @@ public sealed class BackofficeEmailService(IAppDbContext db, ICurrentActor actor
     public async Task<object> LogItemAsync(long id, CancellationToken ct = default)
     {
         var m = await db.EmailMessages.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound();
-        return new { id = m.Id, to = m.ToAddress, subject = m.Subject, html = m.HtmlBody, status = m.Status, attempts = m.Attempts, last_error = m.LastError, created_at = m.CreatedAt, sent_at = m.SentAt };
+        return new { id = m.Id, to = m.ToAddress, subject = m.Subject, html = m.HtmlBody, text = m.TextBody, status = m.Status, attempts = m.Attempts, last_error = m.LastError, created_at = m.CreatedAt, sent_at = m.SentAt };
     }
 
     /// <summary>Puts a failed email back in the outbox for another round of attempts.</summary>

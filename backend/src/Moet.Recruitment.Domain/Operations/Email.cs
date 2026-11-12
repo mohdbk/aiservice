@@ -48,6 +48,9 @@ public class EmailTemplate
     public string BodyAr { get; set; } = "";
     public string SubjectEn { get; set; } = "";
     public string BodyEn { get; set; } = "";
+    /// <summary>Optional designed HTML versions (cleaned when saved). Empty: the HTML part is made from the plain text.</summary>
+    public string BodyHtmlAr { get; set; } = "";
+    public string BodyHtmlEn { get; set; } = "";
     public bool IsEnabled { get; set; } = true;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
@@ -55,6 +58,8 @@ public class EmailTemplate
     public byte[] RowVersion { get; set; } = [];
 
     public (string Subject, string Body) In(string lang) => lang == "ar" ? (SubjectAr, BodyAr) : (SubjectEn, BodyEn);
+
+    public string HtmlIn(string lang) => lang == "ar" ? BodyHtmlAr : BodyHtmlEn;
 
     public void Validate()
     {
@@ -114,17 +119,44 @@ public static partial class EmailTemplates
     }
 }
 
+/// <summary>One kind of document HR can design: what it is about and the placeholders its data fills.</summary>
+public sealed record DocumentKind(string NameAr, string NameEn, string[] Placeholders);
+
 /// <summary>
-/// An offer letter in Arabic and English. Plain text: a blank line starts a paragraph and a line starting with "# " is a
-/// heading. Placeholders are filled from the offer when the letter is shown, printed or emailed.
+/// The kinds of documents. Adding a kind means adding it here and teaching the document service where its data comes from
+/// (an offer, an applicant, an interview and so on); templates of that kind are then designed in the backoffice.
 /// </summary>
-public class OfferTemplate
+public static class DocumentKinds
+{
+    public const string OfferLetter = "OfferLetter", ApplicantLetter = "ApplicantLetter", InterviewLetter = "InterviewLetter";
+
+    static readonly string[] Applicant = ["name", "reference", "job_title", "department", "applied_on", "today"];
+
+    public static readonly IReadOnlyDictionary<string, DocumentKind> All = new Dictionary<string, DocumentKind>
+    {
+        [OfferLetter] = new("خطاب عرض عمل", "Offer Letter",
+            [.. Applicant, "position_title", "offer_date", "start_date", "monthly_salary", "currency", "terms", "offer_code"]),
+        [InterviewLetter] = new("خطاب مقابلة", "Interview Letter", [.. Applicant, "round", "date", "time", "location", "interview_code"]),
+        [ApplicantLetter] = new("خطاب للمتقدم", "Applicant Letter", Applicant),
+    };
+}
+
+/// <summary>
+/// A document template (offer letter, interview letter and so on) in Arabic and English. Plain text: a blank line starts a
+/// paragraph and a line starting with "# " is a heading; an optional designed HTML version is used for display, printing and
+/// email when present. Placeholders are filled from the record (an offer, an interview, an applicant) when it is produced.
+/// </summary>
+public class DocumentTemplate
 {
     public int Id { get; set; }
+    public string Kind { get; set; } = DocumentKinds.OfferLetter;
     public string NameAr { get; set; } = "";
     public string NameEn { get; set; } = "";
     public string BodyAr { get; set; } = "";
     public string BodyEn { get; set; } = "";
+    /// <summary>Optional designed HTML versions (cleaned when saved). Empty: the letter is laid out from the plain text.</summary>
+    public string BodyHtmlAr { get; set; } = "";
+    public string BodyHtmlEn { get; set; } = "";
     public bool IsDefault { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; }
@@ -132,13 +164,13 @@ public class OfferTemplate
     public int? UpdatedByStaffId { get; set; }
     public byte[] RowVersion { get; set; } = [];
 
-    public static readonly string[] Placeholders =
-        ["name", "reference", "job_title", "department", "position_title", "offer_date", "start_date", "monthly_salary", "currency", "terms", "offer_code"];
-
     public string In(string lang) => lang == "ar" ? BodyAr : BodyEn;
+
+    public string HtmlIn(string lang) => lang == "ar" ? BodyHtmlAr : BodyHtmlEn;
 
     public void Validate()
     {
+        if (!DocumentKinds.All.ContainsKey(Kind)) throw DomainException.Invalid("invalid_value");
         if (NameAr.Trim().Length == 0 || NameEn.Trim().Length == 0) throw DomainException.Invalid("name_required");
         if (BodyAr.Trim().Length == 0 || BodyEn.Trim().Length == 0) throw DomainException.Invalid("template_text_required");
         if (IsDefault && !IsActive) throw DomainException.Invalid("template_default_inactive");

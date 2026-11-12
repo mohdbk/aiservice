@@ -49,7 +49,7 @@ public sealed class EmailOutboxWorker(IServiceScopeFactory scopes, ILogger<Email
         {
             try
             {
-                await sender.SendAsync(config, m.ToAddress, m.Subject, m.HtmlBody, ct);
+                await sender.SendAsync(config, m.ToAddress, m.Subject, m.HtmlBody, m.TextBody, ct);
                 m.Status = EmailStatus.Sent;
                 m.SentAt = clock.UtcNow;
                 m.Attempts++;

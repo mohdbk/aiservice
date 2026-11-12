@@ -271,8 +271,11 @@ public class EndToEndTests
         Assert.True((await admin.GetAsync("/api/backoffice/email-log")).IsSuccessStatusCode);
 
         // Offer letters: the standard template is the default.
-        var offerTemplates = await Read(await admin.GetAsync("/api/backoffice/offer-templates"));
+        var offerTemplates = await Read(await admin.GetAsync("/api/backoffice/document-templates?kind=OfferLetter"));
         Assert.Contains(offerTemplates.GetProperty("items").EnumerateArray(), t => t.GetProperty("is_default").GetBoolean());
+        var kinds = await Read(await admin.GetAsync("/api/backoffice/document-templates"));
+        Assert.Equal(3, kinds.GetProperty("kinds").GetArrayLength());
+        Assert.Equal(3, kinds.GetProperty("items").EnumerateArray().Count(t => t.GetProperty("is_default").GetBoolean()));
 
         // Changes without the X-Admin header are refused.
         var plain = app.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });

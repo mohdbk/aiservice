@@ -141,6 +141,7 @@ public sealed class AgentProposalService(
                 {
                     ToAddress = app.Email, Subject = subject,
                     HtmlBody = PortalMailer.Html(TextUtil.NoEmDash(S(a, "body")), subject, "", signature, TextUtil.IsRtl(app.LanguageCode)),
+                    TextBody = $"{TextUtil.NoEmDash(S(a, "body"))}\n\n{signature}",
                     Status = EmailStatus.Queued, NextAttemptAt = clock.UtcNow, CreatedAt = clock.UtcNow,
                 });
                 db.ApplicationNotes.Add(new ApplicationNote { JobApplicationId = app.Id, Kind = NoteKind.System, Text = $"Email sent: {subject}", AuthorStaffId = staffId, CreatedAt = clock.UtcNow });

@@ -19,6 +19,8 @@ public class EmailMessage
     public string ToAddress { get; set; } = "";
     public string Subject { get; set; } = "";
     public string HtmlBody { get; set; } = "";
+    /// <summary>The plain-text part, sent alongside the HTML for mail clients that show text only.</summary>
+    public string TextBody { get; set; } = "";
     public EmailStatus Status { get; set; } = EmailStatus.Queued;
     public int Attempts { get; set; }
     public DateTime NextAttemptAt { get; set; }

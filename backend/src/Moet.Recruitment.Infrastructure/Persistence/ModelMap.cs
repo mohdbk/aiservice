@@ -225,7 +225,7 @@ static class ModelMap
         m.Entity<Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey>(e => e.ToTable("DataProtectionKey", "ops"));
         m.Entity<EmailSetting>(e => { e.ToTable("EmailSetting", "ops"); e.Property(x => x.Id).ValueGeneratedNever(); });
         m.Entity<EmailTemplate>(e => { e.ToTable("EmailTemplate", "ops"); e.Property(x => x.RowVersion).IsRowVersion(); });
-        m.Entity<OfferTemplate>(e => { e.ToTable("OfferTemplate", "hiring"); e.Property(x => x.RowVersion).IsRowVersion(); });
+        m.Entity<DocumentTemplate>(e => { e.ToTable("DocumentTemplate", "core"); e.Property(x => x.RowVersion).IsRowVersion(); });
         m.Entity<RoleProfile>(e =>
         {
             e.ToTable("RoleProfile", "assessment");

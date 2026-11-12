@@ -87,8 +87,10 @@ public static class BackofficeEndpoints
         staff.MapGet("/offers/{id:int}", (int id, BackofficeInterviewService s, CancellationToken ct) => s.OfferAsync(id, ct));
         staff.MapPost("/offers", (OfferInput b, BackofficeInterviewService s, CancellationToken ct) => s.SaveOfferAsync(null, b, ct));
         staff.MapPut("/offers/{id:int}", (int id, OfferInput b, BackofficeInterviewService s, CancellationToken ct) => s.SaveOfferAsync(id, b, ct));
-        staff.MapGet("/offers/{id:int}/letter", (int id, string? lang, OfferLetterService s, CancellationToken ct) => s.LetterAsync(id, lang, ct));
-        staff.MapGet("/offer-templates", (bool? active, OfferLetterService s, CancellationToken ct) => s.ListAsync(active, ct));
+        staff.MapGet("/offers/{id:int}/letter", (int id, string? lang, DocumentService s, CancellationToken ct) => s.DocumentAsync("OfferLetter", id, null, lang, ct));
+        staff.MapGet("/documents/{kind}/{id:int}", (string kind, int id, int? template, string? lang, DocumentService s, CancellationToken ct) =>
+            s.DocumentAsync(kind, id, template, lang, ct));
+        staff.MapGet("/document-templates", (string? kind, bool? active, DocumentService s, CancellationToken ct) => s.ListAsync(kind, active, ct));
         staff.MapGet("/email-wording", (BackofficeEmailService s, CancellationToken ct) => s.WordingAsync(ct));
         staff.MapPost("/offers/{id:int}/status", (int id, StatusBody b, BackofficeInterviewService s, CancellationToken ct) => s.SetOfferStatusAsync(id, b.Status, ct));
 
@@ -152,10 +154,10 @@ public static class BackofficeEndpoints
         setup.MapPost("/role-profiles", (RoleProfileInput b, RoleProfileService s, CancellationToken ct) => s.SaveAsync(null, b, ct));
         setup.MapPut("/role-profiles/{id:int}", (int id, RoleProfileInput b, RoleProfileService s, CancellationToken ct) => s.SaveAsync(id, b, ct));
         setup.MapDelete("/role-profiles/{id:int}", (int id, RoleProfileService s, CancellationToken ct) => s.DeleteAsync(id, ct));
-        setup.MapGet("/offer-templates/{id:int}", (int id, OfferLetterService s, CancellationToken ct) => s.GetAsync(id, ct));
-        setup.MapPost("/offer-templates", (OfferTemplateInput b, OfferLetterService s, CancellationToken ct) => s.SaveAsync(null, b, ct));
-        setup.MapPut("/offer-templates/{id:int}", (int id, OfferTemplateInput b, OfferLetterService s, CancellationToken ct) => s.SaveAsync(id, b, ct));
-        setup.MapDelete("/offer-templates/{id:int}", (int id, OfferLetterService s, CancellationToken ct) => s.DeleteAsync(id, ct));
+        setup.MapGet("/document-templates/{id:int}", (int id, DocumentService s, CancellationToken ct) => s.GetAsync(id, ct));
+        setup.MapPost("/document-templates", (DocumentTemplateInput b, DocumentService s, CancellationToken ct) => s.SaveAsync(null, b, ct));
+        setup.MapPut("/document-templates/{id:int}", (int id, DocumentTemplateInput b, DocumentService s, CancellationToken ct) => s.SaveAsync(id, b, ct));
+        setup.MapDelete("/document-templates/{id:int}", (int id, DocumentService s, CancellationToken ct) => s.DeleteAsync(id, ct));
         setup.MapGet("/email-templates", (BackofficeEmailService s, CancellationToken ct) => s.TemplatesAsync(ct));
         setup.MapGet("/email-templates/{id:int}", (int id, BackofficeEmailService s, CancellationToken ct) => s.TemplateAsync(id, ct));
         setup.MapPost("/email-templates", (EmailTemplateInput b, BackofficeEmailService s, CancellationToken ct) => s.SaveTemplateAsync(null, b, ct));

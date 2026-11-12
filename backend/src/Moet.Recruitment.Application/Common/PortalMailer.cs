@@ -71,42 +71,81 @@ public sealed class PortalMailer(IAppDbContext db, ContentService content, ICloc
         var all = new Dictionary<string, string> { ["name"] = name, ["link"] = link };
         foreach (var (k, v) in values ?? new Dictionary<string, string>()) all[k] = v;
         subject = TextUtil.NoEmDash(EmailTemplates.Fill(subject, all));
-        body = TextUtil.NoEmDash(EmailTemplates.Fill(body, all));
+        var (htmlPart, textPart) = Compose(body, template?.HtmlIn(lang == "ar" ? "ar" : "en"), all, subject, link, await SignatureAsync(lang, ct), TextUtil.IsRtl(lang));
         db.EmailMessages.Add(new EmailMessage
         {
-            ToAddress = to, Subject = TextUtil.Clip(subject, 300), HtmlBody = Html(body, subject, link, await SignatureAsync(lang, ct), TextUtil.IsRtl(lang)),
+            ToAddress = to, Subject = TextUtil.Clip(subject, 300), HtmlBody = htmlPart, TextBody = textPart,
             Status = EmailStatus.Queued, NextAttemptAt = clock.UtcNow, CreatedAt = clock.UtcNow,
         });
         return true;
     }
 
     /// <summary>
+    /// Both parts of an email from a template: the plain text (filled, with the signature) and the HTML (the designed HTML
+    /// version filled with escaped values when there is one, otherwise made from the plain text).
+    /// </summary>
+    public static (string Html, string Text) Compose(string textBody, string? htmlBody, IReadOnlyDictionary<string, string> values, string subject,
+        string link, string signature, bool rtl)
+    {
+        var text = TextUtil.NoEmDash(EmailTemplates.Fill(textBody, values)).Replace("\r", "");
+        var plain = text.Replace("\n# ", "\n").TrimStart('#', ' ') + (signature.Length > 0 ? "\n\n" + signature : "");
+        if (string.IsNullOrWhiteSpace(htmlBody))
+        {
+            if (values.TryGetValue("offer_letter_html", out var letterHtml) && letterHtml.Length > 0 && textBody.Contains("{offer_letter}"))
+            {
+                // A plain-text email that carries a letter with its own HTML version: the HTML part shows the designed letter.
+                var others = values.Where(x => x.Key != "offer_letter").ToDictionary(x => x.Key, x => x.Value);
+                var inner = Paragraphs(TextUtil.NoEmDash(EmailTemplates.Fill(textBody, others)), subject, link);
+                inner = System.Text.RegularExpressions.Regex.Replace(inner, @"<p[^>]*>\{offer_letter\}</p>", letterHtml.Replace("$", "$$"));
+                return (Wrap(inner, signature, rtl), plain);
+            }
+            return (Html(text, subject, link, signature, rtl), plain);
+        }
+        var html = htmlBody;
+        foreach (var (k, v) in values)
+        {
+            var token = "{" + k + "}";
+            if (!html.Contains(token)) continue;
+            if (k == "link")
+            {
+                html = html.Replace($"<p>{token}</p>", v.Length == 0 ? "" : Button(v, subject)).Replace(token, TextUtil.Esc(v));
+            }
+            else if (k == "offer_letter")
+            {
+                // The letter's own HTML version when it has one (passed as offer_letter_html), otherwise its text as paragraphs.
+                var letter = values.TryGetValue("offer_letter_html", out var lh) && lh.Length > 0 ? lh : Paragraphs(v, subject, "");
+                html = html.Replace($"<p>{token}</p>", letter).Replace(token, letter);
+            }
+            else if (k == "offer_letter_html") continue;
+            else html = html.Replace(token, TextUtil.Esc(TextUtil.NoEmDash(v)).Replace("\n", "<br>"));
+        }
+        return (Wrap(html, signature, rtl), plain);
+    }
+
+    static string Button(string link, string subject) =>
+        $"<p style=\"margin:0 0 16px\"><a href=\"{TextUtil.Esc(link)}\" style=\"display:inline-block;background:#92722a;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:bold\">{TextUtil.Esc(subject)}</a></p>"
+        + $"<p style=\"margin:0 0 16px;font-size:12px;color:#555;word-break:break-all\">{TextUtil.Esc(link)}</p>";
+
+    public static string Wrap(string inner, string signature, bool rtl) =>
+        $"<div dir=\"{(rtl ? "rtl" : "ltr")}\" style=\"font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#232528;max-width:560px\">{inner}"
+        + (signature.Length > 0 ? $"<p style=\"margin:24px 0 0;color:#555\">{TextUtil.Esc(signature)}</p>" : "") + "</div>";
+
+    /// <summary>
     /// The email HTML: one paragraph per blank-line-separated block, a button for a block that is just the link, and a
     /// heading for a line starting with "# " (offer letters).
     /// </summary>
-    public static string Html(string body, string subject, string link, string signature, bool rtl)
+    public static string Html(string body, string subject, string link, string signature, bool rtl) => Wrap(Paragraphs(body, subject, link), signature, rtl);
+
+    public static string Paragraphs(string body, string subject, string link)
     {
         var sb = new StringBuilder();
-        sb.Append($"<div dir=\"{(rtl ? "rtl" : "ltr")}\" style=\"font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#232528;max-width:560px\">");
         foreach (var para in body.Replace("\r", "").Split("\n\n"))
         {
             if (para.Trim().Length == 0) continue;
-            if (link.Length > 0 && para.Trim() == link)
-            {
-                sb.Append($"<p style=\"margin:0 0 16px\"><a href=\"{TextUtil.Esc(link)}\" style=\"display:inline-block;background:#92722a;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:bold\">{TextUtil.Esc(subject)}</a></p>");
-                sb.Append($"<p style=\"margin:0 0 16px;font-size:12px;color:#555;word-break:break-all\">{TextUtil.Esc(link)}</p>");
-            }
-            else if (para.TrimStart().StartsWith("# "))
-            {
-                sb.Append($"<h2 style=\"margin:0 0 16px;font-size:20px\">{TextUtil.Esc(para.TrimStart()[2..].Trim())}</h2>");
-            }
-            else
-            {
-                sb.Append($"<p style=\"margin:0 0 16px\">{TextUtil.Esc(para).Replace("\n", "<br>")}</p>");
-            }
+            if (link.Length > 0 && para.Trim() == link) sb.Append(Button(link, subject));
+            else if (para.TrimStart().StartsWith("# ")) sb.Append($"<h2 style=\"margin:0 0 16px;font-size:20px\">{TextUtil.Esc(para.TrimStart()[2..].Trim())}</h2>");
+            else sb.Append($"<p style=\"margin:0 0 16px\">{TextUtil.Esc(para).Replace("\n", "<br>")}</p>");
         }
-        if (signature.Length > 0) sb.Append($"<p style=\"margin:24px 0 0;color:#555\">{TextUtil.Esc(signature)}</p>");
-        sb.Append("</div>");
         return sb.ToString();
     }
 }
