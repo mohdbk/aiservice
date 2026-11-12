@@ -238,6 +238,24 @@ public class EndToEndTests
         }));
         Assert.Equal(HttpStatusCode.BadRequest, badRole.StatusCode);
 
+        // Personality settings: band cut-offs and HR's own notes for a type (reset brings back the built-in notes).
+        var ps = await Read(await admin.GetAsync("/api/backoffice/personality-settings"));
+        Assert.Equal(16, ps.GetProperty("band_cutoffs").GetProperty("high").GetInt32());
+        Assert.Equal(16, ps.GetProperty("types").GetArrayLength());
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsync("/api/backoffice/personality-settings/bands", JsonBody(new { low = 6, moderate = 16, high = 11, very_high = 21 }))).StatusCode);
+        Assert.True((await admin.PutAsync("/api/backoffice/personality-settings/bands", JsonBody(new { low = 6, moderate = 11, high = 17, very_high = 21 }))).IsSuccessStatusCode);
+        Assert.True((await admin.PutAsync("/api/backoffice/personality-settings/types/ESTP", JsonBody(new
+        {
+            name_ar = "المنفذ العملي", name_en = "Practical Doer", strengths_ar = "سريع", strengths_en = "Fast\nPractical", risks_ar = "", risks_en = "",
+        }))).IsSuccessStatusCode);
+        ps = await Read(await admin.GetAsync("/api/backoffice/personality-settings"));
+        Assert.Equal(17, ps.GetProperty("band_cutoffs").GetProperty("high").GetInt32());
+        var estp = ps.GetProperty("types").EnumerateArray().First(x => x.GetProperty("type").GetString() == "ESTP");
+        Assert.True(estp.GetProperty("customised").GetBoolean());
+        Assert.Equal(2, estp.GetProperty("strengths_en").GetArrayLength());
+        Assert.True((await admin.DeleteAsync("/api/backoffice/personality-settings/types/ESTP")).IsSuccessStatusCode);
+        Assert.True((await admin.PutAsync("/api/backoffice/personality-settings/bands", JsonBody(new { low = 6, moderate = 11, high = 16, very_high = 21 }))).IsSuccessStatusCode);
+
         // Selection: the job is matched against a role profile and weighs the parts 0/30/50/20; the ranking lists its applicants.
         var jobId = job.GetProperty("id").GetInt32();
         var jobView = await Read(await admin.GetAsync($"/api/backoffice/jobs/{jobId}"));

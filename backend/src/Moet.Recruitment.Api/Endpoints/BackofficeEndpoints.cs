@@ -109,6 +109,7 @@ public static class BackofficeEndpoints
         staff.MapGet("/assessment-templates", (PersonalityTemplates s) => s.List());
         staff.MapPost("/assessment-templates/{key}", (string key, PersonalityTemplates s, CancellationToken ct) => s.CreateAsync(key, ct));
         staff.MapGet("/role-profiles", (string? model, RoleProfileService s, CancellationToken ct) => s.ListAsync(model, ct));
+        staff.MapGet("/personality-settings", (PersonalitySettingsService s, CancellationToken ct) => s.GetAsync(ct));
         staff.MapGet("/role-profiles/{id:int}", (int id, RoleProfileService s, CancellationToken ct) => s.GetAsync(id, ct));
         staff.MapGet("/invitations", ([AsParameters] ListQuery lq, string? status, int? assessment, string? result, int? job, BackofficeAssessmentService s, CancellationToken ct) =>
             s.InvitationsAsync(lq, status, assessment, result, job, ct));
@@ -156,6 +157,9 @@ public static class BackofficeEndpoints
         setup.MapPost("/role-profiles", (RoleProfileInput b, RoleProfileService s, CancellationToken ct) => s.SaveAsync(null, b, ct));
         setup.MapPut("/role-profiles/{id:int}", (int id, RoleProfileInput b, RoleProfileService s, CancellationToken ct) => s.SaveAsync(id, b, ct));
         setup.MapDelete("/role-profiles/{id:int}", (int id, RoleProfileService s, CancellationToken ct) => s.DeleteAsync(id, ct));
+        setup.MapPut("/personality-settings/bands", (BandCutoffsInput b, PersonalitySettingsService s, CancellationToken ct) => s.SaveCutoffsAsync(b, ct));
+        setup.MapPut("/personality-settings/types/{type}", (string type, TypeNoteInput b, PersonalitySettingsService s, CancellationToken ct) => s.SaveTypeAsync(type, b, ct));
+        setup.MapDelete("/personality-settings/types/{type}", (string type, PersonalitySettingsService s, CancellationToken ct) => s.ResetTypeAsync(type, ct));
         setup.MapGet("/document-templates/{id:int}", (int id, DocumentService s, CancellationToken ct) => s.GetAsync(id, ct));
         setup.MapPost("/document-templates", (DocumentTemplateInput b, DocumentService s, CancellationToken ct) => s.SaveAsync(null, b, ct));
         setup.MapPut("/document-templates/{id:int}", (int id, DocumentTemplateInput b, DocumentService s, CancellationToken ct) => s.SaveAsync(id, b, ct));

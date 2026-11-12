@@ -11,7 +11,8 @@ public sealed record ApplicantFilter(int? JobId, string? Status, string? Screeni
 
 /// <summary>The applicant pipeline: lists, the applicant's full record, status changes, notes and re-scoring.</summary>
 public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor actor, IRequestLanguage language, IClock clock, JobQueue jobs, AssessmentWorkflow workflow,
-    PortalMailer mailer, ContentService content, SelectionService selection)
+    PortalMailer mailer, ContentService content, SelectionService selection,
+    PersonalitySettingsService personalitySettings)
 {
     static readonly Sorts<JobApplication> AppSorts = new Sorts<JobApplication>("created")
         .Add("created", a => a.CreatedAt).Add("name", a => a.FullName).Add("code", a => a.Code).Add("status", a => a.Status)
@@ -85,8 +86,10 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
         var roles = invitations.Any(i => i.personality_model != PersonalityModel.None) ? await db.RoleProfiles.AsNoTracking().Where(r => r.IsActive)
             .OrderBy(r => r.SortOrder).ThenBy(r => r.NameEn).ToListAsync(ct) : [];
         // Per invitation: the 16-type letters and notes, and the fit with each role profile (from the latest completed attempt).
+        var cutoffs = await personalitySettings.CutoffsAsync(ct);
+        var reports = await personalitySettings.ReportsAsync(ct);
         var personality = invitations.Where(i => i.personality_model != PersonalityModel.None).ToDictionary(i => i.id.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            i => RoleProfileService.Summary(i.personality_model, i.attempts.LastOrDefault(t => t.trait_profile != null)?.trait_profile, roles));
+            i => RoleProfileService.Summary(i.personality_model, i.attempts.LastOrDefault(t => t.trait_profile != null)?.trait_profile, roles, cutoffs, reports));
         var c = a.CvAnalysis;
         var combined = await selection.ForApplicantAsync(a.Id, ct);
         return new

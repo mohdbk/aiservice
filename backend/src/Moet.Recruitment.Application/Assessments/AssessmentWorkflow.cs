@@ -9,7 +9,8 @@ using Moet.Recruitment.Domain.Hiring;
 namespace Moet.Recruitment.Application.Assessments;
 
 /// <summary>Invitations and attempts, shared by the career portal (candidates) and the backoffice (HR).</summary>
-public sealed class AssessmentWorkflow(IAppDbContext db, ContentService content, PortalMailer mailer, JobQueue jobs, ICodeGenerator codes, IClock clock)
+public sealed class AssessmentWorkflow(IAppDbContext db, ContentService content, PortalMailer mailer, JobQueue jobs, ICodeGenerator codes, IClock clock,
+    PersonalitySettingsService personality)
 {
     // ---------------- invitations ----------------
 
@@ -105,7 +106,7 @@ public sealed class AssessmentWorkflow(IAppDbContext db, ContentService content,
     public async Task FinaliseAsync(Invitation inv, Attempt a, CancellationToken ct)
     {
         var asm = inv.Assessment ?? await db.Assessments.FirstAsync(x => x.Id == inv.AssessmentId, ct);
-        if (asm.IsPersonality) a.ScorePersonality(asm.PersonalityModel, Personality.ParseNorms(asm.TraitNorms));
+        if (asm.IsPersonality) a.ScorePersonality(asm.PersonalityModel, Personality.ParseNorms(asm.TraitNorms), await personality.CutoffsAsync(ct));
         else a.DecidePass(asm.PassMark);
         inv.Summarise(asm.ScorePolicy, asm.IsPersonality);
         inv.UpdatedAt = clock.UtcNow;

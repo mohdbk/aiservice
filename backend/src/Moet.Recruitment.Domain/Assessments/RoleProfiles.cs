@@ -79,7 +79,7 @@ public class RoleProfile
     }
 
     /// <summary>The fit of a completed profile, or null when it is for another model or misses a dimension the role weighs.</summary>
-    public RoleFit? Fit(PersonalityModel model, IReadOnlyList<TraitScore> profile)
+    public RoleFit? Fit(PersonalityModel model, IReadOnlyList<TraitScore> profile, BandCutoffs? cutoffs = null)
     {
         // Big Five profiles apply to both Big Five scorings (sum 5 to 25, or the 1 to 10 scale): the dimensions are the same.
         if (model != PersonalityModel && !(IsBigFive(model) && IsBigFive(PersonalityModel))) return null;
@@ -101,7 +101,7 @@ public class RoleProfile
         if (weight == 0) return null;
         var percent = Math.Round(total / (25 * weight) * 100, 1);
         var below = TargetMap().Where(target => profile.FirstOrDefault(x => x.Code == target.Key) is { } t &&
-            Array.IndexOf(Personality.SumBands, Personality.SumBand(Personality.OutOf25(t))) < Array.IndexOf(Personality.SumBands, target.Value))
+            Array.IndexOf(Personality.SumBands, Personality.SumBand(Personality.OutOf25(t), cutoffs)) < Array.IndexOf(Personality.SumBands, target.Value))
             .Select(target => target.Key).ToList();
         return new RoleFit(Id, NameAr, NameEn, percent, percent >= StrongFrom ? "Strong" : percent >= ModerateFrom ? "Moderate" : "Weak", below);
     }

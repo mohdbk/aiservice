@@ -28,7 +28,8 @@ public sealed record AssessmentInput(
 public sealed record MarkInput(int QuestionId, decimal? Points, string? Comment);
 
 /// <summary>Question bank, tests, invitations and marking for HR.</summary>
-public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor actor, IRequestLanguage language, IClock clock, IHtmlCleaner html, AssessmentWorkflow workflow, JobQueue jobs)
+public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor actor, IRequestLanguage language, IClock clock, IHtmlCleaner html, AssessmentWorkflow workflow, JobQueue jobs,
+    PersonalitySettingsService personality)
 {
     const string En = "en";
 
@@ -359,7 +360,8 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
             id = a.Id, attempt_no = (int)a.AttemptNo, status = a.Status.ToString(), percent = a.Percent, earned = a.Earned, total = a.Total,
             passed = a.Passed, started_at = a.StartedAt, trait_profile = TraitProfile(a.TraitProfile),
             personality_model = inv.Assessment!.PersonalityModel.ToString(),
-            personality = RoleProfileService.Summary(inv.Assessment.PersonalityModel, a.TraitProfile, roles), submitted_at = a.SubmittedAt, tab_switches = a.TabSwitches, pastes = a.Pastes,
+            personality = RoleProfileService.Summary(inv.Assessment.PersonalityModel, a.TraitProfile, roles, await personality.CutoffsAsync(ct),
+                await personality.ReportsAsync(ct)), submitted_at = a.SubmittedAt, tab_switches = a.TabSwitches, pastes = a.Pastes,
             invitation = new { id = inv.Id, code = inv.Code, assessment = inv.Assessment!.In(language.English ? "en" : "ar").Title, pass_mark = inv.Assessment.PassMark },
             applicant = new { id = inv.JobApplicationId, name = inv.JobApplication!.FullName },
             sections = a.SectionScores().Select(s => new { s.SectionNo, s.Title, s.Earned, s.Total, s.Percent, s.Passed }).ToList(),

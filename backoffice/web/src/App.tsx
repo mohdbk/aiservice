@@ -21,6 +21,7 @@ import { EmailLog, EmailServer, EmailTemplates } from "./pages/Email";
 import DocumentTemplates from "./pages/DocumentTemplates";
 import Questions from "./pages/Questions";
 import RoleProfiles from "./pages/RoleProfiles";
+import PersonalitySettings from "./pages/PersonalitySettings";
 import Screening from "./pages/Screening";
 import { Departments, Password, PortalText, Rounds, Settings, Staff } from "./pages/Setup";
 import SignIn from "./pages/SignIn";
@@ -56,6 +57,7 @@ function Guarded() {
         <Route path="questions/:id" element={<QuestionEdit />} />
         <Route path="invitations" element={<Invitations />} />
         <Route path="role-profiles" element={<RoleProfiles />} />
+        <Route path="personality-settings" element={<PersonalitySettings />} />
         <Route path="marking/:id" element={<Marking />} />
         <Route path="assistant" element={<Assistant />} />
         <Route path="password" element={<Password />} />

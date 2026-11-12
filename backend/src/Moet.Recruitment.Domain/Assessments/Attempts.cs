@@ -188,9 +188,9 @@ public class Attempt
 
     /// <summary>Passes when every answer is marked, the overall pass mark is met and every section pass mark is met.</summary>
     /// <summary>Works out the trait profile of a personality questionnaire; there is no pass or fail.</summary>
-    public IReadOnlyList<TraitScore> ScorePersonality(PersonalityModel model, IReadOnlyDictionary<string, TraitNorm> norms)
+    public IReadOnlyList<TraitScore> ScorePersonality(PersonalityModel model, IReadOnlyDictionary<string, TraitNorm> norms, BandCutoffs? cutoffs = null)
     {
-        var profile = Personality.Profile(AllQuestions, model, norms);
+        var profile = Personality.Profile(AllQuestions, model, norms, cutoffs);
         TraitProfile = System.Text.Json.JsonSerializer.Serialize(profile);
         Passed = null;
         return profile;

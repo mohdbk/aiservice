@@ -1,7 +1,7 @@
 import { Dialog, Menu } from "@base-ui/react";
 import {
   Briefcase, CalendarCheck, CaretDown, ChatCircleDots, ClipboardText, Exam, FileText, Gear, Handshake, Key, List, ListChecks,
-  Cube, EnvelopeSimple, HardDrives, Robot, Scroll, SignOut, SquaresFour, Target, Tray, Translate, TreeStructure, UserCircle, Users, UsersThree, X,
+  Cube, EnvelopeSimple, HardDrives, Robot, Scroll, SignOut, SquaresFour, Target, Tray, Translate, TreeStructure, UserCircle, Users, UsersThree, X, Brain,
 } from "@phosphor-icons/react";
 import { ReactNode, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
@@ -34,6 +34,7 @@ function useNav(): { group?: string; items: Item[] }[] {
         { to: "/invitations", label: t("nav.invitations"), icon: i(FileText) },
         { to: "/screening", label: t("nav.screening"), icon: i(ListChecks) },
         { to: "/role-profiles", label: t("nav.role_profiles"), icon: i(Target) },
+        { to: "/personality-settings", label: t("nav.personality_settings"), icon: i(Brain) },
       ],
     },
     {

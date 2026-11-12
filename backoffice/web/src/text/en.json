@@ -866,5 +866,21 @@
  "sel.ranking_hint": "Applicants ranked by combined score. Rejected applicants are hidden unless you show all.",
  "sel.show": "Show",
  "sel.show_all": "All Applicants",
- "error.selection_weights_total": "The weights must add up to 100%."
+ "error.selection_weights_total": "The weights must add up to 100%.",
+ "nav.personality_settings": "Personality Settings",
+ "perset.subtitle": "Band cut-offs for the workplace Big Five and the notes shown for each of the 16 types.",
+ "perset.bands": "Big Five Bands",
+ "perset.bands_hint": "Each dimension is scored out of 25. Set where each band starts. New results use these bands; results already scored keep theirs. Role profile targets use them too.",
+ "perset.from.low": "Low From",
+ "perset.from.moderate": "Moderate From",
+ "perset.from.high": "High From",
+ "perset.from.very_high": "Very High From",
+ "perset.defaults": "Defaults",
+ "perset.types": "16 Types",
+ "perset.types_hint": "Notes shown next to a result: the type's name, likely strengths and points to explore at interview. Change any type in your own words.",
+ "perset.customised": "Changed",
+ "perset.reset": "Use Built-in Notes",
+ "perset.reset_confirm": "Go back to the built-in notes for this type?",
+ "perset.lines_hint": "One per line.",
+ "error.band_cutoffs_invalid": "Each band must start above the one before it, between 6 and 25."
 }

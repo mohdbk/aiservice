@@ -1,7 +1,42 @@
+using Moet.Recruitment.Domain.Common;
+
 namespace Moet.Recruitment.Domain.Assessments;
 
 /// <summary>Workplace notes for one of the 16 types: likely strengths and points to explore at interview.</summary>
 public sealed record TypeReport(string Type, string NameAr, string NameEn, string[] StrengthsAr, string[] StrengthsEn, string[] RisksAr, string[] RisksEn);
+
+/// <summary>HR's own wording for a type, replacing the built-in notes (one line per strength or point to explore).</summary>
+public class TypeNote
+{
+    public string Type { get; set; } = "";
+    public string NameAr { get; set; } = "";
+    public string NameEn { get; set; } = "";
+    public string StrengthsAr { get; set; } = "";
+    public string StrengthsEn { get; set; } = "";
+    public string RisksAr { get; set; } = "";
+    public string RisksEn { get; set; } = "";
+    public DateTime UpdatedAt { get; set; }
+    public int? UpdatedByStaffId { get; set; }
+
+    static string[] Lines(string s) => s.Replace("\r", "").Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    public TypeReport ToReport() => new(Type, NameAr, NameEn, Lines(StrengthsAr), Lines(StrengthsEn), Lines(RisksAr), Lines(RisksEn));
+
+    public void Validate()
+    {
+        if (!TypeReports.All.ContainsKey(Type)) throw DomainException.Invalid("invalid_value");
+        if (NameAr.Trim().Length == 0 || NameEn.Trim().Length == 0) throw DomainException.Invalid("name_required");
+    }
+}
+
+/// <summary>Personality settings kept by HR: the band cut-offs of the workplace Big Five (one row).</summary>
+public class PersonalitySetting
+{
+    public byte Id { get; set; } = 1;
+    public string BandCutoffs { get; set; } = "6,11,16,21";
+    public DateTime UpdatedAt { get; set; }
+    public int? UpdatedByStaffId { get; set; }
+}
 
 /// <summary>
 /// Short executive notes per type for the Ministry's 16-type questionnaire. They describe tendencies to explore in

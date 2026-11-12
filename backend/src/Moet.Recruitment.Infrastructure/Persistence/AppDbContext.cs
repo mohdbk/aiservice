@@ -51,6 +51,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
     public DbSet<AgentProposal> AgentProposals => Set<AgentProposal>();
     public DbSet<AgentComponent> AgentComponents => Set<AgentComponent>();
     public DbSet<RoleProfile> RoleProfiles => Set<RoleProfile>();
+    public DbSet<TypeNote> TypeNotes => Set<TypeNote>();
+    public DbSet<PersonalitySetting> PersonalitySettings => Set<PersonalitySetting>();
     public DbSet<AgentSetting> AgentSettings => Set<AgentSetting>();
     public DbSet<AgentRun> AgentRuns => Set<AgentRun>();
     /// <summary>The key ring that protects sign-in cookies, shared by every API instance and kept across restarts.</summary>
@@ -103,7 +105,7 @@ static class Audit
         typeof(JobOpening), typeof(JobOpeningTranslation), typeof(JobApplication), typeof(Interview), typeof(InterviewFeedback),
         typeof(JobOffer), typeof(Question), typeof(Assessment), typeof(Invitation), typeof(ScreeningQuestion), typeof(PortalSetting),
         typeof(PortalText), typeof(StaffUser), typeof(Department), typeof(InterviewRound), typeof(AgentComponent), typeof(AgentSetting), typeof(RoleProfile),
-        typeof(EmailSetting), typeof(EmailTemplate), typeof(DocumentTemplate),
+        typeof(EmailSetting), typeof(EmailTemplate), typeof(DocumentTemplate), typeof(TypeNote), typeof(PersonalitySetting),
     ];
 
     static readonly HashSet<string> Secret = ["PasswordHash", "RowVersion", "Content", "ModelApiKeyProtected", "PasswordProtected"];

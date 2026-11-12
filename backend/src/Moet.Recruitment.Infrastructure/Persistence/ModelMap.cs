@@ -231,6 +231,8 @@ static class ModelMap
             e.ToTable("RoleProfile", "assessment");
             e.Property(x => x.RowVersion).IsRowVersion();
         });
+        m.Entity<TypeNote>(e => { e.ToTable("TypeNote", "assessment"); e.HasKey(x => x.Type); });
+        m.Entity<PersonalitySetting>(e => { e.ToTable("PersonalitySetting", "assessment"); e.Property(x => x.Id).ValueGeneratedNever(); });
         m.Entity<AgentComponent>(e =>
         {
             e.ToTable("AgentComponent", "ops");

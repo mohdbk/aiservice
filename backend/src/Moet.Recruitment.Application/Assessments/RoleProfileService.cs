@@ -80,13 +80,14 @@ public sealed class RoleProfileService(IAppDbContext db, ICurrentActor actor, IC
     /// What the backoffice shows next to a trait profile: the 4-letter type and its notes (16-type questionnaire) and the fit
     /// with each active role profile of the same model. Null when there is no profile yet.
     /// </summary>
-    public static object? Summary(PersonalityModel model, string? traitProfileJson, IReadOnlyList<RoleProfile> roles)
+    public static object? Summary(PersonalityModel model, string? traitProfileJson, IReadOnlyList<RoleProfile> roles,
+        BandCutoffs? cutoffs = null, IReadOnlyDictionary<string, TypeReport>? reports = null)
     {
         if (string.IsNullOrEmpty(traitProfileJson)) return null;
         var profile = JsonSerializer.Deserialize<List<TraitScore>>(traitProfileJson) ?? [];
         if (profile.Count == 0) return null;
         var type = model == PersonalityModel.WorkplaceType16 ? Personality.TypeOf(profile) : null;
-        var report = type != null && TypeReports.All.TryGetValue(type.Value.Type, out var r) ? r : null;
+        var report = type != null && (reports ?? TypeReports.All).TryGetValue(type.Value.Type, out var r) ? r : null;
         return new
         {
             type = type?.Type,
@@ -96,7 +97,7 @@ public sealed class RoleProfileService(IAppDbContext db, ICurrentActor actor, IC
                 name_ar = report.NameAr, name_en = report.NameEn, strengths_ar = report.StrengthsAr, strengths_en = report.StrengthsEn,
                 risks_ar = report.RisksAr, risks_en = report.RisksEn,
             },
-            fits = roles.Select(role => role.Fit(model, profile)).Where(f => f != null).Select(f => new
+            fits = roles.Select(role => role.Fit(model, profile, cutoffs)).Where(f => f != null).Select(f => new
             {
                 profile_id = f!.ProfileId, name_ar = f.NameAr, name_en = f.NameEn, percent = f.Percent, level = f.Level, below_target = f.BelowTarget,
             }),

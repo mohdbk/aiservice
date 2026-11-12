@@ -10,6 +10,34 @@ public sealed record Trait(string Code, string NameAr, string NameEn);
 public sealed record TraitNorm(double Mean, double Sd);
 
 /// <summary>
+/// Where each band of a workplace Big Five dimension (a score out of 25) starts, set by HR: by default Low from 6, Moderate from
+/// 11, High from 16 and Very High from 21 (Very Low below Low).
+/// </summary>
+public sealed record BandCutoffs(int Low, int Moderate, int High, int VeryHigh)
+{
+    public static readonly BandCutoffs Default = new(6, 11, 16, 21);
+
+    public void Validate()
+    {
+        if (!(Low > 5 && Low < Moderate && Moderate < High && High < VeryHigh && VeryHigh <= 25)) throw DomainException.Invalid("band_cutoffs_invalid");
+    }
+
+    public override string ToString() => $"{Low},{Moderate},{High},{VeryHigh}";
+
+    public static BandCutoffs Parse(string? s)
+    {
+        var p = (s ?? "").Split(',', StringSplitOptions.TrimEntries);
+        if (p.Length == 4 && p.All(x => int.TryParse(x, System.Globalization.CultureInfo.InvariantCulture, out _)))
+        {
+            var c = new BandCutoffs(int.Parse(p[0], System.Globalization.CultureInfo.InvariantCulture), int.Parse(p[1], System.Globalization.CultureInfo.InvariantCulture),
+                int.Parse(p[2], System.Globalization.CultureInfo.InvariantCulture), int.Parse(p[3], System.Globalization.CultureInfo.InvariantCulture));
+            try { c.Validate(); return c; } catch (DomainException) { }
+        }
+        return Default;
+    }
+}
+
+/// <summary>
 /// One trait's result. Sum and MaxSum are set for the workplace questionnaires (sum of the 1 to 5 answers, as HR scores them on paper).
 /// Bands: Low, Average or High (sten models); VeryLow, Low, Moderate, High or VeryHigh (WorkplaceBigFive); empty for type poles.
 /// </summary>
@@ -127,7 +155,8 @@ public static partial class Personality
     /// </list>
     /// Traits with no answered items are left out.
     /// </summary>
-    public static IReadOnlyList<TraitScore> Profile(IEnumerable<AttemptQuestion> questions, PersonalityModel model, IReadOnlyDictionary<string, TraitNorm> norms)
+    public static IReadOnlyList<TraitScore> Profile(IEnumerable<AttemptQuestion> questions, PersonalityModel model, IReadOnlyDictionary<string, TraitNorm> norms,
+        BandCutoffs? cutoffs = null)
     {
         var items = questions.Where(q => q.QuestionType == QuestionType.Likert && q.Trait.Length > 0).ToList();
         var result = new List<TraitScore>();
@@ -141,7 +170,7 @@ public static partial class Personality
             if (!UsesNorms(model))
             {
                 var stenW = (int)Math.Clamp(Math.Round(1 + (mean - 1) / 4 * 9, MidpointRounding.AwayFromZero), 1, 10);
-                var bandW = model == PersonalityModel.WorkplaceBigFive ? SumBand(mean * 5) : "";
+                var bandW = model == PersonalityModel.WorkplaceBigFive ? SumBand(mean * 5, cutoffs) : "";
                 result.Add(new TraitScore(trait.Code, trait.NameAr, trait.NameEn, mine.Count, values.Count, Math.Round(mean, 2), score, null, stenW, bandW,
                     (int)values.Sum(), values.Count * 5));
                 continue;
@@ -162,13 +191,15 @@ public static partial class Personality
     }
 
     /// <summary>
-    /// HR's interpretation of a dimension score out of 25: 21 to 25 Very High, 16 to 20 High, 11 to 15 Moderate, 6 to 10 Low, 5 Very Low.
-    /// With unanswered statements the score is the answered mean times five, so the bands keep their meaning.
+    /// HR's interpretation of a dimension score out of 25, by default 21 to 25 Very High, 16 to 20 High, 11 to 15 Moderate, 6 to 10
+    /// Low, 5 Very Low (the cut-offs are set in the backoffice). With unanswered statements the score is the answered mean times
+    /// five, so the bands keep their meaning.
     /// </summary>
-    public static string SumBand(double outOf25)
+    public static string SumBand(double outOf25, BandCutoffs? cutoffs = null)
     {
+        var c = cutoffs ?? BandCutoffs.Default;
         var v = Math.Round(outOf25, MidpointRounding.AwayFromZero);
-        return v >= 21 ? "VeryHigh" : v >= 16 ? "High" : v >= 11 ? "Moderate" : v >= 6 ? "Low" : "VeryLow";
+        return v >= c.VeryHigh ? "VeryHigh" : v >= c.High ? "High" : v >= c.Moderate ? "Moderate" : v >= c.Low ? "Low" : "VeryLow";
     }
 
     /// <summary>A dimension score out of 25 (the sum when all five statements are answered).</summary>

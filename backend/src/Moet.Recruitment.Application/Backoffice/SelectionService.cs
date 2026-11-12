@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Moet.Recruitment.Application.Assessments;
 using Moet.Recruitment.Application.Common;
 using Moet.Recruitment.Domain;
 using Moet.Recruitment.Domain.Assessments;
@@ -12,7 +13,7 @@ namespace Moet.Recruitment.Application.Backoffice;
 /// The combined selection score per applicant: CV, technical assessments, the interview panel's scorecards and the personality
 /// fit with the job's role profile, weighted as set on the job (40/40/20 by default).
 /// </summary>
-public sealed class SelectionService(IAppDbContext db, IRequestLanguage language)
+public sealed class SelectionService(IAppDbContext db, IRequestLanguage language, PersonalitySettingsService personality)
 {
     sealed record Row(int Id, string Code, string Name, int JobId, ApplicationStatus Status, decimal? Cv, DateTime CreatedAt);
 
@@ -36,6 +37,7 @@ public sealed class SelectionService(IAppDbContext db, IRequestLanguage language
             .ToListAsync(ct);
         var profiles = jobs.Values.Any(j => j.RoleProfileId != null)
             ? await db.RoleProfiles.AsNoTracking().Where(r => r.IsActive).ToListAsync(ct) : [];
+        var cutoffs = await personality.CutoffsAsync(ct);
         foreach (var a in apps)
         {
             var job = jobs[a.JobOpeningId];
@@ -48,9 +50,9 @@ public sealed class SelectionService(IAppDbContext db, IRequestLanguage language
                 {
                     var traits = JsonSerializer.Deserialize<List<TraitScore>>(inv.Trait!) ?? [];
                     // The job family's profile for this questionnaire: the chosen one, or its sibling with the same English name.
-                    var profile = chosen.Fit(inv.PersonalityModel, traits) != null ? chosen
-                        : profiles.FirstOrDefault(p => p.NameEn == chosen.NameEn && p.Fit(inv.PersonalityModel, traits) != null);
-                    var f = profile?.Fit(inv.PersonalityModel, traits);
+                    var profile = chosen.Fit(inv.PersonalityModel, traits, cutoffs) != null ? chosen
+                        : profiles.FirstOrDefault(p => p.NameEn == chosen.NameEn && p.Fit(inv.PersonalityModel, traits, cutoffs) != null);
+                    var f = profile?.Fit(inv.PersonalityModel, traits, cutoffs);
                     // With both questionnaires taken the Big Five fit is preferred: it is finer than the 4-letter match.
                     if (f != null && (fit == null || RoleProfile.IsBigFive(inv.PersonalityModel))) fit = f;
                 }

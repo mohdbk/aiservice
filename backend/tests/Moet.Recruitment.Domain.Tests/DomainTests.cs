@@ -497,4 +497,23 @@ public class PersonalityTests
         Assert.Null(Selection.InterviewPercent([]));
         Assert.Equal(70, Selection.TestsPercent([60m, null, 80m]));
     }
+
+    [Fact]
+    public void Band_cutoffs_are_hr_settings()
+    {
+        Assert.Equal("High", Personality.SumBand(16));
+        var strict = new BandCutoffs(7, 12, 18, 23);
+        strict.Validate();
+        Assert.Equal("Moderate", Personality.SumBand(16, strict));
+        Assert.Equal("VeryHigh", Personality.SumBand(23, strict));
+        Assert.Equal("VeryLow", Personality.SumBand(6, strict));
+        Assert.Equal(strict, BandCutoffs.Parse("7,12,18,23"));
+        Assert.Equal(BandCutoffs.Default, BandCutoffs.Parse("20,10,5,1"));   // invalid: the default stands
+        Assert.Equal("band_cutoffs_invalid", Assert.Throws<DomainException>(() => new BandCutoffs(6, 16, 11, 21).Validate()).Code);
+
+        var note = new TypeNote { Type = "ESTP", NameAr = "منفذ", NameEn = "Doer", StrengthsEn = "Fast\n\n Practical " };
+        note.Validate();
+        Assert.Equal(["Fast", "Practical"], note.ToReport().StrengthsEn);
+        Assert.Equal("invalid_value", Assert.Throws<DomainException>(() => new TypeNote { Type = "ABCD", NameAr = "x", NameEn = "x" }.Validate()).Code);
+    }
 }

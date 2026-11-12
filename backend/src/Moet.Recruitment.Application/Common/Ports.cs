@@ -43,6 +43,8 @@ public interface IAppDbContext
     DbSet<AgentProposal> AgentProposals { get; }
     DbSet<AgentComponent> AgentComponents { get; }
     DbSet<RoleProfile> RoleProfiles { get; }
+    DbSet<TypeNote> TypeNotes { get; }
+    DbSet<PersonalitySetting> PersonalitySettings { get; }
     DbSet<AgentSetting> AgentSettings { get; }
     DbSet<AgentRun> AgentRuns { get; }
 
