@@ -23,7 +23,27 @@ Agent tools  --staff member's own session-->  API /api/backoffice/*  (role check
   - The proposal is carried out only when the same person presses **Approve**, once, within 30 minutes.
   - The change runs through the normal backoffice services, so it is audited like any other change.
 
-## Settings
+## Forms, components and the open screen
+
+- **ask_user:** when the agent needs details, it shows an A2UI form instead of asking in text. Your answers come back to it as a `submit_form` action.
+- **Approval cards:** each card is an editable form. On Approve, the backend applies only the fields that action allows, and checks them again.
+- **Components** (Setup › Assistant Components): admins design question forms and approval cards in a visual builder, with a live preview in Arabic and English. The agent finds them with `list_components` and shows them with `show_component`. A designed approval card replaces the built-in card for its action.
+- **Open screen:** the backoffice sends the page and record that are open (for example `applicant_id: 12`) with each run. It travels in the AG-UI `context` field and in the `X-Agent-Context` header. The assistant opens as a side panel on every page.
+
+## Assistant Settings (Setup)
+
+Admins can set the following; the agent reads them on each run, with a 30-second cache:
+
+- **On or off.**
+- **Model:** server address, model name, and access key. The key is stored encrypted with AES-GCM, using a key derived from `AGENT_KEY`.
+- **Behaviour:** temperature, maximum tool steps per question, and extra guidance.
+- **Tools:** which tools are switched on.
+- **Limits:** how long an approval card stays valid, questions per person per day, and how many messages are remembered.
+- **Example questions:** shown at the start of a conversation.
+
+The agent fetches these from `/api/internal/agent/settings`, which accepts only the shared `AGENT_KEY`.
+
+## Environment variables
 
 | Variable | Where | Purpose |
 |---|---|---|
