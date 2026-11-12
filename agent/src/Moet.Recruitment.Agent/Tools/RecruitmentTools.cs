@@ -225,9 +225,10 @@ public sealed class RecruitmentTools(BackofficeApi api)
         [Description("The fields, at most 8")] List<AskField> fields)
     {
         if (fields.Count is 0 or > 8) return Error("give_1_to_8_fields");
-        // One form per answer: a second form in the same reply would ask the same thing twice.
-        if (!api.FirstInRun("ask_user"))
-            return JsonSerializer.SerializeToElement(new { error = "form_already_shown", hint = "A form is already showing. Stop now and wait for the user's answer." });
+        // Different forms may show together; the same form twice in one reply (same question and fields) is refused.
+        var signature = $"ask:{title.Trim().ToLowerInvariant()}|{string.Join(",", fields.Select(f => f.Name.Trim().ToLowerInvariant()).Order())}";
+        if (!api.FirstInRun(signature))
+            return JsonSerializer.SerializeToElement(new { error = "form_already_shown", hint = "This form is already showing. Do not repeat it; wait for the user's answer." });
         // A choice with nothing to choose from is a dead end for the user: send the model back to fetch real options first.
         var empty = fields.Where(f => f.Type is "choice" or "multichoice" && (f.Options == null || !f.Options.Any(o => o.Label.Trim().Length > 0))).Select(f => f.Name).ToList();
         if (empty.Count > 0)
@@ -287,8 +288,8 @@ public sealed class RecruitmentTools(BackofficeApi api)
         try { component = (await FindComponentAsync(c => Str(c, "key") == key && Str(c, "kind") == "Ask", ct)) ?? default; }
         catch (BackofficeException e) { return Error(e.Code); }
         if (component.ValueKind != JsonValueKind.Object) return Error("component_not_found");
-        if (!api.FirstInRun("ask_user"))
-            return JsonSerializer.SerializeToElement(new { error = "form_already_shown", hint = "A form is already showing. Stop now and wait for the user's answer." });
+        if (!api.FirstInRun($"component:{key}"))
+            return JsonSerializer.SerializeToElement(new { error = "form_already_shown", hint = "This form is already showing. Do not repeat it; wait for the user's answer." });
         var definition = component.GetProperty("definition");
         var lookups = await LookupsIfNeededAsync(definition, ct);
         var s = new Surface($"form-{key}-{Guid.NewGuid():N}"[..Math.Min(60, 14 + key.Length)]);

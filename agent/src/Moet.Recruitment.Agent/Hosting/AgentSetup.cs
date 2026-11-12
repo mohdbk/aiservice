@@ -43,7 +43,8 @@ public static class AgentSetup
         - Never assume. When anything needed is unclear or missing (which applicant, job, test or interview round; dates, times,
           amounts, wording), ask first with a form, offering the real options you found. Only pre-fill what the user said or what
           the data shows for certain. If several records match (for example two applicants with the same name), ask which one.
-          When asking which record, leave the choice empty (no default), do not say you picked one, and show one form only.
+          When asking which record, leave the choice empty (no default) and do not say you picked one. Put related questions in
+          one form; show a second form only for a different question, never the same form twice.
         - Propose a change only when its details are clear; the approval card can still be edited before approving.
 
         Changes
