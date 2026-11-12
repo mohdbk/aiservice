@@ -1,0 +1,75 @@
+name: Design Audit
+
+# The whole stack with demo content, then screenshots of every backoffice and portal page in Arabic and English, on a
+# desktop and a phone, with a report of anything wider than the screen. Images go to the "audit" branch.
+on:
+  workflow_dispatch:
+  push:
+    branches: [dotnet-backend]
+    paths: ["e2e/audit.mjs", ".github/workflows/design-audit.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "Ci-Strong-Password-123"
+          MSSQL_PID: Developer
+        ports: ["1433:1433"]
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Ci-Strong-Password-123 -Q 'SELECT 1' || exit 1"
+          --health-interval 10s --health-timeout 5s --health-retries 20
+    env:
+      DOTNET_NOLOGO: "1"
+      ADMIN_EMAIL: admin@moet.test
+      ADMIN_PASSWORD: Admin-Password-123
+      AGENT_KEY: e2e-agent-key-0123456789
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Build
+        run: |
+          dotnet build backend/src/Moet.Recruitment.Api -c Release
+          dotnet build agent/src/Moet.Recruitment.Agent -c Release
+          (cd backoffice/web && npm install --no-audit --no-fund && npm run build)
+          (cd portal/web && npm install --no-audit --no-fund && npm run build)
+      - name: Start the stack
+        run: |
+          SCENARIO=1 node e2e/fake-model.mjs > model.log 2>&1 &
+          BACKEND_URL=http://localhost:5080 LLM_BASE_URL=http://localhost:9000/v1 LLM_MODEL=fake LLM_API_KEY=none \
+            dotnet agent/src/Moet.Recruitment.Agent/bin/Release/net10.0/Moet.Recruitment.Agent.dll --urls http://localhost:5090 > agent.log 2>&1 &
+          DB_CONNECTION="Server=localhost,1433;Database=MoetAudit;User Id=sa;Password=Ci-Strong-Password-123;TrustServerCertificate=True;Encrypt=False" \
+          PORTAL_API_KEY=e2e-portal-key PORTAL_API_SECRET=e2e-secret-0123456789 PORTAL_URL=http://127.0.0.1:8080 COOKIE_SECURE=0 RUN_WORKERS=0 AGENT_URL=http://localhost:5090 \
+            dotnet backend/src/Moet.Recruitment.Api/bin/Release/net10.0/Moet.Recruitment.Api.dll --urls http://localhost:5080 > api.log 2>&1 &
+          (cd backoffice/web && npx vite preview --host 127.0.0.1 > ../../web.log 2>&1 &)
+          (cd portal/server && RECRUITMENT_API_URL=http://localhost:5080 CAREERS_PORTAL_API_KEY=e2e-portal-key CAREERS_PORTAL_API_SECRET=e2e-secret-0123456789 \
+            SESSION_SECRET=audit-session-secret-0123456789abcdef COOKIE_SECURE=0 PORT=8080 node src/server.js > ../../portal.log 2>&1 &)
+          for i in $(seq 1 60); do curl -sf http://localhost:5080/healthz && curl -sf http://127.0.0.1:4173/ >/dev/null && curl -sf http://127.0.0.1:8080/ >/dev/null && break; sleep 2; done
+          API=http://localhost:5080 PORTAL_KEY=e2e-portal-key:e2e-secret-0123456789 node backoffice/scripts/seed-demo.mjs
+      - name: Screenshots
+        run: |
+          mkdir -p e2e/run && cd e2e/run && npm init -y >/dev/null && npm install playwright@1.49.1 --no-audit --no-fund >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          cp ../audit.mjs . && BASE_URL=http://127.0.0.1:4173 PORTAL_URL=http://127.0.0.1:8080 node audit.mjs
+      - name: Logs
+        if: always()
+        run: |
+          echo "--- api errors"; grep -n -A8 "fail:\|Exception" api.log | head -60; echo "--- agent"; grep -n -A8 "fail:\|Exception" agent.log | head -40; echo "--- portal"; tail -30 portal.log; echo "--- web"; tail -10 web.log
+      - name: Push to the audit branch
+        if: always()
+        run: |
+          test -d e2e/run/shots || exit 0
+          cd e2e/run/shots && git init -q -b audit && git add . \
+            && git -c user.name=audit -c user.email=audit@localhost commit -qm "Design audit ${GITHUB_SHA::7}" \
+            && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" audit

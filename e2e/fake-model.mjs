@@ -9,6 +9,7 @@ http.createServer(async (req, res) => {
   for await (const c of req) body += c;
   if (!req.url.endsWith("/chat/completions")) { res.writeHead(404).end(); return; }
   const input = JSON.parse(body || "{}");
+  if (process.env.SCENARIO && Array.isArray(input.tools) && input.tools.length > 0 && input.stream) return scenario(input, res);
   const hasTool = (input.messages || []).some((m) => m.role === "tool");
   const wantsTools = Array.isArray(input.tools) && input.tools.length > 0;
   if (!input.stream) {
@@ -31,3 +32,44 @@ http.createServer(async (req, res) => {
   }
   res.end("data: [DONE]\n\n");
 }).listen(9000, () => console.log("fake model on :9000"));
+
+// SCENARIO=1 (design audit): the last user message picks a short plan of tool calls, so the chat shows every kind of
+// card the assistant can draw. Ids come from the previous tool result.
+const PLANS = [
+  [/compare|قارن/i, [["search_applicants", () => ({})], ["compare_applicants", (ids) => ({ applicantIds: ids.slice(0, 3) })]],
+    "**Comparison ready.** The first applicant has the strongest CV match; check the personality fit before the interview."],
+  [/cards|بطاقات/i, [["search_applicants", () => ({})], ["show_applicants", (ids) => ({ applicantIds: ids.slice(0, 4) })]],
+    "**Cards ready.**\n\n- 4 applicants shown\n- 2 have completed the personality questionnaire"],
+  [/form|نموذج/i, [["ask_user", () => ({ title: "Interview details", fields: [
+    { name: "date", label: "Date", type: "date", required: true },
+    { name: "round", label: "Round", type: "choice", options: [{ value: "1", label: "Technical" }, { value: "2", label: "HR" }], required: true },
+    { name: "minutes", label: "Length (minutes)", type: "number", value: "45" },
+    { name: "notes", label: "Notes", type: "longtext" },
+    { name: "notify", label: "Email the candidate", type: "checkbox", value: "true" },
+  ] })]], "**Form shown.** Fill it in and press Submit."],
+  [/note|ملاحظة/i, [["search_applicants", () => ({})], ["propose_note", (ids) => ({ applicantId: ids[0], text: "Strong Power BI experience; invite to the technical interview." })]],
+    "**Proposal ready.** It is waiting for your approval."],
+];
+
+function scenario(input, res) {
+  const msgs = input.messages || [];
+  let lastUser = msgs.length - 1;
+  while (lastUser >= 0 && msgs[lastUser].role !== "user") lastUser--;
+  const text = typeof msgs[lastUser]?.content === "string" ? msgs[lastUser].content : JSON.stringify(msgs[lastUser]?.content || "");
+  const plan = PLANS.find(([re]) => re.test(text)) || [null, [["list_jobs", () => ({})]], "Here are the open jobs."];
+  const done = msgs.slice(lastUser + 1).filter((m) => m.role === "tool");
+  const ids = [...(done.at(-1)?.content || "").toString().matchAll(/"id"\s*:\s*(\d+)/g)].map((m) => Number(m[1]));
+  res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" });
+  const step = plan[1][done.length];
+  if (step) {
+    const [name, args] = step;
+    res.write(chunk({ role: "assistant", content: null, tool_calls: [{ index: 0, id: `call_${done.length + 1}`, type: "function", function: { name, arguments: "" } }] }));
+    res.write(chunk({ tool_calls: [{ index: 0, function: { arguments: JSON.stringify(args(ids)) } }] }));
+    res.write(chunk({}, "tool_calls"));
+  } else {
+    res.write(chunk({ role: "assistant", content: "" }));
+    res.write(chunk({ content: plan[2] }));
+    res.write(chunk({}, "stop"));
+  }
+  res.end("data: [DONE]\n\n");
+}
