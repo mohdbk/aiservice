@@ -156,6 +156,17 @@ public static class BackofficeEndpoints
         staff.MapPut("/agent/conversations/{thread}", (string thread, ConversationInput b, AgentConversationService s, CancellationToken ct) => s.SaveAsync(thread, b, ct));
         staff.MapPost("/agent/conversations/{thread}/share", (string thread, ShareBody b, AgentConversationService s, CancellationToken ct) => s.ShareAsync(thread, b.Shared, ct));
         staff.MapDelete("/agent/conversations/{thread}", (string thread, AgentConversationService s, CancellationToken ct) => s.DeleteAsync(thread, ct));
+        staff.MapPost("/agent/attachments", async (HttpRequest req, AgentAttachmentService s, CancellationToken ct) =>
+        {
+            if (!req.HasFormContentType) throw DomainException.Invalid("file_required");
+            var form = await req.ReadFormAsync(ct);
+            var f = form.Files.GetFile("file") ?? throw DomainException.Invalid("file_required");
+            if (f.Length > 10 * 1024 * 1024) throw DomainException.Invalid("cv_too_large", new Dictionary<string, object?> { ["max_mb"] = 10 });
+            using var ms = new MemoryStream();
+            await f.CopyToAsync(ms, ct);
+            return await s.UploadAsync(f.FileName, ms.ToArray(), ct);
+        }).DisableAntiforgery();
+        staff.MapGet("/agent/attachments/{id:guid}/text", (Guid id, AgentAttachmentService s, CancellationToken ct) => s.TextAsync(id, ct));
         staff.MapGet("/agent/suggestions", (AgentConversationService s, CancellationToken ct) => s.SuggestionsAsync(ct));
         staff.MapGet("/agent/info", (AgentSettingsService s, CancellationToken ct) => s.InfoAsync(ct));
         staff.MapGet("/agent/components", (BackofficeComponentService s, CancellationToken ct) => s.ActiveAsync(ct));

@@ -76,7 +76,7 @@ export default function PersonalitySettings() {
           {bands.error && <div className="mb-4"><ErrorState error={bands.error} /></div>}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {KEYS.map((k) => (
-              <TextInput key={k} label={t(`perset.from.${k}`)} type="number" min={6} max={25} value={cut[k]} disabled={!canEdit}
+              <TextInput required key={k} label={t(`perset.from.${k}`)} type="number" min={6} max={25} value={cut[k]} disabled={!canEdit}
                 onChange={(e) => setC({ ...cut, [k]: Number(e.target.value) || 0 })} />
             ))}
           </div>
@@ -108,8 +108,8 @@ export default function PersonalitySettings() {
           <Button variant="outline" onClick={() => setD(null)}>{t("common.cancel")}</Button>
           <Button busy={note.busy} onClick={saveNote}>{t("common.save")}</Button></>}>
           {note.error && <ErrorState error={note.error} />}
-          <TextInput label={<FlagLabel lang="ar">{t("setup.name_ar")}</FlagLabel>} dir="rtl" value={d.name_ar} onChange={(e) => setD({ ...d, name_ar: e.target.value })} />
-          <TextInput label={<FlagLabel lang="en">{t("setup.name_en")}</FlagLabel>} dir="ltr" value={d.name_en} onChange={(e) => setD({ ...d, name_en: e.target.value })} />
+          <TextInput required label={<FlagLabel lang="ar">{t("setup.name_ar")}</FlagLabel>} dir="rtl" value={d.name_ar} onChange={(e) => setD({ ...d, name_ar: e.target.value })} />
+          <TextInput required label={<FlagLabel lang="en">{t("setup.name_en")}</FlagLabel>} dir="ltr" value={d.name_en} onChange={(e) => setD({ ...d, name_en: e.target.value })} />
           <TextArea label={<FlagLabel lang="ar">{t("pers.strengths")}</FlagLabel>} hint={t("perset.lines_hint")} dir="rtl" rows={4} value={d.strengths_ar} onChange={(e) => setD({ ...d, strengths_ar: e.target.value })} />
           <TextArea label={<FlagLabel lang="en">{t("pers.strengths")}</FlagLabel>} dir="ltr" rows={4} value={d.strengths_en} onChange={(e) => setD({ ...d, strengths_en: e.target.value })} />
           <TextArea label={<FlagLabel lang="ar">{t("pers.risks")}</FlagLabel>} dir="rtl" rows={3} value={d.risks_ar} onChange={(e) => setD({ ...d, risks_ar: e.target.value })} />

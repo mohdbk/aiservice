@@ -75,3 +75,15 @@ public class AgentConversation
 
     public const int MaxContent = 2_000_000;
 }
+
+/// <summary>A file a staff member attached in the assistant chat (the content is in a stored file); its text is read once.</summary>
+public class AgentAttachment
+{
+    public Guid Id { get; set; }
+    public int StaffUserId { get; set; }
+    public string FileName { get; set; } = "";
+    public Guid FileId { get; set; }
+    public string? Text { get; set; }
+    public string ReadMethod { get; set; } = "";
+    public DateTime CreatedAt { get; set; }
+}

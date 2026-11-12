@@ -55,6 +55,7 @@ public interface IAppDbContext
     DbSet<AgentSetting> AgentSettings { get; }
     DbSet<AgentRun> AgentRuns { get; }
     DbSet<AgentConversation> AgentConversations { get; }
+    DbSet<AgentAttachment> AgentAttachments { get; }
 
     Task<int> SaveChangesAsync(CancellationToken ct = default);
 }

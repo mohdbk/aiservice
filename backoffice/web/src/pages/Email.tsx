@@ -28,7 +28,7 @@ function TestEmail({ path, open, onClose }: { path: string; open: boolean; onClo
       <Button busy={busy} disabled={!to} onClick={send} icon={<PaperPlaneTilt size={24} aria-hidden="true" />}>{t("mail.send")}</Button>
     </>}>
       {error && <ErrorState error={error} />}
-      <TextInput label={t("mail.test_to")} type="email" dir="ltr" value={to} onChange={(e) => setTo(e.target.value)} />
+      <TextInput required label={t("mail.test_to")} type="email" dir="ltr" value={to} onChange={(e) => setTo(e.target.value)} />
       <LangSwitch value={l} onChange={setL} />
       {result && (result.ok ? <Note>{t("mail.test_ok", { server: result.server })}</Note>
         : <Note tone="warning">{t("mail.test_failed", { server: result.server })} <span dir="ltr" className="block break-all font-mono text-xs">{result.error}</span></Note>)}
@@ -83,7 +83,7 @@ export function EmailServer() {
           <div className="space-y-4">
             <TextInput label={t("mail.host")} hint={t("mail.host_hint")} dir="ltr" value={s.host} onChange={(e) => set("host", e.target.value)} />
             <div className="grid grid-cols-2 gap-3">
-              <TextInput label={t("mail.port")} type="number" min={1} max={65535} dir="ltr" value={s.port} onChange={(e) => set("port", Number(e.target.value) || 0)} />
+              <TextInput required label={t("mail.port")} type="number" min={1} max={65535} dir="ltr" value={s.port} onChange={(e) => set("port", Number(e.target.value) || 0)} />
               <div className="pt-8"><Toggle label={t("mail.tls")} checked={s.use_tls} onChange={(v) => set("use_tls", v)} /></div>
             </div>
             <TextInput label={t("mail.user")} dir="ltr" autoComplete="off" value={s.user_name} onChange={(e) => set("user_name", e.target.value)} />
@@ -94,7 +94,7 @@ export function EmailServer() {
         </Card>
         <Card title={t("mail.sender")}>
           <div className="space-y-4">
-            <TextInput label={t("mail.from_address")} type="email" dir="ltr" value={s.from_address} onChange={(e) => set("from_address", e.target.value)} />
+            <TextInput required label={t("mail.from_address")} type="email" dir="ltr" value={s.from_address} onChange={(e) => set("from_address", e.target.value)} />
             <TextInput label={t("mail.from_name")} value={s.from_name} onChange={(e) => set("from_name", e.target.value)} />
             <TextArea label={<FlagLabel lang="ar">{t("mail.signature_ar")}</FlagLabel>} dir="rtl" rows={3} value={s.signature_ar} onChange={(e) => set("signature_ar", e.target.value)} />
             <TextArea label={<FlagLabel lang="en">{t("mail.signature_en")}</FlagLabel>} dir="ltr" rows={3} value={s.signature_en} onChange={(e) => set("signature_en", e.target.value)} />
@@ -137,7 +137,7 @@ function TemplateText({ lang, subject, body, html, designed, placeholders, onSub
   const ar = lang === "ar";
   return (
     <div className="space-y-3">
-      <TextInput label={<FlagLabel lang={lang}>{t("mail.subject")}</FlagLabel>} dir={ar ? "rtl" : "ltr"} value={subject} onChange={(e) => onSubject(e.target.value)}
+      <TextInput required label={<FlagLabel lang={lang}>{t("mail.subject")}</FlagLabel>} dir={ar ? "rtl" : "ltr"} value={subject} onChange={(e) => onSubject(e.target.value)}
         hint={subject && <span dir={ar ? "rtl" : "ltr"}>{fill(subject, ar)}</span>} />
       <TemplateBody lang={lang} text={body} html={html} designed={designed} onText={onBody} onHtml={onHtml} placeholders={placeholders}
         textLabel={<FlagLabel lang={lang}>{designed ? t("mail.body_text") : t("mail.body")}</FlagLabel>} htmlLabel={<FlagLabel lang={lang}>{t("mail.body_html")}</FlagLabel>}
@@ -206,10 +206,10 @@ export function EmailTemplates() {
           {error && <ErrorState error={error} />}
           {f.event && <Note>{t(`mail.event_hint.${f.event}`)}</Note>}
           <div className="grid gap-3 sm:grid-cols-2">
-            <TextInput label={<FlagLabel lang="ar">{t("setup.name_ar")}</FlagLabel>} dir="rtl" value={f.name_ar} onChange={(e) => setF({ ...f, name_ar: e.target.value })} />
-            <TextInput label={<FlagLabel lang="en">{t("setup.name_en")}</FlagLabel>} dir="ltr" value={f.name_en} onChange={(e) => setF({ ...f, name_en: e.target.value })} />
+            <TextInput required label={<FlagLabel lang="ar">{t("setup.name_ar")}</FlagLabel>} dir="rtl" value={f.name_ar} onChange={(e) => setF({ ...f, name_ar: e.target.value })} />
+            <TextInput required label={<FlagLabel lang="en">{t("setup.name_en")}</FlagLabel>} dir="ltr" value={f.name_en} onChange={(e) => setF({ ...f, name_en: e.target.value })} />
           </div>
-          {!f.event && <TextInput label={t("mail.key")} hint={t("mail.key_hint")} dir="ltr" value={f.key} onChange={(e) => setF({ ...f, key: e.target.value })} />}
+          {!f.event && <TextInput required label={t("mail.key")} hint={t("mail.key_hint")} dir="ltr" value={f.key} onChange={(e) => setF({ ...f, key: e.target.value })} />}
           <Toggle label={t("mail.enabled")} hint={f.required ? t("mail.required_hint") : undefined} checked={f.is_enabled} onChange={(v) => !f.required && setF({ ...f, is_enabled: v })} />
           <Toggle label={t("mail.designed")} hint={t("mail.designed_hint")} checked={!!f.designed} onChange={(v) => setF({
             ...f, designed: v,

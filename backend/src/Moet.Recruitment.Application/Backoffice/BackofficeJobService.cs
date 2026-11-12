@@ -174,6 +174,20 @@ public sealed class BackofficeJobService(IAppDbContext db, ICodeGenerator codes,
         return new { id = j.Id, code = j.Code };
     }
 
+    /// <summary>The job's selection settings only: the role profile (0 for none) and the weights of the combined score.</summary>
+    public async Task<object> SetSelectionAsync(int id, int roleProfileId, SelectionWeights w, CancellationToken ct = default)
+    {
+        var j = await db.JobOpenings.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound();
+        w.Validate();
+        if (roleProfileId > 0 && !await db.RoleProfiles.AnyAsync(r => r.Id == roleProfileId, ct)) throw DomainException.Invalid("invalid_value");
+        j.RoleProfileId = roleProfileId > 0 ? roleProfileId : null;
+        (j.WeightCv, j.WeightTests, j.WeightInterview, j.WeightPersonality) = ((byte)w.Cv, (byte)w.Tests, (byte)w.Interview, (byte)w.Personality);
+        j.UpdatedAt = clock.UtcNow;
+        j.UpdatedByStaffId = actor.Id;
+        await db.SaveChangesAsync(ct);
+        return new { id = j.Id };
+    }
+
     /// <summary>Saves the job's text in another language. Writing or editing it approves it; a fresh draft waits for review.</summary>
     public void ApplyTranslation(JobOpening j, TranslationInput t, bool suggested, DateTime now)
     {

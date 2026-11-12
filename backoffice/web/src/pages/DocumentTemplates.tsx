@@ -76,11 +76,11 @@ export default function DocumentTemplates() {
           <Button busy={busy} onClick={save}>{t("common.save")}</Button>
         </>}>
           {error && <ErrorState error={error} />}
-          <SelectInput label={t("otpl.kind")} value={f.kind} disabled={!!f.id} onChange={(e) => setF({ ...f, kind: e.target.value })}
+          <SelectInput required label={t("otpl.kind")} value={f.kind} disabled={!!f.id} onChange={(e) => setF({ ...f, kind: e.target.value })}
             options={kinds.map((k) => ({ value: k.key, label: en ? k.name_en : k.name_ar }))} />
           <div className="grid gap-3 sm:grid-cols-2">
-            <TextInput label={<FlagLabel lang="ar">{t("setup.name_ar")}</FlagLabel>} dir="rtl" value={f.name_ar} onChange={(e) => setF({ ...f, name_ar: e.target.value })} />
-            <TextInput label={<FlagLabel lang="en">{t("setup.name_en")}</FlagLabel>} dir="ltr" value={f.name_en} onChange={(e) => setF({ ...f, name_en: e.target.value })} />
+            <TextInput required label={<FlagLabel lang="ar">{t("setup.name_ar")}</FlagLabel>} dir="rtl" value={f.name_ar} onChange={(e) => setF({ ...f, name_ar: e.target.value })} />
+            <TextInput required label={<FlagLabel lang="en">{t("setup.name_en")}</FlagLabel>} dir="ltr" value={f.name_en} onChange={(e) => setF({ ...f, name_en: e.target.value })} />
           </div>
           <div className="flex flex-wrap gap-6">
             <Toggle label={t("common.active")} checked={f.is_active} onChange={(v) => setF({ ...f, is_active: v, is_default: v && f.is_default })} />

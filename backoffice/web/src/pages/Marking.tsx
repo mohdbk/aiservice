@@ -103,7 +103,7 @@ export default function Marking() {
               {q.rubric && <div className="mb-3"><Note><strong>{t("mark.rubric")}:</strong> <span className="whitespace-pre-line">{q.rubric}</span></Note></div>}
               {q.suggested_points !== null && <div className="mb-3"><Note tone="warning"><strong>{t("mark.suggested", { points: q.suggested_points })}</strong> {q.suggestion_reason}</Note></div>}
               {!personality && <div className="grid gap-3 sm:grid-cols-[10rem_1fr]">
-                <TextInput label={t("mark.points")} type="number" min={0} max={q.points} step={0.5} value={marks[q.id]?.points ?? ""}
+                <TextInput required label={t("mark.points")} type="number" min={0} max={q.points} step={0.5} value={marks[q.id]?.points ?? ""}
                   onChange={(e) => setMarks((m) => ({ ...m, [q.id]: { ...m[q.id], points: e.target.value } }))} />
                 <TextInput label={t("mark.comment")} value={marks[q.id]?.comment ?? ""} onChange={(e) => setMarks((m) => ({ ...m, [q.id]: { ...m[q.id], comment: e.target.value } }))} />
               </div>}

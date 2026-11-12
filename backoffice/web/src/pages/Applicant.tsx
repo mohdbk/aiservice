@@ -278,8 +278,8 @@ function InviteDialog({ open, onClose, tests, onSave, busy }: { open: boolean; o
       <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
       <Button busy={busy} disabled={!test} onClick={() => onSave({ assessment_id: Number(test), deadline_days: days })}>{t("app.invite")}</Button>
     </>}>
-      <SelectInput label={t("app.test")} value={test} onChange={(e) => setTest(e.target.value)} options={[{ value: "", label: "" }, ...tests.map((x) => ({ value: x.id, label: x.title }))]} />
-      <TextInput label={t("jobs.deadline_days")} type="number" min={1} max={90} value={days} onChange={(e) => setDays(Number(e.target.value) || 7)} />
+      <SelectInput required label={t("app.test")} value={test} onChange={(e) => setTest(e.target.value)} options={[{ value: "", label: "" }, ...tests.map((x) => ({ value: x.id, label: x.title }))]} />
+      <TextInput required label={t("jobs.deadline_days")} type="number" min={1} max={90} value={days} onChange={(e) => setDays(Number(e.target.value) || 7)} />
     </Modal>
   );
 }
@@ -294,8 +294,8 @@ function ReexamDialog({ open, onClose, onSave, busy }: { open: boolean; onClose:
       <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
       <Button busy={busy} onClick={() => onSave({ extra_attempts: extra, deadline_days: days, notify })}>{t("common.confirm")}</Button>
     </>}>
-      <TextInput label={t("inv.extra_attempts")} type="number" min={1} max={5} value={extra} onChange={(e) => setExtra(Number(e.target.value) || 1)} />
-      <TextInput label={t("jobs.deadline_days")} type="number" min={1} max={90} value={days} onChange={(e) => setDays(Number(e.target.value) || 7)} />
+      <TextInput required label={t("inv.extra_attempts")} type="number" min={1} max={5} value={extra} onChange={(e) => setExtra(Number(e.target.value) || 1)} />
+      <TextInput required label={t("jobs.deadline_days")} type="number" min={1} max={90} value={days} onChange={(e) => setDays(Number(e.target.value) || 7)} />
       <Tick label={t("inv.notify")} checked={notify} onChange={setNotify} />
     </Modal>
   );
@@ -313,12 +313,12 @@ export function InterviewDialog({ open, onClose, lookups, onSave, busy, initial 
       <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
       <Button busy={busy} disabled={!f.round_id || !f.date} onClick={() => onSave(f)}>{t("common.save")}</Button>
     </>}>
-      <SelectInput label={t("int.round")} value={f.round_id || ""} onChange={(e) => set("round_id", Number(e.target.value))}
+      <SelectInput required label={t("int.round")} value={f.round_id || ""} onChange={(e) => set("round_id", Number(e.target.value))}
         options={[{ value: "", label: "" }, ...(lookups?.rounds || []).map((r) => ({ value: r.id, label: r.name }))]} />
       <div className="grid gap-3 sm:grid-cols-3">
-        <TextInput label={t("int.date")} type="date" value={f.date} onChange={(e) => set("date", e.target.value)} />
-        <TextInput label={t("int.from")} type="time" value={f.from} onChange={(e) => set("from", e.target.value)} />
-        <TextInput label={t("int.to")} type="time" value={f.to} onChange={(e) => set("to", e.target.value)} />
+        <TextInput required label={t("int.date")} type="date" value={f.date} onChange={(e) => set("date", e.target.value)} />
+        <TextInput required label={t("int.from")} type="time" value={f.from} onChange={(e) => set("from", e.target.value)} />
+        <TextInput required label={t("int.to")} type="time" value={f.to} onChange={(e) => set("to", e.target.value)} />
       </div>
       <TextInput label={t("int.location")} value={f.location} onChange={(e) => set("location", e.target.value)} />
       <fieldset>
@@ -350,9 +350,9 @@ export function OfferDialog({ open, onClose, onSave, busy, defaultTitle, initial
       <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
       <Button busy={busy} disabled={!f.position_title} onClick={() => onSave({ ...f, start_date: f.start_date || null })}>{t("common.save")}</Button>
     </>}>
-      <TextInput label={t("offer.position")} value={f.position_title} onChange={(e) => set("position_title", e.target.value)} />
+      <TextInput required label={t("offer.position")} value={f.position_title} onChange={(e) => set("position_title", e.target.value)} />
       <div className="grid gap-3 sm:grid-cols-2">
-        <TextInput label={t("offer.date")} type="date" value={f.offer_date} onChange={(e) => set("offer_date", e.target.value)} />
+        <TextInput required label={t("offer.date")} type="date" value={f.offer_date} onChange={(e) => set("offer_date", e.target.value)} />
         <TextInput label={t("offer.start")} type="date" value={f.start_date} onChange={(e) => set("start_date", e.target.value)} />
         <TextInput label={t("offer.salary")} type="number" min={0} value={f.monthly_salary ?? ""} onChange={(e) => set("monthly_salary", e.target.value ? Number(e.target.value) : null)} />
         <TextInput label={t("offer.currency")} value={f.currency} maxLength={3} onChange={(e) => set("currency", e.target.value.toUpperCase())} dir="ltr" />
@@ -417,16 +417,16 @@ function BookingDialog({ onClose, lookups, onSave, busy }: {
       <Button busy={busy} disabled={!ready} onClick={() => onSave(f)}>{t("book.send")}</Button>
     </>}>
       <p className="text-sm text-aeblack-600">{t("book.hint")}</p>
-      <SelectInput label={t("int.round")} value={f.round_id || ""} onChange={(e) => setF({ ...f, round_id: Number(e.target.value) })}
+      <SelectInput required label={t("int.round")} value={f.round_id || ""} onChange={(e) => setF({ ...f, round_id: Number(e.target.value) })}
         options={[{ value: "", label: "" }, ...(lookups?.rounds || []).map((r) => ({ value: r.id, label: r.name }))]} />
       <fieldset>
         <legend className="mb-2 text-sm font-semibold">{t("book.times")}</legend>
         <div className="space-y-2">
           {f.slots.map((s, i) => (
             <div key={i} className="grid grid-cols-[1fr_auto] items-end gap-2 sm:grid-cols-[1fr_7rem_7rem_auto]">
-              <TextInput label={t("int.date")} type="date" value={s.date} onChange={(e) => setSlot(i, "date", e.target.value)} wrapClass="col-span-2 sm:col-span-1" />
-              <TextInput label={t("int.from")} type="time" value={s.from} onChange={(e) => setSlot(i, "from", e.target.value)} />
-              <TextInput label={t("int.to")} type="time" value={s.to} onChange={(e) => setSlot(i, "to", e.target.value)} />
+              <TextInput required label={t("int.date")} type="date" value={s.date} onChange={(e) => setSlot(i, "date", e.target.value)} wrapClass="col-span-2 sm:col-span-1" />
+              <TextInput required label={t("int.from")} type="time" value={s.from} onChange={(e) => setSlot(i, "from", e.target.value)} />
+              <TextInput required label={t("int.to")} type="time" value={s.to} onChange={(e) => setSlot(i, "to", e.target.value)} />
               <Button variant="link" size="sm" aria-label={t("common.remove")} disabled={f.slots.length === 1}
                 onClick={() => setF({ ...f, slots: f.slots.filter((_, j) => j !== i) })}><Trash size={20} aria-hidden="true" /></Button>
             </div>

@@ -67,7 +67,7 @@ export default function Screening() {
             onSuggest={form.id ? async () => { if (await suggest.run(() => api(`/suggest-english/screening/${form.id}`, { body: {} })) !== undefined) toast(t("common.queued"), "info"); } : undefined}
             suggesting={suggest.busy}>
             <div className="space-y-4" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
-              <TextArea label={lang === "ar" ? t("sq.text_ar") : t("sq.text_en")} rows={2} value={lang === "ar" ? form.text : form.text_en}
+              <TextArea required label={lang === "ar" ? t("sq.text_ar") : t("sq.text_en")} rows={2} value={lang === "ar" ? form.text : form.text_en}
                 onChange={(e) => set(lang === "ar" ? "text" : "text_en", e.target.value)} />
               {hasOptions && (
                 <fieldset>
@@ -87,7 +87,7 @@ export default function Screening() {
             </div>
           </LangTabs>
           <div className="grid gap-3 sm:grid-cols-2">
-            <SelectInput label={t("sq.answer_type")} value={form.answer_type} onChange={(e) => {
+            <SelectInput required label={t("sq.answer_type")} value={form.answer_type} onChange={(e) => {
               const v = e.target.value;
               setForm((f) => (f ? { ...f, answer_type: v, options: (v === "SingleChoice" || v === "MultipleChoice") && f.options.length === 0 ? [{ text: "", text_en: "" }, { text: "", text_en: "" }] : f.options } : f));
             }} options={opts(t, "at.", TYPES)} />

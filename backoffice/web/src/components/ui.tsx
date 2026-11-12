@@ -98,10 +98,13 @@ export function Note({ children, tone = "info" }: { children: ReactNode; tone?: 
 }
 
 // ---------------- form fields ----------------
-export function Field({ label, hint, error, children, className = "", id }: { label: ReactNode; hint?: ReactNode; error?: string; children: ReactNode; className?: string; id?: string }) {
+/** A labelled field. Required fields carry a red asterisk (and "required" for screen readers, from the input itself). */
+export function Field({ label, hint, error, children, className = "", id, required }: { label: ReactNode; hint?: ReactNode; error?: string; children: ReactNode; className?: string; id?: string; required?: boolean }) {
   return (
     <div className={`aegov-form-control ${error ? "control-error" : ""} ${className}`}>
-      <label htmlFor={id} className="mh-ui mb-1 block text-sm font-semibold text-aeblack-800">{label}</label>
+      <label htmlFor={id} className="mh-ui mb-1 block text-sm font-semibold text-aeblack-800">
+        {label}{required && <span className="ms-1 text-aered-600" aria-hidden="true">*</span>}
+      </label>
       <div className="form-control-input">{children}</div>
       {hint && <p className="mh-ui mt-1 text-xs text-aeblack-500">{hint}</p>}
       {error && <p className="mt-1 text-sm text-aered-700" role="alert">{error}</p>}
@@ -115,7 +118,7 @@ export function TextInput({ label, hint, error, wrapClass, ...rest }: InputProps
   const id = useId();
   const ltr = rest.type === "email" || rest.type === "password" || rest.type === "number" || rest.type === "date" || rest.type === "time" || rest.type === "url";
   return (
-    <Field label={label} hint={hint} error={error} id={id} className={wrapClass}>
+    <Field label={label} hint={hint} error={error} id={id} className={wrapClass} required={rest.required}>
       <input id={id} dir={ltr ? "ltr" : rest.dir} {...rest} />
     </Field>
   );
@@ -126,7 +129,7 @@ type TextAreaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label
 export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function TextArea({ label, hint, error, wrapClass, ...rest }, ref) {
   const id = useId();
   return (
-    <Field label={label} hint={hint} error={error} id={id} className={wrapClass}>
+    <Field label={label} hint={hint} error={error} id={id} className={wrapClass} required={rest.required}>
       <textarea id={id} ref={ref} {...rest} />
     </Field>
   );
@@ -135,7 +138,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function 
 export function SelectInput({ label, hint, options, wrapClass, ...rest }: React.SelectHTMLAttributes<HTMLSelectElement> & { label: ReactNode; hint?: ReactNode; options: { value: string | number; label: string }[]; wrapClass?: string }) {
   const id = useId();
   return (
-    <Field label={label} hint={hint} id={id} className={wrapClass}>
+    <Field label={label} hint={hint} id={id} className={wrapClass} required={rest.required}>
       <select id={id} {...rest}>
         {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
@@ -173,8 +176,8 @@ export function Tick({ label, checked, onChange }: { label: ReactNode; checked: 
 }
 
 /** Small rich text editor for job descriptions and instructions (the server cleans the HTML). */
-export function RichText({ label, hint, value, onChange, dir, headings = false, after }: {
-  label: ReactNode; hint?: ReactNode; value: string; onChange: (v: string) => void; dir: "rtl" | "ltr"; headings?: boolean; after?: ReactNode;
+export function RichText({ label, hint, value, onChange, dir, headings = false, after, required }: {
+  label: ReactNode; hint?: ReactNode; value: string; onChange: (v: string) => void; dir: "rtl" | "ltr"; headings?: boolean; after?: ReactNode; required?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const id = useId();
@@ -189,7 +192,7 @@ export function RichText({ label, hint, value, onChange, dir, headings = false, 
   const tool = "rounded p-1.5 text-aeblack-600 hover:bg-primary-50 hover:text-primary-700";
   return (
     <div>
-      <p id={id} className="mh-ui mb-1 text-sm font-semibold text-aeblack-800">{label}</p>
+      <p id={id} className="mh-ui mb-1 text-sm font-semibold text-aeblack-800">{label}{required && <span className="ms-1 text-aered-600" aria-hidden="true">*</span>}</p>
       <div className="rounded-lg border border-aeblack-200 bg-white focus-within:border-primary-500">
         <div className="flex gap-1 border-b border-aeblack-100 p-1" role="toolbar" aria-labelledby={id}>
           <button type="button" className={tool} onClick={() => cmd("bold")} aria-label="Bold"><TextB size={20} /></button>
@@ -199,7 +202,7 @@ export function RichText({ label, hint, value, onChange, dir, headings = false, 
           {headings && <button type="button" className={tool} onClick={() => { document.execCommand("formatBlock", false, "h2"); onChange(ref.current?.innerHTML || ""); ref.current?.focus(); }} aria-label="Heading"><TextH size={20} /></button>}
           {headings && <button type="button" className={tool} onClick={() => { document.execCommand("formatBlock", false, "p"); onChange(ref.current?.innerHTML || ""); ref.current?.focus(); }} aria-label="Paragraph"><Paragraph size={20} /></button>}
         </div>
-        <div ref={ref} dir={dir} contentEditable role="textbox" aria-multiline="true" aria-labelledby={id} className="mh-editor mc-prose"
+        <div ref={ref} dir={dir} contentEditable role="textbox" aria-multiline="true" aria-required={required || undefined} aria-labelledby={id} className="mh-editor mc-prose"
           onInput={(e) => onChange((e.currentTarget as HTMLDivElement).innerHTML)} suppressContentEditableWarning />
       </div>
       {after}
@@ -442,7 +445,7 @@ export function PlaceholderText({ label, hint, lang, value, onChange, placeholde
   const shown = sample ? sample(value) : value;
   return (
     <div className="space-y-3">
-      <TextArea ref={ref} label={label} hint={hint} dir={dir} rows={rows} value={value} onChange={(e) => onChange(e.target.value)} />
+      <TextArea required ref={ref} label={label} hint={hint} dir={dir} rows={rows} value={value} onChange={(e) => onChange(e.target.value)} />
       {placeholders.length > 0 && (
         <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("mail.placeholders")}>
           {placeholders.map((p) => (

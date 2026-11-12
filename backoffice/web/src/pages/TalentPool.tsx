@@ -55,7 +55,7 @@ export default function TalentPool() {
           <Button busy={busy} disabled={!jobId} onClick={send}>{t("pool.send")}</Button></>}>
           {error && <ErrorState error={error} />}
           <p className="text-sm text-aeblack-600">{t("pool.invite_hint")}</p>
-          <SelectInput label={t("apps.job")} value={jobId} onChange={(e) => setJobId(e.target.value)}
+          <SelectInput required label={t("apps.job")} value={jobId} onChange={(e) => setJobId(e.target.value)}
             options={[{ value: "", label: "" }, ...(jobs.data?.items || []).map((j) => ({ value: String(j.id), label: j.title }))]} />
         </Modal>
       )}

@@ -104,3 +104,67 @@ public sealed class AgentConversationService(IAppDbContext db, ICurrentActor act
         return list.Where(x => x.Count > 0).Take(5).Select(x => new { key = x.Key, count = x.Count, text_ar = x.Ar, text_en = x.En, ask_ar = x.AskAr, ask_en = x.AskEn });
     }
 }
+
+/// <summary>
+/// Files attached in the assistant chat: PDF, Word, text or an image (read with OCR when set up), up to 10 MB, visible only
+/// to the person who attached them. The assistant reads their text with the read_attachment tool.
+/// </summary>
+public sealed class AgentAttachmentService(IAppDbContext db, ICurrentActor actor, IClock clock, ICvReader reader)
+{
+    const int MaxMb = 10;
+
+    public async Task<object> UploadAsync(string? fileName, byte[]? content, CancellationToken ct = default)
+    {
+        var me = actor.Id ?? throw DomainException.Forbidden();
+        if (content == null || content.Length == 0) throw DomainException.Invalid("file_required");
+        var name = Path.GetFileName(fileName ?? "file");
+        var ext = Path.GetExtension(name).TrimStart('.').ToLowerInvariant();
+        string type;
+        if (ext is "txt" or "csv" or "md")
+        {
+            if (content.Length > MaxMb * 1024 * 1024) throw DomainException.Invalid("cv_too_large", new Dictionary<string, object?> { ["max_mb"] = MaxMb });
+            type = "text/plain";
+        }
+        else
+        {
+            ext = Moet.Recruitment.Domain.Hiring.CvFile.Validate(name, content, MaxMb);
+            type = Moet.Recruitment.Domain.Hiring.CvFile.ContentTypes[ext];
+        }
+        var now = clock.UtcNow;
+        var file = new StoredFile
+        {
+            Id = Guid.NewGuid(), FileName = TextUtil.Clip(name, 200), ContentType = type, SizeBytes = content.Length,
+            Sha256 = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(content)).ToLowerInvariant(), Content = content, CreatedAt = now,
+        };
+        db.StoredFiles.Add(file);
+        var a = new AgentAttachment { Id = Guid.NewGuid(), StaffUserId = me, FileName = file.FileName, FileId = file.Id, CreatedAt = now };
+        db.AgentAttachments.Add(a);
+        await db.SaveChangesAsync(ct);
+        return new { id = a.Id, file_name = a.FileName, size = content.Length };
+    }
+
+    /// <summary>The attachment's text (read on first use). Only for the person who attached it.</summary>
+    public async Task<object> TextAsync(Guid id, CancellationToken ct = default)
+    {
+        var me = actor.Id ?? throw DomainException.Forbidden();
+        var a = await db.AgentAttachments.FirstOrDefaultAsync(x => x.Id == id && x.StaffUserId == me, ct) ?? throw DomainException.NotFound();
+        if (a.Text == null)
+        {
+            var f = await db.StoredFiles.AsNoTracking().FirstAsync(x => x.Id == a.FileId, ct);
+            var ext = Path.GetExtension(f.FileName).TrimStart('.').ToLowerInvariant();
+            if (f.ContentType == "text/plain") (a.Text, a.ReadMethod) = (System.Text.Encoding.UTF8.GetString(f.Content), "text");
+            else
+            {
+                var r = await reader.ReadAsync(f.Content, ext, ct);
+                (a.Text, a.ReadMethod) = (r.Text, r.Method);
+            }
+            await db.SaveChangesAsync(ct);
+        }
+        const int max = 60_000;
+        return new
+        {
+            id = a.Id, file_name = a.FileName, read_method = a.ReadMethod, truncated = a.Text.Length > max,
+            text = a.Text.Length > max ? a.Text[..max] : a.Text,
+        };
+    }
+}

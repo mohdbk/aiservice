@@ -17,6 +17,11 @@ public static class AgentActions
         ["email_candidate"] = ["subject", "body"],
         ["create_draft_job"] = ["title", "location", "employment_type", "department_id"],
         ["suggest_english"] = [],
+        ["offer_interview_times"] = ["round_id", "times", "location", "panel_ids"],
+        ["talent_invite"] = ["job_id"],
+        ["set_offer_status"] = ["status"],
+        ["set_interview_status"] = ["status"],
+        ["set_job_selection"] = ["role_profile_id", "w_cv", "w_tests", "w_interview", "w_personality"],
     };
 }
 

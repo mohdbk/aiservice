@@ -117,11 +117,11 @@ function FieldEditor({ field, onChange, editable }: { field: FieldNode; onChange
     <div className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-3">
         {editable
-          ? <SelectInput label={t("comp.field_name")} value={field.name} onChange={(e) => onChange({ ...field, name: e.target.value })}
+          ? <SelectInput required label={t("comp.field_name")} value={field.name} onChange={(e) => onChange({ ...field, name: e.target.value })}
               options={[{ value: "", label: t("common.choose") }, ...editable.map((x) => ({ value: x, label: x }))]} />
-          : <TextInput label={t("comp.field_name")} dir="ltr" value={field.name} hint={t("comp.field_name_hint")}
+          : <TextInput required label={t("comp.field_name")} dir="ltr" value={field.name} hint={t("comp.field_name_hint")}
               onChange={(e) => onChange({ ...field, name: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_") })} />}
-        <SelectInput label={t("comp.input")} value={field.input} onChange={(e) => onChange({ ...field, input: e.target.value })}
+        <SelectInput required label={t("comp.input")} value={field.input} onChange={(e) => onChange({ ...field, input: e.target.value })}
           options={INPUTS.map((x) => ({ value: x, label: t(`comp.input.${x}`) }))} />
         <TextInput label={t("comp.default")} dir="auto" value={field.default ?? ""} onChange={(e) => onChange({ ...field, default: e.target.value })} />
       </div>
@@ -134,7 +134,7 @@ function FieldEditor({ field, onChange, editable }: { field: FieldNode; onChange
           {!field.source && <>
             {options.map((o, i) => (
               <div key={i} className="grid items-end gap-2 sm:grid-cols-[8rem_1fr_1fr_auto]">
-                <TextInput label={t("comp.option_value")} dir="ltr" value={o.value} onChange={(e) => onChange({ ...field, options: options.map((x, k) => (k === i ? { ...x, value: e.target.value } : x)) })} />
+                <TextInput required label={t("comp.option_value")} dir="ltr" value={o.value} onChange={(e) => onChange({ ...field, options: options.map((x, k) => (k === i ? { ...x, value: e.target.value } : x)) })} />
                 <TextInput label={<FlagLabel lang="ar">{t("comp.option_label")}</FlagLabel>} dir="rtl" value={o.label.ar}
                   onChange={(e) => onChange({ ...field, options: options.map((x, k) => (k === i ? { ...x, label: { ...x.label, ar: e.target.value } } : x)) })} />
                 <TextInput label={<FlagLabel lang="en">{t("comp.option_label")}</FlagLabel>} dir="ltr" value={o.label.en}
@@ -243,19 +243,19 @@ export default function ComponentEdit() {
           <Card title={t("comp.details")}>
             <div className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-2">
-                <TextInput label={<FlagLabel lang="ar">{t("comp.name")}</FlagLabel>} dir="rtl" value={f.name} onChange={(e) => set("name", e.target.value)} />
-                <TextInput label={<FlagLabel lang="en">{t("comp.name_en")}</FlagLabel>} dir="ltr" value={f.name_en} onChange={(e) => set("name_en", e.target.value)} />
+                <TextInput required label={<FlagLabel lang="ar">{t("comp.name")}</FlagLabel>} dir="rtl" value={f.name} onChange={(e) => set("name", e.target.value)} />
+                <TextInput required label={<FlagLabel lang="en">{t("comp.name_en")}</FlagLabel>} dir="ltr" value={f.name_en} onChange={(e) => set("name_en", e.target.value)} />
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
-                <TextInput label={t("comp.key")} dir="ltr" value={f.key} hint={t("comp.key_hint")}
+                <TextInput required label={t("comp.key")} dir="ltr" value={f.key} hint={t("comp.key_hint")}
                   onChange={(e) => set("key", e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"))} />
-                <SelectInput label={t("comp.kind")} value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as Form["kind"], action_name: e.target.value === "Approval" ? f.action_name ?? ACTIONS[0] : null })}
+                <SelectInput required label={t("comp.kind")} value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as Form["kind"], action_name: e.target.value === "Approval" ? f.action_name ?? ACTIONS[0] : null })}
                   options={[{ value: "Ask", label: t("comp.kind.Ask") }, { value: "Approval", label: t("comp.kind.Approval") }]} />
-                {f.kind === "Approval" && <SelectInput label={t("comp.action")} value={f.action_name ?? ""} onChange={(e) => set("action_name", e.target.value)}
+                {f.kind === "Approval" && <SelectInput required label={t("comp.action")} value={f.action_name ?? ""} onChange={(e) => set("action_name", e.target.value)}
                   options={ACTIONS.map((a) => ({ value: a, label: t(`comp.action.${a}`) }))} />}
               </div>
               <Note>{t(f.kind === "Approval" ? "comp.kind_help.Approval" : "comp.kind_help.Ask")}</Note>
-              <TextArea label={t("comp.purpose")} hint={t("comp.purpose_hint")} rows={2} dir="auto" value={f.purpose} onChange={(e) => set("purpose", e.target.value)} />
+              <TextArea required label={t("comp.purpose")} hint={t("comp.purpose_hint")} rows={2} dir="auto" value={f.purpose} onChange={(e) => set("purpose", e.target.value)} />
               {f.kind === "Ask" && <>
                 <BiInputs label={t("comp.form_title")} value={f.definition.title} onChange={(title) => setDef({ title })} />
                 <BiInputs label={t("comp.submit_label")} value={f.definition.submit} onChange={(submit) => setDef({ submit })} />

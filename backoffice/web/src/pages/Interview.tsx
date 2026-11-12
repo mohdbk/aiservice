@@ -90,7 +90,7 @@ export default function Interview() {
                 e.preventDefault();
                 save(`/interviews/${i.id}/feedback`, { recommendation: rec, comments, ratings: Object.entries(ratings).map(([skill, rating]) => ({ skill, rating })) });
               }}>
-                <SelectInput label={t("int.recommendation")} value={rec} onChange={(e) => setRec(e.target.value)}
+                <SelectInput required label={t("int.recommendation")} value={rec} onChange={(e) => setRec(e.target.value)}
                   options={["Cleared", "Rejected"].map((r) => ({ value: r, label: t(`rec.${r}`) }))} />
                 {i.round.skills.length > 0 && (
                   <fieldset>

@@ -323,9 +323,9 @@ function RetentionSettings() {
       <div className="grid max-w-2xl gap-4">
         <Toggle label={t("pdp.enabled")} checked={r.is_enabled} onChange={(v) => setF({ ...r, is_enabled: v })} />
         <div className="grid gap-4 sm:grid-cols-2">
-          <TextInput label={t("pdp.unsuccessful_months")} type="number" min={1} max={240} value={r.unsuccessful_months}
+          <TextInput required label={t("pdp.unsuccessful_months")} type="number" min={1} max={240} value={r.unsuccessful_months}
             onChange={(e) => setF({ ...r, unsuccessful_months: Number(e.target.value) || 0 })} />
-          <TextInput label={t("pdp.inactive_months")} type="number" min={1} max={240} value={r.inactive_account_months}
+          <TextInput required label={t("pdp.inactive_months")} type="number" min={1} max={240} value={r.inactive_account_months}
             onChange={(e) => setF({ ...r, inactive_account_months: Number(e.target.value) || 0 })} />
         </div>
         <p className="text-sm text-aeblack-600">{t("pdp.due", { apps: r.due_applications, accounts: r.due_accounts })}</p>
@@ -388,20 +388,20 @@ export function TextMessages() {
           <div className="grid gap-4">
             <Toggle label={t("texts.enabled")} checked={s.is_enabled} onChange={(v) => set("is_enabled", v)} />
             <div className="grid gap-4 sm:grid-cols-2">
-              <SelectInput label={t("texts.channel")} value={s.channel} onChange={(e) => set("channel", e.target.value)}
+              <SelectInput required label={t("texts.channel")} value={s.channel} onChange={(e) => set("channel", e.target.value)}
                 options={[{ value: "Sms", label: "SMS" }, { value: "WhatsApp", label: "WhatsApp" }]} />
-              <SelectInput label={t("texts.service")} value={s.provider} onChange={(e) => set("provider", e.target.value)}
+              <SelectInput required label={t("texts.service")} value={s.provider} onChange={(e) => set("provider", e.target.value)}
                 options={[{ value: "Webhook", label: t("texts.webhook") }, { value: "Twilio", label: "Twilio" }]} />
             </div>
             {s.provider === "Webhook" ? (
-              <TextInput label={t("texts.url")} hint={t("texts.url_hint")} type="url" value={s.url} onChange={(e) => set("url", e.target.value)} />
+              <TextInput required label={t("texts.url")} hint={t("texts.url_hint")} type="url" value={s.url} onChange={(e) => set("url", e.target.value)} />
             ) : (
-              <TextInput label={t("texts.account")} value={s.account_id} dir="ltr" onChange={(e) => set("account_id", e.target.value)} />
+              <TextInput required label={t("texts.account")} value={s.account_id} dir="ltr" onChange={(e) => set("account_id", e.target.value)} />
             )}
             <div className="grid gap-4 sm:grid-cols-2">
               <TextInput label={t("texts.token")} type="password" autoComplete="new-password" value={s.token}
                 hint={s.has_token ? t("texts.token_kept") : undefined} onChange={(e) => set("token", e.target.value)} />
-              <TextInput label={t("texts.sender")} hint={t("texts.sender_hint")} dir="ltr" value={s.sender} onChange={(e) => set("sender", e.target.value)} />
+              <TextInput required label={t("texts.sender")} hint={t("texts.sender_hint")} dir="ltr" value={s.sender} onChange={(e) => set("sender", e.target.value)} />
             </div>
             <fieldset>
               <legend className="mb-2 text-sm font-semibold">{t("texts.events")}</legend>
@@ -417,7 +417,7 @@ export function TextMessages() {
         </Card>
         <div className="space-y-6">
           <Card title={t("texts.test")}>
-            <TextInput label={t("texts.test_to")} type="tel" dir="ltr" placeholder="+9715..." value={to} onChange={(e) => setTo(e.target.value)} />
+            <TextInput required label={t("texts.test_to")} type="tel" dir="ltr" placeholder="+9715..." value={to} onChange={(e) => setTo(e.target.value)} />
             <Button variant="outline" className="mt-3" busy={busy} disabled={!to} onClick={test}>{t("texts.send_test")}</Button>
             <p className="mt-2 text-xs text-aeblack-500">{t("texts.test_hint")}</p>
           </Card>
@@ -473,7 +473,7 @@ export function HandOffSettings() {
         <Card title={t("handoff.settings")} className="xl:col-span-2">
           <div className="grid gap-4">
             <Toggle label={t("handoff.enabled")} checked={s.is_enabled} onChange={(v) => setF({ ...s, is_enabled: v })} />
-            <TextInput label={t("handoff.url")} type="url" value={s.url} onChange={(e) => setF({ ...s, url: e.target.value })} />
+            <TextInput required label={t("handoff.url")} type="url" value={s.url} onChange={(e) => setF({ ...s, url: e.target.value })} />
             <TextInput label={t("handoff.secret")} type="password" autoComplete="new-password" value={s.secret}
               hint={s.has_secret ? t("handoff.secret_kept") : t("handoff.secret_hint")} onChange={(e) => setF({ ...s, secret: e.target.value })} />
             <Toggle label={t("handoff.include_cv")} checked={s.include_cv} onChange={(v) => setF({ ...s, include_cv: v })} />

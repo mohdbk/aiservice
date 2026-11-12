@@ -122,7 +122,7 @@ export default function JobEdit() {
               {lang === "ar" ? (
                 <div className="space-y-5" dir="rtl" lang="ar">
                   <TextInput label={t("jobs.title_ar")} value={job.title} maxLength={140} required onChange={(e) => set("title", e.target.value)} />
-                  <RichText label={t("jobs.description_ar")} hint={t("jobs.description_hint")} dir="rtl" value={job.description} onChange={(v) => set("description", v)} />
+                  <RichText required label={t("jobs.description_ar")} hint={t("jobs.description_hint")} dir="rtl" value={job.description} onChange={(v) => set("description", v)} />
                 </div>
               ) : (
                 <div className="space-y-5" dir="ltr" lang="en">
@@ -134,13 +134,13 @@ export default function JobEdit() {
           </Card>
           <Card>
             <div className="space-y-4">
-              <SelectInput label={t("jobs.status")} value={job.status} onChange={(e) => set("status", e.target.value)}
+              <SelectInput required label={t("jobs.status")} value={job.status} onChange={(e) => set("status", e.target.value)}
                 options={["Draft", "Open", "Closed"].map((s) => ({ value: s, label: t(`status.${s}`) }))} />
               <Toggle label={t("jobs.published")} checked={job.is_published} onChange={(v) => set("is_published", v)} />
               <SelectInput label={t("jobs.department")} value={job.department_id ?? ""} onChange={(e) => set("department_id", e.target.value ? Number(e.target.value) : null)}
                 options={[{ value: "", label: t("common.none") }, ...(lk?.departments || []).map((d) => ({ value: d.id, label: d.name }))]} />
               <TextInput label={t("jobs.location")} value={job.location} onChange={(e) => set("location", e.target.value)} />
-              <SelectInput label={t("jobs.employment_type")} value={job.employment_type} onChange={(e) => set("employment_type", e.target.value)}
+              <SelectInput required label={t("jobs.employment_type")} value={job.employment_type} onChange={(e) => set("employment_type", e.target.value)}
                 options={["FullTime", "PartTime", "Contract", "Temporary", "Internship"].map((s) => ({ value: s, label: t(`emp.${s}`) }))} />
               <div className="grid grid-cols-2 gap-3">
                 <TextInput label={t("jobs.posted_on")} type="date" value={job.posted_on} onChange={(e) => set("posted_on", e.target.value)} />
@@ -150,7 +150,7 @@ export default function JobEdit() {
                 <TextInput label={t("jobs.salary_min")} type="number" min={0} value={job.salary_min ?? ""} onChange={(e) => set("salary_min", e.target.value ? Number(e.target.value) : null)} />
                 <TextInput label={t("jobs.salary_max")} type="number" min={0} value={job.salary_max ?? ""} onChange={(e) => set("salary_max", e.target.value ? Number(e.target.value) : null)} />
               </div>
-              <SelectInput label={t("jobs.salary_period")} value={job.salary_period} onChange={(e) => set("salary_period", e.target.value)}
+              <SelectInput required label={t("jobs.salary_period")} value={job.salary_period} onChange={(e) => set("salary_period", e.target.value)}
                 options={["Month", "Year"].map((s) => ({ value: s, label: t(`period.${s}`) }))} />
               <Toggle label={t("jobs.show_salary")} checked={job.show_salary} onChange={(v) => set("show_salary", v)} />
             </div>
@@ -204,9 +204,9 @@ export default function JobEdit() {
             {job.stages.map((s, i) => (
               <div key={i} className="grid gap-3 rounded-xl border border-aeblack-100 p-4 sm:grid-cols-[1fr_12rem_10rem_auto] sm:items-end">
                 <p className="font-semibold">{lk?.assessments.find((a) => a.id === s.assessment_id)?.title || `#${s.assessment_id}`}</p>
-                <SelectInput label={t("jobs.send_when")} value={s.send_when} onChange={(e) => set("stages", job.stages.map((x, k) => (k === i ? { ...x, send_when: e.target.value } : x)))}
+                <SelectInput required label={t("jobs.send_when")} value={s.send_when} onChange={(e) => set("stages", job.stages.map((x, k) => (k === i ? { ...x, send_when: e.target.value } : x)))}
                   options={["OnApply", "Manual"].map((v) => ({ value: v, label: t(`send.${v}`) }))} />
-                <TextInput label={t("jobs.deadline_days")} type="number" min={1} max={90} value={s.deadline_days}
+                <TextInput required label={t("jobs.deadline_days")} type="number" min={1} max={90} value={s.deadline_days}
                   onChange={(e) => set("stages", job.stages.map((x, k) => (k === i ? { ...x, deadline_days: Number(e.target.value) || 7 } : x)))} />
                 <Button variant="link" aria-label={t("common.remove")} onClick={() => set("stages", job.stages.filter((_, k) => k !== i))}><Trash size={20} /></Button>
               </div>

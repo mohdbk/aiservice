@@ -36,7 +36,7 @@ export function Departments() {
         <Modal open onClose={() => setF(null)} title={f.id ? t("common.edit") : t("common.add")} footer={<>
           <Button variant="outline" onClick={() => setF(null)}>{t("common.cancel")}</Button><Button busy={busy} onClick={save}>{t("common.save")}</Button></>}>
           {error && <ErrorState error={error} />}
-          <TextInput label={<FlagLabel lang="ar">{t("setup.name_ar")}</FlagLabel>} dir="rtl" value={f.name || ""} onChange={(e) => setF({ ...f, name: e.target.value })} />
+          <TextInput required label={<FlagLabel lang="ar">{t("setup.name_ar")}</FlagLabel>} dir="rtl" value={f.name || ""} onChange={(e) => setF({ ...f, name: e.target.value })} />
           <TextInput label={<FlagLabel lang="en">{t("setup.name_en")}</FlagLabel>} dir="ltr" value={f.name_en || ""} onChange={(e) => setF({ ...f, name_en: e.target.value })} />
           <Toggle label={t("common.active")} checked={f.is_active ?? true} onChange={(v) => setF({ ...f, is_active: v })} />
         </Modal>
@@ -77,7 +77,7 @@ export function Rounds() {
         <Modal open onClose={() => setF(null)} title={f.id ? t("common.edit") : t("common.add")} footer={<>
           <Button variant="outline" onClick={() => setF(null)}>{t("common.cancel")}</Button><Button busy={busy} onClick={save}>{t("common.save")}</Button></>}>
           {error && <ErrorState error={error} />}
-          <TextInput label={<FlagLabel lang="ar">{t("setup.name_ar")}</FlagLabel>} dir="rtl" value={f.name || ""} onChange={(e) => setF({ ...f, name: e.target.value })} />
+          <TextInput required label={<FlagLabel lang="ar">{t("setup.name_ar")}</FlagLabel>} dir="rtl" value={f.name || ""} onChange={(e) => setF({ ...f, name: e.target.value })} />
           <TextInput label={<FlagLabel lang="en">{t("setup.name_en")}</FlagLabel>} dir="ltr" value={f.name_en || ""} onChange={(e) => setF({ ...f, name_en: e.target.value })} />
           <TextArea label={t("setup.description")} value={f.description || ""} onChange={(e) => setF({ ...f, description: e.target.value })} />
           <TextArea label={t("setup.skills")} hint={t("setup.skills_hint")} rows={5} value={f.skillsText || ""} onChange={(e) => setF({ ...f, skillsText: e.target.value })} />
@@ -118,9 +118,9 @@ export function Settings() {
           <div className="space-y-4">
             <TextInput label={t("setup.main_site_url")} type="url" value={s.main_site_url} onChange={(e) => set("main_site_url", e.target.value)} />
             <TextInput label={t("setup.portal_url")} type="url" value={s.portal_url} onChange={(e) => set("portal_url", e.target.value)} />
-            <SelectInput label={t("setup.default_language")} value={s.default_language_code} onChange={(e) => set("default_language_code", e.target.value)}
+            <SelectInput required label={t("setup.default_language")} value={s.default_language_code} onChange={(e) => set("default_language_code", e.target.value)}
               options={s.languages.filter((l) => l.is_enabled).map((l) => ({ value: l.code, label: l.native_name }))} />
-            <TextInput label={t("setup.max_cv_mb")} type="number" min={1} max={50} value={s.max_cv_mb} onChange={(e) => set("max_cv_mb", Number(e.target.value) || 5)} />
+            <TextInput required label={t("setup.max_cv_mb")} type="number" min={1} max={50} value={s.max_cv_mb} onChange={(e) => set("max_cv_mb", Number(e.target.value) || 5)} />
           </div>
         </Card>
         <Card>
@@ -223,9 +223,9 @@ export function Staff() {
         <Modal open onClose={() => setF(null)} title={f.id ? t("common.edit") : t("common.add")} footer={<>
           <Button variant="outline" onClick={() => setF(null)}>{t("common.cancel")}</Button><Button busy={busy} onClick={save}>{t("common.save")}</Button></>}>
           {error && <ErrorState error={error} />}
-          <TextInput label={t("common.name")} value={f.full_name || ""} onChange={(e) => setF({ ...f, full_name: e.target.value })} />
-          <TextInput label={t("auth.email")} type="email" value={f.email || ""} onChange={(e) => setF({ ...f, email: e.target.value })} />
-          <SelectInput label={t("setup.role")} value={f.role || "Recruiter"} onChange={(e) => setF({ ...f, role: e.target.value })} options={roles} />
+          <TextInput required label={t("common.name")} value={f.full_name || ""} onChange={(e) => setF({ ...f, full_name: e.target.value })} />
+          <TextInput required label={t("auth.email")} type="email" value={f.email || ""} onChange={(e) => setF({ ...f, email: e.target.value })} />
+          <SelectInput required label={t("setup.role")} value={f.role || "Recruiter"} onChange={(e) => setF({ ...f, role: e.target.value })} options={roles} />
           <TextInput label={t("auth.password")} type="password" autoComplete="new-password" hint={t("setup.password_hint")} value={f.password || ""} onChange={(e) => setF({ ...f, password: e.target.value })} />
           <Toggle label={t("setup.enabled")} checked={f.is_enabled ?? true} onChange={(v) => setF({ ...f, is_enabled: v })} />
         </Modal>

@@ -67,7 +67,7 @@ export default function QuestionEdit() {
             onSuggest={isNew ? undefined : suggestEnglish} suggesting={suggest.busy}>
             <div className="space-y-5" dir={lang === "ar" ? "rtl" : "ltr"} lang={lang}>
               {lang === "ar"
-                ? <RichText label={t("q.text_ar")} dir="rtl" value={q.text} onChange={(v) => set("text", v)} />
+                ? <RichText required label={t("q.text_ar")} dir="rtl" value={q.text} onChange={(v) => set("text", v)} />
                 : <RichText label={t("q.text_en")} dir="ltr" value={q.text_en} onChange={(v) => set("text_en", v)} />}
               {isChoice && (
                 <fieldset>
@@ -94,17 +94,17 @@ export default function QuestionEdit() {
         </Card>
         <Card>
           <div className="space-y-4">
-            <SelectInput label={t("q.type")} value={q.question_type} onChange={(e) => {
+            <SelectInput required label={t("q.type")} value={q.question_type} onChange={(e) => {
               const v = e.target.value;
               setQ((x) => ({ ...x, question_type: v, options: v === "TrueFalse" ? [{ text: "صح", text_en: "True", correct: true }, { text: "خطأ", text_en: "False", correct: false }] : x.options }));
             }} options={["SingleChoice", "MultipleChoice", "TrueFalse", "ShortAnswer", "Number", "Essay", "FileUpload", "Likert"].map((v) => ({ value: v, label: t(`qt.${v}`) }))} />
             <TextInput label={t("q.category")} value={q.category} onChange={(e) => set("category", e.target.value)} />
             <TextInput label={t("q.job_family")} value={q.job_family} onChange={(e) => set("job_family", e.target.value)} />
-            <SelectInput label={t("q.difficulty")} value={q.difficulty} onChange={(e) => set("difficulty", e.target.value)}
+            <SelectInput required label={t("q.difficulty")} value={q.difficulty} onChange={(e) => set("difficulty", e.target.value)}
               options={["Easy", "Medium", "Hard"].map((v) => ({ value: v, label: t(`diff.${v}`) }))} />
             {likert ? (
               <>
-                <SelectInput label={t("pers.trait")} value={q.trait} onChange={(e) => set("trait", e.target.value)} options={[
+                <SelectInput required label={t("pers.trait")} value={q.trait} onChange={(e) => set("trait", e.target.value)} options={[
                   { value: "", label: t("common.choose") },
                   ...Object.entries(MODELS).filter(([m]) => m !== "WorkplaceBigFive").flatMap(([m, traits]) => traits.map((x) => ({ value: x.code, label: `${t(`pers.model.${m}`)}: ${x.code} ${lang === "en" ? x.en : x.ar}` })))
                     .filter((o, i, all) => all.findIndex((y) => y.label === o.label) === i),
@@ -112,7 +112,7 @@ export default function QuestionEdit() {
                 <Toggle label={t("pers.reverse")} hint={t("pers.reverse_hint")} checked={q.reverse_keyed} onChange={(v) => set("reverse_keyed", v)} />
                 <p className="text-xs text-aeblack-500">{t("pers.likert_hint")}</p>
               </>
-            ) : <TextInput label={t("q.points")} type="number" min={0.5} step={0.5} value={q.points} onChange={(e) => set("points", Number(e.target.value) || 1)} />}
+            ) : <TextInput required label={t("q.points")} type="number" min={0.5} step={0.5} value={q.points} onChange={(e) => set("points", Number(e.target.value) || 1)} />}
             {(q.question_type === "ShortAnswer" || q.question_type === "Number") && (
               <TextArea label={t("q.accepted")} hint={t("q.accepted_hint")} value={q.accepted_answers.join("\n")} onChange={(e) => set("accepted_answers", e.target.value.split("\n"))} />
             )}

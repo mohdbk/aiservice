@@ -89,7 +89,7 @@ export default function TestEdit() {
                 </div>
               )}
               <div className="space-y-5" dir={ar ? "rtl" : "ltr"} lang={lang}>
-                <TextInput label={ar ? t("test.name_ar") : t("test.name_en")} value={ar ? x.title : x.title_en} onChange={(e) => set(ar ? "title" : "title_en", e.target.value)} />
+                <TextInput required={ar} label={ar ? t("test.name_ar") : t("test.name_en")} value={ar ? x.title : x.title_en} onChange={(e) => set(ar ? "title" : "title_en", e.target.value)} />
                 <RichText label={ar ? t("test.instructions_ar") : t("test.instructions_en")} dir={ar ? "rtl" : "ltr"}
                   value={ar ? x.instructions : x.instructions_en} onChange={(v) => set(ar ? "instructions" : "instructions_en", v)} />
                 {x.sections.map((s, si) => (

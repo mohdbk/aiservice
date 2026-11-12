@@ -19,7 +19,8 @@ public sealed record ProposalInput(string? Action, JsonElement Arguments, string
 /// </summary>
 public sealed class AgentProposalService(
     IAppDbContext db, ICurrentActor actor, IClock clock, ContentService content, PortalMailer mailer, AgentSettingsService settings,
-    BackofficeApplicantService applicants, BackofficeInterviewService interviews, BackofficeJobService jobs, BackofficeSetupService setup)
+    BackofficeApplicantService applicants, BackofficeInterviewService interviews, BackofficeJobService jobs, BackofficeSetupService setup,
+    BookingService bookings, TalentPoolService talent)
 {
 
     static IReadOnlyDictionary<string, string[]> Editable => AgentActions.Editable;
@@ -156,6 +157,38 @@ public sealed class AgentProposalService(
                 var id = JsonSerializer.SerializeToElement(saved).TryGetProperty("id", out var idv) ? idv.GetInt32() : 0;
                 return (ar ? "تم إنشاء مسودة الوظيفة." : "Draft job created.", id > 0 ? $"/jobs/{id}" : "/jobs");
             }
+            case "offer_interview_times":
+            {
+                var app = await ApplicantAsync(a, ct);
+                var r = JsonSerializer.SerializeToElement(await bookings.CreateAsync(new BookingInput(app.Id, I(a, "round_id"), Opt(a, "location"), Ids(a, "panel_ids"), Times(S(a, "times"))), ct));
+                var emailed = r.TryGetProperty("emailed", out var em) && em.ValueKind == JsonValueKind.True;
+                return (ar ? $"تم إرسال مواعيد المقابلة إلى {app.FullName}{(emailed ? " بالبريد" : "")}، وسيختار أحدها في بوابة الوظائف." : $"Interview times sent to {app.FullName}{(emailed ? " by email" : "")}; they will pick one in the career portal.", $"/applicants/{app.Id}");
+            }
+            case "talent_invite":
+            {
+                var r = JsonSerializer.SerializeToElement(await talent.InviteAsync(I(a, "account_id"), I(a, "job_id"), ct));
+                var emailed = r.TryGetProperty("emailed", out var em) && em.ValueKind == JsonValueKind.True;
+                if (!emailed) throw DomainException.Conflict("email_not_configured");
+                return (ar ? "تم إرسال دعوة التقديم." : "Invitation to apply sent.", "/talent-pool");
+            }
+            case "set_offer_status":
+            {
+                var offerId = I(a, "offer_id");
+                await interviews.SetOfferStatusAsync(offerId, S(a, "status"), ct);
+                return (ar ? $"تم تغيير حالة العرض إلى «{OfferAr(S(a, "status"))}»." : $"Offer is now {S(a, "status")}.", "/offers");
+            }
+            case "set_interview_status":
+            {
+                var interviewId = I(a, "interview_id");
+                await interviews.SetStatusAsync(interviewId, S(a, "status"), ct);
+                return (ar ? "تم تحديث حالة المقابلة." : $"Interview is now {S(a, "status")}.", $"/interviews/{interviewId}");
+            }
+            case "set_job_selection":
+            {
+                var jobId = I(a, "job_id");
+                await jobs.SetSelectionAsync(jobId, I(a, "role_profile_id"), new SelectionWeights(I(a, "w_cv"), I(a, "w_tests"), I(a, "w_interview"), I(a, "w_personality")), ct);
+                return (ar ? "تم تحديث إعدادات الاختيار للوظيفة." : "The job's selection settings were updated.", $"/jobs/{jobId}");
+            }
             case "suggest_english":
                 await setup.SuggestEnglishAsync(S(a, "kind"), I(a, "id"), ct);
                 return (ar ? "تم طلب النسخة الإنجليزية، وستكون جاهزة للمراجعة بعد قليل." : "English suggestion requested; it will be ready for review shortly.", null);
@@ -172,6 +205,37 @@ public sealed class AgentProposalService(
             case "create_draft_job":
                 if (S(a, "title").Length == 0) throw DomainException.Invalid("title_required");
                 return ar ? $"إنشاء مسودة وظيفة: {S(a, "title")}" : $"Create a draft job: {S(a, "title")}";
+            case "talent_invite":
+            {
+                var accountId = I(a, "account_id");
+                var who = await db.ApplicantAccounts.Where(u => u.Id == accountId && u.InTalentPool).Select(u => u.FullName).FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
+                var jobId = I(a, "job_id");
+                var job = await db.JobOpenings.Include(j => j.Translations).FirstOrDefaultAsync(j => j.Id == jobId, ct) ?? throw DomainException.NotFound();
+                return ar ? $"دعوة {who} للتقديم على وظيفة {job.In("ar").Title}" : $"Invite {who} to apply for {job.In("en").Title}";
+            }
+            case "set_offer_status":
+            {
+                var offerId = I(a, "offer_id");
+                var o = await db.JobOffers.Where(x => x.Id == offerId).Select(x => new { x.Code, x.PositionTitle, Name = x.JobApplication!.FullName }).FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
+                if (!Enum.TryParse<OfferStatus>(S(a, "status"), out _)) throw DomainException.Invalid("invalid_value");
+                return ar ? $"تغيير حالة عرض {o.Name} ({o.Code}) إلى «{OfferAr(S(a, "status"))}»" : $"Move the offer to {o.Name} ({o.Code}) to {S(a, "status")}";
+            }
+            case "set_interview_status":
+            {
+                var interviewId = I(a, "interview_id");
+                var i = await db.Interviews.Where(x => x.Id == interviewId).Select(x => new { x.Code, Name = x.JobApplication!.FullName }).FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
+                if (!Enum.TryParse<InterviewStatus>(S(a, "status"), out _)) throw DomainException.Invalid("invalid_value");
+                return ar ? $"تغيير حالة مقابلة {i.Name} ({i.Code}) إلى {S(a, "status")}" : $"Move the interview with {i.Name} ({i.Code}) to {S(a, "status")}";
+            }
+            case "set_job_selection":
+            {
+                var jobId = I(a, "job_id");
+                var job = await db.JobOpenings.Include(j => j.Translations).FirstOrDefaultAsync(j => j.Id == jobId, ct) ?? throw DomainException.NotFound();
+                new SelectionWeights(I(a, "w_cv"), I(a, "w_tests"), I(a, "w_interview"), I(a, "w_personality")).Validate();
+                var weights = $"{I(a, "w_tests")}/{I(a, "w_interview")}/{I(a, "w_personality")}/{I(a, "w_cv")}";
+                return ar ? $"إعدادات الاختيار لوظيفة {job.In("ar").Title}: الأوزان (اختبارات/مقابلات/شخصية/سيرة) {weights}"
+                    : $"Selection settings for {job.In("en").Title}: weights (tests/interviews/personality/CV) {weights}";
+            }
             case "suggest_english":
                 if (S(a, "kind") is not ("job" or "screening" or "question" or "assessment")) throw DomainException.Invalid("invalid_value");
                 return ar ? $"اقتراح النسخة الإنجليزية ({KindAr(S(a, "kind"))} رقم {I(a, "id")})" : $"Suggest English text ({S(a, "kind")} {I(a, "id")})";
@@ -201,6 +265,15 @@ public sealed class AgentProposalService(
             }
             case "make_offer":
                 return ar ? $"إنشاء مسودة عرض عمل لـ {who}: {S(a, "position_title")}" : $"Create a draft offer for {who}: {S(a, "position_title")}";
+            case "offer_interview_times":
+            {
+                var times = Times(S(a, "times"));
+                if (times.Count == 0) throw DomainException.Invalid("booking_slots");
+                var roundId = I(a, "round_id");
+                var round = await db.InterviewRounds.Where(r => r.Id == roundId).Select(r => ar || r.NameEn == "" ? r.Name : r.NameEn).FirstOrDefaultAsync(ct) ?? throw DomainException.Invalid("round_required");
+                var list = string.Join(ar ? "، " : ", ", times.Select(t => $"{t.Date} {t.From}-{t.To}"));
+                return ar ? $"اقتراح مواعيد مقابلة ({round}) على {who} ليختار منها: {list}" : $"Offer {who} these {round} times to choose from: {list}";
+            }
             case "email_candidate":
                 if (S(a, "subject").Length == 0 || S(a, "body").Length == 0) throw DomainException.Invalid("invalid_value");
                 return ar ? $"إرسال رسالة إلى {who}: {S(a, "subject")}" : $"Email {who}: {S(a, "subject")}";
@@ -214,6 +287,21 @@ public sealed class AgentProposalService(
         var id = I(a, "applicant_id");
         return await db.JobApplications.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound("applicant_not_found");
     }
+
+    static string OfferAr(string status) => status switch
+    {
+        "Draft" => "مسودة", "Sent" => "مرسل", "Accepted" => "مقبول", "Declined" => "مرفوض", "Withdrawn" => "مسحوب", _ => status,
+    };
+
+    static List<int> Ids(JsonElement a, string name) => a.TryGetProperty(name, out var pl) && pl.ValueKind == JsonValueKind.Array
+        ? pl.EnumerateArray().Select(x => x.ValueKind == JsonValueKind.Number ? x.GetInt32() : int.TryParse(x.GetString(), out var v) ? v : 0).Where(x => x > 0).ToList()
+        : S(a, name).Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => int.TryParse(x.Trim(), out var v) ? v : 0).Where(x => x > 0).ToList();
+
+    /// <summary>Interview times written one per line (or separated by ;) as "YYYY-MM-DD HH:MM-HH:MM".</summary>
+    static List<BookingSlotInput> Times(string text) =>
+        text.Split(['\n', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(l => System.Text.RegularExpressions.Regex.Match(l, @"^(\d{4}-\d{2}-\d{2})\s+(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$"))
+            .Where(m => m.Success).Select(m => new BookingSlotInput(m.Groups[1].Value, m.Groups[2].Value, m.Groups[3].Value)).Take(10).ToList();
 
     /// <summary>Applicant statuses as the backoffice shows them in Arabic.</summary>
     static string StatusAr(string status) => status switch

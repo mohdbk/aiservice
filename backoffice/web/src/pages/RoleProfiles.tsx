@@ -85,9 +85,9 @@ export default function RoleProfiles() {
           <Button variant="outline" onClick={() => setF(null)}>{t("common.cancel")}</Button>
           <Button busy={busy} onClick={save}>{t("common.save")}</Button></>}>
           {error && <ErrorState error={error} />}
-          <TextInput label={<FlagLabel lang="ar">{t("setup.name_ar")}</FlagLabel>} dir="rtl" value={f.name_ar} onChange={(e) => setF({ ...f, name_ar: e.target.value })} />
-          <TextInput label={<FlagLabel lang="en">{t("setup.name_en")}</FlagLabel>} dir="ltr" value={f.name_en} onChange={(e) => setF({ ...f, name_en: e.target.value })} />
-          <SelectInput label={t("pers.model")} value={f.personality_model} disabled={!!f.id}
+          <TextInput required label={<FlagLabel lang="ar">{t("setup.name_ar")}</FlagLabel>} dir="rtl" value={f.name_ar} onChange={(e) => setF({ ...f, name_ar: e.target.value })} />
+          <TextInput required label={<FlagLabel lang="en">{t("setup.name_en")}</FlagLabel>} dir="ltr" value={f.name_en} onChange={(e) => setF({ ...f, name_en: e.target.value })} />
+          <SelectInput required label={t("pers.model")} value={f.personality_model} disabled={!!f.id}
             onChange={(e) => setF({ ...f, personality_model: e.target.value, weights: {}, targets: {}, types: [] })}
             options={ROLE_MODELS.map((v) => ({ value: v, label: t(`roles.model.${v}`) }))} />
 
@@ -122,8 +122,8 @@ export default function RoleProfiles() {
               </div>
               <p className={`mt-2 text-sm ${weightTotal === 100 ? "text-aegreen-700" : "text-aered-700"}`}>{t("roles.weight_total", { n: weightTotal })}</p>
               <div className="mt-3 grid grid-cols-2 gap-3">
-                <TextInput label={t("roles.strong_from")} type="number" min={1} max={100} value={f.strong_from} onChange={(e) => setF({ ...f, strong_from: Number(e.target.value) || 0 })} />
-                <TextInput label={t("roles.moderate_from")} type="number" min={1} max={99} value={f.moderate_from} onChange={(e) => setF({ ...f, moderate_from: Number(e.target.value) || 0 })} />
+                <TextInput required label={t("roles.strong_from")} type="number" min={1} max={100} value={f.strong_from} onChange={(e) => setF({ ...f, strong_from: Number(e.target.value) || 0 })} />
+                <TextInput required label={t("roles.moderate_from")} type="number" min={1} max={99} value={f.moderate_from} onChange={(e) => setF({ ...f, moderate_from: Number(e.target.value) || 0 })} />
               </div>
               <p className="mt-2 text-xs text-aeblack-500">{t("roles.weights_hint")}</p>
             </fieldset>
