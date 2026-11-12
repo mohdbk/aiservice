@@ -44,8 +44,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
     public DbSet<EmailMessage> EmailMessages => Set<EmailMessage>();
     public DbSet<BackgroundJob> BackgroundJobs => Set<BackgroundJob>();
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
-    public DbSet<AssistantMessage> AssistantMessages => Set<AssistantMessage>();
-    public DbSet<AssistantAction> AssistantActions => Set<AssistantAction>();
+    public DbSet<AgentProposal> AgentProposals => Set<AgentProposal>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder b)
     {

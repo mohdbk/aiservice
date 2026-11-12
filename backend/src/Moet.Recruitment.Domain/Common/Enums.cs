@@ -58,4 +58,4 @@ public enum AuditAction { Created, Updated, Deleted }
 
 public enum ActorType { Staff, Applicant, System }
 
-public enum AssistantStatus { Success, Error, RateLimited }
+public enum ProposalStatus { Pending, Approved, Cancelled, Failed }

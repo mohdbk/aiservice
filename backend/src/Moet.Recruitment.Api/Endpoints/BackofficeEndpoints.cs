@@ -18,7 +18,6 @@ public static class BackofficeEndpoints
     public sealed record InviteBody(int AssessmentId, int? DeadlineDays);
     public sealed record ReexamBody(int ExtraAttempts, int DeadlineDays, bool Notify);
     public sealed record MarksBody(IReadOnlyList<MarkInput> Marks);
-    public sealed record ChatBody(string? Message, string? SessionId, string? Page);
     public sealed record StaffBody(string? Email, string? FullName, string? Role, bool IsEnabled, string? Password);
 
     public static void Map(WebApplication app)
@@ -61,8 +60,8 @@ public static class BackofficeEndpoints
 
         // applicants
         staff.MapGet("/applicants", ([AsParameters] ListQuery lq, int? job, string? status, string? screening, string? ai, decimal? minScore, string? country,
-                DateOnly? from, DateOnly? to, BackofficeApplicantService s, CancellationToken ct) =>
-            s.ListAsync(lq, new ApplicantFilter(job, status, screening, ai, minScore, country, from, to), ct));
+                DateOnly? from, DateOnly? to, string? cv, BackofficeApplicantService s, CancellationToken ct) =>
+            s.ListAsync(lq, new ApplicantFilter(job, status, screening, ai, minScore, country, from, to, cv), ct));
         staff.MapGet("/applicants/{id:int}", (int id, BackofficeApplicantService s, CancellationToken ct) => s.GetAsync(id, ct));
         staff.MapGet("/applicants/{id:int}/cv", async (int id, bool? download, BackofficeApplicantService s, CancellationToken ct) =>
         {
@@ -119,11 +118,11 @@ public static class BackofficeEndpoints
         staff.MapPut("/screening-questions/{id:int}", (int id, ScreeningQuestionInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveScreeningQuestionAsync(id, b, ct));
         staff.MapPost("/suggest-english/{kind}/{id:int}", (string kind, int id, BackofficeSetupService s, CancellationToken ct) => s.SuggestEnglishAsync(kind, id, ct));
 
-        // assistant
-        staff.MapPost("/assistant/chat", (ChatBody b, AssistantService s, CancellationToken ct) => s.ChatAsync(b.Message, b.SessionId, b.Page, ct))
-            .RequireRateLimiting("assistant");
-        staff.MapGet("/assistant/history", (string? session, AssistantService s, CancellationToken ct) => s.HistoryAsync(session, ct));
-        staff.MapPost("/assistant/actions/{id:guid}/approve", (Guid id, AssistantService s, CancellationToken ct) => s.ApproveAsync(id, ct));
+        // recruitment agent: the browser talks AG-UI to the agent service through this proxy; the agent can only propose changes
+        staff.MapPost("/agent/run", AgentProxy.RunAsync).RequireRateLimiting("assistant");
+        staff.MapPost("/agent/proposals", (ProposalInput b, AgentProposalService s, CancellationToken ct) => s.ProposeAsync(b, ct));
+        staff.MapPost("/agent/proposals/{id:guid}/approve", (Guid id, string? lang, AgentProposalService s, CancellationToken ct) => s.ApproveAsync(id, lang, ct));
+        staff.MapPost("/agent/proposals/{id:guid}/cancel", (Guid id, AgentProposalService s, CancellationToken ct) => s.CancelAsync(id, ct));
 
         // setup (recruitment admins only)
         var setup = api.MapGroup("").RequireAuthorization(StaffPolicies.Admin);

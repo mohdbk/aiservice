@@ -130,6 +130,21 @@ public class EndToEndTests
         Assert.Equal(25, odd.GetProperty("size").GetInt32());
         Assert.Equal(0, odd.GetProperty("total").GetInt32());
 
+        // The agent can only propose; the backend describes the change and carries it out once, on approval.
+        var applicantId = list.GetProperty("items")[0].GetProperty("id").GetInt32();
+        var proposal = await Read(await admin.PostAsync("/api/backoffice/agent/proposals",
+            JsonBody(new { action = "add_note", arguments = new { applicant_id = applicantId, text = "Strong analytics background" }, thread_id = "t1", lang = "en" })));
+        Assert.StartsWith("Add a note to", proposal.GetProperty("label").GetString());
+        var pid = proposal.GetProperty("id").GetString();
+        var approved = await Read(await admin.PostAsync($"/api/backoffice/agent/proposals/{pid}/approve?lang=en", JsonBody(new { })));
+        Assert.Equal("Approved", approved.GetProperty("status").GetString());
+        Assert.Equal(HttpStatusCode.Conflict, (await admin.PostAsync($"/api/backoffice/agent/proposals/{pid}/approve", JsonBody(new { }))).StatusCode);
+        var detail = await Read(await admin.GetAsync($"/api/backoffice/applicants/{applicantId}"));
+        Assert.Contains(detail.GetProperty("notes").EnumerateArray(), n => n.GetProperty("text").GetString() == "Strong analytics background");
+        var unknown = await admin.PostAsync("/api/backoffice/agent/proposals", JsonBody(new { action = "delete_everything", arguments = new { } }));
+        Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await admin.PostAsync("/api/backoffice/agent/run", JsonBody(new { }))).StatusCode);
+
         // Changes without the X-Admin header are refused.
         var plain = app.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
         Assert.Equal(HttpStatusCode.Forbidden, (await plain.PostAsync("/api/backoffice/sign-in", JsonBody(new { email = "x", password = "y" }))).StatusCode);

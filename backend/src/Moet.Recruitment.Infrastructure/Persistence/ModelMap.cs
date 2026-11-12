@@ -215,7 +215,6 @@ static class ModelMap
         m.Entity<EmailMessage>(e => e.ToTable("EmailMessage", "ops"));
         m.Entity<BackgroundJob>(e => e.ToTable("BackgroundJob", "ops"));
         m.Entity<AuditEntry>(e => e.ToTable("AuditEntry", "ops"));
-        m.Entity<AssistantMessage>(e => e.ToTable("AssistantMessage", "ops"));
-        m.Entity<AssistantAction>(e => { e.ToTable("AssistantAction", "ops"); e.Property(x => x.Id).ValueGeneratedNever(); });
+        m.Entity<AgentProposal>(e => { e.ToTable("AgentProposal", "ops"); e.Property(x => x.Id).ValueGeneratedNever(); });
     }
 }

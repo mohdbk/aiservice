@@ -660,33 +660,21 @@ CREATE TABLE ops.AuditEntry (
 );
 CREATE INDEX IX_AuditEntry_Entity ON ops.AuditEntry (EntityName, EntityKey, OccurredAt);
 
-CREATE TABLE ops.AssistantMessage (
-    Id               bigint IDENTITY(1,1) NOT NULL CONSTRAINT PK_AssistantMessage PRIMARY KEY,
-    StaffUserId      int            NOT NULL CONSTRAINT FK_AssistantMessage_Staff REFERENCES [identity].StaffUser (Id),
-    SessionId        varchar(40)    NOT NULL,
-    Question         nvarchar(4000) NOT NULL,
-    Reply            nvarchar(max)  NOT NULL,
-    ToolTrace        nvarchar(max)  NOT NULL CONSTRAINT CK_AssistantMessage_ToolTrace CHECK (ISJSON(ToolTrace) = 1),
-    Status           varchar(12)    NOT NULL CONSTRAINT CK_AssistantMessage_Status CHECK (Status IN ('Success', 'Error', 'RateLimited')),
-    Model            varchar(100)   NOT NULL,
-    PromptTokens     int            NOT NULL,
-    CompletionTokens int            NOT NULL,
-    LatencyMs        int            NOT NULL,
-    CreatedAt        datetime2(0)   NOT NULL
-);
-CREATE INDEX IX_AssistantMessage_Session ON ops.AssistantMessage (StaffUserId, SessionId, CreatedAt);
-
-CREATE TABLE ops.AssistantAction (
-    Id            uniqueidentifier NOT NULL CONSTRAINT PK_AssistantAction PRIMARY KEY,
-    StaffUserId   int            NOT NULL CONSTRAINT FK_AssistantAction_Staff REFERENCES [identity].StaffUser (Id),
-    SessionId     varchar(40)    NOT NULL,
+/* Changes the recruitment agent proposed; each waits for the same staff member's approval. */
+CREATE TABLE ops.AgentProposal (
+    Id            uniqueidentifier NOT NULL CONSTRAINT PK_AgentProposal PRIMARY KEY,
+    StaffUserId   int            NOT NULL CONSTRAINT FK_AgentProposal_Staff REFERENCES [identity].StaffUser (Id),
+    ThreadId      varchar(64)    NOT NULL,
     ActionName    varchar(60)    NOT NULL,
-    Arguments     nvarchar(4000) NOT NULL CONSTRAINT CK_AssistantAction_Arguments CHECK (ISJSON(Arguments) = 1),
+    Arguments     nvarchar(max)  NOT NULL CONSTRAINT CK_AgentProposal_Arguments CHECK (ISJSON(Arguments) = 1),
     Label         nvarchar(600)  NOT NULL,
+    Status        varchar(12)    NOT NULL CONSTRAINT CK_AgentProposal_Status CHECK (Status IN ('Pending', 'Approved', 'Cancelled', 'Failed')),
+    CreatedAt     datetime2(0)   NOT NULL,
     ExpiresAt     datetime2(0)   NOT NULL,
-    UsedAt        datetime2(0)   NULL,
-    Result        nvarchar(600)  NOT NULL CONSTRAINT DF_AssistantAction_Result DEFAULT (N'')
+    DecidedAt     datetime2(0)   NULL,
+    Result        nvarchar(600)  NOT NULL CONSTRAINT DF_AgentProposal_Result DEFAULT (N'')
 );
+CREATE INDEX IX_AgentProposal_Staff ON ops.AgentProposal (StaffUserId, CreatedAt);
 
 /* Readable codes (JOB-2026-0001 and so on) come from sequences, so they never repeat. */
 CREATE SEQUENCE hiring.JobOpeningCode AS int START WITH 1;

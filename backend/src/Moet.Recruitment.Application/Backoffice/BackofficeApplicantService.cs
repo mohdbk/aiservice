@@ -7,7 +7,7 @@ using Moet.Recruitment.Domain.Hiring;
 
 namespace Moet.Recruitment.Application.Backoffice;
 
-public sealed record ApplicantFilter(int? JobId, string? Status, string? Screening, string? AiStatus, decimal? MinScore, string? Country, DateOnly? From, DateOnly? To);
+public sealed record ApplicantFilter(int? JobId, string? Status, string? Screening, string? AiStatus, decimal? MinScore, string? Country, DateOnly? From, DateOnly? To, string? CvText = null);
 
 /// <summary>The applicant pipeline: lists, the applicant's full record, status changes, notes and re-scoring.</summary>
 public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor actor, IClock clock, JobQueue jobs, AssessmentWorkflow workflow)
@@ -27,6 +27,11 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
         if (!string.IsNullOrEmpty(f.Country)) q = q.Where(a => a.Country == f.Country);
         if (f.From != null) q = q.Where(a => a.CreatedAt >= f.From.Value.ToDateTime(TimeOnly.MinValue));
         if (f.To != null) q = q.Where(a => a.CreatedAt < f.To.Value.AddDays(1).ToDateTime(TimeOnly.MinValue));
+        if (!string.IsNullOrWhiteSpace(f.CvText))
+        {
+            var cv = f.CvText.Trim();
+            q = q.Where(a => a.CvAnalysis!.Summary.Contains(cv) || a.CvAnalysis.ProfileJson!.Contains(cv));
+        }
         if (lq.Term.Length > 0)
         {
             var t = lq.Term;

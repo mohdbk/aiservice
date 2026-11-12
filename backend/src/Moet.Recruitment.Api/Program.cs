@@ -12,6 +12,7 @@ var cfg = builder.Configuration;
 builder.Services.AddApplication();
 builder.Services.AddBackofficeApplication();
 builder.Services.AddInfrastructure(cfg, runWorkers: cfg["RUN_WORKERS"] != "0");
+builder.Services.AddHttpClient(AgentProxy.Client, c => c.Timeout = TimeSpan.FromMinutes(10));
 builder.Services.ConfigureHttpJsonOptions(o => Json.Configure(o.SerializerOptions));
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
 {

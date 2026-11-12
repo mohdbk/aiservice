@@ -65,32 +65,32 @@ public class AuditEntry
     public DateTime OccurredAt { get; set; }
 }
 
-public class AssistantMessage
+/// <summary>
+/// A change the recruitment agent proposed. Nothing happens until the same staff member approves it, once, before it expires;
+/// the backend then carries it out with that person's permissions.
+/// </summary>
+public class AgentProposal
 {
-    public long Id { get; set; }
-    public int StaffUserId { get; set; }
-    public string SessionId { get; set; } = "";
-    public string Question { get; set; } = "";
-    public string Reply { get; set; } = "";
-    public string ToolTrace { get; set; } = "[]";
-    public AssistantStatus Status { get; set; }
-    public string Model { get; set; } = "";
-    public int PromptTokens { get; set; }
-    public int CompletionTokens { get; set; }
-    public int LatencyMs { get; set; }
-    public DateTime CreatedAt { get; set; }
-}
+    public static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(30);
 
-/// <summary>A change the assistant proposed. Nothing happens until the same staff member approves it.</summary>
-public class AssistantAction
-{
     public Guid Id { get; set; }
     public int StaffUserId { get; set; }
-    public string SessionId { get; set; } = "";
+    public string ThreadId { get; set; } = "";
     public string ActionName { get; set; } = "";
     public string Arguments { get; set; } = "{}";
     public string Label { get; set; } = "";
+    public ProposalStatus Status { get; set; }
+    public DateTime CreatedAt { get; set; }
     public DateTime ExpiresAt { get; set; }
-    public DateTime? UsedAt { get; set; }
+    public DateTime? DecidedAt { get; set; }
     public string Result { get; set; } = "";
+
+    /// <summary>Claims the proposal for a decision by <paramref name="staffId"/>; throws when it is not theirs or no longer open.</summary>
+    public void Claim(int staffId, DateTime now, bool approve)
+    {
+        if (StaffUserId != staffId) throw DomainException.Forbidden();
+        if (Status != ProposalStatus.Pending || ExpiresAt < now) throw DomainException.Conflict("proposal_expired");
+        Status = approve ? ProposalStatus.Approved : ProposalStatus.Cancelled;
+        DecidedAt = now;
+    }
 }

@@ -1,0 +1,34 @@
+name: Agent
+
+on:
+  push:
+    branches: [main, dotnet-backend]
+    paths: ["agent/**", ".github/workflows/agent.yml"]
+  pull_request:
+    paths: ["agent/**", ".github/workflows/agent.yml"]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+    defaults:
+      run:
+        working-directory: agent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Restore
+        run: dotnet restore Moet.Recruitment.Agent.slnx
+      - name: Build
+        run: dotnet build Moet.Recruitment.Agent.slnx --no-restore -c Release
+      - name: Tests (scripted model, fake backoffice, real AG-UI endpoint)
+        run: dotnet test tests/Moet.Recruitment.Agent.Tests --no-build -c Release --logger "console;verbosity=normal"
+      - name: No em dashes
+        run: "! grep -rnI --exclude-dir=bin --exclude-dir=obj $'\\u2014' src/ tests/ || (echo 'em dash found' && exit 1)"
+      - name: Container image builds
+        run: docker build -t moet-recruitment-agent .

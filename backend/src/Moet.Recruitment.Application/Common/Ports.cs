@@ -37,8 +37,7 @@ public interface IAppDbContext
     DbSet<EmailMessage> EmailMessages { get; }
     DbSet<BackgroundJob> BackgroundJobs { get; }
     DbSet<AuditEntry> AuditEntries { get; }
-    DbSet<AssistantMessage> AssistantMessages { get; }
-    DbSet<AssistantAction> AssistantActions { get; }
+    DbSet<AgentProposal> AgentProposals { get; }
 
     Task<int> SaveChangesAsync(CancellationToken ct = default);
 }
