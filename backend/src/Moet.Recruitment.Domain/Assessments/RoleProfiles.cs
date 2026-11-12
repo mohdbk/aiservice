@@ -81,7 +81,8 @@ public class RoleProfile
     /// <summary>The fit of a completed profile, or null when it is for another model or misses a dimension the role weighs.</summary>
     public RoleFit? Fit(PersonalityModel model, IReadOnlyList<TraitScore> profile)
     {
-        if (model != PersonalityModel) return null;
+        // Big Five profiles apply to both Big Five scorings (sum 5 to 25, or the 1 to 10 scale): the dimensions are the same.
+        if (model != PersonalityModel && !(IsBigFive(model) && IsBigFive(PersonalityModel))) return null;
         if (model == PersonalityModel.WorkplaceType16)
         {
             if (Personality.TypeOf(profile) is not { } result) return null;

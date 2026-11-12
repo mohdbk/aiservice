@@ -324,11 +324,13 @@ export function InterviewDialog({ open, onClose, lookups, onSave, busy, initial 
 
 export function OfferDialog({ open, onClose, onSave, busy, defaultTitle, initial }: {
   open: boolean; onClose: () => void; onSave: (b: any) => void; busy: boolean; defaultTitle: string;
-  initial?: { position_title: string; offer_date: string; start_date: string; monthly_salary: number | null; currency: string; terms: string };
+  initial?: { position_title: string; offer_date: string; start_date: string; monthly_salary: number | null; currency: string; terms: string; offer_template_id?: number | null };
 }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const today = new Date().toISOString().slice(0, 10);
-  const [f, setF] = useState(initial || { position_title: defaultTitle, offer_date: today, start_date: "", monthly_salary: null as number | null, currency: "AED", terms: "" });
+  const [f, setF] = useState(initial || { position_title: defaultTitle, offer_date: today, start_date: "", monthly_salary: null as number | null, currency: "AED", terms: "", offer_template_id: null as number | null });
+  // Letter templates: the default is used when none is picked.
+  const templates = useAsync(() => (open ? api<{ items: { id: number; name_ar: string; name_en: string; is_default: boolean }[] }>("/offer-templates?active=true") : Promise.resolve({ items: [] })), [open]);
   const set = (k: string, v: unknown) => setF((x) => ({ ...x, [k]: v }));
   return (
     <Modal open={open} onClose={onClose} title={t("app.make_offer")} footer={<>
@@ -342,7 +344,11 @@ export function OfferDialog({ open, onClose, onSave, busy, defaultTitle, initial
         <TextInput label={t("offer.salary")} type="number" min={0} value={f.monthly_salary ?? ""} onChange={(e) => set("monthly_salary", e.target.value ? Number(e.target.value) : null)} />
         <TextInput label={t("offer.currency")} value={f.currency} maxLength={3} onChange={(e) => set("currency", e.target.value.toUpperCase())} dir="ltr" />
       </div>
-      <TextArea label={t("offer.terms")} rows={6} value={f.terms} onChange={(e) => set("terms", e.target.value)} />
+      <TextArea label={t("offer.terms")} rows={6} value={f.terms} onChange={(e) => set("terms", e.target.value)} hint={t("offer.terms_hint")} />
+      {(templates.data?.items.length ?? 0) > 0 && (
+        <SelectInput label={t("offer.letter_template")} value={f.offer_template_id ?? ""} onChange={(e) => set("offer_template_id", e.target.value ? Number(e.target.value) : null)}
+          options={[{ value: "", label: t("offer.template_default") }, ...(templates.data?.items || []).map((x) => ({ value: x.id, label: lang === "en" ? x.name_en : x.name_ar }))]} />
+      )}
     </Modal>
   );
 }

@@ -10,7 +10,7 @@ type Profile = {
   types: string[]; strong_from: number; moderate_from: number; is_active: boolean; sort_order: number; row_version?: string;
 };
 
-const ROLE_MODELS = ["WorkplaceBigFive", "WorkplaceType16", "BigFive"];
+const ROLE_MODELS = ["WorkplaceBigFive", "WorkplaceType16"];
 const LETTERS = [["E", "I"], ["N", "S"], ["T", "F"], ["J", "P"]];
 const ALL_TYPES = LETTERS[0].flatMap((a) => LETTERS[1].flatMap((b) => LETTERS[2].flatMap((c) => LETTERS[3].map((d) => a + b + c + d))));
 
@@ -60,10 +60,10 @@ export default function RoleProfiles() {
         actions={canEdit && <Button onClick={() => setF(blank("WorkplaceBigFive"))} icon={<Plus size={24} aria-hidden="true" />}>{t("common.add")}</Button>} />
       <div className="space-y-6">
         {ROLE_MODELS.map((model) => {
-          const rows = items.filter((r) => r.personality_model === model);
-          if (rows.length === 0 && model === "BigFive") return null;
+          // Big Five profiles cover both Big Five scorings.
+          const rows = items.filter((r) => r.personality_model === model || (model === "WorkplaceBigFive" && r.personality_model === "BigFive"));
           return (
-            <Card key={model} title={t(`pers.model.${model}`)}>
+            <Card key={model} title={t(`roles.model.${model}`)}>
               {rows.length === 0 ? <Empty /> : (
                 <ul className="divide-y divide-aeblack-100">
                   {rows.map((r) => (
@@ -97,7 +97,7 @@ export default function RoleProfiles() {
           <TextInput label={<span className="inline-flex items-center gap-2"><LangFlag lang="en" />{t("setup.name_en")}</span>} dir="ltr" value={f.name_en} onChange={(e) => setF({ ...f, name_en: e.target.value })} />
           <SelectInput label={t("pers.model")} value={f.personality_model} disabled={!!f.id}
             onChange={(e) => setF({ ...f, personality_model: e.target.value, weights: {}, targets: {}, types: [] })}
-            options={ROLE_MODELS.map((v) => ({ value: v, label: t(`pers.model.${v}`) }))} />
+            options={ROLE_MODELS.map((v) => ({ value: v, label: t(`roles.model.${v}`) }))} />
 
           {typeModel ? (
             <fieldset>

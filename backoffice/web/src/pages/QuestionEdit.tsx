@@ -106,7 +106,7 @@ export default function QuestionEdit() {
               <>
                 <SelectInput label={t("pers.trait")} value={q.trait} onChange={(e) => set("trait", e.target.value)} options={[
                   { value: "", label: t("common.choose") },
-                  ...Object.entries(MODELS).flatMap(([m, traits]) => traits.map((x) => ({ value: x.code, label: `${t(`pers.model.${m}`)}: ${x.code} ${lang === "en" ? x.en : x.ar}` })))
+                  ...Object.entries(MODELS).filter(([m]) => m !== "WorkplaceBigFive").flatMap(([m, traits]) => traits.map((x) => ({ value: x.code, label: `${t(`pers.model.${m}`)}: ${x.code} ${lang === "en" ? x.en : x.ar}` })))
                     .filter((o, i, all) => all.findIndex((y) => y.label === o.label) === i),
                 ]} />
                 <Toggle label={t("pers.reverse")} hint={t("pers.reverse_hint")} checked={q.reverse_keyed} onChange={(v) => set("reverse_keyed", v)} />

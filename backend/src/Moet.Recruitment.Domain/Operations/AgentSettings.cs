@@ -9,7 +9,7 @@ public class AgentSetting
     public static readonly string[] Tools =
     [
         "list_jobs", "get_job", "search_applicants", "get_applicant", "list_interviews", "list_offers", "list_tests", "list_test_invitations",
-        "get_lookups", "get_dashboard", "show_applicants", "compare_applicants", "ask_user", "list_components", "show_component",
+        "get_lookups", "get_dashboard", "show_applicants", "compare_applicants", "ask_user", "list_components", "show_component", "list_email_templates",
         "propose_status_change", "propose_note", "propose_interview", "propose_test_invitation", "propose_offer", "propose_email",
         "propose_draft_job", "propose_english_suggestion",
     ];

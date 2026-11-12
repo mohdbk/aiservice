@@ -2,7 +2,7 @@ import { Checkbox, Dialog, Menu, Switch, Tabs } from "@base-ui/react";
 import {
   ArrowClockwise, CaretDown, Check, CircleNotch, Info, ListBullets, ListNumbers, MagicWand, TextB, TextItalic, Warning, X,
 } from "@phosphor-icons/react";
-import { ReactNode, useEffect, useId, useRef, useState } from "react";
+import { ReactNode, forwardRef, useEffect, useId, useRef, useState } from "react";
 import { ApiError, useLang } from "../core";
 import { FlagUae, FlagUs } from "./flags";
 
@@ -121,14 +121,16 @@ export function TextInput({ label, hint, error, wrapClass, ...rest }: InputProps
   );
 }
 
-export function TextArea({ label, hint, error, wrapClass, ...rest }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label: ReactNode; hint?: ReactNode; error?: string; wrapClass?: string }) {
+type TextAreaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label: ReactNode; hint?: ReactNode; error?: string; wrapClass?: string };
+
+export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(function TextArea({ label, hint, error, wrapClass, ...rest }, ref) {
   const id = useId();
   return (
     <Field label={label} hint={hint} error={error} id={id} className={wrapClass}>
-      <textarea id={id} {...rest} />
+      <textarea id={id} ref={ref} {...rest} />
     </Field>
   );
-}
+});
 
 export function SelectInput({ label, hint, options, wrapClass, ...rest }: React.SelectHTMLAttributes<HTMLSelectElement> & { label: ReactNode; hint?: ReactNode; options: { value: string | number; label: string }[]; wrapClass?: string }) {
   const id = useId();

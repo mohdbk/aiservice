@@ -1,7 +1,7 @@
 import { Dialog, Menu } from "@base-ui/react";
 import {
   Briefcase, CalendarCheck, CaretDown, ChatCircleDots, ClipboardText, Exam, FileText, Gear, Handshake, Key, List, ListChecks,
-  Cube, Robot, SignOut, SquaresFour, Target, Translate, TreeStructure, UserCircle, Users, UsersThree, X,
+  Cube, EnvelopeSimple, HardDrives, Robot, Scroll, SignOut, SquaresFour, Target, Tray, Translate, TreeStructure, UserCircle, Users, UsersThree, X,
 } from "@phosphor-icons/react";
 import { ReactNode, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
@@ -24,7 +24,7 @@ function useNav(): { group?: string; items: Item[] }[] {
         { to: "/applicants", label: t("nav.applicants"), icon: i(Users) },
         { to: "/interviews", label: t("nav.interviews"), icon: i(CalendarCheck) },
         { to: "/offers", label: t("nav.offers"), icon: i(Handshake) },
-        { to: "/screening", label: t("nav.screening"), icon: i(ListChecks) },
+        { to: "/setup/offer-templates", label: t("nav.offer_templates"), icon: i(Scroll), admin: true },
       ],
     },
     {
@@ -33,10 +33,17 @@ function useNav(): { group?: string; items: Item[] }[] {
         { to: "/tests", label: t("nav.assessments"), icon: i(Exam) },
         { to: "/questions", label: t("nav.questions"), icon: i(ClipboardText) },
         { to: "/invitations", label: t("nav.invitations"), icon: i(FileText) },
+        { to: "/screening", label: t("nav.screening"), icon: i(ListChecks) },
         { to: "/role-profiles", label: t("nav.role_profiles"), icon: i(Target) },
       ],
     },
-    { items: [{ to: "/assistant", label: t("nav.assistant"), icon: i(ChatCircleDots) }] },
+    {
+      group: t("nav.group.assistant"),
+      items: [
+        { to: "/assistant", label: t("nav.assistant"), icon: i(ChatCircleDots) },
+        { to: "/setup/components", label: t("nav.components"), icon: i(Cube), admin: true },
+      ],
+    },
     {
       group: t("nav.setup"),
       items: [
@@ -44,9 +51,16 @@ function useNav(): { group?: string; items: Item[] }[] {
         { to: "/setup/rounds", label: t("nav.rounds"), icon: i(UsersThree), admin: true },
         { to: "/setup/settings", label: t("nav.settings"), icon: i(Gear), admin: true },
         { to: "/setup/portal-text", label: t("nav.portal_text"), icon: i(Translate), admin: true },
-        { to: "/setup/assistant", label: t("nav.agent_settings"), icon: i(Robot), admin: true },
-        { to: "/setup/components", label: t("nav.components"), icon: i(Cube), admin: true },
+        { to: "/setup/email-templates", label: t("nav.email_templates"), icon: i(EnvelopeSimple), admin: true },
+      ],
+    },
+    {
+      group: t("nav.group.system"),
+      items: [
         { to: "/setup/staff", label: t("nav.staff"), icon: i(Key), sys: true },
+        { to: "/setup/email-server", label: t("nav.email_server"), icon: i(HardDrives), sys: true },
+        { to: "/setup/assistant", label: t("nav.agent_settings"), icon: i(Robot), sys: true },
+        { to: "/setup/email-log", label: t("nav.email_log"), icon: i(Tray), sys: true },
       ],
     },
   ];

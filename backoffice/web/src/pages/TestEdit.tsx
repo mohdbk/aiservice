@@ -5,7 +5,7 @@ import {
   Bilingual, Button, Card, EnglishBadge, ErrorState, LangTabs, Loading, PageHeader, RichText, SelectInput, TextArea, TextInput, Toggle, useSaving,
 } from "../components/ui";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
-import { MODEL_KEYS, NORMED, MODELS } from "../components/personality";
+import { BIG_FIVE, MODEL_KEYS, NORMED, MODELS } from "../components/personality";
 import { useLookups } from "./JobEdit";
 import { plain } from "./Questions";
 
@@ -156,8 +156,13 @@ export default function TestEdit() {
                 ...(v === "Personality" ? { shuffle_options: false, show_score_to_candidate: false, score_policy: "Latest" } : {}) }));
             }} options={["KnowledgeTest", "LanguageCheck", "SituationalJudgement", "WorkSample", "Aptitude", "Personality", "Other"].map((v) => ({ value: v, label: t(`type.${v}`) }))} />
             {personality && <>
-              <SelectInput label={t("pers.model")} value={x.personality_model} onChange={(e) => setX((p) => ({ ...p, personality_model: e.target.value, trait_norms: {} }))}
-                options={MODEL_KEYS.map((v) => ({ value: v, label: t(`pers.model.${v}`) }))} />
+              <SelectInput label={t("pers.model")} value={BIG_FIVE.includes(x.personality_model) ? "BigFive" : x.personality_model}
+                onChange={(e) => { const v = e.target.value; setX((p) => ({ ...p, personality_model: v === "BigFive" ? (BIG_FIVE.includes(p.personality_model) ? p.personality_model : "WorkplaceBigFive") : v, trait_norms: {} })); }}
+                options={[...MODEL_KEYS, ...(MODEL_KEYS.includes(x.personality_model) || BIG_FIVE.includes(x.personality_model) ? [] : [x.personality_model])].map((v) => ({ value: v, label: t(`pers.model.${v}`) }))} />
+              {BIG_FIVE.includes(x.personality_model) && (
+                <SelectInput label={t("pers.scoring")} value={x.personality_model} onChange={(e) => setX((p) => ({ ...p, personality_model: e.target.value, trait_norms: {} }))}
+                  options={BIG_FIVE.map((v) => ({ value: v, label: t(`pers.scoring.${v}`) }))} />
+              )}
               <p className="text-xs text-aeblack-500">{t(`pers.model_hint.${x.personality_model}`)}</p>
               {NORMED.includes(x.personality_model) && <details className="rounded-xl bg-whitely-100 p-3">
                 <summary className="cursor-pointer text-sm font-semibold">{t("pers.norms")}</summary>

@@ -34,6 +34,7 @@ public sealed class RecruitmentTools(BackofficeApi api)
         AIFunctionFactory.Create(AskUser, "ask_user"),
         AIFunctionFactory.Create(ListComponents, "list_components"),
         AIFunctionFactory.Create(ShowComponent, "show_component"),
+        AIFunctionFactory.Create(ListEmailTemplates, "list_email_templates"),
         AIFunctionFactory.Create(ProposeStatusChange, "propose_status_change"),
         AIFunctionFactory.Create(ProposeNote, "propose_note"),
         AIFunctionFactory.Create(ProposeInterview, "propose_interview"),
@@ -252,6 +253,13 @@ public sealed class RecruitmentTools(BackofficeApi api)
             fields = Fields(c.GetProperty("definition")).Select(f => new { name = Str(f, "name"), input = Str(f, "input"), required = f.TryGetProperty("required", out var r) && r.ValueKind == JsonValueKind.True }),
         });
         return JsonSerializer.SerializeToElement(list);
+    }
+
+    [Description("HR's approved email wording (subject and body in Arabic and English, with {placeholders}). Check it before drafting an email to a candidate and follow the matching template, filling the placeholders yourself.")]
+    public async Task<JsonElement> ListEmailTemplates(CancellationToken ct = default)
+    {
+        try { return (await api.GetAsync("email-wording", ct)).GetProperty("items"); }
+        catch (BackofficeException e) { return Error(e.Code); }
     }
 
     [Description("Shows a form an admin designed (key from list_components), pre-filled with values you know. After calling it, stop and wait: the answers arrive as an A2UI action named submit_form.")]

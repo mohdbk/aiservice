@@ -17,6 +17,8 @@ import Jobs from "./pages/Jobs";
 import Marking from "./pages/Marking";
 import Offers from "./pages/Offers";
 import QuestionEdit from "./pages/QuestionEdit";
+import { EmailLog, EmailServer, EmailTemplates } from "./pages/Email";
+import OfferTemplates from "./pages/OfferTemplates";
 import Questions from "./pages/Questions";
 import RoleProfiles from "./pages/RoleProfiles";
 import Screening from "./pages/Screening";
@@ -63,6 +65,10 @@ function Guarded() {
         <Route path="setup/staff" element={<Staff />} />
         <Route path="setup/assistant" element={<AgentSettings />} />
         <Route path="setup/components" element={<Components />} />
+        <Route path="setup/offer-templates" element={<OfferTemplates />} />
+        <Route path="setup/email-templates" element={<EmailTemplates />} />
+        <Route path="setup/email-server" element={<EmailServer />} />
+        <Route path="setup/email-log" element={<EmailLog />} />
         <Route path="setup/components/:id" element={<ComponentEdit />} />
         <Route path="*" element={<Navigate to={`/${lang}`} replace />} />
       </Routes>

@@ -31,8 +31,12 @@ export const MODELS: Record<string, { code: string; ar: string; en: string }[]> 
   ],
 };
 
-/** Every model HR can pick, in menu order. */
-export const MODEL_KEYS = ["WorkplaceBigFive", "WorkplaceType16", "BigFive", "SixteenPF"];
+/**
+ * The models HR picks from. Big Five is one model with two scorings (WorkplaceBigFive: sums 5 to 25 with bands; BigFive:
+ * the 1 to 10 scale with optional norms). 16PF is scored by the backend but hidden until licensed questions exist.
+ */
+export const MODEL_KEYS = ["BigFive", "WorkplaceType16"];
+export const BIG_FIVE = ["WorkplaceBigFive", "BigFive"];
 /** Models scored with reference norms and stens (the workplace questionnaires use sums and fixed bands). */
 export const NORMED = ["BigFive", "SixteenPF"];
 export const SUM_BANDS = ["VeryLow", "Low", "Moderate", "High", "VeryHigh"];
