@@ -247,7 +247,8 @@ export function AgentChat({ panel = false }: { panel?: boolean }) {
           )}
           {visible.map((m) => (
             <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[92%] rounded-2xl px-4 py-3 text-sm leading-6 ${panel ? "" : "sm:max-w-[85%]"} ${m.role === "user" ? "mh-chat-user" : "mh-chat-bot w-full"}`}>
+              <div className={`max-w-[92%] rounded-2xl text-sm leading-6 ${panel ? "" : "sm:max-w-[85%]"} ${m.role === "user" ? "mh-chat-user px-4 py-3"
+                : m.surfaces?.some((id) => state.surfaces[id]) ? "w-full py-1" /* cards carry their own frame: no second border around them */ : "mh-chat-bot w-full px-4 py-3"}`}>
                 {m.role === "assistant" && <ChatCircleDots size={20} className="mb-1 text-primary-600" aria-hidden="true" />}
                 {m.tools && m.tools.length > 0 && (
                   <ul className="mb-2 flex flex-wrap gap-2" aria-label={t("asst.thinking")}>
