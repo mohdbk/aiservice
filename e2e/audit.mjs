@@ -51,6 +51,11 @@ async function shoot(ctx, name, url, after, full = false) {
     await page.screenshot({ path: `shots/${name}.png`, fullPage: !after || full });
     const o = await overflow(page);
     if (o.doc > o.w + 1 || o.out.length) note(`WIDE  ${name}: page ${o.doc}px on a ${o.w}px screen\n        ${o.out.join("\n        ")}`);
+    if (name.endsWith("_en_dashboard") || name.endsWith("_en_jobs") && name.startsWith("po_")) {
+      const fonts = await page.evaluate(async () => { await document.fonts.ready; return [...document.fonts].filter((f) => f.status === "loaded").map((f) => f.family).filter((v, i, a) => a.indexOf(v) === i).join(", ")
+        + " | body: " + getComputedStyle(document.body).fontFamily; });
+      note(`FONTS ${name}: ${fonts}`);
+    }
     if (errors.length) note(`ERROR ${name}: ${errors.slice(0, 3).join(" | ")}`);
   } catch (e) {
     note(`FAIL  ${name}: ${e.message.split("\n")[0]}`);

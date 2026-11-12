@@ -70,7 +70,16 @@ footer a:hover, nav a.mc-underline-hover:hover { text-decoration: underline; }
 .aegov-form-control .form-control-input > textarea { min-height: 7rem; resize: vertical; }
 .aegov-form-control .form-control-input > input::placeholder { color: var(--color-aeblack-400); }
 
-/* Text in another language keeps its own font (for example "العربية" on English pages) */
+/* One font stack per page language, each with the other language's font next: Arabic words on English pages (names, job
+   titles, anything typed by people) are drawn in the Arabic font, and English words on Arabic pages in the Latin font. */
+html:not([lang|="ar"]) body, html:not([lang|="ar"]) :is(h1, h2, h3, h4, h5, h6, input, textarea, select, button, [role="option"]) {
+  font-family: "Inter", "Noto Kufi Arabic", system-ui, sans-serif;
+}
+html[lang|="ar"] body, html[lang|="ar"] :is(h1, h2, h3, h4, h5, h6, input, textarea, select, button, [role="option"]) {
+  font-family: "Noto Kufi Arabic", "Inter", system-ui, sans-serif;
+}
+
+/* Text marked with another language keeps its own font (for example "العربية" on English pages) */
 html:not([lang|="ar"]) [lang|="ar"] { font-family: var(--font-notokufi), "Noto Kufi Arabic", sans-serif; }
 html[lang|="ar"] [lang|="en"] { font-family: var(--font-inter), "Inter", sans-serif; }
 
