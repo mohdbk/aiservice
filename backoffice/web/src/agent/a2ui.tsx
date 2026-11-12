@@ -134,6 +134,10 @@ export function A2Surface({ surface, busy, onAction, onData, emptyText = "" }: {
         const options: { value: string; label: string }[] = (Array.isArray(c.options) ? c.options : []).map((o: any) => ({ value: String(o.value), label: String(resolve(o.label, surface.data) ?? o.value) }));
         const label = <>{String(v("label") ?? "")}{c.required && <span className="text-aered-600" aria-hidden="true"> *</span>}</>;
         const current = v("value");
+        // Nothing to choose from (an incomplete form): let the user type the answer instead of showing an empty list.
+        if (options.length === 0)
+          return <TextInput label={label} dir="auto" value={Array.isArray(current) ? current.join(", ") : String(current ?? "")} disabled={locked}
+            required={!!c.required} onChange={(e) => write(path, c.maxAllowedSelections === 1 ? e.target.value : e.target.value.split(",").map((x) => x.trim()).filter(Boolean))} />;
         if (c.maxAllowedSelections === 1) {
           return <SelectInput label={label} value={String(current ?? "")} disabled={locked} required={!!c.required}
             options={[{ value: "", label: emptyText }, ...options]} onChange={(e) => write(path, e.target.value)} />;

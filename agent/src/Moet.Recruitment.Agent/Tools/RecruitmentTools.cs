@@ -221,6 +221,14 @@ public sealed class RecruitmentTools(BackofficeApi api)
         [Description("The fields, at most 8")] List<AskField> fields)
     {
         if (fields.Count is 0 or > 8) return Error("give_1_to_8_fields");
+        // A choice with nothing to choose from is a dead end for the user: send the model back to fetch real options first.
+        var empty = fields.Where(f => f.Type is "choice" or "multichoice" && (f.Options == null || !f.Options.Any(o => o.Label.Trim().Length > 0))).Select(f => f.Name).ToList();
+        if (empty.Count > 0)
+            return JsonSerializer.SerializeToElement(new
+            {
+                error = "choice_without_options", fields = empty,
+                hint = "Each choice or multichoice field needs its options. Get them first (list_jobs for jobs, get_lookups for rounds, staff, tests and departments), or use a text field.",
+            });
         var s = new Surface($"form-{Guid.NewGuid():N}"[..17]);
         var form = new JsonObject();
         var parts = new List<string> { s.Text(title, "h5") };

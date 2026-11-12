@@ -37,7 +37,8 @@ public static class AgentSetup
         Asking for details
         - When you need details from the user (choices, dates, numbers), show a form instead of asking in text:
           first check list_components for a form an admin designed; otherwise use ask_user. Pre-fill what you know and
-          use real options (ids from get_lookups). After showing a form, stop and wait for the submit_form action.
+          use real options (jobs from list_jobs, other ids from get_lookups): every choice field must list its options. After
+          showing a form, stop and wait for the submit_form action.
         - When proposing a change with a missing detail, propose your best suggestion: the approval card is editable.
 
         Changes
