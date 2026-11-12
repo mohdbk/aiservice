@@ -1,0 +1,65 @@
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.HttpOverrides;
+using Moet.Recruitment.Api.Endpoints;
+using Moet.Recruitment.Api.Hosting;
+using Moet.Recruitment.Application;
+using Moet.Recruitment.Infrastructure;
+
+var builder = WebApplication.CreateBuilder(args);
+var cfg = builder.Configuration;
+
+builder.Services.AddApplication();
+builder.Services.AddAdminApplication();
+builder.Services.AddInfrastructure(cfg, runWorkers: cfg["RUN_WORKERS"] != "0");
+builder.Services.ConfigureHttpJsonOptions(o => Json.Configure(o.SerializerOptions));
+builder.Services.Configure<ForwardedHeadersOptions>(o =>
+{
+    o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    o.KnownIPNetworks.Clear();
+    o.KnownProxies.Clear();
+});
+
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(o =>
+{
+    o.Cookie.Name = "moet_admin";
+    o.Cookie.HttpOnly = true;
+    o.Cookie.SameSite = SameSiteMode.Strict;
+    o.Cookie.SecurePolicy = cfg["COOKIE_SECURE"] == "0" ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
+    o.ExpireTimeSpan = TimeSpan.FromHours(double.TryParse(cfg["SESSION_HOURS"], out var h) ? h : 8);
+    o.SlidingExpiration = true;
+    o.Events = StaffCookie.Events();
+});
+builder.Services.AddAuthorization(o => StaffPolicies.Add(o));
+builder.Services.AddRateLimiter(o =>
+{
+    o.RejectionStatusCode = 429;
+    o.AddPolicy("sign-in", ctx => RateLimitPartition.GetFixedWindowLimiter(ctx.Connection.RemoteIpAddress?.ToString() ?? "?",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1) }));
+    o.AddPolicy("assistant", ctx => RateLimitPartition.GetFixedWindowLimiter(ctx.User.Identity?.Name ?? "?",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1) }));
+});
+
+var app = builder.Build();
+
+if (cfg["TRUST_PROXY"] == "1") app.UseForwardedHeaders();
+app.UseMiddleware<SecurityHeaders>();
+app.UseMiddleware<ErrorEnvelope>();
+app.UseDefaultFiles();
+app.UseStaticFiles();
+app.UseAuthentication();
+app.UseRateLimiter();
+app.UseAuthorization();
+app.UseMiddleware<AdminCsrf>();
+
+app.MapGet("/healthz", () => Results.Ok(new { ok = true }));
+PortalEndpoints.Map(app);
+AdminEndpoints.Map(app);
+app.MapFallback(SpaFallback.Handle);
+
+if (cfg["MIGRATE_ON_START"] != "0")
+    await DependencyInjection.PrepareDatabaseAsync(app.Services, cfg, app.Logger);
+
+app.Run();
+
+public partial class Program;

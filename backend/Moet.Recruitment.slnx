@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Moet.Recruitment.Domain/Moet.Recruitment.Domain.csproj" />
+    <Project Path="src/Moet.Recruitment.Application/Moet.Recruitment.Application.csproj" />
+    <Project Path="src/Moet.Recruitment.Infrastructure/Moet.Recruitment.Infrastructure.csproj" />
+    <Project Path="src/Moet.Recruitment.Api/Moet.Recruitment.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Moet.Recruitment.Domain.Tests/Moet.Recruitment.Domain.Tests.csproj" />
+    <Project Path="tests/Moet.Recruitment.Api.Tests/Moet.Recruitment.Api.Tests.csproj" />
+  </Folder>
+</Solution>

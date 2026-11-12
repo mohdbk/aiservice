@@ -1,0 +1,5 @@
+bin/
+obj/
+*.user
+TestResults/
+src/Moet.Recruitment.Api/wwwroot/

@@ -1,0 +1,295 @@
+using Microsoft.EntityFrameworkCore;
+using Moet.Recruitment.Application.Common;
+using Moet.Recruitment.Domain;
+using Moet.Recruitment.Domain.Common;
+using Moet.Recruitment.Domain.Content;
+using Moet.Recruitment.Domain.Hiring;
+
+namespace Moet.Recruitment.Application.Admin;
+
+public sealed record ScreeningOptionInput(int? Id, string Text, string? TextEn);
+
+public sealed record ScreeningQuestionInput(string Text, string? TextEn, bool EnglishApproved, string AnswerType, string? Category, bool IsActive,
+    IReadOnlyList<ScreeningOptionInput>? Options);
+
+public sealed record SettingsInput(string MainSiteUrl, string PortalUrl, string DefaultLanguageCode, bool AllowSignup, bool RequireEmailVerification,
+    int MaxCvMb, bool AutoScoreApplications, bool AssistantEnabled);
+
+public sealed record PortalTextInput(string Lang, string Key, string Text, bool Approved);
+
+public sealed record NamedInput(string Name, string? NameEn, bool IsActive, string? Description, IReadOnlyList<string>? Skills);
+
+/// <summary>Screening questions, dashboard, lookups and settings.</summary>
+public sealed class AdminSetupService(IAppDbContext db, ICurrentActor actor, IClock clock, ContentService content, ITextCatalog catalog, JobQueue jobs)
+{
+    const string En = "en";
+
+    // ---------------- screening questions ----------------
+
+    public async Task<object> ScreeningQuestionsAsync(CancellationToken ct = default)
+    {
+        var rows = await db.ScreeningQuestions.AsNoTracking().OrderBy(q => q.Category).ThenBy(q => q.Text).Select(q => new
+        {
+            id = q.Id, text = q.Text, answer_type = q.AnswerType, category = q.Category, is_active = q.IsActive,
+            english = q.Translations.Where(t => t.LanguageCode == En).Select(t => (ReviewStatus?)t.ReviewStatus).FirstOrDefault(),
+            options = q.Options.OrderBy(o => o.SortOrder).Select(o => new { id = o.Id, text = o.Text }).ToList(),
+        }).ToListAsync(ct);
+        return new { questions = rows.Select(r => new { r.id, r.text, r.answer_type, r.category, r.is_active, r.options, english = r.english?.ToString() ?? "Missing" }).ToList() };
+    }
+
+    public async Task<object> ScreeningQuestionAsync(int id, CancellationToken ct = default)
+    {
+        var q = await LoadScreening(id).AsNoTracking().FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
+        var tr = q.Translations.FirstOrDefault(t => t.LanguageCode == En);
+        return new
+        {
+            id = q.Id, text = q.Text, text_en = tr?.Text ?? "", english_status = tr?.ReviewStatus.ToString() ?? "Missing",
+            english_approved = tr?.ReviewStatus == ReviewStatus.Approved, answer_type = q.AnswerType.ToString(), category = q.Category,
+            is_active = q.IsActive,
+            options = q.Options.OrderBy(o => o.SortOrder).Select(o => new { id = o.Id, text = o.Text, text_en = o.Translations.FirstOrDefault(t => t.LanguageCode == En)?.Text ?? "" }).ToList(),
+        };
+    }
+
+    IQueryable<ScreeningQuestion> LoadScreening(int id) => db.ScreeningQuestions.Where(q => q.Id == id)
+        .Include(q => q.Options).ThenInclude(o => o.Translations).Include(q => q.Translations).AsSplitQuery();
+
+    public async Task<object> SaveScreeningQuestionAsync(int? id, ScreeningQuestionInput input, CancellationToken ct = default)
+    {
+        var now = clock.UtcNow;
+        ScreeningQuestion q;
+        if (id == null)
+        {
+            q = new ScreeningQuestion { CreatedAt = now, SourceLanguageCode = "ar" };
+            db.ScreeningQuestions.Add(q);
+        }
+        else q = await LoadScreening(id.Value).FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
+        q.Text = TextUtil.Clip(input.Text?.Trim(), 1000);
+        q.AnswerType = AdminJobService.Parse<AnswerType>(input.AnswerType, "answer_type");
+        q.Category = TextUtil.Clip(input.Category?.Trim(), 100);
+        q.IsActive = input.IsActive;
+        q.UpdatedAt = now;
+        // Options keep their ids (answers and requirements refer to them); removed ones are deleted.
+        var incoming = (input.Options ?? []).Where(o => o.Text.Trim().Length > 0).ToList();
+        q.Options.RemoveAll(o => o.Id != 0 && incoming.All(i => i.Id != o.Id));
+        var order = 0;
+        foreach (var oi in incoming)
+        {
+            var o = oi.Id == null ? null : q.Options.FirstOrDefault(x => x.Id == oi.Id);
+            if (o == null) q.Options.Add(o = new ScreeningQuestionOption());
+            o.SortOrder = order++;
+            o.Text = TextUtil.Clip(oi.Text.Trim(), 300);
+            var t = o.Translations.FirstOrDefault(x => x.LanguageCode == En);
+            if (string.IsNullOrWhiteSpace(oi.TextEn)) { if (t != null) o.Translations.Remove(t); }
+            else
+            {
+                if (t == null) o.Translations.Add(t = new ScreeningQuestionOptionTranslation { LanguageCode = En });
+                t.Text = TextUtil.Clip(oi.TextEn.Trim(), 300);
+            }
+        }
+        q.Validate();
+        var tr = q.Translations.FirstOrDefault(t => t.LanguageCode == En);
+        if (string.IsNullOrWhiteSpace(input.TextEn))
+        {
+            if (tr != null) q.Translations.Remove(tr);
+        }
+        else
+        {
+            if (tr == null) q.Translations.Add(tr = new ScreeningQuestionTranslation { LanguageCode = En, ReviewStatus = ReviewStatus.Suggested });
+            tr.Text = TextUtil.Clip(input.TextEn.Trim(), 1000);
+            var hash = TextUtil.ContentHash(tr.Text, string.Join("\n", q.Options.OrderBy(o => o.SortOrder).Select(o => o.Translations.FirstOrDefault(x => x.LanguageCode == En)?.Text ?? "")));
+            TranslationReview.Apply(tr, input.EnglishApproved, false, hash, actor.Id, now);
+        }
+        await db.SaveChangesAsync(ct);
+        return new { id = q.Id };
+    }
+
+    /// <summary>Queues an English draft from the language model for a screening question, test question or test.</summary>
+    public async Task<object> SuggestEnglishAsync(string kind, int id, CancellationToken ct = default)
+    {
+        var type = kind switch
+        {
+            "screening" => JobTypes.SuggestScreeningTranslation,
+            "question" => JobTypes.SuggestQuestionTranslation,
+            "assessment" => JobTypes.SuggestAssessmentTranslation,
+            "job" => JobTypes.SuggestJobTranslation,
+            _ => throw DomainException.NotFound(),
+        };
+        await jobs.EnqueueAsync(type, id, ct);
+        await db.SaveChangesAsync(ct);
+        return new { queued = true };
+    }
+
+    // ---------------- dashboard and lookups ----------------
+
+    public async Task<object> DashboardAsync(CancellationToken ct = default)
+    {
+        var now = clock.UtcNow;
+        var weekAgo = now.AddDays(-7);
+        var today = clock.Today();
+        return new
+        {
+            open_jobs = await db.JobOpenings.CountAsync(j => j.Status == JobStatus.Open, ct),
+            published_jobs = await db.JobOpenings.CountAsync(j => j.Status == JobStatus.Open && j.IsPublished && (j.ClosesOn == null || j.ClosesOn >= today), ct),
+            new_applicants = await db.JobApplications.CountAsync(a => a.CreatedAt >= weekAgo, ct),
+            to_review = await db.JobApplications.CountAsync(a => a.Status == ApplicationStatus.Open, ct),
+            upcoming_interviews = await db.Interviews.CountAsync(i => i.StartsAt >= now && i.Status == InterviewStatus.Scheduled, ct),
+            to_mark = await db.Attempts.CountAsync(a => a.Status == AttemptStatus.Submitted, ct),
+            offers_out = await db.JobOffers.CountAsync(o => o.Status == OfferStatus.Sent, ct),
+            english_to_review = await db.JobOpeningTranslations.CountAsync(t => t.ReviewStatus == ReviewStatus.Suggested, ct),
+            recent = await db.JobApplications.AsNoTracking().OrderByDescending(a => a.CreatedAt).Take(8).Select(a => new
+            {
+                id = a.Id, full_name = a.FullName, job_title = a.JobOpening!.Title, created_at = a.CreatedAt,
+                score = a.CvAnalysis == null ? null : a.CvAnalysis.Score, status = a.Status,
+            }).ToListAsync(ct),
+            interviews = await db.Interviews.AsNoTracking().Where(i => i.StartsAt >= now && i.Status == InterviewStatus.Scheduled)
+                .OrderBy(i => i.StartsAt).Take(6).Select(i => new { id = i.Id, starts_at = i.StartsAt, applicant = i.JobApplication!.FullName, round = i.InterviewRound!.Name })
+                .ToListAsync(ct),
+        };
+    }
+
+    public async Task<object> LookupsAsync(CancellationToken ct = default) => new
+    {
+        departments = await db.Departments.AsNoTracking().Where(d => d.IsActive).OrderBy(d => d.Name)
+            .Select(d => new { id = d.Id, name = d.Name, name_en = d.Translations.Where(t => t.LanguageCode == En).Select(t => t.Name).FirstOrDefault() ?? "" }).ToListAsync(ct),
+        rounds = await db.InterviewRounds.AsNoTracking().Where(r => r.IsActive).OrderBy(r => r.Name).Select(r => new { id = r.Id, name = r.Name }).ToListAsync(ct),
+        staff = await db.StaffUsers.AsNoTracking().Where(u => u.IsEnabled).OrderBy(u => u.FullName).Select(u => new { id = u.Id, name = u.FullName, email = u.Email }).ToListAsync(ct),
+        assessments = await db.Assessments.AsNoTracking().Where(a => a.Status == AssessmentStatus.Published).OrderBy(a => a.Title).Select(a => new { id = a.Id, title = a.Title }).ToListAsync(ct),
+        screening_questions = await db.ScreeningQuestions.AsNoTracking().Where(q => q.IsActive).OrderBy(q => q.Text)
+            .Select(q => new { id = q.Id, text = q.Text, answer_type = q.AnswerType, options = q.Options.OrderBy(o => o.SortOrder).Select(o => new { id = o.Id, text = o.Text }).ToList() })
+            .ToListAsync(ct),
+        categories = await db.Questions.AsNoTracking().Where(x => x.Category != "").Select(x => x.Category).Distinct().OrderBy(x => x).ToListAsync(ct),
+        job_families = await db.Questions.AsNoTracking().Where(x => x.JobFamily != "").Select(x => x.JobFamily).Distinct().OrderBy(x => x).ToListAsync(ct),
+    };
+
+    // ---------------- departments and interview rounds ----------------
+
+    public async Task<object> DepartmentsAsync(CancellationToken ct = default) => new
+    {
+        departments = await db.Departments.AsNoTracking().OrderBy(d => d.Name)
+            .Select(d => new { id = d.Id, name = d.Name, name_en = d.Translations.Where(t => t.LanguageCode == En).Select(t => t.Name).FirstOrDefault() ?? "", is_active = d.IsActive })
+            .ToListAsync(ct),
+    };
+
+    public async Task<object> SaveDepartmentAsync(int? id, NamedInput input, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(input.Name)) throw DomainException.Invalid("name_required");
+        Department d;
+        if (id == null) db.Departments.Add(d = new Department { SourceLanguageCode = "ar" });
+        else d = await db.Departments.Include(x => x.Translations).FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound();
+        d.Name = TextUtil.Clip(input.Name.Trim(), 140);
+        d.IsActive = input.IsActive;
+        var t = d.Translations.FirstOrDefault(x => x.LanguageCode == En);
+        if (string.IsNullOrWhiteSpace(input.NameEn)) { if (t != null) d.Translations.Remove(t); }
+        else
+        {
+            if (t == null) d.Translations.Add(t = new DepartmentTranslation { LanguageCode = En });
+            t.Name = TextUtil.Clip(input.NameEn.Trim(), 140);
+        }
+        await db.SaveChangesAsync(ct);
+        return new { id = d.Id };
+    }
+
+    public async Task<object> RoundsAsync(CancellationToken ct = default) => new
+    {
+        rounds = await db.InterviewRounds.AsNoTracking().OrderBy(r => r.Name)
+            .Select(r => new { id = r.Id, name = r.Name, description = r.Description, is_active = r.IsActive, skills = r.Skills.OrderBy(s => s.SortOrder).Select(s => s.Skill).ToList() })
+            .ToListAsync(ct),
+    };
+
+    public async Task<object> SaveRoundAsync(int? id, NamedInput input, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(input.Name)) throw DomainException.Invalid("name_required");
+        InterviewRound r;
+        if (id == null) db.InterviewRounds.Add(r = new InterviewRound());
+        else r = await db.InterviewRounds.Include(x => x.Skills).FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound();
+        r.Name = TextUtil.Clip(input.Name.Trim(), 140);
+        r.Description = TextUtil.Clip(input.Description?.Trim(), 1000);
+        r.IsActive = input.IsActive;
+        r.Skills.Clear();
+        var n = 0;
+        foreach (var s in (input.Skills ?? []).Select(s => s.Trim()).Where(s => s.Length > 0).Distinct())
+            r.Skills.Add(new InterviewRoundSkill { SortOrder = n++, Skill = TextUtil.Clip(s, 140) });
+        await db.SaveChangesAsync(ct);
+        return new { id = r.Id };
+    }
+
+    // ---------------- settings and portal wording ----------------
+
+    public async Task<object> SettingsAsync(CancellationToken ct = default)
+    {
+        var s = await db.PortalSettings.AsNoTracking().FirstAsync(ct);
+        return new
+        {
+            s.MainSiteUrl, s.PortalUrl, s.DefaultLanguageCode, s.AllowSignup, s.RequireEmailVerification, max_cv_mb = (int)s.MaxCvMb,
+            s.AutoScoreApplications, s.AssistantEnabled, has_logo = s.LogoFileId != null,
+            languages = await db.Languages.AsNoTracking().OrderBy(l => l.SortOrder).Select(l => new { l.Code, l.NativeName, l.IsEnabled }).ToListAsync(ct),
+        };
+    }
+
+    public async Task<object> SaveSettingsAsync(SettingsInput input, CancellationToken ct = default)
+    {
+        var s = await db.PortalSettings.FirstAsync(ct);
+        if (!await db.Languages.AnyAsync(l => l.Code == input.DefaultLanguageCode && l.IsEnabled, ct)) throw DomainException.Invalid("invalid_value");
+        s.MainSiteUrl = Url(input.MainSiteUrl);
+        s.PortalUrl = Url(input.PortalUrl);
+        s.DefaultLanguageCode = input.DefaultLanguageCode;
+        s.AllowSignup = input.AllowSignup;
+        s.RequireEmailVerification = input.RequireEmailVerification;
+        s.MaxCvMb = (byte)Math.Clamp(input.MaxCvMb, 1, 50);
+        s.AutoScoreApplications = input.AutoScoreApplications;
+        s.AssistantEnabled = input.AssistantEnabled;
+        s.UpdatedAt = clock.UtcNow;
+        s.UpdatedByStaffId = actor.Id;
+        await db.SaveChangesAsync(ct);
+        content.Invalidate();
+        return new { ok = true };
+    }
+
+    static string Url(string? u)
+    {
+        u = (u ?? "").Trim().TrimEnd('/');
+        if (u.Length == 0) return "";
+        return Uri.TryCreate(u, UriKind.Absolute, out var x) && x.Scheme is "https" or "http" ? u : throw DomainException.Invalid("invalid_url");
+    }
+
+    public async Task<object> PortalTextAsync(string lang, CancellationToken ct = default)
+    {
+        var shipped = catalog.Shipped(lang);
+        var english = catalog.Shipped("en");
+        var overrides = await db.PortalTexts.AsNoTracking().Where(t => t.LanguageCode == lang).ToListAsync(ct);
+        return new
+        {
+            texts = english.Keys.Order().Select(k =>
+            {
+                var o = overrides.FirstOrDefault(x => x.TextKey == k);
+                return new
+                {
+                    key = k, english = english[k], shipped = shipped.TryGetValue(k, out var v) ? v : "",
+                    text = o?.Text ?? "", review_status = o?.ReviewStatus.ToString() ?? "", approved = o?.ReviewStatus == ReviewStatus.Approved,
+                };
+            }).ToList(),
+        };
+    }
+
+    public async Task<object> SavePortalTextAsync(PortalTextInput input, CancellationToken ct = default)
+    {
+        if (!catalog.Shipped("en").ContainsKey(input.Key)) throw DomainException.Invalid("unknown_key");
+        if (!await db.Languages.AnyAsync(l => l.Code == input.Lang, ct)) throw DomainException.Invalid("unknown_language");
+        var now = clock.UtcNow;
+        var t = await db.PortalTexts.FirstOrDefaultAsync(x => x.LanguageCode == input.Lang && x.TextKey == input.Key, ct);
+        if (string.IsNullOrWhiteSpace(input.Text))
+        {
+            if (t != null) db.PortalTexts.Remove(t);
+        }
+        else
+        {
+            if (t == null) db.PortalTexts.Add(t = new PortalText { LanguageCode = input.Lang, TextKey = input.Key, ReviewStatus = ReviewStatus.Suggested });
+            t.Text = TextUtil.NoEmDash(input.Text.Trim());
+            t.UpdatedAt = now;
+            TranslationReview.Apply(t, input.Approved, false, TextUtil.ContentHash(t.Text), actor.Id, now);
+        }
+        await db.SaveChangesAsync(ct);
+        content.Invalidate();
+        return new { ok = true };
+    }
+}

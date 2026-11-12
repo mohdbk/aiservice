@@ -1,0 +1,47 @@
+name: Backend
+
+on:
+  push:
+    branches: [main, dotnet-backend]
+    paths: ["backend/**", "admin/**", ".github/workflows/backend.yml"]
+  pull_request:
+    paths: ["backend/**", "admin/**", ".github/workflows/backend.yml"]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: "Ci-Strong-Password-123"
+          MSSQL_PID: Developer
+        ports: ["1433:1433"]
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Ci-Strong-Password-123 -Q 'SELECT 1' || exit 1"
+          --health-interval 10s --health-timeout 5s --health-retries 20
+    env:
+      DOTNET_NOLOGO: "1"
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Restore
+        run: dotnet restore Moet.Recruitment.slnx
+      - name: Build (warnings shown)
+        run: dotnet build Moet.Recruitment.slnx --no-restore -c Release
+      - name: Domain tests
+        run: dotnet test tests/Moet.Recruitment.Domain.Tests --no-build -c Release --logger "console;verbosity=normal"
+      - name: End-to-end tests on SQL Server
+        env:
+          TEST_DB_CONNECTION: "Server=localhost,1433;Database=MoetRecruitmentCi;User Id=sa;Password=Ci-Strong-Password-123;TrustServerCertificate=True;Encrypt=False"
+        run: dotnet test tests/Moet.Recruitment.Api.Tests --no-build -c Release --logger "console;verbosity=normal"
+      - name: Schema scripts have no em dashes
+        run: "! grep -rn $'\\u2014' src/ || (echo 'em dash found' && exit 1)"
