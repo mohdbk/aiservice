@@ -60,6 +60,15 @@ public class JobOpening
         return (tr.Title.Trim().Length > 0 ? tr.Title : Title, TextUtil.StripHtml(tr.Description).Length > 0 ? tr.Description : Description, lang);
     }
 
+    /// <summary>
+    /// The location in a language: the approved translation's own text when it has one, otherwise the emirate's name in that
+    /// language when the location is an emirate, otherwise the original.
+    /// </summary>
+    public string LocationIn(string lang) =>
+        lang == SourceLanguageCode ? Location
+        : ApprovedTranslation(lang) is { Location.Length: > 0 } tr ? tr.Location
+        : Locations.In(Location, lang);
+
     /// <summary>Version of the description that the screening criteria were derived from.</summary>
     public string DescriptionVersion() => TextUtil.Sha256Hex(Title + "\u001f" + TextUtil.StripHtml(Description))[..16];
 
@@ -80,6 +89,8 @@ public class JobOpeningTranslation : ITranslation
     public string LanguageCode { get; set; } = "";
     public string Title { get; set; } = "";
     public string Description { get; set; } = "";
+    /// <summary>The location in this language (any place, written as the reader should see it).</summary>
+    public string Location { get; set; } = "";
     public ReviewStatus ReviewStatus { get; set; }
     public string? SuggestedHash { get; set; }
     public int? ApprovedByStaffId { get; set; }

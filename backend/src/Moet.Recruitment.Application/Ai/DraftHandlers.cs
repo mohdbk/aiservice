@@ -42,10 +42,11 @@ public sealed class JobDraftHandler(IAppDbContext db, ILanguageModel model, IClo
         var j = await db.JobOpenings.Include(x => x.Translations).FirstAsync(x => x.Id == id, ct);
         if (j.Translations.Any(t => t.LanguageCode == En && TranslationReview.IsFilled(t.Title, t.Description))) return;
         var o = await Model.CompleteJsonAsync(Prompts.TranslateJob,
-            JsonSerializer.Serialize(new { title = j.Title, description_html = j.Description }), Prompts.TranslateJobSchema, "job_translation", ct);
+            JsonSerializer.Serialize(new { title = j.Title, location = j.Location, description_html = j.Description }), Prompts.TranslateJobSchema, "job_translation", ct);
         var t = Draft(j.Translations, () => new JobOpeningTranslation { LanguageCode = En });
         t.Title = TextUtil.Clip(Clean(Str(o, "title")), 140);
         t.Description = html.Clean(Clean(Str(o, "description_html")));
+        t.Location = TextUtil.Clip(Clean(Str(o, "location")), 140);
         Suggested(t, TextUtil.ContentHash(t.Title, t.Description));
         await db.SaveChangesAsync(ct);
     }

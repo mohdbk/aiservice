@@ -526,4 +526,16 @@ public class PersonalityTests
         Assert.Equal("رأس الخيمة", Locations.In("ras al-khaimah", "ar"));
         Assert.Equal("Remote", Locations.In("Remote", "ar"));
     }
+
+    [Fact]
+    public void Each_language_has_its_own_location()
+    {
+        var j = new JobOpening { Title = "محلل", Location = "الرياض", SourceLanguageCode = "ar" };
+        Assert.Equal("الرياض", j.LocationIn("en"));   // no English version yet: the original
+        j.Translations.Add(new JobOpeningTranslation { LanguageCode = "en", Title = "Analyst", Description = "<p>x</p>", Location = "Riyadh", ReviewStatus = ReviewStatus.Approved });
+        Assert.Equal("Riyadh", j.LocationIn("en"));
+        Assert.Equal("الرياض", j.LocationIn("ar"));
+        var dubai = new JobOpening { Title = "محلل", Location = "دبي", SourceLanguageCode = "ar" };
+        Assert.Equal("Dubai", dubai.LocationIn("en"));   // an emirate needs no translation
+    }
 }

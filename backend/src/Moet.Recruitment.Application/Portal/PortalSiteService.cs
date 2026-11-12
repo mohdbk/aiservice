@@ -67,11 +67,11 @@ public sealed class PortalSiteService(IAppDbContext db, ContentService content, 
             .Take(500).ToListAsync(ct);
         var filters = new JobFilters(
             jobs.Where(j => j.Department != null).Select(j => j.Department!.NameIn(lang)).Distinct().Order().ToList(),
-            jobs.Select(j => Locations.In(j.Location, lang)).Where(l => l.Length > 0).Distinct().Order().ToList());
+            jobs.Select(j => j.LocationIn(lang)).Where(l => l.Length > 0).Distinct().Order().ToList());
         IEnumerable<JobOpening> rows = jobs;
         if (!string.IsNullOrWhiteSpace(department))
             rows = rows.Where(j => j.Department != null && j.Department.NameIn(lang).StartsWith(department.Trim(), StringComparison.OrdinalIgnoreCase));
-        if (!string.IsNullOrWhiteSpace(location)) rows = rows.Where(j => Locations.In(j.Location, lang) == location.Trim() || j.Location == location.Trim());
+        if (!string.IsNullOrWhiteSpace(location)) rows = rows.Where(j => j.LocationIn(lang) == location.Trim() || j.Location == location.Trim());
         var term = TextUtil.Clip(q?.Trim(), 100);
         if (term.Length > 0)
             rows = rows.Where(j => Matches(j.Title, term) || Matches(TextUtil.StripHtml(j.Description), term)
@@ -131,7 +131,7 @@ public sealed class PortalSiteService(IAppDbContext db, ContentService content, 
         SalaryView? salary = j.ShowSalary && (j.SalaryMin != null || j.SalaryMax != null)
             ? new SalaryView(j.SalaryCurrency, j.SalaryMin ?? 0, j.SalaryMax ?? 0, j.SalaryPeriod == SalaryPeriod.Year ? "Year" : "Month")
             : null;
-        return new JobView(j.Code, title, contentLang, TextUtil.Dir(contentLang), j.Department?.NameIn(lang) ?? "", Locations.In(j.Location, lang),
+        return new JobView(j.Code, title, contentLang, TextUtil.Dir(contentLang), j.Department?.NameIn(lang) ?? "", j.LocationIn(lang),
             Labels.Employment(j.EmploymentType, lang), AppTime.Date(j.PostedOn), AppTime.Date(j.ClosesOn), salary,
             TextUtil.Summary(desc), j.IsAccepting(clock.Today()))
         {

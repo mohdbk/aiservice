@@ -22,21 +22,15 @@ type Stage = { assessment_id: number; send_when: string; deadline_days: number }
 type Job = {
   id?: number; code?: string; title: string; description: string; department_id: number | null; location: string; employment_type: string;
   status: string; is_published: boolean; posted_on: string; closes_on: string; salary_min: number | null; salary_max: number | null;
-  salary_currency: string; salary_period: string; show_salary: boolean; title_en: string; description_en: string; english: string;
+  salary_currency: string; salary_period: string; show_salary: boolean; title_en: string; description_en: string; location_en: string; english: string;
   english_approved: boolean; screening: Screening[]; stages: Stage[]; criteria: { criterion: string; weight: number; is_must_have: boolean }[];
   criteria_current: boolean; row_version: string | null; role_profile_id: number | null; weights: Weights;
 };
 
-/** The emirates, stored by their Arabic name (shown in the reader's language on the portal). */
-const EMIRATES = [
-  ["أبوظبي", "Abu Dhabi"], ["دبي", "Dubai"], ["الشارقة", "Sharjah"], ["عجمان", "Ajman"],
-  ["أم القيوين", "Umm Al Quwain"], ["رأس الخيمة", "Ras Al Khaimah"], ["الفجيرة", "Fujairah"],
-] as const;
-
 const EMPTY: Job = {
   title: "", description: "", department_id: null, location: "", employment_type: "FullTime", status: "Draft", is_published: false,
   posted_on: "", closes_on: "", salary_min: null, salary_max: null, salary_currency: "AED", salary_period: "Month", show_salary: false,
-  title_en: "", description_en: "", english: "Missing", english_approved: false, screening: [], stages: [], criteria: [], criteria_current: false, row_version: null,
+  title_en: "", description_en: "", location_en: "", english: "Missing", english_approved: false, screening: [], stages: [], criteria: [], criteria_current: false, row_version: null,
   role_profile_id: null, weights: DEFAULT_WEIGHTS,
 };
 
@@ -63,7 +57,7 @@ export default function JobEdit() {
     if (isNew) return EMPTY;
     const j = await api<any>(`/jobs/${id}`);
     const en = (j.translations || []).find((x: any) => x.lang === "en");
-    return { ...EMPTY, ...j, posted_on: j.posted_on || "", closes_on: j.closes_on || "", title_en: en?.title || "", description_en: en?.description || "",
+    return { ...EMPTY, ...j, posted_on: j.posted_on || "", closes_on: j.closes_on || "", title_en: en?.title || "", description_en: en?.description || "", location_en: en?.location || "",
       english: en?.review_status || "Missing", english_approved: !!en?.approved } as Job;
   }, [id]);
   const [job, setJob] = useState<Job>(EMPTY);
@@ -84,7 +78,7 @@ export default function JobEdit() {
       title: job.title, description: job.description, department_id: job.department_id, location: job.location, employment_type: job.employment_type,
       status: job.status, is_published: job.is_published, posted_on: job.posted_on || null, closes_on: job.closes_on || null,
       salary_min: job.salary_min, salary_max: job.salary_max, salary_currency: job.salary_currency, salary_period: job.salary_period, show_salary: job.show_salary,
-      translations: [{ lang: "en", title: job.title_en, description: job.description_en, approved: job.english_approved }],
+      translations: [{ lang: "en", title: job.title_en, description: job.description_en, location: job.location_en, approved: job.english_approved }],
       screening: job.screening, stages: job.stages, row_version: job.row_version,
       role_profile_id: job.role_profile_id ?? 0, weights: job.weights,
     };
@@ -128,11 +122,13 @@ export default function JobEdit() {
               {lang === "ar" ? (
                 <div className="space-y-5" dir="rtl" lang="ar">
                   <TextInput label={t("jobs.title_ar")} value={job.title} maxLength={140} required onChange={(e) => set("title", e.target.value)} />
+                  <TextInput label={t("jobs.location_ar")} value={job.location} maxLength={140} onChange={(e) => set("location", e.target.value)} />
                   <RichText required label={t("jobs.description_ar")} hint={t("jobs.description_hint")} dir="rtl" value={job.description} onChange={(v) => set("description", v)} />
                 </div>
               ) : (
                 <div className="space-y-5" dir="ltr" lang="en">
                   <TextInput label={t("jobs.title_en")} value={job.title_en} maxLength={140} onChange={(e) => set("title_en", e.target.value)} />
+                  <TextInput label={t("jobs.location_en")} hint={t("jobs.location_en_hint")} value={job.location_en} maxLength={140} onChange={(e) => set("location_en", e.target.value)} />
                   <RichText label={t("jobs.description_en")} dir="ltr" value={job.description_en} onChange={(v) => set("description_en", v)} />
                 </div>
               )}
@@ -145,18 +141,6 @@ export default function JobEdit() {
               <Toggle label={t("jobs.published")} checked={job.is_published} onChange={(v) => set("is_published", v)} />
               <SelectInput label={t("jobs.department")} value={job.department_id ?? ""} onChange={(e) => set("department_id", e.target.value ? Number(e.target.value) : null)}
                 options={[{ value: "", label: t("common.none") }, ...(lk?.departments || []).map((d) => ({ value: d.id, label: d.name }))]} />
-              {(() => {
-                const known = EMIRATES.find(([ar, en]) => ar === job.location || en.toLowerCase() === job.location.trim().toLowerCase());
-                const other = !known && job.location !== "";
-                return (
-                  <>
-                    <SelectInput label={t("jobs.location")} value={known ? known[0] : other ? "__other" : ""}
-                      onChange={(e) => set("location", e.target.value === "__other" ? " " : e.target.value)}
-                      options={[{ value: "", label: "" }, ...EMIRATES.map(([ar, en]) => ({ value: ar, label: panel === "en" ? en : ar })), { value: "__other", label: t("jobs.location_other") }]} />
-                    {other && <TextInput label={t("jobs.location_other")} hint={t("jobs.location_other_hint")} value={job.location.trim()} onChange={(e) => set("location", e.target.value || " ")} />}
-                  </>
-                );
-              })()}
               <SelectInput required label={t("jobs.employment_type")} value={job.employment_type} onChange={(e) => set("employment_type", e.target.value)}
                 options={["FullTime", "PartTime", "Contract", "Temporary", "Internship"].map((s) => ({ value: s, label: t(`emp.${s}`) }))} />
               <div className="grid grid-cols-2 gap-3">

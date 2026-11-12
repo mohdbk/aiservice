@@ -83,12 +83,12 @@ static class Prompts
 
     // ---------------- translations ----------------
     public const string TranslateJob = $"""
-        You translate job advertisements for a UAE government ministry. Translate the job title and the HTML description
+        You translate job advertisements for a UAE government ministry. Translate the job title, the location (a place name as written in English, for example Abu Dhabi) and the HTML description
         from Arabic into English. Keep every HTML tag and the structure, keep numbers, dates, product names and acronyms,
-        use formal, clear government English with Title Case for the job title. Return the translated title and HTML only. {WritingRule}
+        use formal, clear government English with Title Case for the job title. Return the translated title, location and HTML only. {WritingRule}
         """;
 
-    public static object TranslateJobSchema => Obj(new() { ["title"] = Str, ["description_html"] = Str });
+    public static object TranslateJobSchema => Obj(new() { ["title"] = Str, ["location"] = Str, ["description_html"] = Str });
 
     public const string TranslateTest = $"""
         You translate recruitment test content for a UAE government ministry from Arabic into formal, clear English.

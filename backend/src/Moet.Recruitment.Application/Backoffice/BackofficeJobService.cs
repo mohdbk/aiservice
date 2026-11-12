@@ -7,7 +7,7 @@ using Moet.Recruitment.Domain.Hiring;
 
 namespace Moet.Recruitment.Application.Backoffice;
 
-public sealed record TranslationInput(string Lang, string Title, string Description, bool Approved);
+public sealed record TranslationInput(string Lang, string Title, string Description, bool Approved, string? Location = null);
 
 public sealed record JobScreeningInput(int QuestionId, bool Required, string? Rule, string? Expected);
 
@@ -84,7 +84,7 @@ public sealed class BackofficeJobService(IAppDbContext db, ICodeGenerator codes,
         weights = new { cv = (int)j.WeightCv, tests = (int)j.WeightTests, interview = (int)j.WeightInterview, personality = (int)j.WeightPersonality },
         translations = j.Translations.Select(t => new
         {
-            lang = t.LanguageCode, title = t.Title, description = t.Description, review_status = t.ReviewStatus.ToString(),
+            lang = t.LanguageCode, title = t.Title, description = t.Description, location = t.Location, review_status = t.ReviewStatus.ToString(),
             approved = t.ReviewStatus == ReviewStatus.Approved,
         }).ToList(),
         criteria = j.Criteria.OrderBy(c => c.SortOrder).Select(c => new { c.Criterion, c.Weight, c.IsMustHave }).ToList(),
@@ -122,8 +122,7 @@ public sealed class BackofficeJobService(IAppDbContext db, ICodeGenerator codes,
         j.Title = TextUtil.Clip(input.Title?.Trim(), 140);
         j.Description = html.Clean(input.Description);
         j.DepartmentId = input.DepartmentId;
-        // An emirate is kept under its Arabic name, so it shows in either language; anything else as typed.
-        j.Location = Locations.Find(input.Location) is { } emirate ? emirate.Ar : TextUtil.Clip(input.Location?.Trim(), 140);
+        j.Location = TextUtil.NoEmDash(TextUtil.Clip(input.Location?.Trim(), 140));
         j.EmploymentType = Parse<EmploymentType>(input.EmploymentType, "employment_type");
         j.Status = Parse<JobStatus>(input.Status, "status");
         j.IsPublished = input.IsPublished;
@@ -207,6 +206,7 @@ public sealed class BackofficeJobService(IAppDbContext db, ICodeGenerator codes,
         }
         existing.Title = TextUtil.Clip(t.Title.Trim(), 140);
         existing.Description = desc;
+        if (t.Location != null) existing.Location = TextUtil.NoEmDash(TextUtil.Clip(t.Location.Trim(), 140));
         TranslationReview.Apply(existing, t.Approved, suggested, TextUtil.ContentHash(existing.Title, existing.Description), actor.Id, now);
     }
 
