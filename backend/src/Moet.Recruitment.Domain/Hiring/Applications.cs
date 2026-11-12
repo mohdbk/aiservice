@@ -24,6 +24,8 @@ public class JobApplication
     public ScreeningOutcome ScreeningOutcome { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    /// <summary>Set when the personal data was removed (retention or a deletion request); the record stays for reporting.</summary>
+    public DateTime? AnonymisedAt { get; set; }
     public byte[] RowVersion { get; set; } = [];
 
     public List<ScreeningAnswer> ScreeningAnswers { get; set; } = [];

@@ -52,6 +52,9 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
     public DbSet<AgentComponent> AgentComponents => Set<AgentComponent>();
     public DbSet<RoleProfile> RoleProfiles => Set<RoleProfile>();
     public DbSet<TypeNote> TypeNotes => Set<TypeNote>();
+    public DbSet<DataRequest> DataRequests => Set<DataRequest>();
+    public DbSet<ConsentRecord> ConsentRecords => Set<ConsentRecord>();
+    public DbSet<RetentionSetting> RetentionSettings => Set<RetentionSetting>();
     public DbSet<PersonalitySetting> PersonalitySettings => Set<PersonalitySetting>();
     public DbSet<AgentSetting> AgentSettings => Set<AgentSetting>();
     public DbSet<AgentRun> AgentRuns => Set<AgentRun>();
@@ -105,7 +108,7 @@ static class Audit
         typeof(JobOpening), typeof(JobOpeningTranslation), typeof(JobApplication), typeof(Interview), typeof(InterviewFeedback),
         typeof(JobOffer), typeof(Question), typeof(Assessment), typeof(Invitation), typeof(ScreeningQuestion), typeof(PortalSetting),
         typeof(PortalText), typeof(StaffUser), typeof(Department), typeof(InterviewRound), typeof(AgentComponent), typeof(AgentSetting), typeof(RoleProfile),
-        typeof(EmailSetting), typeof(EmailTemplate), typeof(DocumentTemplate), typeof(TypeNote), typeof(PersonalitySetting),
+        typeof(EmailSetting), typeof(EmailTemplate), typeof(DocumentTemplate), typeof(TypeNote), typeof(PersonalitySetting), typeof(DataRequest), typeof(RetentionSetting),
     ];
 
     static readonly HashSet<string> Secret = ["PasswordHash", "RowVersion", "Content", "ModelApiKeyProtected", "PasswordProtected"];

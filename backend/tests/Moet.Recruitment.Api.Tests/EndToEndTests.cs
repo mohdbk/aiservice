@@ -340,6 +340,26 @@ public class EndToEndTests
         Assert.Equal(3, kinds.GetProperty("kinds").GetArrayLength());
         Assert.Equal(3, kinds.GetProperty("items").EnumerateArray().Count(t => t.GetProperty("is_default").GetBoolean()));
 
+        // PDPL: the candidate gets a copy of their data and asks to delete their account; an administrator approves it and the
+        // application keeps its dates and statuses without the personal data. Retention settings are kept.
+        var myData = await Read(await portal.GetAsync($"/api/portal/my_data?email=layla@example.test&epoch={epoch}"));
+        Assert.Equal("layla@example.test", myData.GetProperty("message").GetProperty("account").GetProperty("email").GetString());
+        Assert.Equal(1, myData.GetProperty("message").GetProperty("consents").GetArrayLength());
+        var del = await Read(await portal.PostAsync("/api/portal/request_deletion", JsonBody(new { email = "layla@example.test", epoch, reason = "No longer looking" })));
+        Assert.False(del.GetProperty("message").GetProperty("already").GetBoolean());
+        var requests = await Read(await admin.GetAsync("/api/backoffice/data-requests?status=Open"));
+        var requestId = requests.GetProperty("items")[0].GetProperty("id").GetInt32();
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsync($"/api/backoffice/data-requests/{requestId}/decline", JsonBody(new { response = "" }))).StatusCode);
+        Assert.True((await admin.PostAsync($"/api/backoffice/data-requests/{requestId}/approve", JsonBody(new { response = "Done" }))).IsSuccessStatusCode);
+        var gone = await Read(await admin.GetAsync($"/api/backoffice/applicants/{applicantId}"));
+        Assert.Equal("Anonymised", gone.GetProperty("full_name").GetString());
+        Assert.Equal(HttpStatusCode.Unauthorized, (await portal.PostAsync("/api/portal/authenticate", JsonBody(new { email = "layla@example.test", password = "a-good-pass-123" }))).StatusCode);
+        var retention = await Read(await admin.GetAsync("/api/backoffice/data-protection"));
+        Assert.Equal(24, retention.GetProperty("unsuccessful_months").GetInt32());
+        Assert.True((await admin.PutAsync("/api/backoffice/data-protection", JsonBody(new { is_enabled = true, unsuccessful_months = 12, inactive_account_months = 36 }))).IsSuccessStatusCode);
+        Assert.True((await admin.PostAsync("/api/backoffice/data-protection/run", JsonBody(new { }))).IsSuccessStatusCode);
+        Assert.True((await admin.GetAsync("/api/backoffice/consents")).IsSuccessStatusCode);
+
         // Changes without the X-Admin header are refused.
         var plain = app.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
         Assert.Equal(HttpStatusCode.Forbidden, (await plain.PostAsync("/api/backoffice/sign-in", JsonBody(new { email = "x", password = "y" }))).StatusCode);

@@ -73,6 +73,7 @@ public sealed class PortalApplicationService(
                 AnswerText = ans?.Text ?? "", MeetsRequirement = ans?.Meets ?? (evaluation.NotMet.Contains(q.Key) ? false : null),
             });
         }
+        db.ConsentRecords.Add(new ConsentRecord { ApplicantAccountId = user.Id, Kind = ConsentRecord.Declaration, Granted = true, Detail = app.Code, At = now });
         app.Notes.Add(new ApplicationNote
         {
             Kind = NoteKind.System, Text = $"Applied via the career portal ({lang}). Applicant declaration recorded.",

@@ -183,6 +183,13 @@ public static class BackofficeEndpoints
         sys.MapPost("/staff", (StaffBody b, StaffAuthService s, CancellationToken ct) => s.SaveAsync(null, b.Email, b.FullName, b.Role, b.IsEnabled, b.Password, ct));
         sys.MapGet("/audit", ([AsParameters] ListQuery lq, string? record, string? action, string? key, DateOnly? from, DateOnly? to, SystemService s, CancellationToken ct) =>
             s.AuditAsync(lq, record, action, key, from, to, ct));
+        sys.MapGet("/data-protection", (DataProtectionService s, CancellationToken ct) => s.RetentionViewAsync(ct));
+        sys.MapPut("/data-protection", (RetentionInput b, DataProtectionService s, CancellationToken ct) => s.SaveRetentionAsync(b, ct));
+        sys.MapPost("/data-protection/run", async (DataProtectionService s, CancellationToken ct) => new { anonymised = await s.RunRetentionAsync(true, ct) });
+        sys.MapGet("/data-requests", ([AsParameters] ListQuery lq, string? status, string? kind, DataProtectionService s, CancellationToken ct) => s.RequestsAsync(lq, status, kind, ct));
+        sys.MapPost("/data-requests/{id:int}/approve", (int id, ResponseBody b, DataProtectionService s, CancellationToken ct) => s.ApproveAsync(id, b.Response, ct));
+        sys.MapPost("/data-requests/{id:int}/decline", (int id, ResponseBody b, DataProtectionService s, CancellationToken ct) => s.DeclineAsync(id, b.Response, ct));
+        sys.MapGet("/consents", ([AsParameters] ListQuery lq, string? kind, DataProtectionService s, CancellationToken ct) => s.ConsentsAsync(lq, kind, ct));
         sys.MapGet("/assistant-usage", (SystemService s, CancellationToken ct) => s.AssistantUsageAsync(ct));
         sys.MapPut("/assistant-usage/{staffId:int}", (int staffId, AssistantLimitBody b, SystemService s, CancellationToken ct) => s.SetAssistantLimitAsync(staffId, b.Limit, ct));
         sys.MapGet("/health", async (SystemService s, IHttpClientFactory http, IConfiguration cfg, CancellationToken ct) =>
@@ -224,3 +231,5 @@ public static class BackofficeEndpoints
 }
 
 public sealed record AssistantLimitBody(int? Limit);
+
+public sealed record ResponseBody(string? Response);

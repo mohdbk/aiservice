@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Moet.Recruitment.Application.Backoffice;
 using Moet.Recruitment.Application.Portal;
 using Moet.Recruitment.Domain.Common;
 using Moet.Recruitment.Infrastructure;
@@ -35,6 +36,7 @@ public static class PortalEndpoints
         var acc = sp.GetRequiredService<PortalAccountService>();
         var apps = sp.GetRequiredService<PortalApplicationService>();
         var asm = sp.GetRequiredService<PortalAssessmentService>();
+        var pdp = sp.GetRequiredService<DataProtectionService>();
         var post = HttpMethods.IsPost(ctx.Request.Method);
         try
         {
@@ -60,6 +62,9 @@ public static class PortalEndpoints
                 ("apply", true) => await apps.ApplyAsync(new ApplyInput(input["email"], input["epoch"], input["job"], input["phone"],
                     input["country"], input["cover_note"], input["declaration"], input["lang"], input["screening"],
                     input.File?.FileName, await BytesAsync(input.File, ct)), ct),
+                ("my_data", false) => await pdp.ExportAsync(await acc.RequireAsync(input["email"], input["epoch"], ct), ct),
+                ("data_requests", false) => await pdp.MyRequestsAsync(await acc.RequireAsync(input["email"], input["epoch"], ct), ct),
+                ("request_deletion", true) => await pdp.RequestDeletionAsync(await acc.RequireAsync(input["email"], input["epoch"], ct), input["reason"], ct),
                 ("assessments", false) => await asm.ListAsync(input["email"], input["epoch"], input["lang"], ct),
                 ("assessment", false) => await asm.DetailAsync(input["email"], input["epoch"], input["name"], input["lang"], ct),
                 ("start_assessment", true) => await asm.StartAsync(input["email"], input["epoch"], input["name"], input["lang"], ct),

@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Moet.Recruitment.Application.Assessments;
+using Moet.Recruitment.Application.Backoffice;
 using Moet.Recruitment.Application.Common;
 using Moet.Recruitment.Application.Portal;
 using Moet.Recruitment.Domain;
@@ -150,6 +151,9 @@ public sealed class JobWorker(IServiceScopeFactory scopes, ILogger<JobWorker> lo
             var old = now.AddDays(-30);
             await db.BackgroundJobs.Where(j => j.Status == BackgroundJobStatus.Done && j.CompletedAt < old).ExecuteDeleteAsync(ct);
             await db.EmailMessages.Where(m => m.Status == EmailStatus.Sent && m.SentAt < old).ExecuteDeleteAsync(ct);
+            // Retention (PDPL): old unsuccessful applications and inactive accounts are anonymised.
+            var n = await scope.ServiceProvider.GetRequiredService<DataProtectionService>().RunRetentionAsync(false, ct);
+            if (n > 0) log.LogInformation("Retention anonymised {Count} records", n);
         }
     }
 }

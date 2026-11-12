@@ -36,6 +36,7 @@ public class ApplicantAccount
     public DateTime? LockedUntil { get; set; }
     public DateTime? LastSignInAt { get; set; }
     public DateTime CreatedAt { get; set; }
+    public DateTime? AnonymisedAt { get; set; }
 
     /// <summary>A password reset signs the applicant out of every session.</summary>
     public void PasswordChanged()

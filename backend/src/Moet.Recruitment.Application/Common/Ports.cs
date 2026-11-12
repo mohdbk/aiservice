@@ -44,6 +44,9 @@ public interface IAppDbContext
     DbSet<AgentComponent> AgentComponents { get; }
     DbSet<RoleProfile> RoleProfiles { get; }
     DbSet<TypeNote> TypeNotes { get; }
+    DbSet<DataRequest> DataRequests { get; }
+    DbSet<ConsentRecord> ConsentRecords { get; }
+    DbSet<RetentionSetting> RetentionSettings { get; }
     DbSet<PersonalitySetting> PersonalitySettings { get; }
     DbSet<AgentSetting> AgentSettings { get; }
     DbSet<AgentRun> AgentRuns { get; }
