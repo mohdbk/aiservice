@@ -241,7 +241,13 @@ static class ModelMap
         m.Entity<TextSetting>(e => { e.ToTable("TextSetting", "ops"); e.Property(x => x.Id).ValueGeneratedNever(); });
         m.Entity<TextMessage>(e => e.ToTable("TextMessage", "ops"));
         m.Entity<AgentConversation>(e => { e.ToTable("AgentConversation", "ops"); e.HasKey(x => x.Thread); });
-        m.Entity<AgentAttachment>(e => { e.ToTable("AgentAttachment", "ops"); e.Property(x => x.Id).ValueGeneratedNever(); });
+        m.Entity<AgentAttachment>(e =>
+        {
+            e.ToTable("AgentAttachment", "ops");
+            e.Property(x => x.Id).ValueGeneratedNever();
+            // Known to EF so the file row is written first.
+            e.HasOne<StoredFile>().WithMany().HasForeignKey(x => x.FileId).OnDelete(DeleteBehavior.Restrict);
+        });
         m.Entity<HandOffSetting>(e => { e.ToTable("HandOffSetting", "ops"); e.Property(x => x.Id).ValueGeneratedNever(); });
         m.Entity<ConsentRecord>(e => e.ToTable("ConsentRecord", "ops"));
         m.Entity<RetentionSetting>(e => { e.ToTable("RetentionSetting", "ops"); e.Property(x => x.Id).ValueGeneratedNever(); });
