@@ -6,6 +6,15 @@ using Moet.Recruitment.Api.Hosting;
 using Moet.Recruitment.Application;
 using Moet.Recruitment.Infrastructure;
 
+// "--pdf-check <file>": renders a sample Arabic letter and lists the fonts found (CI runs it inside the container image).
+if (args.Length >= 2 && args[0] == "--pdf-check")
+{
+    var renderer = new QuestPdfRenderer(new ConfigurationBuilder().AddEnvironmentVariables().Build());
+    File.WriteAllBytes(args[1], renderer.Letter("MoET | Offer Letter", "# عرض عمل\n\nالسيدة سارة أحمد المحترمة،\n\nيسرنا أن نقدم لك عرض العمل لوظيفة محلل بيانات اقتصادية في وزارة الاقتصاد والسياحة، براتب شهري 25,000 درهم (Monthly salary AED 25,000).\n\nمع خالص التحية،\nفريق التوظيف", true, null));
+    Console.WriteLine("Fonts: " + string.Join(", ", QuestPdfRenderer.Registered));
+    return;
+}
+
 var builder = WebApplication.CreateBuilder(args);
 var cfg = builder.Configuration;
 builder.AddTelemetry("moet-recruitment-api", Moet.Recruitment.Infrastructure.AppMetrics.MeterName);

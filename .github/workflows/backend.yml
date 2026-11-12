@@ -64,5 +64,16 @@ jobs:
           API=http://localhost:5080 PORTAL_KEY=ci-portal-key:ci-portal-secret-0123456789 node ../backoffice/scripts/seed-demo.mjs || (tail -80 api.log; exit 1)
       - name: Container image builds
         run: docker build -t moet-recruitment-api .
+      - name: Letters in the image use the Arabic font
+        run: |
+          mkdir -p pdf-check && chmod 777 pdf-check
+          docker run --rm -v "$PWD/pdf-check:/out" moet-recruitment-api --pdf-check /out/letter.pdf | tee pdf-check/fonts.txt
+          grep -q "NotoKufiArabic" pdf-check/fonts.txt
+          grep -aq "Arabic" pdf-check/letter.pdf
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pdf-check
+          path: backend/pdf-check/
       - name: Schema scripts have no em dashes
         run: "! grep -rnI --exclude-dir=bin --exclude-dir=obj $'\\u2014' src/ tests/ || (echo 'em dash found' && exit 1)"
