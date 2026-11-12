@@ -36,7 +36,7 @@ public class TextTests
     [Fact]
     public void No_em_dashes_and_stable_reference()
     {
-        Assert.DoesNotContain(TextUtil.EmDash, TextUtil.NoEmDash("A — B—C"));
+        Assert.DoesNotContain(TextUtil.EmDash, TextUtil.NoEmDash("A \u2014 B\u2014C"));
         var created = new DateTime(2026, 3, 1);
         Assert.Equal(TextUtil.Reference("APP-2026-00001", created), TextUtil.Reference("APP-2026-00001", created));
         Assert.StartsWith("MOET-2026-", TextUtil.Reference("APP-2026-00001", created));

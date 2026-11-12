@@ -20,7 +20,7 @@ public static partial class TextUtil
     [GeneratedRegex(@"\p{IsArabic}")] private static partial Regex ArabicLetterRe();
     [GeneratedRegex(@"\p{L}")] private static partial Regex LetterRe();
 
-    public const string EmDash = "—";
+    public const string EmDash = "\u2014";
 
     public static bool IsRtl(string? lang) => RtlLangs.Contains((lang ?? "").Split('-')[0].ToLowerInvariant());
 

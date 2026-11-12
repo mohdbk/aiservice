@@ -44,4 +44,4 @@ jobs:
           TEST_DB_CONNECTION: "Server=localhost,1433;Database=MoetRecruitmentCi;User Id=sa;Password=Ci-Strong-Password-123;TrustServerCertificate=True;Encrypt=False"
         run: dotnet test tests/Moet.Recruitment.Api.Tests --no-build -c Release --logger "console;verbosity=normal"
       - name: Schema scripts have no em dashes
-        run: "! grep -rn $'\\u2014' src/ || (echo 'em dash found' && exit 1)"
+        run: "! grep -rnI --exclude-dir=bin --exclude-dir=obj $'\\u2014' src/ tests/ || (echo 'em dash found' && exit 1)"
