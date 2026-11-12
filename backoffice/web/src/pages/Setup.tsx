@@ -90,7 +90,7 @@ export function Rounds() {
 // ---------------- portal settings ----------------
 type SettingsData = {
   main_site_url: string; portal_url: string; default_language_code: string; allow_signup: boolean; require_email_verification: boolean; max_cv_mb: number;
-  auto_score_applications: boolean; assistant_enabled: boolean; languages: { code: string; native_name: string; is_enabled: boolean }[];
+  auto_score_applications: boolean; languages: { code: string; native_name: string; is_enabled: boolean }[];
 };
 
 export function Settings() {
@@ -127,7 +127,6 @@ export function Settings() {
             <Toggle label={t("setup.allow_signup")} checked={s.allow_signup} onChange={(v) => set("allow_signup", v)} />
             <Toggle label={t("setup.require_verification")} checked={s.require_email_verification} onChange={(v) => set("require_email_verification", v)} />
             <Toggle label={t("setup.auto_score")} checked={s.auto_score_applications} onChange={(v) => set("auto_score_applications", v)} />
-            <Toggle label={t("setup.assistant")} checked={s.assistant_enabled} onChange={(v) => set("assistant_enabled", v)} />
           </div>
         </Card>
       </div>

@@ -20,15 +20,24 @@ export type AgEvent =
 export const newId = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
 
 /** Starts a run and calls onEvent for every AG-UI event until the run ends. */
-export async function runAgent(threadId: string, messages: AgMessage[], lang: string, onEvent: (e: AgEvent) => void, signal?: AbortSignal) {
+export async function runAgent(threadId: string, messages: AgMessage[], lang: string, onEvent: (e: AgEvent) => void, signal?: AbortSignal,
+  screen?: Record<string, string | number>) {
+  const screenJson = screen ? JSON.stringify(screen) : "";
   let res: Response;
   try {
     res = await fetch("/api/backoffice/agent/run", {
       method: "POST",
       credentials: "same-origin",
       signal,
-      headers: { "Content-Type": "application/json", Accept: "text/event-stream", "X-Backoffice": "1", "X-Lang": lang },
-      body: JSON.stringify({ threadId, runId: newId(), messages, tools: [], context: [], state: {}, forwardedProps: {} }),
+      headers: {
+        "Content-Type": "application/json", Accept: "text/event-stream", "X-Backoffice": "1", "X-Lang": lang,
+        ...(screenJson ? { "X-Agent-Context": encodeURIComponent(screenJson) } : {}),
+      },
+      // The open screen also goes in AG-UI's context field; the agent reads it from the header the API forwards.
+      body: JSON.stringify({
+        threadId, runId: newId(), messages, tools: [], state: {}, forwardedProps: {},
+        context: screenJson ? [{ description: "The backoffice screen the user has open", value: screenJson }] : [],
+      }),
     });
   } catch (e) {
     if ((e as Error).name === "AbortError") return;

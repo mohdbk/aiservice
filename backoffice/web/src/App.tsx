@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useLocation, useParams } from "react-router-do
 import { Shell } from "./components/Shell";
 import { Loading } from "./components/ui";
 import { useAuth } from "./core";
+import AgentSettings from "./pages/AgentSettings";
 import Applicant from "./pages/Applicant";
 import Applicants from "./pages/Applicants";
 import Assistant from "./pages/Assistant";
@@ -58,6 +59,7 @@ function Guarded() {
         <Route path="setup/settings" element={<Settings />} />
         <Route path="setup/portal-text" element={<PortalText />} />
         <Route path="setup/staff" element={<Staff />} />
+        <Route path="setup/assistant" element={<AgentSettings />} />
         <Route path="setup/components" element={<Components />} />
         <Route path="setup/components/:id" element={<ComponentEdit />} />
         <Route path="*" element={<Navigate to={`/${lang}`} replace />} />

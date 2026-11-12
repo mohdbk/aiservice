@@ -117,3 +117,7 @@ html[lang|="ar"] [lang|="en"] { font-family: var(--font-inter), "Inter", sans-se
 /* Chat */
 .mh-chat-user { background: var(--color-primary-600); color: #fff; }
 .mh-chat-bot { background: #fff; border: 1px solid var(--color-aeblack-100); }
+
+/* assistant side panel */
+.mh-assistant-fab { position: fixed; z-index: 35; bottom: 1.25rem; inset-inline-end: 1.25rem; border-radius: 9999px; box-shadow: 0 8px 24px rgb(0 0 0 / .18); }
+.mh-chat-drawer { position: fixed; z-index: 45; top: 0; bottom: 0; inset-inline-end: 0; width: min(30rem, 100vw); display: flex; flex-direction: column; background: var(--color-whitely-50, #fff); box-shadow: 0 0 40px rgb(0 0 0 / .2); outline: none; }

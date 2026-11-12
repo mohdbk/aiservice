@@ -1,11 +1,12 @@
 import { Dialog, Menu } from "@base-ui/react";
 import {
   Briefcase, CalendarCheck, CaretDown, ChatCircleDots, ClipboardText, Exam, FileText, Gear, Handshake, Key, List, ListChecks,
-  Cube, SignOut, SquaresFour, Translate, TreeStructure, UserCircle, Users, UsersThree, X,
+  Cube, Robot, SignOut, SquaresFour, Translate, TreeStructure, UserCircle, Users, UsersThree, X,
 } from "@phosphor-icons/react";
 import { ReactNode, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { api, useAuth, useLang } from "../core";
+import { AgentChat } from "../agent/AgentChat";
 import { LangFlag } from "./flags";
 
 type Item = { to: string; label: string; icon: ReactNode; admin?: boolean; sys?: boolean };
@@ -41,6 +42,7 @@ function useNav(): { group?: string; items: Item[] }[] {
         { to: "/setup/rounds", label: t("nav.rounds"), icon: i(UsersThree), admin: true },
         { to: "/setup/settings", label: t("nav.settings"), icon: i(Gear), admin: true },
         { to: "/setup/portal-text", label: t("nav.portal_text"), icon: i(Translate), admin: true },
+        { to: "/setup/assistant", label: t("nav.agent_settings"), icon: i(Robot), admin: true },
         { to: "/setup/components", label: t("nav.components"), icon: i(Cube), admin: true },
         { to: "/setup/staff", label: t("nav.staff"), icon: i(Key), sys: true },
       ],
@@ -140,6 +142,29 @@ function UserMenu() {
   );
 }
 
+/** The assistant as a side panel on every page; it sees the screen behind it. */
+function AssistantPanel() {
+  const { t } = useLang();
+  const [open, setOpen] = useState(false);
+  return (
+    <Dialog.Root open={open} onOpenChange={setOpen} modal={false}>
+      <Dialog.Trigger className="aegov-btn mh-assistant-fab" aria-label={t("asst.title")}>
+        <ChatCircleDots size={24} aria-hidden="true" />
+        <span className="hidden sm:inline">{t("nav.assistant")}</span>
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Popup className="mh-chat-drawer">
+          <div className="flex items-center justify-between border-b border-aeblack-100 bg-white p-3">
+            <Dialog.Title className="inline-flex items-center gap-2 font-bold"><ChatCircleDots size={24} className="text-primary-600" aria-hidden="true" />{t("asst.title")}</Dialog.Title>
+            <Dialog.Close className="rounded p-1 hover:bg-aeblack-100" aria-label={t("app.close")}><X size={24} /></Dialog.Close>
+          </div>
+          <div className="min-h-0 flex-1"><AgentChat panel /></div>
+        </Dialog.Popup>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
+
 export function Shell({ children }: { children: ReactNode }) {
   const { t, lang, dir } = useLang();
   const [open, setOpen] = useState(false);
@@ -182,6 +207,7 @@ export function Shell({ children }: { children: ReactNode }) {
         </aside>
         <main id="main" className="min-w-0 flex-1 px-4 py-6 sm:px-8 sm:py-8">{children}</main>
       </div>
+      {!/\/assistant$/.test(loc.pathname) && <AssistantPanel />}
     </div>
   );
 }
