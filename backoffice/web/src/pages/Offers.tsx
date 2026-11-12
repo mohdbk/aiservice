@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { DataTable, useList } from "../components/DataTable";
 import { Printer } from "@phosphor-icons/react";
-import { ActionMenu, Badge, Button, ErrorState, Loading, Modal, PageHeader, SectionTabs, useSaving } from "../components/ui";
+import { ActionMenu, Badge, Bilingual, Button, ErrorState, LangSwitch, Loading, Modal, PageHeader, SectionTabs, useSaving } from "../components/ui";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
 import { OfferDialog } from "./Applicant";
 
@@ -67,7 +67,7 @@ export default function Offers() {
 /** The offer letter made from its template, in Arabic or English, ready to print or save as PDF. */
 function LetterDialog({ id, onClose }: { id: number; onClose: () => void }) {
   const { t, lang } = useLang();
-  const [l, setL] = useState<string>("");
+  const [l, setL] = useState<Bilingual | "">("");
   const res = useAsync(() => api<{ template_id: number | null; template: string; lang: string; html: string }>(`/offers/${id}/letter${l ? `?lang=${l}` : ""}`), [id, l]);
   const print = () => {
     const d = res.data;
@@ -92,12 +92,7 @@ function LetterDialog({ id, onClose }: { id: number; onClose: () => void }) {
     </>}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm">
         <span className="text-aeblack-500">{res.data?.template}</span>
-        <span className="inline-flex gap-1">
-          {["ar", "en"].map((x) => (
-            <button key={x} type="button" aria-pressed={shown === x} onClick={() => setL(x)}
-              className={`rounded-lg px-3 py-1 font-semibold ${shown === x ? "bg-primary-50 text-primary-800" : "text-aeblack-600"}`}>{x === "ar" ? "العربية" : "English"}</button>
-          ))}
-        </span>
+        <LangSwitch value={shown as Bilingual} onChange={setL} />
       </div>
       {res.loading && !res.data ? <Loading /> : res.error ? <ErrorState error={res.error} /> : !res.data?.html ? <p className="text-sm text-aeblack-500">{t("offer.no_template")}</p>
         : <div className="max-h-[60vh] overflow-auto rounded-xl border border-aeblack-100 bg-white p-5" dangerouslySetInnerHTML={{ __html: res.data.html }} />}

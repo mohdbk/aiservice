@@ -4,7 +4,7 @@ import {
 } from "@phosphor-icons/react";
 import { ReactNode, forwardRef, useEffect, useId, useRef, useState } from "react";
 import { ApiError, useLang } from "../core";
-import { FlagUae, FlagUs } from "./flags";
+import { FlagUae, FlagUs, LangFlag } from "./flags";
 
 // ---------------- buttons and layout ----------------
 type BtnProps = React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "outline" | "link" | "danger"; size?: "sm" | "md"; busy?: boolean; icon?: ReactNode };
@@ -340,4 +340,118 @@ export function useSaving() {
     }
   };
   return { busy, error, run, setError };
+}
+
+// ---------------- shared building blocks ----------------
+
+/** A field label with the language's flag, for Arabic and English versions of the same text. */
+export function FlagLabel({ lang, children }: { lang: "ar" | "en"; children: ReactNode }) {
+  return <span className="inline-flex items-center gap-2"><LangFlag lang={lang} />{children}</span>;
+}
+
+/** A small set of mutually exclusive choices shown as pills (a radio group). */
+export function Segmented<T extends string>({ label, value, options, onChange }: {
+  label: string; value: T; options: { value: T; label: ReactNode }[]; onChange: (v: T) => void;
+}) {
+  return (
+    <div role="radiogroup" aria-label={label} className="inline-flex rounded-xl bg-aeblack-50 p-1">
+      {options.map((o) => (
+        <button key={o.value} type="button" role="radio" aria-checked={value === o.value} onClick={() => onChange(o.value)}
+          className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold transition ${value === o.value ? "bg-white text-primary-800 shadow-sm" : "text-aeblack-600 hover:text-aeblack-900"}`}>
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Arabic or English, with flags. */
+export function LangSwitch({ value, onChange }: { value: Bilingual; onChange: (l: Bilingual) => void }) {
+  const { t } = useLang();
+  return <Segmented label={t("english.title")} value={value} onChange={onChange}
+    options={[{ value: "ar", label: <FlagLabel lang="ar"><span lang="ar">العربية</span></FlagLabel> }, { value: "en", label: <FlagLabel lang="en"><span lang="en">English</span></FlagLabel> }]} />;
+}
+
+/** A list of records inside a card: each row has a title (a button when it opens something), a line under it and badges. */
+export function RowList({ children }: { children: ReactNode }) {
+  return <ul className="-my-3 divide-y divide-aeblack-100">{children}</ul>;
+}
+
+export function Row({ title, sub, onOpen, aside }: { title: ReactNode; sub?: ReactNode; onOpen?: () => void; aside?: ReactNode }) {
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3">
+      <div className="min-w-0 flex-1">
+        {onOpen ? <button type="button" onClick={onOpen} className="text-start font-semibold text-primary-700 hover:underline">{title}</button>
+          : <span className="font-semibold text-aeblack-900">{title}</span>}
+        {sub && <div className="mt-0.5 text-sm text-aeblack-600">{sub}</div>}
+      </div>
+      {aside && <div className="flex flex-wrap items-center gap-2">{aside}</div>}
+    </li>
+  );
+}
+
+/** A field that opens a picker (for example the question picker): looks like an input, shows the current choice. */
+export function PickerField({ label, value, placeholder, onClick }: { label: ReactNode; value?: ReactNode; placeholder?: string; onClick: () => void }) {
+  const id = useId();
+  return (
+    <div>
+      <p id={id} className="mb-1 block text-sm font-semibold text-aeblack-800">{label}</p>
+      <button type="button" aria-labelledby={id} onClick={onClick}
+        className="flex w-full items-center justify-between gap-2 rounded-lg border border-aeblack-200 bg-white px-3 py-2.5 text-start text-sm hover:border-primary-500 focus-visible:border-primary-500">
+        <span className={`line-clamp-2 ${value ? "" : "text-aeblack-400"}`}>{value || placeholder}</span>
+        <CaretDown size={16} className="flex-none text-aeblack-500" aria-hidden="true" />
+      </button>
+    </div>
+  );
+}
+
+/** A number with its label, for summaries at the top of a page. */
+export function Stat({ label, value, hint }: { label: ReactNode; value: ReactNode; hint?: ReactNode }) {
+  return (
+    <div className="mc-surface rounded-2xl border border-aeblack-100 bg-white p-4">
+      <p className="text-sm text-aeblack-500">{label}</p>
+      <p className="mt-1 text-3xl font-bold tabular-nums text-aeblack-900" dir="ltr">{value}</p>
+      {hint && <p className="mt-1 text-xs text-aeblack-500">{hint}</p>}
+    </div>
+  );
+}
+
+/**
+ * Plain text with {placeholders}: the text box, one chip per placeholder (inserted at the cursor) and a live preview
+ * (blank line = paragraph, "# " = heading). Used by the email and offer letter templates.
+ */
+export function PlaceholderText({ label, hint, lang, value, onChange, placeholders, rows = 10, sample }: {
+  label: ReactNode; hint?: ReactNode; lang: Bilingual; value: string; onChange: (v: string) => void; placeholders: string[]; rows?: number;
+  sample?: (text: string) => string;
+}) {
+  const { t } = useLang();
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const dir = lang === "ar" ? "rtl" : "ltr";
+  const insert = (p: string) => {
+    const el = ref.current, token = `{${p}}`;
+    if (!el) return onChange(value + token);
+    const start = el.selectionStart ?? value.length, end = el.selectionEnd ?? value.length;
+    onChange(value.slice(0, start) + token + value.slice(end));
+    requestAnimationFrame(() => { el.focus(); el.setSelectionRange(start + token.length, start + token.length); });
+  };
+  const shown = sample ? sample(value) : value;
+  return (
+    <div className="space-y-3">
+      <TextArea ref={ref} label={label} hint={hint} dir={dir} rows={rows} value={value} onChange={(e) => onChange(e.target.value)} />
+      {placeholders.length > 0 && (
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("mail.placeholders")}>
+          {placeholders.map((p) => (
+            <button key={p} type="button" onClick={() => insert(p)} dir="ltr"
+              className="rounded-md bg-aeblack-50 px-2 py-1 font-mono text-xs text-aeblack-700 hover:bg-primary-50 hover:text-primary-800">{`{${p}}`}</button>
+          ))}
+        </div>
+      )}
+      <div className="rounded-xl border border-aeblack-100 bg-whitely-50 p-4 text-sm" dir={dir} lang={lang}>
+        <p className="mb-2 text-xs font-semibold text-aeblack-500">{t("mail.preview")}</p>
+        {shown.split(/\n\s*\n/).filter((x) => x.trim()).map((para, i) => para.trim().startsWith("# ")
+          ? <h3 key={i} className="mb-3 text-lg font-bold">{para.trim().slice(2)}</h3>
+          : <p key={i} className="mb-3 whitespace-pre-line last:mb-0">{para}</p>)}
+      </div>
+    </div>
+  );
 }

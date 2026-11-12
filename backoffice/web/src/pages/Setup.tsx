@@ -2,8 +2,7 @@ import { FloppyDisk, Plus } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { DataTable, useList } from "../components/DataTable";
-import { LangFlag } from "../components/flags";
-import { Badge, Button, Card, ErrorState, Loading, Modal, PageHeader, SectionTabs, SelectInput, TextArea, TextInput, Toggle, useSaving } from "../components/ui";
+import { Badge, Button, Card, ErrorState, FlagLabel, Loading, Modal, PageHeader, SectionTabs, SelectInput, TextArea, TextInput, Toggle, useSaving } from "../components/ui";
 import { api, useAsync, useAuth, useLang, usePageTitle, useToast } from "../core";
 
 // ---------------- departments ----------------
@@ -37,8 +36,8 @@ export function Departments() {
         <Modal open onClose={() => setF(null)} title={f.id ? t("common.edit") : t("common.add")} footer={<>
           <Button variant="outline" onClick={() => setF(null)}>{t("common.cancel")}</Button><Button busy={busy} onClick={save}>{t("common.save")}</Button></>}>
           {error && <ErrorState error={error} />}
-          <TextInput label={<span className="inline-flex items-center gap-2"><LangFlag lang="ar" />{t("setup.name_ar")}</span>} dir="rtl" value={f.name || ""} onChange={(e) => setF({ ...f, name: e.target.value })} />
-          <TextInput label={<span className="inline-flex items-center gap-2"><LangFlag lang="en" />{t("setup.name_en")}</span>} dir="ltr" value={f.name_en || ""} onChange={(e) => setF({ ...f, name_en: e.target.value })} />
+          <TextInput label={<FlagLabel lang="ar">{t("setup.name_ar")}</FlagLabel>} dir="rtl" value={f.name || ""} onChange={(e) => setF({ ...f, name: e.target.value })} />
+          <TextInput label={<FlagLabel lang="en">{t("setup.name_en")}</FlagLabel>} dir="ltr" value={f.name_en || ""} onChange={(e) => setF({ ...f, name_en: e.target.value })} />
           <Toggle label={t("common.active")} checked={f.is_active ?? true} onChange={(v) => setF({ ...f, is_active: v })} />
         </Modal>
       )}
@@ -157,8 +156,8 @@ export function PortalText() {
     <>
       <PageHeader title={t("setup.portal_text")} subtitle={t("setup.portal_text_hint")} />
       <SectionTabs value={lang} onChange={setLang} tabs={[
-        { value: "ar", label: <span className="inline-flex items-center gap-2"><LangFlag lang="ar" />العربية</span> },
-        { value: "en", label: <span className="inline-flex items-center gap-2"><LangFlag lang="en" />English</span> },
+        { value: "ar", label: <FlagLabel lang="ar"><span lang="ar">العربية</span></FlagLabel> },
+        { value: "en", label: <FlagLabel lang="en"><span lang="en">English</span></FlagLabel> },
       ]} />
       <DataTable list={list} rowKey={(r) => r.key}
         filters={[{ key: "changed", label: t("setup.your_text"), options: [{ value: "1", label: t("common.yes") }] }]}

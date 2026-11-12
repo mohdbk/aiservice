@@ -1,8 +1,10 @@
 import { ArrowClockwise, EnvelopeSimple, FloppyDisk, PaperPlaneTilt, Plus, Trash } from "@phosphor-icons/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { DataTable, useList } from "../components/DataTable";
-import { LangFlag } from "../components/flags";
-import { ActionMenu, Badge, Button, Card, Empty, ErrorState, Loading, Modal, Note, PageHeader, SectionTabs, TextArea, TextInput, Toggle, useSaving } from "../components/ui";
+import {
+  ActionMenu, Badge, Bilingual, Button, Card, Empty, ErrorState, FlagLabel, LangSwitch, Loading, Modal, Note, PageHeader, PlaceholderText, Row, RowList, SectionTabs,
+  TextArea, TextInput, Toggle, useSaving,
+} from "../components/ui";
 import { api, useAsync, useAuth, useLang, usePageTitle, useToast } from "../core";
 
 type TestResult = { ok: boolean; server: string; error?: string };
@@ -12,7 +14,7 @@ function TestEmail({ path, open, onClose }: { path: string; open: boolean; onClo
   const { t, lang } = useLang();
   const { me } = useAuth();
   const [to, setTo] = useState(me?.email || "");
-  const [l, setL] = useState(lang);
+  const [l, setL] = useState<Bilingual>(lang);
   const [result, setResult] = useState<TestResult | null>(null);
   const { busy, error, run } = useSaving();
   const send = async () => {
@@ -27,13 +29,7 @@ function TestEmail({ path, open, onClose }: { path: string; open: boolean; onClo
     </>}>
       {error && <ErrorState error={error} />}
       <TextInput label={t("mail.test_to")} type="email" dir="ltr" value={to} onChange={(e) => setTo(e.target.value)} />
-      <div className="flex gap-2">
-        {["ar", "en"].map((x) => (
-          <button key={x} type="button" aria-pressed={l === x} onClick={() => setL(x as typeof lang)}
-            className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold ${l === x ? "border-primary-600 bg-primary-50 text-primary-800" : "border-aeblack-200"}`}>
-            <LangFlag lang={x} />{x === "ar" ? "العربية" : "English"}</button>
-        ))}
-      </div>
+      <LangSwitch value={l} onChange={setL} />
       {result && (result.ok ? <Note>{t("mail.test_ok", { server: result.server })}</Note>
         : <Note tone="warning">{t("mail.test_failed", { server: result.server })} <span dir="ltr" className="block break-all font-mono text-xs">{result.error}</span></Note>)}
     </Modal>
@@ -100,8 +96,8 @@ export function EmailServer() {
           <div className="space-y-4">
             <TextInput label={t("mail.from_address")} type="email" dir="ltr" value={s.from_address} onChange={(e) => set("from_address", e.target.value)} />
             <TextInput label={t("mail.from_name")} value={s.from_name} onChange={(e) => set("from_name", e.target.value)} />
-            <TextArea label={<span className="inline-flex items-center gap-2"><LangFlag lang="ar" />{t("mail.signature_ar")}</span>} dir="rtl" rows={3} value={s.signature_ar} onChange={(e) => set("signature_ar", e.target.value)} />
-            <TextArea label={<span className="inline-flex items-center gap-2"><LangFlag lang="en" />{t("mail.signature_en")}</span>} dir="ltr" rows={3} value={s.signature_en} onChange={(e) => set("signature_en", e.target.value)} />
+            <TextArea label={<FlagLabel lang="ar">{t("mail.signature_ar")}</FlagLabel>} dir="rtl" rows={3} value={s.signature_ar} onChange={(e) => set("signature_ar", e.target.value)} />
+            <TextArea label={<FlagLabel lang="en">{t("mail.signature_en")}</FlagLabel>} dir="ltr" rows={3} value={s.signature_en} onChange={(e) => set("signature_en", e.target.value)} />
           </div>
         </Card>
       </div>
@@ -129,36 +125,18 @@ function fill(text: string, ar: boolean) {
   return text.replace(/\{([a-z_]+)\}/g, (m, k) => (k === "link" ? "[ ... ]" : SAMPLE[k] ? SAMPLE[k][ar ? 0 : 1] : m));
 }
 
-/** One language's subject and body, with placeholder chips that insert at the cursor and a live preview. */
+/** One language's subject and body, with placeholder chips and a preview filled with sample values. */
 function TemplateText({ lang, subject, body, placeholders, onSubject, onBody }: {
-  lang: "ar" | "en"; subject: string; body: string; placeholders: string[]; onSubject: (v: string) => void; onBody: (v: string) => void;
+  lang: Bilingual; subject: string; body: string; placeholders: string[]; onSubject: (v: string) => void; onBody: (v: string) => void;
 }) {
   const { t } = useLang();
-  const ref = useRef<HTMLTextAreaElement>(null);
   const ar = lang === "ar";
-  const insert = (p: string) => {
-    const el = ref.current;
-    const token = `{${p}}`;
-    if (!el) return onBody(body + token);
-    const start = el.selectionStart ?? body.length, end = el.selectionEnd ?? body.length;
-    onBody(body.slice(0, start) + token + body.slice(end));
-    requestAnimationFrame(() => { el.focus(); el.setSelectionRange(start + token.length, start + token.length); });
-  };
   return (
     <div className="space-y-3">
-      <p className="inline-flex items-center gap-2 font-semibold"><LangFlag lang={lang} />{ar ? "العربية" : "English"}</p>
-      <TextInput label={t("mail.subject")} dir={ar ? "rtl" : "ltr"} value={subject} onChange={(e) => onSubject(e.target.value)} />
-      <TextArea ref={ref} label={t("mail.body")} hint={t("mail.body_hint")} dir={ar ? "rtl" : "ltr"} rows={10} value={body} onChange={(e) => onBody(e.target.value)} />
-      <div className="flex flex-wrap gap-1.5" aria-label={t("mail.placeholders")}>
-        {placeholders.map((p) => (
-          <button key={p} type="button" onClick={() => insert(p)} dir="ltr" className="rounded-md bg-aeblack-50 px-2 py-1 font-mono text-xs text-aeblack-700 hover:bg-primary-50">{`{${p}}`}</button>
-        ))}
-      </div>
-      <div className="rounded-xl border border-aeblack-100 bg-whitely-100 p-4 text-sm" dir={ar ? "rtl" : "ltr"} lang={lang}>
-        <p className="mb-2 text-xs font-semibold text-aeblack-500">{t("mail.preview")}</p>
-        <p className="mb-3 font-semibold">{fill(subject, ar)}</p>
-        {fill(body, ar).split(/\n\s*\n/).map((para, i) => <p key={i} className="mb-3 whitespace-pre-line">{para}</p>)}
-      </div>
+      <TextInput label={<FlagLabel lang={lang}>{t("mail.subject")}</FlagLabel>} dir={ar ? "rtl" : "ltr"} value={subject} onChange={(e) => onSubject(e.target.value)}
+        hint={subject && <span dir={ar ? "rtl" : "ltr"}>{fill(subject, ar)}</span>} />
+      <PlaceholderText label={<FlagLabel lang={lang}>{t("mail.body")}</FlagLabel>} hint={t("mail.body_hint")} lang={lang} value={body} onChange={onBody}
+        placeholders={placeholders} sample={(x) => fill(x, ar)} />
     </div>
   );
 }
@@ -190,19 +168,14 @@ export function EmailTemplates() {
   const rows = list.data?.items || [];
   const section = (title: string, items: TemplateRow[], hint: string) => (
     <Card title={title}>
-      <p className="mb-3 text-sm text-aeblack-500">{hint}</p>
+      <p className="mb-4 text-sm text-aeblack-500">{hint}</p>
       {items.length === 0 ? <Empty /> : (
-        <ul className="divide-y divide-aeblack-100">
+        <RowList>
           {items.map((r) => (
-            <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-              <div className="min-w-0">
-                <button type="button" className="font-semibold text-primary-700" onClick={() => open(r.id)}>{en ? r.name_en : r.name_ar}</button>
-                <p className="truncate text-sm text-aeblack-600">{en ? r.subject_en : r.subject_ar}</p>
-              </div>
-              <Badge tone={r.is_enabled ? "green" : "gray"}>{r.is_enabled ? t("mail.on") : t("mail.off")}</Badge>
-            </li>
+            <Row key={r.id} title={en ? r.name_en : r.name_ar} onOpen={() => open(r.id)} sub={<span className="line-clamp-1">{en ? r.subject_en : r.subject_ar}</span>}
+              aside={<Badge tone={r.is_enabled ? "green" : "gray"}>{r.is_enabled ? t("mail.on") : t("mail.off")}</Badge>} />
           ))}
-        </ul>
+        </RowList>
       )}
     </Card>
   );
@@ -227,8 +200,8 @@ export function EmailTemplates() {
           {error && <ErrorState error={error} />}
           {f.event && <Note>{t(`mail.event_hint.${f.event}`)}</Note>}
           <div className="grid gap-3 sm:grid-cols-2">
-            <TextInput label={<span className="inline-flex items-center gap-2"><LangFlag lang="ar" />{t("setup.name_ar")}</span>} dir="rtl" value={f.name_ar} onChange={(e) => setF({ ...f, name_ar: e.target.value })} />
-            <TextInput label={<span className="inline-flex items-center gap-2"><LangFlag lang="en" />{t("setup.name_en")}</span>} dir="ltr" value={f.name_en} onChange={(e) => setF({ ...f, name_en: e.target.value })} />
+            <TextInput label={<FlagLabel lang="ar">{t("setup.name_ar")}</FlagLabel>} dir="rtl" value={f.name_ar} onChange={(e) => setF({ ...f, name_ar: e.target.value })} />
+            <TextInput label={<FlagLabel lang="en">{t("setup.name_en")}</FlagLabel>} dir="ltr" value={f.name_en} onChange={(e) => setF({ ...f, name_en: e.target.value })} />
           </div>
           {!f.event && <TextInput label={t("mail.key")} hint={t("mail.key_hint")} dir="ltr" value={f.key} onChange={(e) => setF({ ...f, key: e.target.value })} />}
           <Toggle label={t("mail.enabled")} hint={f.required ? t("mail.required_hint") : undefined} checked={f.is_enabled} onChange={(v) => !f.required && setF({ ...f, is_enabled: v })} />

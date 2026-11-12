@@ -4,8 +4,7 @@ import {
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { A2Surface, A2Surfaces, applyMessages, writeData } from "../agent/a2ui";
-import { LangFlag } from "../components/flags";
-import { ActionMenu, Button, Card, ErrorState, Loading, Note, PageHeader, SectionTabs, SelectInput, TextArea, TextInput, Toggle, useSaving } from "../components/ui";
+import { ActionMenu, Button, Card, ErrorState, FlagLabel, Loading, Note, PageHeader, SectionTabs, SelectInput, TextArea, TextInput, Toggle, useSaving } from "../components/ui";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
 import { ACTIONS } from "./Components";
 import { useLookups } from "./JobEdit";
@@ -102,7 +101,7 @@ function BiInputs({ label, value, onChange, long }: { label: string; value: L; o
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       {(["ar", "en"] as const).map((l) => (
-        <Input key={l} label={<span className="inline-flex items-center gap-2"><LangFlag lang={l} />{label} ({t(`comp.lang.${l}`)})</span>}
+        <Input key={l} label={<FlagLabel lang={l}>{label} ({t(`comp.lang.${l}`)})</FlagLabel>}
           dir={l === "ar" ? "rtl" : "ltr"} lang={l} value={value[l]} {...(long ? { rows: 2 } : {})}
           onChange={(e: React.ChangeEvent<HTMLInputElement & HTMLTextAreaElement>) => onChange({ ...value, [l]: e.target.value })} />
       ))}
@@ -136,9 +135,9 @@ function FieldEditor({ field, onChange, editable }: { field: FieldNode; onChange
             {options.map((o, i) => (
               <div key={i} className="grid items-end gap-2 sm:grid-cols-[8rem_1fr_1fr_auto]">
                 <TextInput label={t("comp.option_value")} dir="ltr" value={o.value} onChange={(e) => onChange({ ...field, options: options.map((x, k) => (k === i ? { ...x, value: e.target.value } : x)) })} />
-                <TextInput label={<span className="inline-flex items-center gap-2"><LangFlag lang="ar" />{t("comp.option_label")}</span>} dir="rtl" value={o.label.ar}
+                <TextInput label={<FlagLabel lang="ar">{t("comp.option_label")}</FlagLabel>} dir="rtl" value={o.label.ar}
                   onChange={(e) => onChange({ ...field, options: options.map((x, k) => (k === i ? { ...x, label: { ...x.label, ar: e.target.value } } : x)) })} />
-                <TextInput label={<span className="inline-flex items-center gap-2"><LangFlag lang="en" />{t("comp.option_label")}</span>} dir="ltr" value={o.label.en}
+                <TextInput label={<FlagLabel lang="en">{t("comp.option_label")}</FlagLabel>} dir="ltr" value={o.label.en}
                   onChange={(e) => onChange({ ...field, options: options.map((x, k) => (k === i ? { ...x, label: { ...x.label, en: e.target.value } } : x)) })} />
                 <Button variant="link" className="pb-3" aria-label={t("common.remove")} onClick={() => onChange({ ...field, options: options.filter((_, k) => k !== i) })}><Trash size={20} /></Button>
               </div>
@@ -244,8 +243,8 @@ export default function ComponentEdit() {
           <Card title={t("comp.details")}>
             <div className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-2">
-                <TextInput label={<span className="inline-flex items-center gap-2"><LangFlag lang="ar" />{t("comp.name")}</span>} dir="rtl" value={f.name} onChange={(e) => set("name", e.target.value)} />
-                <TextInput label={<span className="inline-flex items-center gap-2"><LangFlag lang="en" />{t("comp.name_en")}</span>} dir="ltr" value={f.name_en} onChange={(e) => set("name_en", e.target.value)} />
+                <TextInput label={<FlagLabel lang="ar">{t("comp.name")}</FlagLabel>} dir="rtl" value={f.name} onChange={(e) => set("name", e.target.value)} />
+                <TextInput label={<FlagLabel lang="en">{t("comp.name_en")}</FlagLabel>} dir="ltr" value={f.name_en} onChange={(e) => set("name_en", e.target.value)} />
               </div>
               <div className="grid gap-3 sm:grid-cols-3">
                 <TextInput label={t("comp.key")} dir="ltr" value={f.key} hint={t("comp.key_hint")}
@@ -318,8 +317,8 @@ export default function ComponentEdit() {
         <div className="lg:sticky lg:top-24 lg:self-start">
           <Card title={t("comp.preview")}>
             <SectionTabs value={previewLang} onChange={(v) => setPreviewLang(v as "ar" | "en")} tabs={[
-              { value: "ar", label: <span className="inline-flex items-center gap-2"><LangFlag lang="ar" /><span lang="ar">العربية</span></span> },
-              { value: "en", label: <span className="inline-flex items-center gap-2"><LangFlag lang="en" /><span lang="en">English</span></span> },
+              { value: "ar", label: <FlagLabel lang="ar"><span lang="ar">العربية</span></FlagLabel> },
+              { value: "en", label: <FlagLabel lang="en"><span lang="en">English</span></FlagLabel> },
             ]} />
             <div dir={previewLang === "ar" ? "rtl" : "ltr"} lang={previewLang} className="rounded-2xl bg-whitely-50 p-3">
               <div className="mh-chat-bot rounded-2xl px-4 py-3 text-sm">

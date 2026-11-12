@@ -1,8 +1,7 @@
 import { Plus, Trash } from "@phosphor-icons/react";
 import { useState } from "react";
-import { LangFlag } from "../components/flags";
 import { MODELS, SUM_BANDS } from "../components/personality";
-import { Badge, Button, Card, Empty, ErrorState, Loading, Modal, PageHeader, SelectInput, TextInput, Toggle, useSaving } from "../components/ui";
+import { Badge, Button, Card, Empty, ErrorState, FlagLabel, Loading, Modal, PageHeader, Row, RowList, SelectInput, TextInput, Toggle, useSaving } from "../components/ui";
 import { api, useAsync, useAuth, useLang, usePageTitle, useToast } from "../core";
 
 type Profile = {
@@ -65,21 +64,14 @@ export default function RoleProfiles() {
           return (
             <Card key={model} title={t(`roles.model.${model}`)}>
               {rows.length === 0 ? <Empty /> : (
-                <ul className="divide-y divide-aeblack-100">
+                <RowList>
                   {rows.map((r) => (
-                    <li key={r.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                      <div className="min-w-0">
-                        {canEdit ? <button type="button" className="font-semibold text-primary-700" onClick={() => setF({ ...r })}>{en ? r.name_en : r.name_ar}</button>
-                          : <span className="font-semibold">{en ? r.name_en : r.name_ar}</span>}
-                        <p className="mt-1 text-sm text-aeblack-600">
-                          {model === "WorkplaceType16" ? <span dir="ltr">{r.types.join(" · ")}</span>
-                            : Object.entries(r.weights).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${traitName(model, k).split(" (")[0]} ${v}%`).join(" · ")}
-                        </p>
-                      </div>
-                      {!r.is_active && <Badge>{t("common.inactive")}</Badge>}
-                    </li>
+                    <Row key={r.id} title={en ? r.name_en : r.name_ar} onOpen={canEdit ? () => setF({ ...r }) : undefined}
+                      sub={model === "WorkplaceType16" ? <span dir="ltr" className="tracking-wide">{r.types.join(" · ")}</span>
+                        : Object.entries(r.weights).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${traitName(model, k).split(" (")[0]} ${v}%`).join(" · ")}
+                      aside={!r.is_active && <Badge>{t("common.inactive")}</Badge>} />
                   ))}
-                </ul>
+                </RowList>
               )}
             </Card>
           );
@@ -93,8 +85,8 @@ export default function RoleProfiles() {
           <Button variant="outline" onClick={() => setF(null)}>{t("common.cancel")}</Button>
           <Button busy={busy} onClick={save}>{t("common.save")}</Button></>}>
           {error && <ErrorState error={error} />}
-          <TextInput label={<span className="inline-flex items-center gap-2"><LangFlag lang="ar" />{t("setup.name_ar")}</span>} dir="rtl" value={f.name_ar} onChange={(e) => setF({ ...f, name_ar: e.target.value })} />
-          <TextInput label={<span className="inline-flex items-center gap-2"><LangFlag lang="en" />{t("setup.name_en")}</span>} dir="ltr" value={f.name_en} onChange={(e) => setF({ ...f, name_en: e.target.value })} />
+          <TextInput label={<FlagLabel lang="ar">{t("setup.name_ar")}</FlagLabel>} dir="rtl" value={f.name_ar} onChange={(e) => setF({ ...f, name_ar: e.target.value })} />
+          <TextInput label={<FlagLabel lang="en">{t("setup.name_en")}</FlagLabel>} dir="ltr" value={f.name_en} onChange={(e) => setF({ ...f, name_en: e.target.value })} />
           <SelectInput label={t("pers.model")} value={f.personality_model} disabled={!!f.id}
             onChange={(e) => setF({ ...f, personality_model: e.target.value, weights: {}, targets: {}, types: [] })}
             options={ROLE_MODELS.map((v) => ({ value: v, label: t(`roles.model.${v}`) }))} />

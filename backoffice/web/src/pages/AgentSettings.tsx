@@ -1,7 +1,6 @@
 import { FloppyDisk } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
-import { LangFlag } from "../components/flags";
-import { Badge, Button, Card, ErrorState, Loading, Note, PageHeader, TextArea, TextInput, Tick, Toggle, useSaving } from "../components/ui";
+import { Badge, Button, Card, ErrorState, FlagLabel, Loading, Note, PageHeader, Stat, TextArea, TextInput, Tick, Toggle, useSaving } from "../components/ui";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
 
 type Settings = {
@@ -54,10 +53,7 @@ export default function AgentSettings() {
       {error && <div className="mb-4"><ErrorState error={error} /></div>}
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         {(["runs_today", "people_today", "approved_today"] as const).map((k) => (
-          <div key={k} className="mc-surface rounded-2xl border border-aeblack-100 bg-white p-4">
-            <p className="text-sm text-aeblack-500">{t(`ags.usage.${k}`)}</p>
-            <p className="text-3xl font-bold tabular-nums" dir="ltr">{s.usage[k]}</p>
-          </div>
+          <Stat key={k} label={t(`ags.usage.${k}`)} value={s.usage[k]} />
         ))}
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
@@ -66,9 +62,9 @@ export default function AgentSettings() {
             <Toggle label={t("ags.enabled")} hint={t("ags.enabled_hint")} checked={s.is_enabled} onChange={(v) => set("is_enabled", v)} />
             <TextArea label={t("ags.instructions")} hint={t("ags.instructions_hint")} rows={5} dir="auto" value={s.extra_instructions}
               onChange={(e) => set("extra_instructions", e.target.value)} />
-            <TextArea label={<span className="inline-flex items-center gap-2"><LangFlag lang="ar" />{t("ags.examples_ar")}</span>} hint={t("ags.examples_hint")}
+            <TextArea label={<FlagLabel lang="ar">{t("ags.examples_ar")}</FlagLabel>} hint={t("ags.examples_hint")}
               rows={3} dir="rtl" lang="ar" value={s.examples_ar} onChange={(e) => set("examples_ar", e.target.value)} />
-            <TextArea label={<span className="inline-flex items-center gap-2"><LangFlag lang="en" />{t("ags.examples_en")}</span>} hint={t("ags.examples_hint")}
+            <TextArea label={<FlagLabel lang="en">{t("ags.examples_en")}</FlagLabel>} hint={t("ags.examples_hint")}
               rows={3} dir="ltr" lang="en" value={s.examples_en} onChange={(e) => set("examples_en", e.target.value)} />
           </div>
         </Card>

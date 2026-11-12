@@ -2,7 +2,7 @@ import { FloppyDisk, Plus, Shuffle, Trash } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
-  Bilingual, Button, Card, Empty, EnglishBadge, ErrorState, LangTabs, Loading, Modal, PageHeader, RichText, SelectInput, TextArea, TextInput, Toggle, useSaving,
+  Bilingual, Button, Card, Empty, EnglishBadge, ErrorState, LangTabs, Loading, Modal, PageHeader, Pager, PickerField, RichText, SelectInput, TextArea, TextInput, Toggle, useSaving,
 } from "../components/ui";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
 import { BIG_FIVE, MODEL_KEYS, NORMED, MODELS } from "../components/personality";
@@ -115,13 +115,7 @@ export default function TestEdit() {
                     {s.items.map((it, ii) => (
                       <li key={ii} className="grid gap-2 rounded-lg bg-whitely-100 p-3 sm:grid-cols-[1fr_6rem_auto] sm:items-end">
                         {it.question_id ? (
-                          <div>
-                            <p className="mb-1 text-sm font-semibold">{t("q.pick")}</p>
-                            <button type="button" onClick={() => setPicking({ si, ii })}
-                              className="w-full rounded-lg border border-aeblack-200 bg-white px-3 py-2.5 text-start text-sm hover:border-primary-500">
-                              {it.question ? plain(it.question) : `#${it.question_id}`}
-                            </button>
-                          </div>
+                          <PickerField label={t("q.pick")} value={it.question ? plain(it.question) : `#${it.question_id}`} onClick={() => setPicking({ si, ii })} />
                         ) : (
                           <div className="grid gap-2 sm:grid-cols-4">
                             <SelectInput label={t("q.category")} value={it.draw_category} onChange={(e) => setItem(si, ii, { draw_category: e.target.value })}
@@ -230,13 +224,7 @@ function QuestionPicker({ onPick, onClose }: { onPick: (q: { id: number; text: s
           ))}
         </ul>
       )}
-      {res.data && res.data.pages > 1 && (
-        <div className="flex items-center justify-between text-sm">
-          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}>{t("common.previous")}</Button>
-          <span dir="ltr">{page} / {res.data.pages}</span>
-          <Button variant="outline" size="sm" disabled={page >= res.data.pages} onClick={() => setPage(page + 1)}>{t("common.next")}</Button>
-        </div>
-      )}
+      {res.data && <Pager page={page} pages={res.data.pages} onPage={setPage} />}
     </Modal>
   );
 }
