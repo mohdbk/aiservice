@@ -18,7 +18,8 @@ public sealed record RenderedDocument(int TemplateId, string TemplateName, strin
 /// Document templates (recruitment admins) of every kind, and the documents made from them: offer letters for offers,
 /// interview letters for interviews, letters for applicants.
 /// </summary>
-public sealed class DocumentService(IAppDbContext db, ICurrentActor actor, IClock clock, PortalMailer mailer, ContentService content, IHtmlCleaner cleaner)
+public sealed class DocumentService(IAppDbContext db, ICurrentActor actor, IClock clock, PortalMailer mailer, ContentService content, IHtmlCleaner cleaner,
+    IPdfRenderer pdf)
 {
     static readonly CultureInfo Inv = CultureInfo.InvariantCulture;
 
@@ -180,6 +181,18 @@ public sealed class DocumentService(IAppDbContext db, ICurrentActor actor, ICloc
             : new { template_id = (int?)d.TemplateId, template = d.TemplateName, lang = d.Lang, text = d.Text, html = d.Html };
     }
 
+    /// <summary>The document as a PDF file (null when the kind has no active template).</summary>
+    public async Task<(byte[] Content, string FileName)?> PdfAsync(string kind, int recordId, int? templateId, string? lang, CancellationToken ct = default)
+    {
+        var d = await RenderAsync(kind, recordId, templateId, lang, ct);
+        if (d == null) return null;
+        var settings = await content.SettingsAsync(ct);
+        var logo = settings.LogoFileId is { } lid ? await db.StoredFiles.AsNoTracking().Where(f => f.Id == lid && f.ContentType != "image/svg+xml").Select(f => f.Content).FirstOrDefaultAsync(ct) : null;
+        var bytes = pdf.Letter(d.TemplateName, d.Text, d.Lang == "ar", logo);
+        var name = new string(d.TemplateName.Select(c => char.IsLetterOrDigit(c) ? c : '-').ToArray()).Trim('-');
+        return (bytes, $"{(name.Length == 0 ? "letter" : name)}-{recordId}.pdf");
+    }
+
     /// <summary>Emails the offer (email template "offer_sent") with the letter. False when the email is off or not set up.</summary>
     public async Task<bool> EmailOfferAsync(int offerId, CancellationToken ct = default)
     {
@@ -190,6 +203,11 @@ public sealed class DocumentService(IAppDbContext db, ICurrentActor actor, ICloc
         var letter = await RenderAsync(DocumentKinds.OfferLetter, offerId, null, l, ct);
         var hasDesign = letter != null && (await db.DocumentTemplates.AsNoTracking().Where(t => t.Id == letter.TemplateId)
             .Select(t => l == "ar" ? t.BodyHtmlAr : t.BodyHtmlEn).FirstAsync(ct)).Length > 0;
+        // The letter also goes as a PDF file when the email settings say so.
+        MailAttachment? file = null;
+        if (letter != null && await db.EmailSettings.AsNoTracking().Select(s => (bool?)s.AttachOfferPdf).FirstOrDefaultAsync(ct) != false
+            && await PdfAsync(DocumentKinds.OfferLetter, offerId, null, l, ct) is { } p)
+            file = new MailAttachment(p.FileName, "application/pdf", p.Content);
         return await mailer.QueueAsync(app.Email, app.FullName, lang, "offer_sent", "", new Dictionary<string, string>
         {
             ["job_title"] = app.JobOpening!.In(l).Title, ["position_title"] = o.PositionTitle,
@@ -197,6 +215,6 @@ public sealed class DocumentService(IAppDbContext db, ICurrentActor actor, ICloc
             ["offer_letter"] = letter?.Text ?? "",
             // The designed letter goes into the HTML part when the template has one.
             ["offer_letter_html"] = hasDesign ? letter!.Html : "",
-        }, ct);
+        }, ct, file);
     }
 }

@@ -51,7 +51,10 @@ public sealed class EmailOutboxWorker(IServiceScopeFactory scopes, ILogger<Email
         {
             try
             {
-                await sender.SendAsync(config, m.ToAddress, m.Subject, m.HtmlBody, m.TextBody, ct);
+                MailAttachment? file = null;
+                if (m.AttachmentFileId is { } fid && await db.StoredFiles.AsNoTracking().FirstOrDefaultAsync(f => f.Id == fid, ct) is { SizeBytes: > 0 } f)
+                    file = new MailAttachment(f.FileName, f.ContentType, f.Content);
+                await sender.SendAsync(config, m.ToAddress, m.Subject, m.HtmlBody, m.TextBody, ct, file);
                 m.Status = EmailStatus.Sent;
                 m.SentAt = clock.UtcNow;
                 m.Attempts++;
@@ -181,7 +184,10 @@ public sealed class JobWorker(IServiceScopeFactory scopes, ILogger<JobWorker> lo
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var old = now.AddDays(-30);
             await db.BackgroundJobs.Where(j => j.Status == BackgroundJobStatus.Done && j.CompletedAt < old).ExecuteDeleteAsync(ct);
+            // Sent emails older than 30 days go, with the files they carried.
+            var files = await db.EmailMessages.Where(m => m.Status == EmailStatus.Sent && m.SentAt < old && m.AttachmentFileId != null).Select(m => m.AttachmentFileId!.Value).ToListAsync(ct);
             await db.EmailMessages.Where(m => m.Status == EmailStatus.Sent && m.SentAt < old).ExecuteDeleteAsync(ct);
+            if (files.Count > 0) await db.StoredFiles.Where(f => files.Contains(f.Id)).ExecuteDeleteAsync(ct);
             // Retention (PDPL): old unsuccessful applications and inactive accounts are anonymised.
             var n = await scope.ServiceProvider.GetRequiredService<DataProtectionService>().RunRetentionAsync(false, ct);
             if (n > 0) log.LogInformation("Retention anonymised {Count} records", n);

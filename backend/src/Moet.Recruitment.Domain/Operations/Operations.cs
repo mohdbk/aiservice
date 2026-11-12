@@ -21,6 +21,8 @@ public class EmailMessage
     public string HtmlBody { get; set; } = "";
     /// <summary>The plain-text part, sent alongside the HTML for mail clients that show text only.</summary>
     public string TextBody { get; set; } = "";
+    /// <summary>A file sent with the email (for example the offer letter as PDF).</summary>
+    public Guid? AttachmentFileId { get; set; }
     public EmailStatus Status { get; set; } = EmailStatus.Queued;
     public int Attempts { get; set; }
     public DateTime NextAttemptAt { get; set; }

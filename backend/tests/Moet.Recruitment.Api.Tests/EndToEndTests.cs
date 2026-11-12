@@ -336,6 +336,11 @@ public class EndToEndTests
         // Offer letters: the standard template is the default.
         var offerTemplates = await Read(await admin.GetAsync("/api/backoffice/document-templates?kind=OfferLetter"));
         Assert.Contains(offerTemplates.GetProperty("items").EnumerateArray(), t => t.GetProperty("is_default").GetBoolean());
+        // Letters download as PDF (Arabic, right to left).
+        var letterPdf = await admin.GetAsync($"/api/backoffice/documents/ApplicantLetter/{applicantId}/pdf?lang=ar");
+        Assert.True(letterPdf.IsSuccessStatusCode, await letterPdf.Content.ReadAsStringAsync());
+        Assert.Equal("application/pdf", letterPdf.Content.Headers.ContentType!.MediaType);
+        Assert.StartsWith("%PDF", System.Text.Encoding.ASCII.GetString((await letterPdf.Content.ReadAsByteArrayAsync())[..4]));
         var kinds = await Read(await admin.GetAsync("/api/backoffice/document-templates"));
         Assert.Equal(3, kinds.GetProperty("kinds").GetArrayLength());
         Assert.Equal(3, kinds.GetProperty("items").EnumerateArray().Count(t => t.GetProperty("is_default").GetBoolean()));

@@ -1,4 +1,4 @@
-import { Printer } from "@phosphor-icons/react";
+import { FilePdf, Printer } from "@phosphor-icons/react";
 import { useState } from "react";
 import { api, useAsync, useLang } from "../core";
 import { Bilingual, Button, ErrorState, LangSwitch, Loading, Modal, SelectInput } from "./ui";
@@ -39,6 +39,9 @@ export function DocumentDialog({ kind, recordId, title, onClose, chooseTemplate 
   return (
     <Modal open onClose={onClose} title={title} footer={<>
       <Button variant="outline" onClick={onClose}>{t("common.close")}</Button>
+      <a className={`aegov-btn btn-outline ${res.data?.html ? "" : "pointer-events-none opacity-50"}`}
+        href={`/api/backoffice/documents/${kind}/${recordId}/pdf?${new URLSearchParams({ lang: res.data?.lang || l || lang, ...(template || res.data?.template_id ? { template: String(template || res.data?.template_id) } : {}) })}`}>
+        <FilePdf size={24} aria-hidden="true" />{t("doc.pdf")}</a>
       <Button onClick={() => res.data && printHtml(res.data.html, res.data.lang, title)} disabled={!res.data?.html} icon={<Printer size={24} aria-hidden="true" />}>{t("offer.print")}</Button>
     </>}>
       <div className="flex flex-wrap items-end justify-between gap-3">

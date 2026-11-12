@@ -1104,5 +1104,7 @@
  "asst.suggested": "مقترحات الآن",
  "asst.shared": "مشتركة",
  "dash.suggested": "الخطوات التالية المقترحة",
- "dash.ask_assistant": "اسأل المساعد"
+ "dash.ask_assistant": "اسأل المساعد",
+ "doc.pdf": "تنزيل PDF",
+ "mail.attach_offer_pdf": "إرفاق خطاب العرض بصيغة PDF مع رسائل العروض"
 }

@@ -1104,5 +1104,7 @@
  "asst.suggested": "Suggested Now",
  "asst.shared": "Shared",
  "dash.suggested": "Suggested Next Steps",
- "dash.ask_assistant": "Ask the Assistant"
+ "dash.ask_assistant": "Ask the Assistant",
+ "doc.pdf": "Download PDF",
+ "mail.attach_offer_pdf": "Attach the Offer Letter as PDF to Offer Emails"
 }

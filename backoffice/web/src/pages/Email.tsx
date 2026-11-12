@@ -40,7 +40,7 @@ function TestEmail({ path, open, onClose }: { path: string; open: boolean; onClo
 
 type Server = {
   host: string; port: number; use_tls: boolean; user_name: string; has_password: boolean; can_store_password: boolean; from_address: string; from_name: string;
-  signature_ar: string; signature_en: string; in_use: "Settings" | "Environment" | "None"; environment_host: string | null;
+  signature_ar: string; signature_en: string; attach_offer_pdf: boolean; in_use: "Settings" | "Environment" | "None"; environment_host: string | null;
 };
 
 export function EmailServer() {
@@ -58,7 +58,7 @@ export function EmailServer() {
   const set = <K extends keyof Server>(k: K, v: Server[K]) => setS({ ...s, [k]: v });
   const save = async () => {
     const body = { host: s.host, port: s.port, use_tls: s.use_tls, user_name: s.user_name, password: password || null, clear_password: clear,
-      from_address: s.from_address, from_name: s.from_name, signature_ar: s.signature_ar, signature_en: s.signature_en };
+      from_address: s.from_address, from_name: s.from_name, signature_ar: s.signature_ar, signature_en: s.signature_en, attach_offer_pdf: s.attach_offer_pdf };
     if (await run(() => api("/email-settings", { method: "PUT", body })) !== undefined) {
       toast(t("common.saved"));
       setPassword("");
@@ -98,6 +98,7 @@ export function EmailServer() {
             <TextInput label={t("mail.from_name")} value={s.from_name} onChange={(e) => set("from_name", e.target.value)} />
             <TextArea label={<FlagLabel lang="ar">{t("mail.signature_ar")}</FlagLabel>} dir="rtl" rows={3} value={s.signature_ar} onChange={(e) => set("signature_ar", e.target.value)} />
             <TextArea label={<FlagLabel lang="en">{t("mail.signature_en")}</FlagLabel>} dir="ltr" rows={3} value={s.signature_en} onChange={(e) => set("signature_en", e.target.value)} />
+            <Toggle label={t("mail.attach_offer_pdf")} checked={s.attach_offer_pdf} onChange={(v) => set("attach_offer_pdf", v)} />
           </div>
         </Card>
       </div>

@@ -12,6 +12,8 @@ COPY src/ src/
 RUN dotnet publish src/Moet.Recruitment.Api/Moet.Recruitment.Api.csproj -c Release -o /app --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
+# Fonts for PDF letters (Arabic and Latin), and fontconfig so they are found.
+RUN apt-get update && apt-get install -y --no-install-recommends fonts-noto-core fontconfig && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /app .
 ENV ASPNETCORE_HTTP_PORTS=8080 TRUST_PROXY=1

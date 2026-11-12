@@ -155,7 +155,7 @@ public sealed class EnvironmentMail(IConfiguration cfg) : IMailEnvironment
 public sealed class SmtpMailSender : IMailSender
 {
     /// <summary>multipart/alternative: plain text first, then HTML (mail clients show the richest part they support).</summary>
-    public async Task SendAsync(SmtpConfig c, string to, string subject, string html, string text, CancellationToken ct = default)
+    public async Task SendAsync(SmtpConfig c, string to, string subject, string html, string text, CancellationToken ct = default, MailAttachment? attachment = null)
     {
         using var smtp = new System.Net.Mail.SmtpClient(c.Host, c.Port)
         {
@@ -177,6 +177,8 @@ public sealed class SmtpMailSender : IMailSender
         }
         msg.SubjectEncoding = System.Text.Encoding.UTF8;
         msg.To.Add(to);
+        if (attachment != null)
+            msg.Attachments.Add(new System.Net.Mail.Attachment(new MemoryStream(attachment.Content), attachment.FileName, attachment.ContentType));
         await smtp.SendMailAsync(msg, ct);
     }
 }

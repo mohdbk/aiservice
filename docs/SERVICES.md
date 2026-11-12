@@ -31,6 +31,7 @@ Candidate browser  ->  Portal (Node)  --service key-->  API /api/portal
   - Email: `SMTP_*`.
   - Model for CV scoring and drafts: `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`.
   - Other: `OCR_URL`, `TIME_ZONE`, `COOKIE_SECURE`, `TRUST_PROXY`, `RUN_WORKERS`.
+  - PDF letters: `PDF_LICENSE` (`Community`, `Professional` or `Enterprise`). Letters are made with QuestPDF. Its Community licence is free only for organisations under USD 1M annual revenue, non-profits and open-source projects. Confirm with the Ministry's legal team whether a ministry qualifies, or buy a Professional or Enterprise licence and set this value. The image installs the Noto fonts for Arabic.
 - **Agent:** `BACKEND_URL`, `AGENT_KEY`, `LLM_*`. The agent's settings can also be changed in the backoffice under Setup › Assistant Settings.
 
 ## On-Prem

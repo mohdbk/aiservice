@@ -20,6 +20,8 @@ public class EmailSetting
     public string FromName { get; set; } = "";
     public string SignatureAr { get; set; } = "";
     public string SignatureEn { get; set; } = "";
+    /// <summary>The offer email carries the offer letter as a PDF file.</summary>
+    public bool AttachOfferPdf { get; set; } = true;
     public DateTime UpdatedAt { get; set; }
     public int? UpdatedByStaffId { get; set; }
 

@@ -102,6 +102,8 @@ public static class BackofficeEndpoints
         staff.MapPost("/offers", (OfferInput b, BackofficeInterviewService s, CancellationToken ct) => s.SaveOfferAsync(null, b, ct));
         staff.MapPut("/offers/{id:int}", (int id, OfferInput b, BackofficeInterviewService s, CancellationToken ct) => s.SaveOfferAsync(id, b, ct));
         staff.MapGet("/offers/{id:int}/letter", (int id, string? lang, DocumentService s, CancellationToken ct) => s.DocumentAsync("OfferLetter", id, null, lang, ct));
+        staff.MapGet("/documents/{kind}/{id:int}/pdf", async (string kind, int id, int? template, string? lang, DocumentService s, CancellationToken ct) =>
+            await s.PdfAsync(kind, id, template, lang, ct) is { } f ? Results.File(f.Content, "application/pdf", f.FileName) : Results.NotFound());
         staff.MapGet("/documents/{kind}/{id:int}", (string kind, int id, int? template, string? lang, DocumentService s, CancellationToken ct) =>
             s.DocumentAsync(kind, id, template, lang, ct));
         staff.MapGet("/document-templates", (string? kind, bool? active, DocumentService s, CancellationToken ct) => s.ListAsync(kind, active, ct));

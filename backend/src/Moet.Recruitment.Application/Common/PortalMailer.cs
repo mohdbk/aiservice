@@ -54,7 +54,7 @@ public sealed class PortalMailer(IAppDbContext db, ContentService content, ICloc
     /// template is switched off. The values fill the template's placeholders; {name} and {link} are always there.
     /// </summary>
     public async Task<bool> QueueAsync(string to, string name, string lang, string eventKey, string link,
-        IDictionary<string, string>? values = null, CancellationToken ct = default)
+        IDictionary<string, string>? values = null, CancellationToken ct = default, MailAttachment? attachment = null)
     {
         var template = await db.EmailTemplates.AsNoTracking().FirstOrDefaultAsync(t => t.Event == eventKey, ct);
         if (template is { IsEnabled: false }) return false;
@@ -80,9 +80,20 @@ public sealed class PortalMailer(IAppDbContext db, ContentService content, ICloc
         foreach (var (k, v) in values ?? new Dictionary<string, string>()) all[k] = v;
         subject = TextUtil.NoEmDash(EmailTemplates.Fill(subject, all));
         var (htmlPart, textPart) = Compose(body, template?.HtmlIn(lang == "ar" ? "ar" : "en"), all, subject, link, await SignatureAsync(lang, ct), TextUtil.IsRtl(lang));
+        Guid? fileId = null;
+        if (attachment != null)
+        {
+            fileId = Guid.NewGuid();
+            db.StoredFiles.Add(new StoredFile
+            {
+                Id = fileId.Value, FileName = attachment.FileName, ContentType = attachment.ContentType, SizeBytes = attachment.Content.Length,
+                Sha256 = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(attachment.Content)).ToLowerInvariant(), Content = attachment.Content,
+                CreatedAt = clock.UtcNow,
+            });
+        }
         db.EmailMessages.Add(new EmailMessage
         {
-            ToAddress = to, Subject = TextUtil.Clip(subject, 300), HtmlBody = htmlPart, TextBody = textPart,
+            ToAddress = to, Subject = TextUtil.Clip(subject, 300), HtmlBody = htmlPart, TextBody = textPart, AttachmentFileId = fileId,
             Status = EmailStatus.Queued, NextAttemptAt = clock.UtcNow, CreatedAt = clock.UtcNow,
         });
         return true;

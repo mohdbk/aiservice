@@ -7,7 +7,7 @@ using Moet.Recruitment.Domain.Operations;
 namespace Moet.Recruitment.Application.Backoffice;
 
 public sealed record EmailSettingInput(string? Host, int Port, bool UseTls, string? UserName, string? Password, bool ClearPassword,
-    string? FromAddress, string? FromName, string? SignatureAr, string? SignatureEn);
+    string? FromAddress, string? FromName, string? SignatureAr, string? SignatureEn, bool? AttachOfferPdf = null);
 public sealed record TestEmailInput(string? To, string? Lang);
 public sealed record EmailTemplateInput(string? Key, string? NameAr, string? NameEn, string? SubjectAr, string? BodyAr, string? SubjectEn, string? BodyEn,
     bool IsEnabled, string? RowVersion, string? BodyHtmlAr = null, string? BodyHtmlEn = null);
@@ -38,7 +38,7 @@ public sealed class BackofficeEmailService(IAppDbContext db, ICurrentActor actor
         {
             host = s.Host, port = s.Port, use_tls = s.UseTls, user_name = s.UserName, has_password = s.PasswordProtected.Length > 0,
             can_store_password = secrets.IsConfigured, from_address = s.FromAddress, from_name = s.FromName,
-            signature_ar = s.SignatureAr, signature_en = s.SignatureEn, updated_at = s.UpdatedAt,
+            signature_ar = s.SignatureAr, signature_en = s.SignatureEn, attach_offer_pdf = s.AttachOfferPdf, updated_at = s.UpdatedAt,
             in_use = current == null ? "None" : current.Source, environment_host = current?.Source == "Environment" ? current.Host : null,
         };
     }
@@ -56,6 +56,7 @@ public sealed class BackofficeEmailService(IAppDbContext db, ICurrentActor actor
         s.FromName = TextUtil.NoEmDash(TextUtil.Clip(input.FromName?.Trim(), 200));
         s.SignatureAr = TextUtil.NoEmDash(TextUtil.Clip(input.SignatureAr?.Trim(), 1000));
         s.SignatureEn = TextUtil.NoEmDash(TextUtil.Clip(input.SignatureEn?.Trim(), 1000));
+        if (input.AttachOfferPdf is { } attach) s.AttachOfferPdf = attach;
         s.UpdatedAt = clock.UtcNow;
         s.UpdatedByStaffId = actor.Id;
         s.Validate();

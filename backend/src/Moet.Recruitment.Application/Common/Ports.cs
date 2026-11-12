@@ -131,9 +131,18 @@ public interface ITextSender
     Task SendAsync(TextConfig config, string to, string body, CancellationToken ct = default);
 }
 
+/// <summary>A file sent with an email.</summary>
+public sealed record MailAttachment(string FileName, string ContentType, byte[] Content);
+
 public interface IMailSender
 {
-    Task SendAsync(SmtpConfig config, string to, string subject, string html, string text, CancellationToken ct = default);
+    Task SendAsync(SmtpConfig config, string to, string subject, string html, string text, CancellationToken ct = default, MailAttachment? attachment = null);
+}
+
+/// <summary>Lays a letter out as a PDF (Arabic right to left, English left to right).</summary>
+public interface IPdfRenderer
+{
+    byte[] Letter(string title, string text, bool rtl, byte[]? logo);
 }
 
 /// <summary>An OpenAI-compatible chat model, on-prem or hosted.</summary>
