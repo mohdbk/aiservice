@@ -44,14 +44,14 @@ jobs:
         run: |
           node e2e/fake-model.mjs > model.log 2>&1 &
           DB_CONNECTION="Server=localhost,1433;Database=MoetE2e;User Id=sa;Password=Ci-Strong-Password-123;TrustServerCertificate=True;Encrypt=False" \
-          PORTAL_API_KEY=e2e-key PORTAL_API_SECRET=e2e-secret-0123456789 PORTAL_URL=https://careers.example COOKIE_SECURE=0 RUN_WORKERS=0 \
+          PORTAL_API_KEY=e2e-portal-key PORTAL_API_SECRET=e2e-secret-0123456789 PORTAL_URL=https://careers.example COOKIE_SECURE=0 RUN_WORKERS=0 \
           AGENT_URL=http://localhost:5090 \
             dotnet backend/src/Moet.Recruitment.Api/bin/Release/net10.0/Moet.Recruitment.Api.dll --urls http://localhost:5080 > api.log 2>&1 &
           BACKEND_URL=http://localhost:5080 LLM_BASE_URL=http://localhost:9000/v1 LLM_MODEL=fake LLM_API_KEY=none \
             dotnet agent/src/Moet.Recruitment.Agent/bin/Release/net10.0/Moet.Recruitment.Agent.dll --urls http://localhost:5090 > agent.log 2>&1 &
           (cd backoffice/web && npx vite preview --host 127.0.0.1 > ../../web.log 2>&1 &)
           for i in $(seq 1 60); do curl -sf http://localhost:5080/healthz && curl -sf http://localhost:5090/healthz && curl -sf http://127.0.0.1:4173/ >/dev/null && break; sleep 2; done
-          API=http://localhost:5080 PORTAL_KEY=e2e-key:e2e-secret-0123456789 node backoffice/scripts/seed-demo.mjs
+          API=http://localhost:5080 PORTAL_KEY=e2e-portal-key:e2e-secret-0123456789 node backoffice/scripts/seed-demo.mjs
       - name: Assistant on a phone
         run: |
           mkdir -p e2e/run/shots && cd e2e/run && npm init -y >/dev/null && npm install playwright@1.49.1 --no-audit --no-fund >/dev/null

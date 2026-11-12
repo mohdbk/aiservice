@@ -84,8 +84,8 @@ function NavList({ onPick }: { onPick?: () => void }) {
 function Brand() {
   const { t, lang, to } = useLang();
   return (
-    <Link to={to("/")} className="flex items-center gap-3" dir="ltr" aria-label={`${t("app.ministry")}, ${t("app.badge")}`}>
-      <img src={lang === "ar" ? "/logo-ar.png" : "/logo-en.png"} alt="" width={906} height={227} className="mh-logo h-10 sm:h-12" />
+    <Link to={to("/")} className="flex min-w-0 shrink items-center gap-3" dir="ltr" aria-label={`${t("app.ministry")}, ${t("app.badge")}`}>
+      <img src={lang === "ar" ? "/logo-ar.png" : "/logo-en.png"} alt="" width={906} height={227} className="mh-logo h-9 sm:h-12" />
       <span className="hidden h-8 w-px bg-aeblack-200 sm:block" aria-hidden="true" />
       <span dir={lang === "ar" ? "rtl" : "ltr"} className="hidden rounded-full bg-primary-100 px-3 py-1 text-sm font-bold text-primary-800 sm:inline">{t("app.badge")}</span>
     </Link>
@@ -98,9 +98,9 @@ function LanguageSwitch() {
   const other = lang === "ar" ? "en" : "ar";
   const path = loc.pathname.replace(/^\/(ar|en)/, `/${other}`) + loc.search;
   return (
-    <Link to={path} lang={other} className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-aeblack-700 hover:bg-aeblack-100">
+    <Link to={path} lang={other} aria-label={t("lang.switch")} className="inline-flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold text-aeblack-700 hover:bg-aeblack-100 sm:px-3">
       <LangFlag lang={other} />
-      {t("lang.switch")}
+      <span className="hidden sm:inline">{t("lang.switch")}</span>
     </Link>
   );
 }
@@ -123,7 +123,7 @@ function UserMenu() {
       <Menu.Trigger className="inline-flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold text-aeblack-800 hover:bg-aeblack-100">
         <UserCircle size={24} aria-hidden="true" />
         <span className="hidden max-w-40 truncate md:inline">{me.full_name}</span>
-        <CaretDown size={16} aria-hidden="true" />
+        <CaretDown size={16} className="hidden sm:block" aria-hidden="true" />
       </Menu.Trigger>
       <Menu.Portal>
         <Menu.Positioner sideOffset={6} align="end">
@@ -175,31 +175,34 @@ export function Shell({ children }: { children: ReactNode }) {
     document.documentElement.dir = dir;
   }, [lang, dir]);
   useEffect(() => setOpen(false), [loc.pathname]);
+  const menu = (
+    <Dialog.Root open={open} onOpenChange={setOpen}>
+      <Dialog.Trigger className="rounded-lg p-2 text-aeblack-700 hover:bg-aeblack-100 lg:hidden" aria-label={t("app.menu")}><List size={24} /></Dialog.Trigger>
+      <Dialog.Portal>
+        <Dialog.Backdrop className="mh-backdrop" />
+        <Dialog.Popup className="mh-drawer">
+          <div className="flex items-center justify-between border-b border-aeblack-100 p-4">
+            <Dialog.Title className="font-bold">{t("app.menu")}</Dialog.Title>
+            <Dialog.Close className="rounded p-1 hover:bg-aeblack-100" aria-label={t("app.close")}><X size={24} /></Dialog.Close>
+          </div>
+          <NavList onPick={() => setOpen(false)} />
+        </Dialog.Popup>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
   return (
     <div className="min-h-screen">
       <a href="#main" className="mc-skip aegov-btn btn-sm">{t("app.skip")}</a>
       <header className="sticky top-0 z-30 border-b border-aeblack-100 bg-white">
         {/* The logo is always on the left, in Arabic and English: the bar is laid out left to right. */}
-        <div dir="ltr" className="flex h-16 items-center justify-between gap-3 px-4 sm:h-20 sm:px-6">
-          <div className="flex min-w-0 items-center gap-2">
-            <Dialog.Root open={open} onOpenChange={setOpen}>
-              <Dialog.Trigger className="rounded-lg p-2 text-aeblack-700 hover:bg-aeblack-100 lg:hidden" aria-label={t("app.menu")}><List size={24} /></Dialog.Trigger>
-              <Dialog.Portal>
-                <Dialog.Backdrop className="mh-backdrop" />
-                <Dialog.Popup className="mh-drawer">
-                  <div className="flex items-center justify-between border-b border-aeblack-100 p-4">
-                    <Dialog.Title className="font-bold">{t("app.menu")}</Dialog.Title>
-                    <Dialog.Close className="rounded p-1 hover:bg-aeblack-100" aria-label={t("app.close")}><X size={24} /></Dialog.Close>
-                  </div>
-                  <NavList onPick={() => setOpen(false)} />
-                </Dialog.Popup>
-              </Dialog.Portal>
-            </Dialog.Root>
-            <Brand />
-          </div>
-          <div dir={dir} className="flex shrink-0 items-center gap-1">
+        {/* The menu button sits at the far right in both languages, the reading-start side in Arabic. */}
+        <div dir="ltr" className="flex h-16 items-center justify-between gap-2 px-3 sm:h-20 sm:gap-3 sm:px-6">
+          <Brand />
+          <div dir={dir} className="flex shrink-0 items-center gap-0.5 sm:gap-1">
+            {dir === "rtl" && menu}
             <LanguageSwitch />
             <UserMenu />
+            {dir === "ltr" && menu}
           </div>
         </div>
       </header>

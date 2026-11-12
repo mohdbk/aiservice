@@ -13,7 +13,7 @@ type Dash = {
 
 function Stat({ icon, label, value, to }: { icon: ReactNode; label: string; value: number; to: string }) {
   return (
-    <Link to={to} className="mc-surface flex items-center gap-4 rounded-2xl border border-aeblack-100 bg-white p-5 transition hover:border-primary-300 hover:shadow-sm">
+    <Link to={to} className="mc-surface flex items-center gap-4 rounded-2xl border border-aeblack-100 bg-white p-5 text-aeblack-900 no-underline transition hover:border-primary-300 hover:shadow-sm [&_*]:no-underline">
       <span className="flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-primary-50 text-primary-700">{icon}</span>
       <span>
         <span className="block text-2xl font-bold tabular-nums text-aeblack-900">{value}</span>

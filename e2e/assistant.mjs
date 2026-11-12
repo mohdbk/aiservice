@@ -16,6 +16,14 @@ for (const lang of ["ar", "en"]) {
   await page.locator('form button[type="submit"]').click();
   await page.waitForURL(new RegExp(`/${lang}/?$`));
   await page.goto(`${BASE}/${lang}/applicants`);
+  const vw = page.viewportSize().width;
+  const logo = await page.locator("header img").first().boundingBox();
+  const menuBtn = await page.locator(`header button[aria-label="${lang === "ar" ? "القائمة" : "Menu"}"]`).boundingBox();
+  const group = await page.locator("header > div > div").last().boundingBox();
+  if (!(logo && logo.x < vw / 3)) { failed = true; console.error(`FAIL ${lang}: logo not on the left`); }
+  if (!(menuBtn && menuBtn.x + menuBtn.width > vw - 60)) { failed = true; console.error(`FAIL ${lang}: menu button not at the right edge`); }
+  if (!(logo && group && logo.x + logo.width <= group.x + 1)) { failed = true; console.error(`FAIL ${lang}: header items overlap the logo`); }
+  else console.log(`ok   ${lang}: header (logo left, menu right, no overlap)`);
   await page.locator(".mh-assistant-fab").click();
   const box = page.locator(".mh-chat-drawer textarea");
   await box.fill(lang === "ar" ? "ما الوظائف المفتوحة؟" : "Which jobs are open?");
