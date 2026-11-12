@@ -208,10 +208,10 @@ public sealed class AgentProposalService(
             case "talent_invite":
             {
                 var accountId = I(a, "account_id");
-                var who = await db.ApplicantAccounts.Where(u => u.Id == accountId && u.InTalentPool).Select(u => u.FullName).FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
+                var candidate = await db.ApplicantAccounts.Where(u => u.Id == accountId && u.InTalentPool).Select(u => u.FullName).FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
                 var jobId = I(a, "job_id");
                 var job = await db.JobOpenings.Include(j => j.Translations).FirstOrDefaultAsync(j => j.Id == jobId, ct) ?? throw DomainException.NotFound();
-                return ar ? $"دعوة {who} للتقديم على وظيفة {job.In("ar").Title}" : $"Invite {who} to apply for {job.In("en").Title}";
+                return ar ? $"دعوة {candidate} للتقديم على وظيفة {job.In("ar").Title}" : $"Invite {candidate} to apply for {job.In("en").Title}";
             }
             case "set_offer_status":
             {
