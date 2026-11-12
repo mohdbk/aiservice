@@ -51,6 +51,7 @@ public static class Labels
         AssessmentType.SituationalJudgement => "Situational Judgement",
         AssessmentType.WorkSample => "Work Sample",
         AssessmentType.Aptitude => "Aptitude",
+        AssessmentType.Personality => "Personality",
         _ => "Other",
     };
 }

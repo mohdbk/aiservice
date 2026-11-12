@@ -101,13 +101,13 @@ public sealed class AgentProposalService(
             {
                 var app = await ApplicantAsync(a, ct);
                 await applicants.SetStatusAsync(app.Id, S(a, "status"), ct);
-                return (ar ? $"تم تغيير حالة {app.FullName} إلى {S(a, "status")}." : $"{app.FullName} is now {S(a, "status")}.", $"/applicants/{app.Id}");
+                return (ar ? $"تم تغيير حالة {app.FullName} إلى «{StatusAr(S(a, "status"))}»." : $"{app.FullName} is now {S(a, "status")}.", $"/applicants/{app.Id}");
             }
             case "add_note":
             {
                 var app = await ApplicantAsync(a, ct);
                 await applicants.AddNoteAsync(app.Id, S(a, "text"), ct);
-                return (ar ? $"أضيفت ملاحظة إلى ملف {app.FullName}." : $"Note added to {app.FullName}.", $"/applicants/{app.Id}");
+                return (ar ? $"تمت إضافة ملاحظة إلى ملف {app.FullName}." : $"Note added to {app.FullName}.", $"/applicants/{app.Id}");
             }
             case "schedule_interview":
             {
@@ -116,20 +116,20 @@ public sealed class AgentProposalService(
                     ? pl.EnumerateArray().Select(x => x.ValueKind == JsonValueKind.Number ? x.GetInt32() : int.TryParse(x.GetString(), out var v) ? v : 0).Where(x => x > 0).ToList() : [];
                 await interviews.ScheduleAsync(null, new InterviewInput(app.Id, I(a, "round_id"), S(a, "date"), S(a, "from"), S(a, "to"),
                     Opt(a, "location"), Opt(a, "notes"), panel), ct);
-                return (ar ? $"تم تحديد مقابلة مع {app.FullName}." : $"Interview scheduled with {app.FullName}.", $"/applicants/{app.Id}");
+                return (ar ? $"تمت جدولة مقابلة مع {app.FullName}." : $"Interview scheduled with {app.FullName}.", $"/applicants/{app.Id}");
             }
             case "invite_to_test":
             {
                 var app = await ApplicantAsync(a, ct);
                 await applicants.InviteAsync(app.Id, I(a, "assessment_id"), I(a, "deadline_days") is > 0 and var n ? n : null, ct);
-                return (ar ? $"أرسلت دعوة الاختبار إلى {app.FullName}." : $"Test invitation sent to {app.FullName}.", $"/applicants/{app.Id}");
+                return (ar ? $"تم إرسال دعوة الاختبار إلى {app.FullName}." : $"Test invitation sent to {app.FullName}.", $"/applicants/{app.Id}");
             }
             case "make_offer":
             {
                 var app = await ApplicantAsync(a, ct);
                 await interviews.SaveOfferAsync(null, new OfferInput(app.Id, S(a, "position_title"), S(a, "offer_date"), Opt(a, "start_date"),
                     decimal.TryParse(S(a, "monthly_salary"), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var sal) ? sal : null, Opt(a, "currency"), Opt(a, "terms")), ct);
-                return (ar ? $"أنشئ عرض عمل مسودة لـ {app.FullName}." : $"Draft offer created for {app.FullName}.", $"/applicants/{app.Id}");
+                return (ar ? $"تم إنشاء مسودة عرض عمل لـ {app.FullName}." : $"Draft offer created for {app.FullName}.", $"/applicants/{app.Id}");
             }
             case "email_candidate":
             {
@@ -145,7 +145,7 @@ public sealed class AgentProposalService(
                 });
                 db.ApplicationNotes.Add(new ApplicationNote { JobApplicationId = app.Id, Kind = NoteKind.System, Text = $"Email sent: {subject}", AuthorStaffId = staffId, CreatedAt = clock.UtcNow });
                 await db.SaveChangesAsync(ct);
-                return (ar ? $"أضيفت رسالة {app.FullName} إلى قائمة الإرسال." : $"Email to {app.FullName} queued.", $"/applicants/{app.Id}");
+                return (ar ? $"تمت جدولة الرسالة إلى {app.FullName} للإرسال." : $"Email to {app.FullName} queued.", $"/applicants/{app.Id}");
             }
             case "create_draft_job":
             {
@@ -153,11 +153,11 @@ public sealed class AgentProposalService(
                     S(a, "location"), S(a, "employment_type") is { Length: > 0 } et ? et : "FullTime", "Draft", false, null, null, null, null, null, null, false,
                     null, null, null, null), ct);
                 var id = JsonSerializer.SerializeToElement(saved).TryGetProperty("id", out var idv) ? idv.GetInt32() : 0;
-                return (ar ? "أنشئت مسودة الوظيفة." : "Draft job created.", id > 0 ? $"/jobs/{id}" : "/jobs");
+                return (ar ? "تم إنشاء مسودة الوظيفة." : "Draft job created.", id > 0 ? $"/jobs/{id}" : "/jobs");
             }
             case "suggest_english":
                 await setup.SuggestEnglishAsync(S(a, "kind"), I(a, "id"), ct);
-                return (ar ? "طلبت الترجمة الإنجليزية، وستظهر للمراجعة بعد قليل." : "English suggestion requested; it will be ready for review shortly.", null);
+                return (ar ? "تم طلب النسخة الإنجليزية، وستكون جاهزة للمراجعة بعد قليل." : "English suggestion requested; it will be ready for review shortly.", null);
             default:
                 throw DomainException.Invalid("invalid_value");
         }
@@ -173,7 +173,7 @@ public sealed class AgentProposalService(
                 return ar ? $"إنشاء مسودة وظيفة: {S(a, "title")}" : $"Create a draft job: {S(a, "title")}";
             case "suggest_english":
                 if (S(a, "kind") is not ("job" or "screening" or "question" or "assessment")) throw DomainException.Invalid("invalid_value");
-                return ar ? $"اقتراح نص إنجليزي ({S(a, "kind")} رقم {I(a, "id")})" : $"Suggest English text ({S(a, "kind")} {I(a, "id")})";
+                return ar ? $"اقتراح النسخة الإنجليزية ({KindAr(S(a, "kind"))} رقم {I(a, "id")})" : $"Suggest English text ({S(a, "kind")} {I(a, "id")})";
         }
         var app = await ApplicantAsync(a, ct);
         var who = $"{app.FullName} ({app.Code})";
@@ -181,7 +181,7 @@ public sealed class AgentProposalService(
         {
             case "set_applicant_status":
                 if (!Enum.TryParse<ApplicationStatus>(S(a, "status"), out _)) throw DomainException.Invalid("invalid_value");
-                return ar ? $"تغيير حالة {who} إلى {S(a, "status")}" : $"Move {who} to {S(a, "status")}";
+                return ar ? $"تغيير حالة {who} إلى «{StatusAr(S(a, "status"))}»" : $"Move {who} to {S(a, "status")}";
             case "add_note":
                 if (S(a, "text").Trim().Length == 0) throw DomainException.Invalid("note_required");
                 return ar ? $"إضافة ملاحظة إلى {who}: {TextUtil.Clip(S(a, "text"), 300)}" : $"Add a note to {who}: {TextUtil.Clip(S(a, "text"), 300)}";
@@ -189,7 +189,7 @@ public sealed class AgentProposalService(
             {
                 var roundId = I(a, "round_id");
                 var round = await db.InterviewRounds.Where(r => r.Id == roundId).Select(r => r.Name).FirstOrDefaultAsync(ct) ?? throw DomainException.Invalid("round_required");
-                return ar ? $"تحديد مقابلة ({round}) مع {who} يوم {S(a, "date")} من {S(a, "from")} إلى {S(a, "to")}"
+                return ar ? $"جدولة مقابلة ({round}) مع {who} يوم {S(a, "date")} من الساعة {S(a, "from")} إلى {S(a, "to")}"
                     : $"Schedule a {round} interview with {who} on {S(a, "date")} from {S(a, "from")} to {S(a, "to")}";
             }
             case "invite_to_test":
@@ -199,7 +199,7 @@ public sealed class AgentProposalService(
                 return ar ? $"دعوة {who} إلى اختبار {test}" : $"Invite {who} to the {test} test";
             }
             case "make_offer":
-                return ar ? $"إنشاء عرض عمل مسودة لـ {who}: {S(a, "position_title")}" : $"Create a draft offer for {who}: {S(a, "position_title")}";
+                return ar ? $"إنشاء مسودة عرض عمل لـ {who}: {S(a, "position_title")}" : $"Create a draft offer for {who}: {S(a, "position_title")}";
             case "email_candidate":
                 if (S(a, "subject").Length == 0 || S(a, "body").Length == 0) throw DomainException.Invalid("invalid_value");
                 return ar ? $"إرسال رسالة إلى {who}: {S(a, "subject")}" : $"Email {who}: {S(a, "subject")}";
@@ -213,6 +213,17 @@ public sealed class AgentProposalService(
         var id = I(a, "applicant_id");
         return await db.JobApplications.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound("applicant_not_found");
     }
+
+    /// <summary>Applicant statuses as the backoffice shows them in Arabic.</summary>
+    static string StatusAr(string status) => status switch
+    {
+        "Open" => "جديد", "Replied" => "تم التواصل", "Hold" => "معلّق", "Accepted" => "مقبول", "Rejected" => "لم يتم الاختيار", _ => status,
+    };
+
+    static string KindAr(string kind) => kind switch
+    {
+        "job" => "وظيفة", "screening" => "سؤال فرز", "question" => "سؤال", "assessment" => "اختبار", _ => kind,
+    };
 
     static string S(JsonElement e, string name) =>
         e.TryGetProperty(name, out var v) ? v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : v.ValueKind is JsonValueKind.Null ? "" : v.GetRawText() : "";

@@ -326,7 +326,7 @@ public sealed class RecruitmentTools(BackofficeApi api)
             ["panel_ids"] = new JsonArray([.. (panelIds ?? []).Select(x => (JsonNode)x.ToString(CultureInfo.InvariantCulture))]),
         }, ct, (s, lookups) =>
         [
-            s.ChoicePicker(L("جولة المقابلة", "Interview Round"), "/form/round_id", Options(lookups, "rounds", "name"), required: true),
+            s.ChoicePicker(L("مرحلة المقابلة", "Interview Round"), "/form/round_id", Options(lookups, "rounds", "name"), required: true),
             s.DateTimeInput(L("التاريخ", "Date"), "/form/date", required: true),
             s.Row([s.DateTimeInput(L("من", "From"), "/form/from", false, true, true), s.DateTimeInput(L("إلى", "To"), "/form/to", false, true, true)]),
             s.TextField(L("المكان أو رابط الاجتماع", "Location or Meeting Link"), "/form/location"),
@@ -343,7 +343,7 @@ public sealed class RecruitmentTools(BackofficeApi api)
         }, ct, (s, lookups) =>
         [
             s.ChoicePicker(L("الاختبار", "Test"), "/form/assessment_id", Options(lookups, "assessments", "title"), required: true),
-            s.TextField(L("عدد الأيام لإكماله", "Days to Complete"), "/form/deadline_days", "number"),
+            s.TextField(L("عدد أيام الإنجاز", "Days to Complete"), "/form/deadline_days", "number"),
         ], "assessment_id");
 
     [Description("Proposes a draft job offer (not sent to the candidate). Dates YYYY-MM-DD. Shows an approval card the user can edit.")]
@@ -444,8 +444,8 @@ public sealed class RecruitmentTools(BackofficeApi api)
 
     IEnumerable<(string, string)> Statuses() =>
     [
-        ("Open", L("مفتوح", "Open")), ("Replied", L("تم الرد", "Replied")), ("Hold", L("معلق", "On Hold")),
-        ("Accepted", L("مقبول", "Accepted")), ("Rejected", L("مرفوض", "Rejected")),
+        ("Open", L("جديد", "New")), ("Replied", L("تم التواصل", "Contacted")), ("Hold", L("معلّق", "On Hold")),
+        ("Accepted", L("مقبول", "Accepted")), ("Rejected", L("لم يتم الاختيار", "Not Selected")),
     ];
 
     IEnumerable<(string, string)> EmploymentTypes() =>
