@@ -65,7 +65,8 @@ public sealed class PortalAssessmentService(
         var user = await accounts.RequireAsync(email, epoch, ct);
         var inv = await workflow.LoadForCandidateAsync(user.Id, code, ct);
         var a = await workflow.OpenAttemptAsync(inv, ct);
-        return a == null ? new { finished = true } : workflow.State(a, lang);
+        // Questions come in the language the candidate chose when starting (they can change it from the start page).
+        return a == null ? new { finished = true } : workflow.State(a, inv.LanguageCode);
     }
 
     async Task<(Invitation, Attempt)> CurrentAsync(string? email, string? epoch, string? code, CancellationToken ct)
@@ -108,7 +109,7 @@ public sealed class PortalAssessmentService(
         lang = await content.RequireLanguageAsync(lang, ct);
         var (inv, a) = await CurrentAsync(email, epoch, code, ct);
         var next = await workflow.NextSectionAsync(inv, a, section, ct);
-        return next == null ? new { finished = true } : workflow.State(next, lang);
+        return next == null ? new { finished = true } : workflow.State(next, inv.LanguageCode);
     }
 
     public async Task<object> EventAsync(string? email, string? epoch, string? code, string? kind, CancellationToken ct = default)

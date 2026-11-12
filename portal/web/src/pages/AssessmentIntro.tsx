@@ -12,13 +12,18 @@ import { AsmStatusBadge, typeIcon, typeKey, useDeadline } from "./assessmentBits
 
 export default function AssessmentIntro() {
   const { id = "" } = useParams();
-  const { t, lang, path, errorText } = useSite();
+  const { t, lang, path, errorText, config } = useSite();
   const navigate = useNavigate();
   const deadline = useDeadline();
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
-  const { data: a, error: loadError } = useAsync((signal) => api<AssessmentSummary>(`/api/assessments/${encodeURIComponent(id)}?lang=${lang}`, { signal }), [id, lang]);
+  // The language of the assessment itself (questions, instructions); the page around it stays in the portal's language.
+  const [testLang, setTestLang] = useState<string | null>(null);
+  const contentLang = testLang || lang;
+  const { data: a, error: loadError } = useAsync((signal) => api<AssessmentSummary>(`/api/assessments/${encodeURIComponent(id)}?lang=${contentLang}`, { signal }), [id, contentLang]);
+  const chosen = testLang || (a?.language && a.languages?.includes(a.language) && a.status === "in_progress" ? a.language : a?.languages?.includes(lang) ? lang : a?.language) || lang;
+  const contentDir = config.languages.find((l) => l.code === chosen)?.dir || (chosen === "ar" ? "rtl" : "ltr");
   usePageTitle(a?.title || t("asm.title"));
   if (loadError instanceof ApiError && loadError.status === 404) return <NotFound />;
   if (loadError) return <div className="container mx-auto max-w-3xl px-4 py-10"><Alert tone="error" title={errorText(loadError)} /></div>;
@@ -30,7 +35,7 @@ export default function AssessmentIntro() {
     setBusy(true);
     setError(null);
     try {
-      await api(`/api/assessments/${encodeURIComponent(a.id)}/start`, { body: { lang } });
+      await api(`/api/assessments/${encodeURIComponent(a.id)}/start`, { body: { lang: chosen } });
       navigate(path(`/assessments/${encodeURIComponent(a.id)}/take`));
     } catch (e) {
       setError(e);
@@ -46,7 +51,7 @@ export default function AssessmentIntro() {
         <span className="inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-primary-600 text-whitely-50" aria-hidden="true"><I size={40} /></span>
         <div>
           <p className="text-sm font-medium text-primary-700">{t(typeKey(a.type))}</p>
-          <h1 className="font-heading text-3xl font-bold text-aeblack-950">{a.title}</h1>
+          <h1 className="font-heading text-3xl font-bold text-aeblack-950" lang={chosen} dir={contentDir}>{a.title}</h1>
           {a.job_title && <p className="mt-1 text-aeblack-600">{t("asm.for_job", { job: a.job_title })}</p>}
           <div className="mt-2"><AsmStatusBadge status={a.status} /></div>
         </div>
@@ -73,12 +78,30 @@ export default function AssessmentIntro() {
         </section>
       ) : (
         <>
+          {(a.languages?.length ?? 0) > 1 && (
+            <section className="mc-surface mt-6 rounded-2xl border border-aeblack-100 bg-white p-6">
+              <h2 id="asm-lang" className="mb-1 font-heading text-xl font-semibold">{t("asm.language")}</h2>
+              <p className="mb-4 text-sm text-aeblack-600">{t("asm.language_hint")}</p>
+              <div role="radiogroup" aria-labelledby="asm-lang" className="flex flex-wrap gap-3">
+                {a.languages!.map((code) => {
+                  const on = chosen === code;
+                  const label = config.languages.find((l) => l.code === code)?.label || code;
+                  return (
+                    <button key={code} type="button" role="radio" aria-checked={on} onClick={() => setTestLang(code)} lang={code}
+                      className={`min-w-36 rounded-xl border-2 px-5 py-3 text-start font-semibold transition ${on ? "border-primary-600 bg-primary-50 text-primary-800" : "border-aeblack-200 bg-white text-aeblack-700 hover:border-primary-300"}`}>
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
           <section className="mc-surface mt-6 rounded-2xl border border-aeblack-100 bg-white p-6">
             <h2 className="mb-3 font-heading text-xl font-semibold">{t("asm.sections")}</h2>
             <ol className="divide-y divide-aeblack-100">
               {a.sections.map((s, i) => (
                 <li key={i} className="flex items-center justify-between gap-3 py-3">
-                  <span className="flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-50 text-sm font-bold text-primary-700">{i + 1}</span>{s.title}</span>
+                  <span className="flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-50 text-sm font-bold text-primary-700">{i + 1}</span><span lang={chosen} dir={contentDir}>{s.title}</span></span>
                   <span className="text-sm text-aeblack-600">{s.minutes ? t("asm.duration", { minutes: s.minutes }) : t("asm.untimed")}</span>
                 </li>
               ))}
@@ -88,7 +111,7 @@ export default function AssessmentIntro() {
           {a.instructions && (
             <section className="mc-surface mt-6 rounded-2xl border border-aeblack-100 bg-white p-6">
               <h2 className="mb-3 font-heading text-xl font-semibold">{t("asm.instructions")}</h2>
-              <div className="mc-prose" dangerouslySetInnerHTML={{ __html: a.instructions }} />
+              <div className="mc-prose" lang={chosen} dir={contentDir} dangerouslySetInnerHTML={{ __html: a.instructions }} />
             </section>
           )}
           <section className="mt-6">

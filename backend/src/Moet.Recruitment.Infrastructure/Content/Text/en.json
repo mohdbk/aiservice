@@ -300,5 +300,7 @@
  "common.yes": "Yes",
  "common.no": "No",
  "error.screening_required": "Please answer all required questions.",
- "error.screening_invalid": "Please check your answers to the questions."
+ "error.screening_invalid": "Please check your answers to the questions.",
+ "asm.language": "Assessment Language",
+ "asm.language_hint": "Choose the language you want the questions in. The rest of the portal stays as it is."
 }

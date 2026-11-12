@@ -107,7 +107,7 @@ function Answer({ q, value, onChange, onUpload, disabled }: {
 
 export default function TakeAssessment() {
   const { id = "" } = useParams();
-  const { t, lang, path, errorText } = useSite();
+  const { t, lang, path, errorText, config } = useSite();
   const navigate = useNavigate();
   const [st, setSt] = useState<AsmState | null>(null);
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
@@ -222,6 +222,9 @@ export default function TakeAssessment() {
   if (error && !st) return <div className="container mx-auto max-w-3xl px-4 py-10"><Alert tone="error" title={errorText(error)} /></div>;
   if (!st) return <FullPageLoading />;
 
+  // Questions are in the language the candidate chose; buttons and messages stay in the portal's language.
+  const cl = st.language || lang;
+  const cdir = config.languages.find((l) => l.code === cl)?.dir || (cl === "ar" ? "rtl" : "ltr");
   const qs = st.section.questions;
   const q = qs[Math.min(index, qs.length - 1)];
   const answered = (k: string) => { const v = answers[k]; return !(v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length)); };
@@ -235,7 +238,7 @@ export default function TakeAssessment() {
       <div className="mc-surface sticky top-[4.5rem] z-10 mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-aeblack-100 bg-white/95 p-4 shadow-sm backdrop-blur md:top-[8.5rem]">
         <div>
           <p className="text-sm text-aeblack-600">{t("asm.section_of", { n: st.section_index + 1, count: st.section_count })}</p>
-          <p className="font-heading text-lg font-semibold text-aeblack-900">{st.section.title}</p>
+          <p className="font-heading text-lg font-semibold text-aeblack-900" lang={cl} dir={cdir}>{st.section.title}</p>
         </div>
         <div className="flex items-center gap-4">
           <span className={`inline-flex items-center gap-1.5 text-sm ${save === "failed" ? "text-aered-700" : "text-aeblack-600"}`} aria-live="polite">
@@ -252,7 +255,7 @@ export default function TakeAssessment() {
 
       {notice && <div className="mb-4"><Alert tone="warning" title={notice} /></div>}
       {error ? <div className="mb-4"><Alert tone="error" title={errorText(error)} /></div> : null}
-      {st.section.instructions && index === 0 && <div className="mb-4"><Alert tone="info">{st.section.instructions}</Alert></div>}
+      {st.section.instructions && index === 0 && <div className="mb-4"><Alert tone="info"><span lang={cl} dir={cdir} className="block">{st.section.instructions}</span></Alert></div>}
 
       <nav aria-label={t("asm.questions_in_section")} className="mb-6 flex flex-wrap gap-2">
         {qs.map((x, i) => (
@@ -269,8 +272,8 @@ export default function TakeAssessment() {
           <span>{t("asm.question_of", { n: index + 1, count: qs.length })}</span>
           {q.type !== "Agreement Scale" && <span>{t("asm.points", { points: q.points })}</span>}
         </div>
-        <div id="question-title" className="mc-prose mb-6 text-lg font-medium text-aeblack-900" dir="auto" dangerouslySetInnerHTML={{ __html: q.text }} />
-        <Answer q={q} value={answers[q.key]} disabled={moving} onChange={(v, im) => change(q.key, v, im)} onUpload={(f) => upload(q.key, f)} />
+        <div id="question-title" className="mc-prose mb-6 text-lg font-medium text-aeblack-900" lang={cl} dir={cdir} dangerouslySetInnerHTML={{ __html: q.text }} />
+        <div lang={cl} dir={cdir}><Answer q={q} value={answers[q.key]} disabled={moving} onChange={(v, im) => change(q.key, v, im)} onUpload={(f) => upload(q.key, f)} /></div>
       </section>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">

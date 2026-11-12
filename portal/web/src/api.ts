@@ -98,6 +98,9 @@ export type ApplicationDetail = ApplicationSummary & { details_state: "ready" | 
 // ---------- assessments ----------
 export type AsmStatus = "to_do" | "in_progress" | "submitted" | "completed" | "expired" | "cancelled";
 export type AssessmentSummary = {
+  /** Languages the candidate can take it in, and the one chosen (or the original). */
+  languages?: string[];
+  language?: string;
   id: string;
   title: string;
   type: string;
@@ -117,6 +120,8 @@ export type AssessmentSummary = {
 };
 export type AsmQuestion = { key: string; type: string; text: string; points: number; max_words: number; options: { key: string; text: string }[] };
 export type AsmState = {
+  /** The language the questions are in (the candidate's choice). */
+  language?: string;
   finished?: boolean;
   attempt: number;
   section_index: number;

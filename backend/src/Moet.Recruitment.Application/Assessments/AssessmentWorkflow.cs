@@ -162,6 +162,7 @@ public sealed class AssessmentWorkflow(IAppDbContext db, ContentService content,
         foreach (var q in sec.OrderedQuestions.Where(q => q.IsAnswered)) answers[q.QuestionKey] = WireAnswer(q);
         return new
         {
+            language = lang,
             attempt = (int)a.AttemptNo,
             section_index = sec.SectionNo,
             section_count = a.Sections.Count,
@@ -246,8 +247,13 @@ public sealed class AssessmentWorkflow(IAppDbContext db, ContentService content,
         var open = inv.Status == InvitationStatus.InProgress ? await OpenAttemptAsync(inv, ct) : null;
         var reason = inv.CannotStartReason(now);
         var showScore = asm.ShowScoreToCandidate && inv.Status == InvitationStatus.Marked;
+        // The candidate can take it in the original language or any language with an approved translation that the portal offers.
+        var (portalLangs, _) = await content.LanguagesAsync(ct);
+        var languages = portalLangs.Select(l => l.Code)
+            .Where(c => c == asm.SourceLanguageCode || asm.Translations.Any(t => t.LanguageCode == c && t.ReviewStatus == ReviewStatus.Approved)).ToList();
         return new
         {
+            languages, language = languages.Contains(inv.LanguageCode) ? inv.LanguageCode : asm.SourceLanguageCode,
             id = inv.Code, title, type = Labels.AssessmentTypeName(asm.AssessmentType),
             status = open != null ? "in_progress" : inv.CandidateStatus(now),
             deadline = clock.LocalMinute(inv.DeadlineAt),
