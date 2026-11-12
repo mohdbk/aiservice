@@ -96,8 +96,11 @@ for (const [view, opts] of Object.entries(VIEWS)) {
     for (const [name, path] of pages) await shoot(ctx, `bo_${view}_${lang}_${name}`, `${BASE}/${lang}${path}`);
     // The assistant conversation with every kind of card (results, comparison, form, approval), from the scripted model.
     await shoot(ctx, `bo_${view}_${lang}_zz_chat`, `${BASE}/${lang}/assistant`, async (p) => {
+      // A fresh conversation (the chat is kept per staff member in the browser).
+      await p.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("mh-agent-")).forEach((k) => localStorage.removeItem(k)));
+      await p.reload({ waitUntil: "networkidle" });
       const ask = async (text, marker) => {
-        const box = p.locator("main textarea").first();
+        const box = p.locator("#asst-q");
         await box.fill(text);
         await box.press("Enter");
         await p.getByText(marker).last().waitFor({ timeout: 40000 });
