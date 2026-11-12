@@ -1,3 +1,5 @@
+using Moet.Recruitment.Domain.Common;
+
 namespace Moet.Recruitment.Domain.Operations;
 
 public class StoredFile
