@@ -58,7 +58,7 @@ AdminEndpoints.Map(app);
 app.MapFallback(SpaFallback.Handle);
 
 if (cfg["MIGRATE_ON_START"] != "0")
-    await DependencyInjection.PrepareDatabaseAsync(app.Services, cfg, app.Logger);
+    await Moet.Recruitment.Infrastructure.DependencyInjection.PrepareDatabaseAsync(app.Services, cfg, app.Logger);
 
 app.Run();
 
