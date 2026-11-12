@@ -4,6 +4,7 @@ import {
 } from "@phosphor-icons/react";
 import { ReactNode, useEffect, useId, useRef, useState } from "react";
 import { ApiError, useLang } from "../core";
+import { FlagUae, FlagUs } from "./flags";
 
 // ---------------- buttons and layout ----------------
 type BtnProps = React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "outline" | "link" | "danger"; size?: "sm" | "md"; busy?: boolean; icon?: ReactNode };
@@ -215,8 +216,9 @@ export function LangTabs({ value, onChange, english, approved, onApproved, onSug
   return (
     <Tabs.Root value={value} onValueChange={(v) => onChange(v as Bilingual)}>
       <Tabs.List className="mh-tabs" aria-label={t("english.title")}>
-        <Tabs.Tab value="ar" className="mh-tab"><span lang="ar">العربية</span></Tabs.Tab>
+        <Tabs.Tab value="ar" className="mh-tab"><FlagUae /><span lang="ar">العربية</span></Tabs.Tab>
         <Tabs.Tab value="en" className="mh-tab">
+          <FlagUs />
           <span lang="en">English</span>
           <span className={`h-2 w-2 rounded-full ${english === "Approved" ? "bg-aegreen-500" : english === "Suggested" ? "bg-camel-500" : "bg-aeblack-300"}`} aria-hidden="true" />
         </Tabs.Tab>

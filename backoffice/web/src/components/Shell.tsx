@@ -1,0 +1,186 @@
+import { Dialog, Menu } from "@base-ui/react";
+import {
+  Briefcase, CalendarCheck, CaretDown, ChatCircleDots, ClipboardText, Exam, FileText, Gear, Handshake, Key, List, ListChecks,
+  SignOut, SquaresFour, Translate, TreeStructure, UserCircle, Users, UsersThree, X,
+} from "@phosphor-icons/react";
+import { ReactNode, useEffect, useState } from "react";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { api, useAuth, useLang } from "../core";
+import { LangFlag } from "./flags";
+
+type Item = { to: string; label: string; icon: ReactNode; admin?: boolean; sys?: boolean };
+
+function useNav(): { group?: string; items: Item[] }[] {
+  const { t } = useLang();
+  const i = (C: typeof Briefcase) => <C size={24} aria-hidden="true" />;
+  return [
+    { items: [{ to: "/", label: t("nav.dashboard"), icon: i(SquaresFour) }] },
+    {
+      group: t("nav.group.hiring"),
+      items: [
+        { to: "/jobs", label: t("nav.jobs"), icon: i(Briefcase) },
+        { to: "/applicants", label: t("nav.applicants"), icon: i(Users) },
+        { to: "/interviews", label: t("nav.interviews"), icon: i(CalendarCheck) },
+        { to: "/offers", label: t("nav.offers"), icon: i(Handshake) },
+        { to: "/screening", label: t("nav.screening"), icon: i(ListChecks) },
+      ],
+    },
+    {
+      group: t("nav.group.assessment"),
+      items: [
+        { to: "/tests", label: t("nav.assessments"), icon: i(Exam) },
+        { to: "/questions", label: t("nav.questions"), icon: i(ClipboardText) },
+        { to: "/invitations", label: t("nav.invitations"), icon: i(FileText) },
+      ],
+    },
+    { items: [{ to: "/assistant", label: t("nav.assistant"), icon: i(ChatCircleDots) }] },
+    {
+      group: t("nav.setup"),
+      items: [
+        { to: "/setup/departments", label: t("nav.departments"), icon: i(TreeStructure), admin: true },
+        { to: "/setup/rounds", label: t("nav.rounds"), icon: i(UsersThree), admin: true },
+        { to: "/setup/settings", label: t("nav.settings"), icon: i(Gear), admin: true },
+        { to: "/setup/portal-text", label: t("nav.portal_text"), icon: i(Translate), admin: true },
+        { to: "/setup/staff", label: t("nav.staff"), icon: i(Key), sys: true },
+      ],
+    },
+  ];
+}
+
+function NavList({ onPick }: { onPick?: () => void }) {
+  const { to } = useLang();
+  const { me } = useAuth();
+  const groups = useNav();
+  return (
+    <nav className="space-y-6 p-4" aria-label="Main">
+      {groups.map((g, gi) => {
+        const items = g.items.filter((it) => (!it.admin || me?.can_administer) && (!it.sys || me?.is_administrator));
+        if (!items.length) return null;
+        return (
+          <div key={gi}>
+            {g.group && <p className="mb-2 px-3 text-xs font-bold uppercase tracking-wide text-aeblack-400">{g.group}</p>}
+            <ul className="space-y-1">
+              {items.map((it) => (
+                <li key={it.to}>
+                  <NavLink to={to(it.to)} end={it.to === "/"} onClick={onPick}
+                    className={({ isActive }) => `flex items-center gap-3 rounded-lg px-3 py-2.5 font-semibold transition ${isActive ? "bg-primary-50 text-primary-800" : "text-aeblack-700 hover:bg-aeblack-50 hover:text-primary-700"}`}>
+                    {it.icon}
+                    <span>{it.label}</span>
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      })}
+    </nav>
+  );
+}
+
+function Brand() {
+  const { t, lang, to } = useLang();
+  return (
+    <Link to={to("/")} className="flex items-center gap-3" dir="ltr" aria-label={`${t("app.ministry")}, ${t("app.badge")}`}>
+      <img src={lang === "ar" ? "/logo-ar.png" : "/logo-en.png"} alt="" className="h-10 w-auto sm:h-12" />
+      <span className="hidden h-8 w-px bg-aeblack-200 sm:block" aria-hidden="true" />
+      <span dir={lang === "ar" ? "rtl" : "ltr"} className="hidden rounded-full bg-primary-100 px-3 py-1 text-sm font-bold text-primary-800 sm:inline">{t("app.badge")}</span>
+    </Link>
+  );
+}
+
+function LanguageSwitch() {
+  const { lang, t } = useLang();
+  const loc = useLocation();
+  const other = lang === "ar" ? "en" : "ar";
+  const path = loc.pathname.replace(/^\/(ar|en)/, `/${other}`) + loc.search;
+  return (
+    <Link to={path} lang={other} className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-aeblack-700 hover:bg-aeblack-100">
+      <LangFlag lang={other} />
+      {t("lang.switch")}
+    </Link>
+  );
+}
+
+function UserMenu() {
+  const { t, to } = useLang();
+  const { me, setMe } = useAuth();
+  const nav = useNavigate();
+  if (!me) return null;
+  const signOut = async () => {
+    try {
+      await api("/sign-out", { body: {} });
+    } finally {
+      setMe(null);
+      nav(to("/sign-in"));
+    }
+  };
+  return (
+    <Menu.Root>
+      <Menu.Trigger className="inline-flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold text-aeblack-800 hover:bg-aeblack-100">
+        <UserCircle size={24} aria-hidden="true" />
+        <span className="hidden max-w-40 truncate md:inline">{me.full_name}</span>
+        <CaretDown size={16} aria-hidden="true" />
+      </Menu.Trigger>
+      <Menu.Portal>
+        <Menu.Positioner sideOffset={6} align="end">
+          <Menu.Popup className="mh-popup">
+            <div className="px-3 py-2 text-xs text-aeblack-500">
+              <p className="font-semibold text-aeblack-800">{me.full_name}</p>
+              <p dir="ltr" className="text-start">{me.email}</p>
+              <p>{t(`role.${me.role}`)}</p>
+            </div>
+            <Menu.Separator className="my-1 h-px bg-aeblack-100" />
+            <Menu.Item className="mh-item" onClick={() => nav(to("/password"))}><Key size={20} aria-hidden="true" />{t("auth.change_password")}</Menu.Item>
+            <Menu.Item className="mh-item" onClick={signOut}><SignOut size={20} aria-hidden="true" />{t("auth.sign_out")}</Menu.Item>
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
+  );
+}
+
+export function Shell({ children }: { children: ReactNode }) {
+  const { t, lang, dir } = useLang();
+  const [open, setOpen] = useState(false);
+  const loc = useLocation();
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = dir;
+  }, [lang, dir]);
+  useEffect(() => setOpen(false), [loc.pathname]);
+  return (
+    <div className="min-h-screen">
+      <a href="#main" className="mc-skip aegov-btn btn-sm">{t("app.skip")}</a>
+      <header className="sticky top-0 z-30 border-b border-aeblack-100 bg-white">
+        <div className="flex h-16 items-center justify-between gap-3 px-4 sm:h-20 sm:px-6">
+          <div className="flex items-center gap-2">
+            <Dialog.Root open={open} onOpenChange={setOpen}>
+              <Dialog.Trigger className="rounded-lg p-2 text-aeblack-700 hover:bg-aeblack-100 lg:hidden" aria-label={t("app.menu")}><List size={24} /></Dialog.Trigger>
+              <Dialog.Portal>
+                <Dialog.Backdrop className="mh-backdrop" />
+                <Dialog.Popup className="mh-drawer">
+                  <div className="flex items-center justify-between border-b border-aeblack-100 p-4">
+                    <Dialog.Title className="font-bold">{t("app.menu")}</Dialog.Title>
+                    <Dialog.Close className="rounded p-1 hover:bg-aeblack-100" aria-label={t("app.close")}><X size={24} /></Dialog.Close>
+                  </div>
+                  <NavList onPick={() => setOpen(false)} />
+                </Dialog.Popup>
+              </Dialog.Portal>
+            </Dialog.Root>
+            <Brand />
+          </div>
+          <div className="flex items-center gap-1">
+            <LanguageSwitch />
+            <UserMenu />
+          </div>
+        </div>
+      </header>
+      <div className="flex">
+        <aside className="sticky top-20 hidden h-[calc(100vh-5rem)] w-64 flex-none overflow-y-auto border-e border-aeblack-100 bg-white lg:block">
+          <NavList />
+        </aside>
+        <main id="main" className="min-w-0 flex-1 px-4 py-6 sm:px-8 sm:py-8">{children}</main>
+      </div>
+    </div>
+  );
+}
