@@ -26,7 +26,7 @@ import { AssistantUsage, AuditLog, DataProtection, HandOffSettings, HealthPage, 
 import TalentPool from "./pages/TalentPool";
 import PersonalitySettings from "./pages/PersonalitySettings";
 import Screening from "./pages/Screening";
-import { Departments, Password, PortalText, Rounds, Settings, Staff } from "./pages/Setup";
+import { Departments, Locations, Password, PortalText, Rounds, Settings, Staff } from "./pages/Setup";
 import SignIn from "./pages/SignIn";
 import TestEdit from "./pages/TestEdit";
 import Tests from "./pages/Tests";
@@ -66,6 +66,7 @@ function Guarded() {
         <Route path="assistant" element={<Assistant />} />
         <Route path="password" element={<Password />} />
         <Route path="setup/departments" element={<Departments />} />
+        <Route path="setup/locations" element={<Locations />} />
         <Route path="setup/rounds" element={<Rounds />} />
         <Route path="setup/settings" element={<Settings />} />
         <Route path="setup/portal-text" element={<PortalText />} />

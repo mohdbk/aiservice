@@ -9,6 +9,7 @@ import { DEFAULT_WEIGHTS, JobRanking, SelectionSettings, type Weights } from "..
 
 export type Lookups = {
   departments: { id: number; name: string; name_en: string }[];
+  locations: { id: number; name: string; name_ar: string; name_en: string }[];
   rounds: { id: number; name: string }[];
   staff: { id: number; name: string; email: string }[];
   assessments: { id: number; title: string }[];
@@ -20,7 +21,7 @@ export type Lookups = {
 type Screening = { question_id: number; required: boolean; rule: string | null; expected: string | null };
 type Stage = { assessment_id: number; send_when: string; deadline_days: number };
 type Job = {
-  id?: number; code?: string; title: string; description: string; department_id: number | null; location: string; employment_type: string;
+  id?: number; code?: string; title: string; description: string; department_id: number | null; location: string; location_id: number | null; employment_type: string;
   status: string; is_published: boolean; posted_on: string; closes_on: string; salary_min: number | null; salary_max: number | null;
   salary_currency: string; salary_period: string; show_salary: boolean; title_en: string; description_en: string; location_en: string; english: string;
   english_approved: boolean; screening: Screening[]; stages: Stage[]; criteria: { criterion: string; weight: number; is_must_have: boolean }[];
@@ -28,7 +29,7 @@ type Job = {
 };
 
 const EMPTY: Job = {
-  title: "", description: "", department_id: null, location: "", employment_type: "FullTime", status: "Draft", is_published: false,
+  title: "", description: "", department_id: null, location: "", location_id: null, employment_type: "FullTime", status: "Draft", is_published: false,
   posted_on: "", closes_on: "", salary_min: null, salary_max: null, salary_currency: "AED", salary_period: "Month", show_salary: false,
   title_en: "", description_en: "", location_en: "", english: "Missing", english_approved: false, screening: [], stages: [], criteria: [], criteria_current: false, row_version: null,
   role_profile_id: null, weights: DEFAULT_WEIGHTS,
@@ -75,10 +76,10 @@ export default function JobEdit() {
 
   const save = async () => {
     const body = {
-      title: job.title, description: job.description, department_id: job.department_id, location: job.location, employment_type: job.employment_type,
+      title: job.title, description: job.description, department_id: job.department_id, location: job.location, location_id: job.location_id, employment_type: job.employment_type,
       status: job.status, is_published: job.is_published, posted_on: job.posted_on || null, closes_on: job.closes_on || null,
       salary_min: job.salary_min, salary_max: job.salary_max, salary_currency: job.salary_currency, salary_period: job.salary_period, show_salary: job.show_salary,
-      translations: [{ lang: "en", title: job.title_en, description: job.description_en, location: job.location_en, approved: job.english_approved }],
+      translations: [{ lang: "en", title: job.title_en, description: job.description_en, approved: job.english_approved }],
       screening: job.screening, stages: job.stages, row_version: job.row_version,
       role_profile_id: job.role_profile_id ?? 0, weights: job.weights,
     };
@@ -122,13 +123,11 @@ export default function JobEdit() {
               {lang === "ar" ? (
                 <div className="space-y-5" dir="rtl" lang="ar">
                   <TextInput label={t("jobs.title_ar")} value={job.title} maxLength={140} required onChange={(e) => set("title", e.target.value)} />
-                  <TextInput label={t("jobs.location_ar")} value={job.location} maxLength={140} onChange={(e) => set("location", e.target.value)} />
                   <RichText required label={t("jobs.description_ar")} hint={t("jobs.description_hint")} dir="rtl" value={job.description} onChange={(v) => set("description", v)} />
                 </div>
               ) : (
                 <div className="space-y-5" dir="ltr" lang="en">
                   <TextInput label={t("jobs.title_en")} value={job.title_en} maxLength={140} onChange={(e) => set("title_en", e.target.value)} />
-                  <TextInput label={t("jobs.location_en")} hint={t("jobs.location_en_hint")} value={job.location_en} maxLength={140} onChange={(e) => set("location_en", e.target.value)} />
                   <RichText label={t("jobs.description_en")} dir="ltr" value={job.description_en} onChange={(v) => set("description_en", v)} />
                 </div>
               )}
@@ -139,6 +138,9 @@ export default function JobEdit() {
               <SelectInput required label={t("jobs.status")} value={job.status} onChange={(e) => set("status", e.target.value)}
                 options={["Draft", "Open", "Closed"].map((s) => ({ value: s, label: t(`status.${s}`) }))} />
               <Toggle label={t("jobs.published")} checked={job.is_published} onChange={(v) => set("is_published", v)} />
+              <SelectInput label={t("jobs.location")} hint={t("jobs.location_hint")} value={job.location_id ?? ""}
+                onChange={(e) => setJob((j) => ({ ...j, location_id: e.target.value ? Number(e.target.value) : null, location: e.target.value ? j.location : "" }))}
+                options={[{ value: "", label: job.location && !job.location_id ? job.location : t("common.none") }, ...(lk?.locations || []).map((l) => ({ value: l.id, label: l.name }))]} />
               <SelectInput label={t("jobs.department")} value={job.department_id ?? ""} onChange={(e) => set("department_id", e.target.value ? Number(e.target.value) : null)}
                 options={[{ value: "", label: t("common.none") }, ...(lk?.departments || []).map((d) => ({ value: d.id, label: d.name }))]} />
               <SelectInput required label={t("jobs.employment_type")} value={job.employment_type} onChange={(e) => set("employment_type", e.target.value)}

@@ -21,6 +21,12 @@ static class ModelMap
             e.ToTable("Department", "core");
             e.HasMany(x => x.Translations).WithOne().HasForeignKey(t => t.DepartmentId).OnDelete(DeleteBehavior.Cascade);
         });
+        m.Entity<JobLocation>(e =>
+        {
+            e.ToTable("JobLocation", "core");
+            e.HasMany(x => x.Translations).WithOne().HasForeignKey(t => t.JobLocationId).OnDelete(DeleteBehavior.Cascade);
+        });
+        m.Entity<JobLocationTranslation>(e => { e.ToTable("JobLocationTranslation", "core"); e.HasKey(x => new { x.JobLocationId, x.LanguageCode }); });
         m.Entity<DepartmentTranslation>(e => { e.ToTable("DepartmentTranslation", "core"); e.HasKey(x => new { x.DepartmentId, x.LanguageCode }); });
 
         // ---------- identity ----------
@@ -38,6 +44,7 @@ static class ModelMap
             e.ToTable("JobOpening", "hiring");
             e.Property(x => x.RowVersion).IsRowVersion();
             e.HasOne(x => x.Department).WithMany().HasForeignKey(x => x.DepartmentId);
+            e.HasOne(x => x.JobLocation).WithMany().HasForeignKey(x => x.LocationId);
             e.HasMany(x => x.Translations).WithOne().HasForeignKey(t => t.JobOpeningId).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(x => x.Criteria).WithOne().HasForeignKey(c => c.JobOpeningId).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(x => x.ScreeningQuestions).WithOne().HasForeignKey(s => s.JobOpeningId).OnDelete(DeleteBehavior.Cascade);

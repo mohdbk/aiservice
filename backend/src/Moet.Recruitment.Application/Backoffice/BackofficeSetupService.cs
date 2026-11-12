@@ -17,6 +17,8 @@ public sealed record SettingsInput(string MainSiteUrl, string PortalUrl, string 
 
 public sealed record PortalTextInput(string Lang, string Key, string Text, bool Approved);
 
+public sealed record LocationInput(string Name, string? NameEn, bool IsActive, int SortOrder);
+
 public sealed record NamedInput(string Name, string? NameEn, bool IsActive, string? Description, IReadOnlyList<string>? Skills);
 
 /// <summary>Screening questions, dashboard, lookups and settings.</summary>
@@ -172,6 +174,12 @@ public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor
                 id = d.Id, name = en ? d.Translations.Where(t => t.LanguageCode == En && t.Name != "").Select(t => t.Name).FirstOrDefault() ?? d.Name : d.Name,
                 name_en = d.Translations.Where(t => t.LanguageCode == En).Select(t => t.Name).FirstOrDefault() ?? "",
             }).ToListAsync(ct),
+        locations = await db.JobLocations.AsNoTracking().Where(d => d.IsActive).OrderBy(d => d.SortOrder).ThenBy(d => d.Name)
+            .Select(d => new
+            {
+                id = d.Id, name = en ? d.Translations.Where(t => t.LanguageCode == En && t.Name != "").Select(t => t.Name).FirstOrDefault() ?? d.Name : d.Name,
+                name_ar = d.Name, name_en = d.Translations.Where(t => t.LanguageCode == En).Select(t => t.Name).FirstOrDefault() ?? "",
+            }).ToListAsync(ct),
         rounds = await db.InterviewRounds.AsNoTracking().Where(r => r.IsActive).OrderBy(r => r.Name)
             .Select(r => new { id = r.Id, name = en && r.NameEn != "" ? r.NameEn : r.Name, name_ar = r.Name, name_en = r.NameEn }).ToListAsync(ct),
         staff = await db.StaffUsers.AsNoTracking().Where(u => u.IsEnabled).OrderBy(u => u.FullName).Select(u => new { id = u.Id, name = u.FullName, email = u.Email }).ToListAsync(ct),
@@ -211,6 +219,37 @@ public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor
         {
             if (t == null) d.Translations.Add(t = new DepartmentTranslation { LanguageCode = En });
             t.Name = TextUtil.Clip(input.NameEn.Trim(), 140);
+        }
+        await db.SaveChangesAsync(ct);
+        return new { id = d.Id };
+    }
+
+    public Task<PageResult<object>> LocationsAsync(ListQuery lq, CancellationToken ct = default)
+    {
+        var q = db.JobLocations.AsNoTracking().AsQueryable();
+        if (lq.Term.Length > 0) q = q.Where(d => d.Name.Contains(lq.Term) || d.Translations.Any(t => t.Name.Contains(lq.Term)));
+        return q.PageAsync(lq, new Sorts<JobLocation>("order", false).Add("order", d => d.SortOrder).Add("name", d => d.Name).Add("active", d => d.IsActive), d => (object)new
+        {
+            id = d.Id, name = d.Name, name_en = d.Translations.Where(t => t.LanguageCode == En).Select(t => t.Name).FirstOrDefault() ?? "", is_active = d.IsActive,
+            sort_order = d.SortOrder, jobs = db.JobOpenings.Count(j => j.LocationId == d.Id),
+        }, ct);
+    }
+
+    public async Task<object> SaveLocationAsync(int? id, LocationInput input, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(input.Name)) throw DomainException.Invalid("name_required");
+        JobLocation d;
+        if (id == null) db.JobLocations.Add(d = new JobLocation { SourceLanguageCode = "ar" });
+        else d = await db.JobLocations.Include(x => x.Translations).FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound();
+        d.Name = TextUtil.NoEmDash(TextUtil.Clip(input.Name.Trim(), 140));
+        d.IsActive = input.IsActive;
+        d.SortOrder = input.SortOrder;
+        var t = d.Translations.FirstOrDefault(x => x.LanguageCode == En);
+        if (string.IsNullOrWhiteSpace(input.NameEn)) { if (t != null) d.Translations.Remove(t); }
+        else
+        {
+            if (t == null) d.Translations.Add(t = new JobLocationTranslation { LanguageCode = En });
+            t.Name = TextUtil.NoEmDash(TextUtil.Clip(input.NameEn.Trim(), 140));
         }
         await db.SaveChangesAsync(ct);
         return new { id = d.Id };

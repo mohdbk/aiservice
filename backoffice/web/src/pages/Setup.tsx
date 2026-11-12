@@ -45,6 +45,51 @@ export function Departments() {
   );
 }
 
+// ---------------- locations ----------------
+type Loc = { id: number; name: string; name_en: string; is_active: boolean; sort_order: number; jobs: number };
+
+/** The places jobs are based in, with a name in each language; jobs pick one from this list. */
+export function Locations() {
+  const { t, lang } = useLang();
+  const en = lang === "en";
+  usePageTitle(t("setup.locations"));
+  const toast = useToast();
+  const list = useList<Loc>("/locations", []);
+  const [f, setF] = useState<Partial<Loc> | null>(null);
+  const { busy, error, run } = useSaving();
+  const save = async () => {
+    if (!f) return;
+    const body = { name: f.name || "", name_en: f.name_en || "", is_active: f.is_active ?? true, sort_order: f.sort_order ?? 0 };
+    if (await run(() => api(f.id ? `/locations/${f.id}` : "/locations", { method: f.id ? "PUT" : "POST", body })) !== undefined) {
+      toast(t("common.saved"));
+      setF(null);
+      list.reload();
+    }
+  };
+  return (
+    <>
+      <PageHeader title={t("setup.locations")} subtitle={t("setup.locations_hint")}
+        actions={<Button onClick={() => setF({ is_active: true, sort_order: 0 })} icon={<Plus size={20} aria-hidden="true" />}>{t("common.add")}</Button>} />
+      <DataTable list={list} rowKey={(d) => d.id} columns={[
+        { key: "name", label: t("common.name"), sort: "name", render: (d) => <button type="button" className="text-start font-semibold text-primary-700" onClick={() => setF(d)}>{en && d.name_en ? d.name_en : d.name}</button> },
+        { key: "other", label: en ? t("setup.name_ar") : t("setup.name_en"), render: (d) => <span dir={en ? "rtl" : "ltr"}>{(en ? d.name : d.name_en) || "-"}</span> },
+        { key: "jobs", label: t("nav.jobs"), render: (d) => <span className="tabular-nums">{d.jobs}</span> },
+        { key: "active", label: t("common.status"), sort: "active", render: (d) => <Badge tone={d.is_active ? "green" : "gray"}>{d.is_active ? t("common.active") : t("common.inactive")}</Badge> },
+      ]} />
+      {f && (
+        <Modal open onClose={() => setF(null)} title={f.id ? t("common.edit") : t("common.add")} footer={<>
+          <Button variant="outline" onClick={() => setF(null)}>{t("common.cancel")}</Button><Button busy={busy} onClick={save}>{t("common.save")}</Button></>}>
+          {error && <ErrorState error={error} />}
+          <TextInput required label={<FlagLabel lang="ar">{t("setup.name_ar")}</FlagLabel>} dir="rtl" value={f.name || ""} onChange={(e) => setF({ ...f, name: e.target.value })} />
+          <TextInput label={<FlagLabel lang="en">{t("setup.name_en")}</FlagLabel>} dir="ltr" value={f.name_en || ""} onChange={(e) => setF({ ...f, name_en: e.target.value })} />
+          <TextInput label={t("roles.sort_order")} type="number" value={f.sort_order ?? 0} onChange={(e) => setF({ ...f, sort_order: Number(e.target.value) || 0 })} />
+          <Toggle label={t("common.active")} checked={f.is_active ?? true} onChange={(v) => setF({ ...f, is_active: v })} />
+        </Modal>
+      )}
+    </>
+  );
+}
+
 // ---------------- interview rounds ----------------
 type Round = { id: number; name: string; name_en: string; description: string; is_active: boolean; skills: string[] };
 

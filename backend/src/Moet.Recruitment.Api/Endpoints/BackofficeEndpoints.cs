@@ -174,6 +174,9 @@ public static class BackofficeEndpoints
 
         // setup (recruitment admins only)
         var setup = api.MapGroup("").RequireAuthorization(StaffPolicies.Admin);
+        setup.MapGet("/locations", ([AsParameters] ListQuery lq, BackofficeSetupService s, CancellationToken ct) => s.LocationsAsync(lq, ct));
+        setup.MapPost("/locations", (LocationInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveLocationAsync(null, b, ct));
+        setup.MapPut("/locations/{id:int}", (int id, LocationInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveLocationAsync(id, b, ct));
         setup.MapGet("/departments", ([AsParameters] ListQuery lq, BackofficeSetupService s, CancellationToken ct) => s.DepartmentsAsync(lq, ct));
         setup.MapPost("/departments", (NamedInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveDepartmentAsync(null, b, ct));
         setup.MapPut("/departments/{id:int}", (int id, NamedInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveDepartmentAsync(id, b, ct));

@@ -1151,7 +1151,8 @@
  "audit.comments_count": "{n} comments",
  "audit.same_request": "Show everything from the same request",
  "audit.via_note": "Done through the AI assistant: a person approved the assistant's proposal, or the assistant read this for them.",
- "jobs.location_ar": "Location (Arabic)",
- "jobs.location_en": "Location (English)",
- "jobs.location_en_hint": "Leave empty to show the Arabic location (an emirate shows in English by itself)."
+ "setup.locations": "Locations",
+ "nav.locations": "Locations",
+ "setup.locations_hint": "Places jobs are based in, with a name in each language. The portal shows the name in the reader's language.",
+ "jobs.location_hint": "Add places under Settings, Locations."
 }

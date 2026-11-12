@@ -17,7 +17,7 @@ public sealed record JobInput(
     string Title, string Description, int? DepartmentId, string Location, string EmploymentType, string Status, bool IsPublished,
     string? PostedOn, string? ClosesOn, decimal? SalaryMin, decimal? SalaryMax, string? SalaryCurrency, string? SalaryPeriod, bool ShowSalary,
     IReadOnlyList<TranslationInput>? Translations, IReadOnlyList<JobScreeningInput>? Screening, IReadOnlyList<JobStageInput>? Stages,
-    string? RowVersion, int? RoleProfileId = null, SelectionWeightsInput? Weights = null);
+    string? RowVersion, int? RoleProfileId = null, SelectionWeightsInput? Weights = null, int? LocationId = null);
 
 /// <summary>Combined selection score weights (percent, adding up to 100).</summary>
 public sealed record SelectionWeightsInput(int Cv, int Tests, int Interview, int Personality);
@@ -67,7 +67,7 @@ public sealed class BackofficeJobService(IAppDbContext db, ICodeGenerator codes,
     }
 
     IQueryable<JobOpening> Load(int id) => db.JobOpenings.Where(j => j.Id == id)
-        .Include(j => j.Department).Include(j => j.Translations).Include(j => j.Criteria)
+        .Include(j => j.Department).Include(j => j.JobLocation).Include(j => j.Translations).Include(j => j.Criteria)
         .Include(j => j.ScreeningQuestions).ThenInclude(s => s.ScreeningQuestion)
         .Include(j => j.AssessmentStages)
         .AsSplitQuery();
@@ -75,7 +75,7 @@ public sealed class BackofficeJobService(IAppDbContext db, ICodeGenerator codes,
     static object View(JobOpening j) => new
     {
         id = j.Id, code = j.Code, title = j.Title, description = j.Description, source_language = j.SourceLanguageCode,
-        department_id = j.DepartmentId, department = j.Department?.Name ?? "", location = j.Location,
+        department_id = j.DepartmentId, department = j.Department?.Name ?? "", location = j.Location, location_id = j.LocationId,
         employment_type = j.EmploymentType.ToString(), status = j.Status.ToString(), is_published = j.IsPublished,
         posted_on = AppTime.Date(j.PostedOn), closes_on = AppTime.Date(j.ClosesOn),
         salary_min = j.SalaryMin, salary_max = j.SalaryMax, salary_currency = j.SalaryCurrency, salary_period = j.SalaryPeriod.ToString(),
@@ -122,7 +122,13 @@ public sealed class BackofficeJobService(IAppDbContext db, ICodeGenerator codes,
         j.Title = TextUtil.Clip(input.Title?.Trim(), 140);
         j.Description = html.Clean(input.Description);
         j.DepartmentId = input.DepartmentId;
-        j.Location = TextUtil.NoEmDash(TextUtil.Clip(input.Location?.Trim(), 140));
+        // A location from the list; text alone (from the assistant or an older client) is matched to the list by name in any language.
+        var locationText = TextUtil.NoEmDash(TextUtil.Clip(input.Location?.Trim(), 140));
+        var loc = input.LocationId is > 0 and var lid
+            ? await db.JobLocations.Include(l => l.Translations).FirstOrDefaultAsync(l => l.Id == lid, ct) ?? throw DomainException.Invalid("invalid_value", new Dictionary<string, object?> { ["field"] = "location_id" })
+            : locationText.Length > 0 ? await db.JobLocations.Include(l => l.Translations).FirstOrDefaultAsync(l => l.Name == locationText || l.Translations.Any(t => t.Name == locationText), ct) : null;
+        j.LocationId = loc?.Id;
+        j.Location = loc?.Name ?? locationText;
         j.EmploymentType = Parse<EmploymentType>(input.EmploymentType, "employment_type");
         j.Status = Parse<JobStatus>(input.Status, "status");
         j.IsPublished = input.IsPublished;

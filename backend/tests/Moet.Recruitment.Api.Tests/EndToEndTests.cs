@@ -88,6 +88,7 @@ public class EndToEndTests
 
         var en = await Read(await portal.GetAsync($"/api/portal/job?lang=en&name={code}"));
         Assert.Equal("Data Analyst", en.GetProperty("message").GetProperty("title").GetString());
+        Assert.Equal("Dubai", en.GetProperty("message").GetProperty("location").GetString());   // linked to the Dubai location, shown in English
         Assert.Equal("Yes or No", en.GetProperty("message").GetProperty("screening")[0].GetProperty("type").GetString());
         var ar = await Read(await portal.GetAsync($"/api/portal/jobs?lang=ar"));
         Assert.Equal("محلل بيانات", ar.GetProperty("message").GetProperty("jobs")[0].GetProperty("title").GetString());

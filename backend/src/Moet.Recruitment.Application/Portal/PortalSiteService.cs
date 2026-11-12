@@ -62,6 +62,7 @@ public sealed class PortalSiteService(IAppDbContext db, ContentService content, 
         lang = await content.RequireLanguageAsync(lang, ct);
         var jobs = await Listed()
             .Include(j => j.Department).ThenInclude(d => d!.Translations)
+            .Include(j => j.JobLocation).ThenInclude(l => l!.Translations)
             .Include(j => j.Translations)
             .OrderByDescending(j => j.PostedOn).ThenByDescending(j => j.CreatedAt)
             .Take(500).ToListAsync(ct);
@@ -99,6 +100,7 @@ public sealed class PortalSiteService(IAppDbContext db, ContentService content, 
         if (string.IsNullOrEmpty(code)) throw DomainException.NotFound("job_not_found");
         return await db.JobOpenings.AsNoTracking()
                    .Include(j => j.Department).ThenInclude(d => d!.Translations)
+            .Include(j => j.JobLocation).ThenInclude(l => l!.Translations)
                    .Include(j => j.Translations)
                    .Include(j => j.ScreeningQuestions).ThenInclude(s => s.ScreeningQuestion!).ThenInclude(q => q.Options).ThenInclude(o => o.Translations)
                    .Include(j => j.ScreeningQuestions).ThenInclude(s => s.ScreeningQuestion!).ThenInclude(q => q.Translations)

@@ -91,7 +91,7 @@ for (const [view, opts] of Object.entries(VIEWS)) {
     interview && ["interview", `/interviews/${interview.id}`], ["offers", "/offers"], ["talent_pool", "/talent-pool"], ["screening", "/screening"], ["tests", "/tests"],
     test && ["test", `/tests/${test.id}`], ["questions", "/questions"], question && ["question", `/questions/${question.id}`], ["invitations", "/invitations"],
     attempt && ["marking", `/marking/${attempt.id}`], ["role_profiles", "/role-profiles"], ["personality_settings", "/personality-settings"], ["assistant", "/assistant"],
-    ["departments", "/setup/departments"], ["rounds", "/setup/rounds"], ["settings", "/setup/settings"], ["portal_text", "/setup/portal-text"],
+    ["departments", "/setup/departments"], ["locations", "/setup/locations"], ["rounds", "/setup/rounds"], ["settings", "/setup/settings"], ["portal_text", "/setup/portal-text"],
     ["email_templates", "/setup/email-templates"], ["document_templates", "/setup/document-templates"], ["components", "/setup/components"], ["component_new", "/setup/components/new"],
     ["staff", "/setup/staff"], ["email_server", "/setup/email-server"], ["texts", "/setup/texts"], ["handoff", "/setup/handoff"], ["agent_settings", "/setup/assistant"], ["email_log", "/setup/email-log"], ["assistant_usage", "/setup/assistant-usage"], ["audit", "/setup/audit"], ["health", "/setup/health"], ["data_protection", "/setup/data-protection"],
     ["password", "/password"],

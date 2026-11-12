@@ -12,7 +12,10 @@ public class JobOpening
     public string SourceLanguageCode { get; set; } = "ar";
     public int? DepartmentId { get; set; }
     public Department? Department { get; set; }
+    /// <summary>Free-text location, kept for jobs from before locations were a list (and as typed by the assistant).</summary>
     public string Location { get; set; } = "";
+    public int? LocationId { get; set; }
+    public JobLocation? JobLocation { get; set; }
     public EmploymentType EmploymentType { get; set; } = EmploymentType.FullTime;
     public JobStatus Status { get; set; } = JobStatus.Draft;
     public bool IsPublished { get; set; }
@@ -65,7 +68,8 @@ public class JobOpening
     /// language when the location is an emirate, otherwise the original.
     /// </summary>
     public string LocationIn(string lang) =>
-        lang == SourceLanguageCode ? Location
+        JobLocation != null ? JobLocation.NameIn(lang)
+        : lang == SourceLanguageCode ? Location
         : ApprovedTranslation(lang) is { Location.Length: > 0 } tr ? tr.Location
         : Locations.In(Location, lang);
 

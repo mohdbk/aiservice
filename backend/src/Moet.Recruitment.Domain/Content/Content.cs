@@ -53,6 +53,27 @@ public class Department
         lang == SourceLanguageCode ? Name : Translations.FirstOrDefault(t => t.LanguageCode == lang)?.Name is { Length: > 0 } n ? n : Name;
 }
 
+/// <summary>A place jobs are based in (an emirate, a city, an office abroad), with its name in each language.</summary>
+public class JobLocation
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = "";
+    public string SourceLanguageCode { get; set; } = "ar";
+    public bool IsActive { get; set; } = true;
+    public int SortOrder { get; set; }
+    public List<JobLocationTranslation> Translations { get; set; } = [];
+
+    public string NameIn(string lang) =>
+        lang == SourceLanguageCode ? Name : Translations.FirstOrDefault(t => t.LanguageCode == lang)?.Name is { Length: > 0 } n ? n : Name;
+}
+
+public class JobLocationTranslation
+{
+    public int JobLocationId { get; set; }
+    public string LanguageCode { get; set; } = "";
+    public string Name { get; set; } = "";
+}
+
 public class DepartmentTranslation
 {
     public int DepartmentId { get; set; }
