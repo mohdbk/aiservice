@@ -300,5 +300,7 @@
  "common.yes": "نعم",
  "common.no": "لا",
  "error.screening_required": "يرجى الإجابة عن جميع الأسئلة المطلوبة.",
- "error.screening_invalid": "يرجى مراجعة إجاباتك عن الأسئلة."
+ "error.screening_invalid": "يرجى مراجعة إجاباتك عن الأسئلة.",
+ "asm.language": "لغة الاختبار",
+ "asm.language_hint": "اختر اللغة التي تريد أن تظهر بها الأسئلة. تبقى بقية البوابة كما هي."
 }
