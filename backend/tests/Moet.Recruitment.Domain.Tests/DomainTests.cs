@@ -422,4 +422,61 @@ public class PersonalityTests
         q.Validate();
         Assert.Equal("Q3", q.Trait);
     }
+    static AttemptQuestion[] Answers(string trait, params int[] values) => values.Select(v => Item(trait, false, v.ToString())).ToArray();
+
+    [Fact]
+    public void Workplace_big_five_is_scored_as_sums_with_five_bands_and_role_fit()
+    {
+        // HR's worked example: C 22, E 18, A 20, ES 23, O 19 gives 84% for Project Manager (Strong Fit).
+        var qs = Answers("C", 5, 5, 4, 4, 4).Concat(Answers("E", 4, 4, 4, 3, 3)).Concat(Answers("A", 4, 4, 4, 4, 4))
+            .Concat(Answers("ES", 5, 5, 5, 4, 4)).Concat(Answers("O", 4, 4, 4, 4, 3)).ToList();
+        var profile = Personality.Profile(qs, PersonalityModel.WorkplaceBigFive, new Dictionary<string, TraitNorm>());
+        Assert.Equal(22, profile.Single(t => t.Code == "C").Sum);
+        Assert.Equal(25, profile.Single(t => t.Code == "C").MaxSum);
+        Assert.Equal("VeryHigh", profile.Single(t => t.Code == "C").Band);
+        Assert.Equal("High", profile.Single(t => t.Code == "E").Band);
+        Assert.Equal("Moderate", Personality.SumBand(15));
+        Assert.Equal("Low", Personality.SumBand(6));
+        Assert.Equal("VeryLow", Personality.SumBand(5));
+
+        var pm = new RoleProfile
+        {
+            Id = 1, NameAr = "مدير مشروع", NameEn = "Project Manager", PersonalityModel = PersonalityModel.WorkplaceBigFive,
+            Weights = """{"C":35,"ES":25,"E":15,"A":15,"O":10}""", Targets = """{"C":"VeryHigh","E":"VeryHigh"}""",
+        };
+        pm.Validate();
+        var fit = pm.Fit(PersonalityModel.WorkplaceBigFive, profile)!;
+        Assert.Equal(84.2, fit.Percent);
+        Assert.Equal("Strong", fit.Level);
+        Assert.Equal(new[] { "E" }, fit.BelowTarget);
+        Assert.Null(pm.Fit(PersonalityModel.WorkplaceType16, profile));
+
+        pm.Weights = """{"C":35,"ES":25}""";
+        Assert.Equal("role_weights_invalid", Assert.Throws<DomainException>(pm.Validate).Code);   // must add up to 100
+    }
+
+    [Fact]
+    public void Sixteen_type_letters_follow_the_higher_pole_and_ties_go_to_I_S_F_P()
+    {
+        var qs = Answers("E", 5, 5, 4, 4, 4).Concat(Answers("I", 3, 3, 3))        // E wins
+            .Concat(Answers("N", 3, 3, 3, 3)).Concat(Answers("S", 3, 3, 3, 3))      // tie: S
+            .Concat(Answers("T", 5, 4, 4, 4)).Concat(Answers("F", 2, 2, 3, 3))      // T
+            .Concat(Answers("J", 2, 2, 2, 2)).Concat(Answers("P", 4, 4, 4, 4))      // P
+            .ToList();
+        var profile = Personality.Profile(qs, PersonalityModel.WorkplaceType16, new Dictionary<string, TraitNorm>());
+        Assert.Equal(22, profile.Single(t => t.Code == "E").Sum);
+        Assert.Equal("ESTP", Personality.TypeOf(profile)!.Value.Type);
+        Assert.True(TypeReports.All.ContainsKey("ESTP"));
+        Assert.Equal(16, TypeReports.All.Count);
+
+        var roles = new RoleProfile { NameAr = "قيادية", NameEn = "Leadership", PersonalityModel = PersonalityModel.WorkplaceType16, Types = "entj, ESTJ" };
+        roles.Validate();
+        Assert.Equal("ENTJ,ESTJ", roles.Types);
+        Assert.Equal("Moderate", roles.Fit(PersonalityModel.WorkplaceType16, profile)!.Level);   // ESTP vs ESTJ: 3 of 4
+        roles.Types = "ENTJ,INFP";
+        Assert.Equal("Weak", roles.Fit(PersonalityModel.WorkplaceType16, profile)!.Level);
+        roles.Types = "ESTX";
+        Assert.Equal("role_types_invalid", Assert.Throws<DomainException>(roles.Validate).Code);
+    }
 }
+

@@ -9,8 +9,16 @@ public sealed record Trait(string Code, string NameAr, string NameEn);
 /// <summary>Average and spread of a trait's item mean (1 to 5) in a reference group, to turn scores into percentiles and stens.</summary>
 public sealed record TraitNorm(double Mean, double Sd);
 
+/// <summary>
+/// One trait's result. Sum and MaxSum are set for the workplace questionnaires (sum of the 1 to 5 answers, as HR scores them on paper).
+/// Bands: Low, Average or High (sten models); VeryLow, Low, Moderate, High or VeryHigh (WorkplaceBigFive); empty for type poles.
+/// </summary>
 public sealed record TraitScore(
-    string Code, string NameAr, string NameEn, int Items, int Answered, double RawMean, double Score, double? Percentile, int Sten, string Band);
+    string Code, string NameAr, string NameEn, int Items, int Answered, double RawMean, double Score, double? Percentile, int Sten, string Band,
+    int? Sum = null, int? MaxSum = null);
+
+/// <summary>One of the four preference pairs of the 16-type questionnaire and the letter that won.</summary>
+public sealed record TypePair(string First, string Second, double FirstMean, double SecondMean, string Letter);
 
 /// <summary>
 /// Personality questionnaires: agreement-scale statements (Likert, 1 to 5) keyed to traits, some reverse-scored.
@@ -39,6 +47,28 @@ public static partial class Personality
         new("Q3", "الدقة والكمال", "Perfectionism"), new("Q4", "التوتر", "Tension"),
     ];
 
+    /// <summary>The Ministry's workplace Big Five: five dimensions, five statements each, scored 5 to 25.</summary>
+    public static readonly IReadOnlyList<Trait> WorkplaceBigFive =
+    [
+        new("C", "يقظة الضمير (التخطيط والاعتمادية)", "Conscientiousness (Planning & Reliability)"),
+        new("E", "الانبساط (الطاقة والتفاعل)", "Extraversion (Energy & Interaction)"),
+        new("A", "الوداعة (العمل الجماعي والتعاون)", "Agreeableness (Teamwork & Cooperation)"),
+        new("ES", "الاتزان الانفعالي (إدارة الضغوط)", "Emotional Stability (Stress Management)"),
+        new("O", "الانفتاح (الابتكار والتعلم)", "Openness (Innovation & Learning)"),
+    ];
+
+    /// <summary>The Ministry's 16-type questionnaire: eight poles in four pairs. Each statement counts towards one pole.</summary>
+    public static readonly IReadOnlyList<Trait> WorkplaceType16 =
+    [
+        new("E", "الانبساط", "Extraversion"), new("I", "الانطواء", "Introversion"),
+        new("N", "الحدس", "Intuition"), new("S", "الحس", "Sensing"),
+        new("T", "التفكير", "Thinking"), new("F", "الشعور", "Feeling"),
+        new("J", "الحكم والتنظيم", "Judging"), new("P", "الإدراك والمرونة", "Perceiving"),
+    ];
+
+    /// <summary>The pairs in type order. A tie goes to the second letter (I, S, F, P), as in HR's scoring sheet.</summary>
+    public static readonly (string First, string Second)[] TypePairs = [("E", "I"), ("N", "S"), ("T", "F"), ("J", "P")];
+
     public static readonly string[] ScaleAr = ["لا أوافق بشدة", "لا أوافق", "محايد", "أوافق", "أوافق بشدة"];
     public static readonly string[] ScaleEn = ["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"];
 
@@ -49,6 +79,8 @@ public static partial class Personality
     {
         PersonalityModel.BigFive => BigFive,
         PersonalityModel.SixteenPF => SixteenPF,
+        PersonalityModel.WorkplaceBigFive => WorkplaceBigFive,
+        PersonalityModel.WorkplaceType16 => WorkplaceType16,
         _ => [],
     };
 
@@ -67,8 +99,12 @@ public static partial class Personality
         catch (JsonException) { throw DomainException.Invalid("norms_invalid"); }
     }
 
+    /// <summary>Norms only apply to the sten models; the workplace questionnaires use fixed sum bands.</summary>
+    public static bool UsesNorms(PersonalityModel model) => model is PersonalityModel.BigFive or PersonalityModel.SixteenPF;
+
     public static void ValidateNorms(IReadOnlyDictionary<string, TraitNorm> norms, PersonalityModel model)
     {
+        if (!UsesNorms(model) && norms.Count > 0) throw DomainException.Invalid("norms_invalid");
         var codes = Traits(model).Select(t => t.Code).ToHashSet();
         foreach (var (code, n) in norms)
             if (!codes.Contains(code) || n.Mean is < 1 or > 5 || n.Sd is <= 0 or > 4) throw DomainException.Invalid("norms_invalid", new Dictionary<string, object?> { ["trait"] = code });
@@ -102,6 +138,14 @@ public static partial class Personality
             if (values.Count == 0) continue;
             var mean = values.Average();
             var score = Math.Round((mean - 1) / 4 * 100, 1);
+            if (!UsesNorms(model))
+            {
+                var stenW = (int)Math.Clamp(Math.Round(1 + (mean - 1) / 4 * 9, MidpointRounding.AwayFromZero), 1, 10);
+                var bandW = model == PersonalityModel.WorkplaceBigFive ? SumBand(mean * 5) : "";
+                result.Add(new TraitScore(trait.Code, trait.NameAr, trait.NameEn, mine.Count, values.Count, Math.Round(mean, 2), score, null, stenW, bandW,
+                    (int)values.Sum(), values.Count * 5));
+                continue;
+            }
             double? percentile = null;
             int sten;
             if (norms.TryGetValue(trait.Code, out var n))
@@ -116,6 +160,41 @@ public static partial class Personality
         }
         return result;
     }
+
+    /// <summary>
+    /// HR's interpretation of a dimension score out of 25: 21 to 25 Very High, 16 to 20 High, 11 to 15 Moderate, 6 to 10 Low, 5 Very Low.
+    /// With unanswered statements the score is the answered mean times five, so the bands keep their meaning.
+    /// </summary>
+    public static string SumBand(double outOf25)
+    {
+        var v = Math.Round(outOf25, MidpointRounding.AwayFromZero);
+        return v >= 21 ? "VeryHigh" : v >= 16 ? "High" : v >= 11 ? "Moderate" : v >= 6 ? "Low" : "VeryLow";
+    }
+
+    /// <summary>A dimension score out of 25 (the sum when all five statements are answered).</summary>
+    public static double OutOf25(TraitScore t) => t.Answered == 5 && t.Sum is { } s ? s : Math.Round(t.RawMean * 5, 2);
+
+    public static readonly string[] SumBands = ["VeryLow", "Low", "Moderate", "High", "VeryHigh"];
+
+    /// <summary>
+    /// The 4-letter type from a WorkplaceType16 profile, or null when a pair has no answers. Each pair compares the average answer
+    /// of its two poles (the same as comparing sums when both poles have the same number of statements); a tie goes to I, S, F or P.
+    /// </summary>
+    public static (string Type, IReadOnlyList<TypePair> Pairs)? TypeOf(IReadOnlyList<TraitScore> profile)
+    {
+        var pairs = new List<TypePair>();
+        foreach (var (first, second) in TypePairs)
+        {
+            var a = profile.FirstOrDefault(t => t.Code == first);
+            var b = profile.FirstOrDefault(t => t.Code == second);
+            if (a == null || b == null) return null;
+            pairs.Add(new TypePair(first, second, a.RawMean, b.RawMean, a.RawMean > b.RawMean ? first : second));
+        }
+        return (string.Concat(pairs.Select(p => p.Letter)), pairs);
+    }
+
+    [GeneratedRegex("^[EI][NS][TF][JP]$")]
+    public static partial Regex TypeCode();
 
     /// <summary>Standard normal cumulative distribution (Abramowitz and Stegun 26.2.17, error below 1e-7).</summary>
     public static double NormalCdf(double z)

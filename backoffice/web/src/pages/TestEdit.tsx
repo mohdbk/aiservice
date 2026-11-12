@@ -5,7 +5,7 @@ import {
   Bilingual, Button, Card, EnglishBadge, ErrorState, LangTabs, Loading, PageHeader, RichText, SelectInput, TextArea, TextInput, Toggle, useSaving,
 } from "../components/ui";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
-import { MODELS } from "../components/personality";
+import { MODEL_KEYS, NORMED, MODELS } from "../components/personality";
 import { useLookups } from "./JobEdit";
 import { plain } from "./Questions";
 
@@ -152,14 +152,14 @@ export default function TestEdit() {
               options={["Draft", "Published", "Archived"].map((v) => ({ value: v, label: t(`status.${v}`) }))} />
             <SelectInput label={t("test.type")} value={x.assessment_type} onChange={(e) => {
               const v = e.target.value;
-              setX((p) => ({ ...p, assessment_type: v, personality_model: v === "Personality" ? (p.personality_model === "None" ? "BigFive" : p.personality_model) : "None",
+              setX((p) => ({ ...p, assessment_type: v, personality_model: v === "Personality" ? (p.personality_model === "None" ? "WorkplaceBigFive" : p.personality_model) : "None",
                 ...(v === "Personality" ? { shuffle_options: false, show_score_to_candidate: false, score_policy: "Latest" } : {}) }));
             }} options={["KnowledgeTest", "LanguageCheck", "SituationalJudgement", "WorkSample", "Aptitude", "Personality", "Other"].map((v) => ({ value: v, label: t(`type.${v}`) }))} />
             {personality && <>
               <SelectInput label={t("pers.model")} value={x.personality_model} onChange={(e) => setX((p) => ({ ...p, personality_model: e.target.value, trait_norms: {} }))}
-                options={["BigFive", "SixteenPF"].map((v) => ({ value: v, label: t(`pers.model.${v}`) }))} />
-              <p className="text-xs text-aeblack-500">{t(x.personality_model === "SixteenPF" ? "pers.model_hint_16pf" : "pers.model_hint_big5")}</p>
-              <details className="rounded-xl bg-whitely-100 p-3">
+                options={MODEL_KEYS.map((v) => ({ value: v, label: t(`pers.model.${v}`) }))} />
+              <p className="text-xs text-aeblack-500">{t(`pers.model_hint.${x.personality_model}`)}</p>
+              {NORMED.includes(x.personality_model) && <details className="rounded-xl bg-whitely-100 p-3">
                 <summary className="cursor-pointer text-sm font-semibold">{t("pers.norms")}</summary>
                 <p className="my-2 text-xs text-aeblack-500">{t("pers.norms_hint")}</p>
                 <div className="space-y-2">
@@ -171,7 +171,7 @@ export default function TestEdit() {
                     </div>
                   ))}
                 </div>
-              </details>
+              </details>}
             </>}
             {!personality && <TextInput label={t("test.pass_mark")} type="number" min={0} max={100} value={x.pass_mark} onChange={(e) => set("pass_mark", Number(e.target.value) || 0)} />}
             <TextInput label={t("test.max_attempts")} type="number" min={1} max={10} value={x.max_attempts} onChange={(e) => set("max_attempts", Number(e.target.value) || 1)} />

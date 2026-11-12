@@ -18,6 +18,7 @@ import Marking from "./pages/Marking";
 import Offers from "./pages/Offers";
 import QuestionEdit from "./pages/QuestionEdit";
 import Questions from "./pages/Questions";
+import RoleProfiles from "./pages/RoleProfiles";
 import Screening from "./pages/Screening";
 import { Departments, Password, PortalText, Rounds, Settings, Staff } from "./pages/Setup";
 import SignIn from "./pages/SignIn";
@@ -51,6 +52,7 @@ function Guarded() {
         <Route path="questions/new" element={<QuestionEdit />} />
         <Route path="questions/:id" element={<QuestionEdit />} />
         <Route path="invitations" element={<Invitations />} />
+        <Route path="role-profiles" element={<RoleProfiles />} />
         <Route path="marking/:id" element={<Marking />} />
         <Route path="assistant" element={<Assistant />} />
         <Route path="password" element={<Password />} />

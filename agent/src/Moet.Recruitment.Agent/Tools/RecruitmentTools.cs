@@ -169,18 +169,24 @@ public sealed class RecruitmentTools(BackofficeApi api)
         foreach (var criterion in criteria)
             rows.Add(RowOf(criterion, p => Analysis(p) is { } an && an.TryGetProperty("criteria", out var c) && c.ValueKind == JsonValueKind.Array
                 ? c.EnumerateArray().Where(x => Str(x, "criterion") == criterion).Select(x => Str(x, "score")).FirstOrDefault() ?? "" : ""));
-        // Personality questionnaire results (trait, sten out of 10, band), when any of them completed one.
+        // Personality questionnaire results (sum out of 25 or sten out of 10, with the band), when any of them completed one.
         var profiles = people.Select(TraitProfile).ToList();
         var traitRows = profiles.SelectMany(x => x.Keys).Distinct().ToList();
         if (traitRows.Count > 0)
         {
             rows.Add(s.Divider());
-            rows.Add(s.Text(L("ملف الشخصية (من 10)", "Personality Profile (out of 10)"), "h5"));
+            rows.Add(s.Text(L("ملف الشخصية", "Personality Profile"), "h5"));
             foreach (var code in traitRows)
             {
                 var name = profiles.Select(x => x.TryGetValue(code, out var v) ? v.Name : null).First(n => n != null)!;
-                rows.Add(s.Row([s.Text(name, "caption"), .. profiles.Select(x => s.Text(x.TryGetValue(code, out var v) ? $"{v.Sten} · {v.Band}" : "-"))]));
+                rows.Add(s.Row([s.Text(name, "caption"), .. profiles.Select(x => s.Text(x.TryGetValue(code, out var v) ? v.Value : "-"))]));
             }
+            // The 16-type letters and the fit with HR's role profiles, when worked out.
+            var summaries = people.Select(Personality).ToList();
+            if (summaries.Any(x => x.Type.Length > 0))
+                rows.Add(s.Row([s.Text(L("نمط الشخصية", "Personality Type"), "caption"), .. summaries.Select(x => s.Text(x.Type.Length > 0 ? x.Type : "-"))]));
+            foreach (var role in summaries.SelectMany(x => x.Fits.Keys).Distinct().Take(8))
+                rows.Add(s.Row([s.Text(L($"الملاءمة: {role}", $"Fit: {role}"), "caption"), .. summaries.Select(x => s.Text(x.Fits.TryGetValue(role, out var f) ? f : "-"))]));
         }
         rows.Add(s.Row([.. people.Select(p => s.Button(L("فتح", "Open"), "open_applicant",
             new JsonObject { ["applicant_id"] = p.GetProperty("id").GetInt32() }, "borderless"))]));
@@ -480,10 +486,13 @@ public sealed class RecruitmentTools(BackofficeApi api)
     static string Q(params (string Key, string? Value)[] pairs) =>
         string.Join("&", pairs.Where(p => !string.IsNullOrWhiteSpace(p.Value)).Select(p => $"{p.Key}={Uri.EscapeDataString(p.Value!)}"));
 
-    /// <summary>The latest personality questionnaire profile of an applicant: trait code to (name, sten, band).</summary>
-    Dictionary<string, (string Name, int Sten, string Band)> TraitProfile(JsonElement p)
+    /// <summary>
+    /// The latest personality questionnaire profile of an applicant: trait code to (name, value shown). The value is the sum
+    /// out of 25 (workplace questionnaires) or the sten out of 10, with the band.
+    /// </summary>
+    Dictionary<string, (string Name, string Value)> TraitProfile(JsonElement p)
     {
-        var result = new Dictionary<string, (string, int, string)>();
+        var result = new Dictionary<string, (string, string)>();
         if (!p.TryGetProperty("invitations", out var invs) || invs.ValueKind != JsonValueKind.Array) return result;
         foreach (var inv in invs.EnumerateArray())
         {
@@ -492,10 +501,41 @@ public sealed class RecruitmentTools(BackofficeApi api)
             if (json == null) continue;
             using var doc = JsonDocument.Parse(json);
             foreach (var t in doc.RootElement.EnumerateArray())
-                result[Str(t, "Code")] = (Ar ? Str(t, "NameAr") : Str(t, "NameEn"), t.GetProperty("Sten").GetInt32(), Str(t, "Band"));
+            {
+                var band = BandText(Str(t, "Band"));
+                var value = t.TryGetProperty("Sum", out var sum) && sum.ValueKind == JsonValueKind.Number
+                    ? $"{sum.GetInt32()}/{t.GetProperty("MaxSum").GetInt32()}" : $"{t.GetProperty("Sten").GetInt32()}/10";
+                result[Str(t, "Code")] = (Ar ? Str(t, "NameAr") : Str(t, "NameEn"), band.Length > 0 ? $"{value} · {band}" : value);
+            }
             return result;
         }
         return result;
+    }
+
+    string BandText(string band) => band switch
+    {
+        "VeryHigh" => L("مرتفع جدًا", "Very High"), "High" => L("مرتفع", "High"), "Moderate" => L("متوسط", "Moderate"),
+        "Average" => L("متوسط", "Average"), "Low" => L("منخفض", "Low"), "VeryLow" => L("منخفض جدًا", "Very Low"), _ => "",
+    };
+
+    /// <summary>The 16-type letters and role fits (name to "84% · Strong Fit") of the applicant's latest personality questionnaire.</summary>
+    (string Type, Dictionary<string, string> Fits) Personality(JsonElement p)
+    {
+        var fits = new Dictionary<string, string>();
+        if (!p.TryGetProperty("personality", out var all) || all.ValueKind != JsonValueKind.Object) return ("", fits);
+        var type = "";
+        foreach (var inv in all.EnumerateObject())
+        {
+            if (inv.Value.ValueKind != JsonValueKind.Object) continue;
+            if (type.Length == 0) type = Str(inv.Value, "type");
+            if (!inv.Value.TryGetProperty("fits", out var list)) continue;
+            foreach (var f in list.EnumerateArray())
+            {
+                var level = Str(f, "level") switch { "Strong" => L("ملاءمة عالية", "Strong Fit"), "Moderate" => L("ملاءمة متوسطة", "Moderate Fit"), _ => L("ملاءمة ضعيفة", "Weak Fit") };
+                fits.TryAdd(Ar ? Str(f, "name_ar") : Str(f, "name_en"), $"{f.GetProperty("percent").GetDouble():0.#}% · {level}");
+            }
+        }
+        return (type, fits);
     }
 
     static JsonElement? Analysis(JsonElement p) => p.TryGetProperty("analysis", out var a) && a.ValueKind == JsonValueKind.Object ? a : null;

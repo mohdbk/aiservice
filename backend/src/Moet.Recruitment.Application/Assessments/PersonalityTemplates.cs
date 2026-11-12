@@ -11,7 +11,8 @@ namespace Moet.Recruitment.Application.Assessments;
 /// <summary>
 /// Ready-made personality questionnaires that HR can add in one step: the statements go into the question bank (as
 /// agreement-scale questions keyed to traits, Arabic with approved English) and a draft questionnaire is created.
-/// Only public-domain content ships here (IPIP). 16PF questions are licensed by their publisher and added by HR.
+/// Ships the public-domain IPIP Big Five and the Ministry's own workplace questionnaires (Big Five, 25 statements, and
+/// 16-type, 32 statements). 16PF questions are licensed by their publisher and added by HR.
 /// </summary>
 public sealed class PersonalityTemplates(IAppDbContext db, IClock clock, ICurrentActor actor)
 {

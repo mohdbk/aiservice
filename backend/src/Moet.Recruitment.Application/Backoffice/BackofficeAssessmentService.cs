@@ -348,11 +348,13 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
     {
         var a = await LoadAttemptAsync(id, ct);
         var inv = a.Invitation!;
+        var roles = inv.Assessment!.IsPersonality ? await db.RoleProfiles.AsNoTracking().Where(r => r.IsActive).OrderBy(r => r.SortOrder).ToListAsync(ct) : [];
         return new
         {
             id = a.Id, attempt_no = (int)a.AttemptNo, status = a.Status.ToString(), percent = a.Percent, earned = a.Earned, total = a.Total,
             passed = a.Passed, started_at = a.StartedAt, trait_profile = TraitProfile(a.TraitProfile),
-            personality_model = inv.Assessment!.PersonalityModel.ToString(), submitted_at = a.SubmittedAt, tab_switches = a.TabSwitches, pastes = a.Pastes,
+            personality_model = inv.Assessment!.PersonalityModel.ToString(),
+            personality = RoleProfileService.Summary(inv.Assessment.PersonalityModel, a.TraitProfile, roles), submitted_at = a.SubmittedAt, tab_switches = a.TabSwitches, pastes = a.Pastes,
             invitation = new { id = inv.Id, code = inv.Code, assessment = inv.Assessment!.Title, pass_mark = inv.Assessment.PassMark },
             applicant = new { id = inv.JobApplicationId, name = inv.JobApplication!.FullName },
             sections = a.SectionScores().Select(s => new { s.SectionNo, s.Title, s.Earned, s.Total, s.Percent, s.Passed }).ToList(),

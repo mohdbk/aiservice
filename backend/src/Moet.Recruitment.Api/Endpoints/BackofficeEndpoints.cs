@@ -101,6 +101,8 @@ public static class BackofficeEndpoints
         staff.MapPut("/assessments/{id:int}", (int id, AssessmentInput b, BackofficeAssessmentService s, CancellationToken ct) => s.SaveAssessmentAsync(id, b, ct));
         staff.MapGet("/assessment-templates", (PersonalityTemplates s) => s.List());
         staff.MapPost("/assessment-templates/{key}", (string key, PersonalityTemplates s, CancellationToken ct) => s.CreateAsync(key, ct));
+        staff.MapGet("/role-profiles", (string? model, RoleProfileService s, CancellationToken ct) => s.ListAsync(model, ct));
+        staff.MapGet("/role-profiles/{id:int}", (int id, RoleProfileService s, CancellationToken ct) => s.GetAsync(id, ct));
         staff.MapGet("/invitations", ([AsParameters] ListQuery lq, string? status, int? assessment, string? result, int? job, BackofficeAssessmentService s, CancellationToken ct) =>
             s.InvitationsAsync(lq, status, assessment, result, job, ct));
         staff.MapPost("/invitations/{id:int}/reexam", (int id, ReexamBody b, BackofficeAssessmentService s, CancellationToken ct) => s.ReexamAsync(id, b.ExtraAttempts, b.DeadlineDays, b.Notify, ct));
@@ -146,6 +148,9 @@ public static class BackofficeEndpoints
         setup.MapPost("/components", (ComponentInput b, BackofficeComponentService s, CancellationToken ct) => s.SaveAsync(null, b, ct));
         setup.MapPut("/components/{id:int}", (int id, ComponentInput b, BackofficeComponentService s, CancellationToken ct) => s.SaveAsync(id, b, ct));
         setup.MapDelete("/components/{id:int}", (int id, BackofficeComponentService s, CancellationToken ct) => s.DeleteAsync(id, ct));
+        setup.MapPost("/role-profiles", (RoleProfileInput b, RoleProfileService s, CancellationToken ct) => s.SaveAsync(null, b, ct));
+        setup.MapPut("/role-profiles/{id:int}", (int id, RoleProfileInput b, RoleProfileService s, CancellationToken ct) => s.SaveAsync(id, b, ct));
+        setup.MapDelete("/role-profiles/{id:int}", (int id, RoleProfileService s, CancellationToken ct) => s.DeleteAsync(id, ct));
         setup.MapGet("/settings", (BackofficeSetupService s, CancellationToken ct) => s.SettingsAsync(ct));
         setup.MapPut("/settings", (SettingsInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveSettingsAsync(b, ct));
         setup.MapGet("/portal-text/{lang}", (string lang, [AsParameters] ListQuery lq, string? changed, BackofficeSetupService s, CancellationToken ct) => s.PortalTextAsync(lang, lq, changed, ct));

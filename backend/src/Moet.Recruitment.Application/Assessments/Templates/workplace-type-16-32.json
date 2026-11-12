@@ -1,0 +1,208 @@
+{
+ "key": "workplace-type-16-32",
+ "model": "WorkplaceType16",
+ "category": "Workplace 16-Type",
+ "source": "Ministry of Economy & Tourism workplace questionnaire (HR).",
+ "title": {
+  "ar": "استبيان أنماط الشخصية في العمل (16 نمطًا)",
+  "en": "Workplace Personality Assessment (16 Types)"
+ },
+ "instructions": {
+  "ar": "<p>اقرأ كل عبارة واختر مدى انطباقها عليك في العمل. لا توجد إجابات صحيحة أو خاطئة، فأجب بصدق ودون تفكير طويل.</p>",
+  "en": "<p>Read each statement and choose how well it describes you at work. There are no right or wrong answers, so answer honestly and without long thought.</p>"
+ },
+ "items": [
+  {
+   "trait": "E",
+   "reverse": false,
+   "en": "I enjoy meeting new people.",
+   "ar": "أستمتع بالتعرف على أشخاص جدد."
+  },
+  {
+   "trait": "E",
+   "reverse": false,
+   "en": "I feel energized after social interactions.",
+   "ar": "أشعر بالنشاط بعد التواصل الاجتماعي."
+  },
+  {
+   "trait": "E",
+   "reverse": false,
+   "en": "I prefer discussing ideas aloud.",
+   "ar": "أفضّل مناقشة الأفكار بصوت مسموع."
+  },
+  {
+   "trait": "E",
+   "reverse": false,
+   "en": "I often initiate conversations.",
+   "ar": "كثيرًا ما أبادر ببدء الحديث."
+  },
+  {
+   "trait": "E",
+   "reverse": false,
+   "en": "I enjoy being the center of attention.",
+   "ar": "أستمتع بأن أكون محور الاهتمام."
+  },
+  {
+   "trait": "I",
+   "reverse": false,
+   "en": "I prefer working independently.",
+   "ar": "أفضّل العمل بشكل مستقل."
+  },
+  {
+   "trait": "I",
+   "reverse": false,
+   "en": "I need quiet time to recharge.",
+   "ar": "أحتاج إلى وقت هادئ لاستعادة طاقتي."
+  },
+  {
+   "trait": "I",
+   "reverse": false,
+   "en": "I keep my thoughts to myself until they are fully formed.",
+   "ar": "أحتفظ بأفكاري لنفسي حتى تكتمل."
+  },
+  {
+   "trait": "N",
+   "reverse": false,
+   "en": "I focus on possibilities more than facts.",
+   "ar": "أركز على الاحتمالات أكثر من الحقائق."
+  },
+  {
+   "trait": "N",
+   "reverse": false,
+   "en": "I enjoy discussing future opportunities.",
+   "ar": "أستمتع بمناقشة الفرص المستقبلية."
+  },
+  {
+   "trait": "N",
+   "reverse": false,
+   "en": "I look for patterns and connections.",
+   "ar": "أبحث عن الأنماط والروابط."
+  },
+  {
+   "trait": "N",
+   "reverse": false,
+   "en": "I trust my intuition.",
+   "ar": "أثق بحدسي."
+  },
+  {
+   "trait": "S",
+   "reverse": false,
+   "en": "I focus on present realities.",
+   "ar": "أركز على الواقع الحالي."
+  },
+  {
+   "trait": "S",
+   "reverse": false,
+   "en": "I prefer practical solutions.",
+   "ar": "أفضّل الحلول العملية."
+  },
+  {
+   "trait": "S",
+   "reverse": false,
+   "en": "I rely on experience and proven methods.",
+   "ar": "أعتمد على الخبرة والأساليب المجربة."
+  },
+  {
+   "trait": "S",
+   "reverse": false,
+   "en": "I notice details others miss.",
+   "ar": "ألاحظ تفاصيل يغفل عنها الآخرون."
+  },
+  {
+   "trait": "T",
+   "reverse": false,
+   "en": "I make decisions based on logic.",
+   "ar": "أتخذ قراراتي بناءً على المنطق."
+  },
+  {
+   "trait": "T",
+   "reverse": false,
+   "en": "I can separate emotions from decisions.",
+   "ar": "أستطيع فصل المشاعر عن القرارات."
+  },
+  {
+   "trait": "T",
+   "reverse": false,
+   "en": "Fairness is more important than harmony.",
+   "ar": "العدالة أهم من الانسجام."
+  },
+  {
+   "trait": "T",
+   "reverse": false,
+   "en": "I challenge ideas that do not make sense.",
+   "ar": "أعترض على الأفكار غير المنطقية."
+  },
+  {
+   "trait": "F",
+   "reverse": false,
+   "en": "I consider people's feelings before decisions.",
+   "ar": "أراعي مشاعر الناس قبل اتخاذ القرارات."
+  },
+  {
+   "trait": "F",
+   "reverse": false,
+   "en": "Relationships are more important than rules.",
+   "ar": "العلاقات أهم من القواعد."
+  },
+  {
+   "trait": "F",
+   "reverse": false,
+   "en": "I avoid hurting others when giving feedback.",
+   "ar": "أتجنب جرح مشاعر الآخرين عند إبداء الملاحظات."
+  },
+  {
+   "trait": "F",
+   "reverse": false,
+   "en": "Empathy strongly influences my decisions.",
+   "ar": "يؤثر التعاطف بقوة في قراراتي."
+  },
+  {
+   "trait": "J",
+   "reverse": false,
+   "en": "I like having a clear plan.",
+   "ar": "أحب أن تكون لدي خطة واضحة."
+  },
+  {
+   "trait": "J",
+   "reverse": false,
+   "en": "I prefer schedules over spontaneity.",
+   "ar": "أفضّل الجداول المحددة على العفوية."
+  },
+  {
+   "trait": "J",
+   "reverse": false,
+   "en": "I complete tasks before deadlines.",
+   "ar": "أنجز المهام قبل مواعيدها النهائية."
+  },
+  {
+   "trait": "J",
+   "reverse": false,
+   "en": "I like closure and decisions.",
+   "ar": "أحب حسم الأمور واتخاذ القرارات."
+  },
+  {
+   "trait": "P",
+   "reverse": false,
+   "en": "I adapt plans as situations change.",
+   "ar": "أعدّل خططي مع تغير الظروف."
+  },
+  {
+   "trait": "P",
+   "reverse": false,
+   "en": "I enjoy keeping options open.",
+   "ar": "أحب إبقاء الخيارات مفتوحة."
+  },
+  {
+   "trait": "P",
+   "reverse": false,
+   "en": "I work best under flexibility.",
+   "ar": "أعمل بأفضل شكل في ظروف مرنة."
+  },
+  {
+   "trait": "P",
+   "reverse": false,
+   "en": "I make decisions at the last moment.",
+   "ar": "أتخذ قراراتي في اللحظة الأخيرة."
+  }
+ ]
+}

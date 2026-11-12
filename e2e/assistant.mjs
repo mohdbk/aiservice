@@ -9,7 +9,8 @@ for (const [lang, device] of [["ar", "Pixel 7"], ["en", "iPhone 13"], ["ar", "iP
   const ctx = await browser.newContext({ ...devices[device] });
   const page = await ctx.newPage();
   page.on("pageerror", (e) => errors.push(`${lang} pageerror: ${e.message}`));
-  page.on("console", (m) => { if (m.type() === "error") errors.push(`${lang} console: ${m.text()}`); });
+  // The browser logs the expected 401 from /me before sign-in as a console error; failed API calls are caught below instead.
+  page.on("console", (m) => { if (m.type() === "error" && !/status of 401/.test(m.text())) errors.push(`${lang} console: ${m.text()}`); });
   page.on("response", (r) => { if (r.url().includes("/api/") && r.status() >= 400 && !r.url().endsWith("/me")) errors.push(`${lang} ${r.status()} ${r.url()}`); });
   await page.goto(`${BASE}/${lang}/sign-in`);
   await page.fill('input[type="email"]', process.env.ADMIN_EMAIL);

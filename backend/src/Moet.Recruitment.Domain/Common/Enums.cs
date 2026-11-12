@@ -40,7 +40,11 @@ public enum Difficulty { Easy, Medium, Hard }
 
 public enum AssessmentType { KnowledgeTest, LanguageCheck, SituationalJudgement, WorkSample, Aptitude, Other, Personality }
 
-public enum PersonalityModel { None, BigFive, SixteenPF }
+/// <summary>
+/// BigFive and SixteenPF: trait means on the sten scale. WorkplaceBigFive: the Ministry's 25-statement questionnaire, scored as
+/// sums (5 to 25) with five bands and role fit. WorkplaceType16: the Ministry's 32-statement questionnaire giving a 4-letter type.
+/// </summary>
+public enum PersonalityModel { None, BigFive, SixteenPF, WorkplaceBigFive, WorkplaceType16 }
 
 public enum AssessmentStatus { Draft, Published, Archived }
 

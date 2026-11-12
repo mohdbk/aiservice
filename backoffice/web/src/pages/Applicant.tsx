@@ -4,7 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import {
   ActionMenu, Badge, Button, Card, Empty, ErrorState, Loading, Modal, Note, PageHeader, Score, SectionTabs, SelectInput, Table, TextArea, TextInput, Tick, useSaving,
 } from "../components/ui";
-import { TraitProfile, parseProfile } from "../components/personality";
+import { TraitProfile, parseProfile, type PersonalitySummary } from "../components/personality";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
 import { appTone, screenTone } from "./Applicants";
 import { useLookups } from "./JobEdit";
@@ -21,6 +21,7 @@ type Detail = {
   notes: { id: number; kind: string; text: string; created_at: string; author: string }[];
   interviews: { id: number; code: string; round: string; starts_at: string; ends_at: string; status: string; feedback: number }[];
   offers: { id: number; code: string; position_title: string; status: string; offer_date: string }[];
+  personality?: Record<string, PersonalitySummary | null>;
   invitations: {
     id: number; code: string; assessment_id: number; title: string; status: string; deadline_at: string; attempts_used: number; attempts_allowed: number;
     score: number | null; result: string | null; personality_model: string;
@@ -178,7 +179,7 @@ export default function Applicant() {
               </dl>
               {inv.personality_model !== "None" && (() => {
                 const last = [...inv.attempts].reverse().find((at) => at.trait_profile);
-                return last ? <div className="mb-4"><TraitProfile profile={parseProfile(last.trait_profile)} /></div> : null;
+                return last ? <div className="mb-4"><TraitProfile profile={parseProfile(last.trait_profile)} summary={a.personality?.[String(inv.id)]} /></div> : null;
               })()}
               {inv.attempts.length > 0 && (
                 <ul className="space-y-2">

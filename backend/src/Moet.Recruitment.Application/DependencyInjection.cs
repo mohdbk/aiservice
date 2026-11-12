@@ -38,6 +38,7 @@ public static class DependencyInjection
         s.AddScoped<BackofficeInterviewService>();
         s.AddScoped<BackofficeAssessmentService>();
         s.AddScoped<PersonalityTemplates>();
+        s.AddScoped<RoleProfileService>();
         s.AddScoped<BackofficeSetupService>();
         s.AddScoped<AgentProposalService>();
         s.AddScoped<AgentSettingsService>();

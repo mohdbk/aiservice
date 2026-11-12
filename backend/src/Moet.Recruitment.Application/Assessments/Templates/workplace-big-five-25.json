@@ -1,0 +1,166 @@
+{
+ "key": "workplace-big-five-25",
+ "model": "WorkplaceBigFive",
+ "category": "Workplace Big Five",
+ "source": "Ministry of Economy & Tourism workplace questionnaire (HR).",
+ "title": {
+  "ar": "استبيان الشخصية في العمل (السمات الخمس)",
+  "en": "Workplace Personality Assessment (Big Five)"
+ },
+ "instructions": {
+  "ar": "<p>اقرأ كل عبارة واختر مدى انطباقها عليك في العمل. لا توجد إجابات صحيحة أو خاطئة، فأجب بصدق ودون تفكير طويل.</p>",
+  "en": "<p>Read each statement and choose how well it describes you at work. There are no right or wrong answers, so answer honestly and without long thought.</p>"
+ },
+ "items": [
+  {
+   "trait": "C",
+   "reverse": false,
+   "en": "I create plans before starting important tasks.",
+   "ar": "أضع خطة قبل البدء في المهام المهمة."
+  },
+  {
+   "trait": "C",
+   "reverse": false,
+   "en": "I pay close attention to details.",
+   "ar": "أولي التفاصيل اهتمامًا كبيرًا."
+  },
+  {
+   "trait": "C",
+   "reverse": false,
+   "en": "I meet deadlines consistently.",
+   "ar": "ألتزم بالمواعيد النهائية باستمرار."
+  },
+  {
+   "trait": "C",
+   "reverse": false,
+   "en": "I keep my work organized.",
+   "ar": "أحافظ على تنظيم عملي."
+  },
+  {
+   "trait": "C",
+   "reverse": false,
+   "en": "I follow through on commitments.",
+   "ar": "أفي بالتزاماتي حتى النهاية."
+  },
+  {
+   "trait": "E",
+   "reverse": false,
+   "en": "I feel comfortable meeting new people.",
+   "ar": "أشعر بالارتياح عند التعرف على أشخاص جدد."
+  },
+  {
+   "trait": "E",
+   "reverse": false,
+   "en": "I enjoy speaking in front of groups.",
+   "ar": "أستمتع بالتحدث أمام المجموعات."
+  },
+  {
+   "trait": "E",
+   "reverse": false,
+   "en": "I like collaborating with others.",
+   "ar": "أحب التعاون مع الآخرين."
+  },
+  {
+   "trait": "E",
+   "reverse": false,
+   "en": "I feel energized when working with people.",
+   "ar": "أشعر بالنشاط عند العمل مع الناس."
+  },
+  {
+   "trait": "E",
+   "reverse": false,
+   "en": "I often take the lead in discussions.",
+   "ar": "كثيرًا ما أبادر بقيادة النقاشات."
+  },
+  {
+   "trait": "A",
+   "reverse": false,
+   "en": "I listen carefully to others' opinions.",
+   "ar": "أستمع بعناية لآراء الآخرين."
+  },
+  {
+   "trait": "A",
+   "reverse": false,
+   "en": "I am willing to help colleagues when needed.",
+   "ar": "أنا مستعد لمساعدة زملائي عند الحاجة."
+  },
+  {
+   "trait": "A",
+   "reverse": false,
+   "en": "I try to avoid unnecessary conflict.",
+   "ar": "أحرص على تجنب الخلافات غير الضرورية."
+  },
+  {
+   "trait": "A",
+   "reverse": false,
+   "en": "People describe me as cooperative.",
+   "ar": "يصفني الآخرون بأنني متعاون."
+  },
+  {
+   "trait": "A",
+   "reverse": false,
+   "en": "I consider the impact of my actions on others.",
+   "ar": "أراعي أثر تصرفاتي على الآخرين."
+  },
+  {
+   "trait": "ES",
+   "reverse": false,
+   "en": "I remain calm under pressure.",
+   "ar": "أحافظ على هدوئي تحت الضغط."
+  },
+  {
+   "trait": "ES",
+   "reverse": false,
+   "en": "I recover quickly from setbacks.",
+   "ar": "أتجاوز العثرات بسرعة."
+  },
+  {
+   "trait": "ES",
+   "reverse": false,
+   "en": "I make decisions without excessive worry.",
+   "ar": "أتخذ قراراتي دون قلق مفرط."
+  },
+  {
+   "trait": "ES",
+   "reverse": false,
+   "en": "I stay focused during stressful situations.",
+   "ar": "أبقى مركزًا في المواقف الضاغطة."
+  },
+  {
+   "trait": "ES",
+   "reverse": false,
+   "en": "I handle criticism constructively.",
+   "ar": "أتعامل مع النقد بطريقة بنّاءة."
+  },
+  {
+   "trait": "O",
+   "reverse": false,
+   "en": "I enjoy learning new skills.",
+   "ar": "أستمتع بتعلم مهارات جديدة."
+  },
+  {
+   "trait": "O",
+   "reverse": false,
+   "en": "I welcome new ideas and approaches.",
+   "ar": "أرحب بالأفكار والأساليب الجديدة."
+  },
+  {
+   "trait": "O",
+   "reverse": false,
+   "en": "I like solving unfamiliar problems.",
+   "ar": "أحب حل المشكلات غير المألوفة."
+  },
+  {
+   "trait": "O",
+   "reverse": false,
+   "en": "I adapt quickly to change.",
+   "ar": "أتكيف مع التغيير بسرعة."
+  },
+  {
+   "trait": "O",
+   "reverse": false,
+   "en": "I seek opportunities for continuous improvement.",
+   "ar": "أبحث عن فرص للتحسين المستمر."
+  }
+ ]
+}

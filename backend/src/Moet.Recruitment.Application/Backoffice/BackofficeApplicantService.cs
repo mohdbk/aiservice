@@ -79,6 +79,11 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
                     tab_switches = t.TabSwitches, pastes = t.Pastes, submitted_at = t.SubmittedAt, trait_profile = t.TraitProfile,
                 }).ToList(),
             }).ToListAsync(ct);
+        var roles = invitations.Any(i => i.personality_model != PersonalityModel.None) ? await db.RoleProfiles.AsNoTracking().Where(r => r.IsActive)
+            .OrderBy(r => r.SortOrder).ThenBy(r => r.NameEn).ToListAsync(ct) : [];
+        // Per invitation: the 16-type letters and notes, and the fit with each role profile (from the latest completed attempt).
+        var personality = invitations.Where(i => i.personality_model != PersonalityModel.None).ToDictionary(i => i.id.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            i => RoleProfileService.Summary(i.personality_model, i.attempts.LastOrDefault(t => t.trait_profile != null)?.trait_profile, roles));
         var c = a.CvAnalysis;
         return new
         {
@@ -103,7 +108,7 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
                 id = n.Id, kind = n.Kind.ToString(), text = n.Text, created_at = n.CreatedAt,
                 author = n.AuthorStaff?.FullName ?? (n.AuthorApplicantId != null ? a.FullName : "System"),
             }).ToList(),
-            interviews, offers, invitations,
+            interviews, offers, invitations, personality,
         };
     }
 

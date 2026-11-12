@@ -214,6 +214,30 @@ public class EndToEndTests
         Assert.Equal(50, questionnaire.GetProperty("question_count").GetInt32());
         Assert.Equal(5, questionnaire.GetProperty("traits").GetArrayLength());
 
+        // The Ministry's workplace questionnaires (25 and 32 statements) and HR's starting role profiles.
+        var workplace = await Read(await admin.PostAsync("/api/backoffice/assessment-templates/workplace-big-five-25", JsonBody(new { })));
+        Assert.Equal(25, workplace.GetProperty("questions").GetInt32());
+        var types = await Read(await admin.PostAsync("/api/backoffice/assessment-templates/workplace-type-16-32", JsonBody(new { })));
+        Assert.Equal(32, types.GetProperty("questions").GetInt32());
+        var typeTest = await Read(await admin.GetAsync($"/api/backoffice/assessments/{types.GetProperty("id").GetInt32()}"));
+        Assert.Equal("WorkplaceType16", typeTest.GetProperty("personality_model").GetString());
+        var roleProfiles = await Read(await admin.GetAsync("/api/backoffice/role-profiles?model=WorkplaceBigFive"));
+        Assert.Contains(roleProfiles.GetProperty("items").EnumerateArray(), r => r.GetProperty("name_en").GetString() == "Project Manager"
+            && r.GetProperty("weights").GetProperty("C").GetInt32() == 35);
+        var newRole = await admin.PostAsync("/api/backoffice/role-profiles", JsonBody(new
+        {
+            name_ar = "موظف موارد بشرية", name_en = "HR Officer", personality_model = "WorkplaceBigFive",
+            weights = new Dictionary<string, int> { ["A"] = 40, ["E"] = 30, ["ES"] = 30 }, targets = new Dictionary<string, string> { ["A"] = "High" },
+            strong_from = 75, moderate_from = 55, is_active = true, sort_order = 9,
+        }));
+        Assert.True(newRole.IsSuccessStatusCode, await newRole.Content.ReadAsStringAsync());
+        var badRole = await admin.PostAsync("/api/backoffice/role-profiles", JsonBody(new
+        {
+            name_ar = "س", name_en = "X", personality_model = "WorkplaceBigFive", weights = new Dictionary<string, int> { ["A"] = 40 },
+            strong_from = 75, moderate_from = 55, is_active = true,
+        }));
+        Assert.Equal(HttpStatusCode.BadRequest, badRole.StatusCode);
+
         // Changes without the X-Admin header are refused.
         var plain = app.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
         Assert.Equal(HttpStatusCode.Forbidden, (await plain.PostAsync("/api/backoffice/sign-in", JsonBody(new { email = "x", password = "y" }))).StatusCode);
