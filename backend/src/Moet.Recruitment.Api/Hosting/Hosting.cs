@@ -110,37 +110,24 @@ public sealed class SecurityHeaders(RequestDelegate next)
     {
         var h = ctx.Response.Headers;
         h["X-Content-Type-Options"] = "nosniff";
-        h["X-Frame-Options"] = "DENY";
+        // CV files are shown inside the backoffice (same origin, through its proxy); everything else is never framed.
+        var framable = ctx.Request.Path.Value?.EndsWith("/cv", StringComparison.Ordinal) == true;
+        h["X-Frame-Options"] = framable ? "SAMEORIGIN" : "DENY";
         h["Referrer-Policy"] = "same-origin";
         h["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
-        h["Content-Security-Policy"] =
-            "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-            "font-src 'self' https://fonts.gstatic.com; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
+        h["Content-Security-Policy"] = framable ? "frame-ancestors 'self'" : "default-src 'none'; frame-ancestors 'none'";
         if (ctx.Request.IsHttps) h["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains";
-        if (ctx.Request.Path.StartsWithSegments("/api")) h["Cache-Control"] = "no-store";
+        h["Cache-Control"] = "no-store";
         return next(ctx);
     }
 }
 
-/// <summary>Serves the backoffice's index.html for its client-side routes; unknown API paths get 404.</summary>
-public static class SpaFallback
+/// <summary>The API serves no web pages (the backoffice and portal are their own services): anything unknown is a JSON 404.</summary>
+public static class NotFoundEnvelope
 {
-    public static async Task Handle(HttpContext ctx, IWebHostEnvironment env)
+    public static Task Handle(HttpContext ctx)
     {
-        if (ctx.Request.Path.StartsWithSegments("/api"))
-        {
-            ctx.Response.StatusCode = 404;
-            await ctx.Response.WriteAsJsonAsync(new { error = new { code = "not_found", @params = new { } } }, Json.Options);
-            return;
-        }
-        var index = env.WebRootFileProvider.GetFileInfo("index.html");
-        if (!index.Exists)
-        {
-            ctx.Response.StatusCode = 404;
-            return;
-        }
-        ctx.Response.ContentType = "text/html; charset=utf-8";
-        ctx.Response.Headers.CacheControl = "no-cache";
-        await ctx.Response.SendFileAsync(index);
+        ctx.Response.StatusCode = 404;
+        return ctx.Response.WriteAsJsonAsync(new { error = new { code = "not_found", @params = new { } } }, Json.Options);
     }
 }

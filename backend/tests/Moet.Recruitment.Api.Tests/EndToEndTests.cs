@@ -201,6 +201,9 @@ public class EndToEndTests
         var info = await Read(await admin.GetAsync("/api/backoffice/agent/info"));
         Assert.Equal(20, info.GetProperty("history_turns").GetInt32());
 
+        // Assessments load with their sections (computed orderings are not mapped as navigations).
+        Assert.Equal(0, (await Read(await admin.GetAsync("/api/backoffice/assessments"))).GetProperty("total").GetInt32());
+
         // Changes without the X-Admin header are refused.
         var plain = app.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
         Assert.Equal(HttpStatusCode.Forbidden, (await plain.PostAsync("/api/backoffice/sign-in", JsonBody(new { email = "x", password = "y" }))).StatusCode);

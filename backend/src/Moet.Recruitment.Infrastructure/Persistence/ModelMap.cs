@@ -156,6 +156,7 @@ static class ModelMap
         m.Entity<Assessment>(e =>
         {
             e.ToTable("Assessment", "assessment");
+            e.Ignore(x => x.OrderedSections);
             e.HasMany(x => x.Sections).WithOne().HasForeignKey(s => s.AssessmentId).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(x => x.Translations).WithOne().HasForeignKey(t => t.AssessmentId).OnDelete(DeleteBehavior.Cascade);
         });
@@ -183,12 +184,15 @@ static class ModelMap
         m.Entity<Attempt>(e =>
         {
             e.ToTable("Attempt", "assessment");
+            e.Ignore(x => x.OrderedSections);
+            e.Ignore(x => x.AllQuestions);
             e.Property(x => x.RowVersion).IsRowVersion();
             e.HasMany(x => x.Sections).WithOne().HasForeignKey(s => s.AttemptId).OnDelete(DeleteBehavior.Cascade);
         });
         m.Entity<AttemptSection>(e =>
         {
             e.ToTable("AttemptSection", "assessment");
+            e.Ignore(x => x.OrderedQuestions);
             e.HasMany(x => x.Translations).WithOne().HasForeignKey(t => t.AttemptSectionId).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(x => x.Questions).WithOne().HasForeignKey(q => q.AttemptSectionId).OnDelete(DeleteBehavior.Cascade);
         });
@@ -196,6 +200,7 @@ static class ModelMap
         m.Entity<AttemptQuestion>(e =>
         {
             e.ToTable("AttemptQuestion", "assessment");
+            e.Ignore(x => x.OrderedOptions);
             e.HasOne<Question>().WithMany().HasForeignKey(x => x.QuestionId).OnDelete(DeleteBehavior.Restrict);
             e.HasMany(x => x.Translations).WithOne().HasForeignKey(t => t.AttemptQuestionId).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(x => x.Options).WithOne().HasForeignKey(o => o.AttemptQuestionId).OnDelete(DeleteBehavior.Cascade);

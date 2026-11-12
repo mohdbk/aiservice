@@ -46,8 +46,6 @@ var app = builder.Build();
 if (cfg["TRUST_PROXY"] == "1") app.UseForwardedHeaders();
 app.UseMiddleware<SecurityHeaders>();
 app.UseMiddleware<ErrorEnvelope>();
-app.UseDefaultFiles();
-app.UseStaticFiles();
 app.UseAuthentication();
 app.UseRateLimiter();
 app.UseAuthorization();
@@ -57,7 +55,7 @@ app.MapGet("/healthz", () => Results.Ok(new { ok = true }));
 PortalEndpoints.Map(app);
 BackofficeEndpoints.Map(app);
 AgentProxy.MapInternal(app);
-app.MapFallback(SpaFallback.Handle);
+app.MapFallback(NotFoundEnvelope.Handle);
 
 if (cfg["MIGRATE_ON_START"] != "0")
     await Moet.Recruitment.Infrastructure.DependencyInjection.PrepareDatabaseAsync(app.Services, cfg, app.Logger);

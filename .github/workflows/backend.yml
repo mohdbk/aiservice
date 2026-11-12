@@ -3,9 +3,9 @@ name: Backend
 on:
   push:
     branches: [main, dotnet-backend]
-    paths: ["backend/**", "backoffice/**", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "backoffice/scripts/**", ".github/workflows/backend.yml"]
   pull_request:
-    paths: ["backend/**", "backoffice/**", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "backoffice/scripts/**", ".github/workflows/backend.yml"]
   workflow_dispatch:
 
 jobs:
@@ -43,8 +43,22 @@ jobs:
         env:
           TEST_DB_CONNECTION: "Server=localhost,1433;Database=MoetRecruitmentCi;User Id=sa;Password=Ci-Strong-Password-123;TrustServerCertificate=True;Encrypt=False"
         run: dotnet test tests/Moet.Recruitment.Api.Tests --no-build -c Release --logger "console;verbosity=normal"
-      - name: Container image (API with backoffice) builds
-        working-directory: .
-        run: docker build -f backend/Dockerfile -t moet-recruitment-api .
+      - name: Demo data loads through the real API (catches mapping and contract errors end to end)
+        env:
+          DB_CONNECTION: "Server=localhost,1433;Database=MoetRecruitmentSeed;User Id=sa;Password=Ci-Strong-Password-123;TrustServerCertificate=True;Encrypt=False"
+          ADMIN_EMAIL: admin@moet.test
+          ADMIN_PASSWORD: Admin-Password-123
+          PORTAL_API_KEY: ci-portal-key
+          PORTAL_API_SECRET: ci-portal-secret-0123456789
+          PORTAL_URL: https://careers.example
+          COOKIE_SECURE: "0"
+          RUN_WORKERS: "0"
+          AGENT_KEY: ci-agent-key-0123456789
+        run: |
+          dotnet src/Moet.Recruitment.Api/bin/Release/net10.0/Moet.Recruitment.Api.dll --urls http://localhost:5080 > api.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:5080/healthz && break; sleep 2; done
+          API=http://localhost:5080 PORTAL_KEY=ci-portal-key:ci-portal-secret-0123456789 node ../backoffice/scripts/seed-demo.mjs || (tail -80 api.log; exit 1)
+      - name: Container image builds
+        run: docker build -t moet-recruitment-api .
       - name: Schema scripts have no em dashes
         run: "! grep -rnI --exclude-dir=bin --exclude-dir=obj $'\\u2014' src/ tests/ || (echo 'em dash found' && exit 1)"

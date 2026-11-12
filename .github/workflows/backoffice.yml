@@ -27,3 +27,11 @@ jobs:
         run: npm run build
       - name: No em dashes
         run: "! grep -rnI $'\\u2014' src/ || (echo 'em dash found' && exit 1)"
+      - name: Container image builds and serves the app
+        run: |
+          docker build -t moet-recruitment-backoffice .
+          docker run -d --name bo -p 8088:8080 -e API_URL=http://127.0.0.1:9 moet-recruitment-backoffice
+          for i in $(seq 1 20); do curl -sf http://localhost:8088/healthz && break; sleep 1; done
+          curl -sf http://localhost:8088/ar/applicants | grep -q '<div id="root">'
+          curl -sI http://localhost:8088/ | grep -qi 'content-security-policy'
+          docker logs bo
