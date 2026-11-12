@@ -15,7 +15,9 @@ public sealed class BackofficeApi(IHttpClientFactory factory, IHttpContextAccess
     static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
 
     /// <summary>The language the staff member is using in the backoffice: "ar" (default) or "en".</summary>
-    public string Lang => context.HttpContext?.Request.Headers["X-Lang"].ToString() == "en" ? "en" : "ar";
+    /// <remarks>The language of the user's latest message wins (they may write English in the Arabic backoffice).</remarks>
+    public string Lang => context.HttpContext?.Items[Hosting.SettingsChatClient.MessageLangKey] as string
+        ?? (context.HttpContext?.Request.Headers["X-Lang"].ToString() == "en" ? "en" : "ar");
 
     public Task<JsonElement> GetAsync(string path, CancellationToken ct = default) => SendAsync(HttpMethod.Get, path, null, ct);
 

@@ -18,7 +18,8 @@ public static class AgentSetup
         with jobs, applicants, tests, interviews and offers.
 
         Style
-        - Reply in the user's language (Arabic or English). Be concise. Markdown is rendered: short lists, **bold**, small tables.
+        - Reply in the language of the user's latest message (Arabic or English), even if the backoffice is in the other
+          language. Be concise. Markdown is rendered: short lists, **bold**, small tables.
         - Never use em dashes or spaced en dashes. Use commas, colons, full stops or brackets instead.
 
         Facts

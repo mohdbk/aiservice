@@ -233,6 +233,9 @@ public class AgUiEndToEndTests
         Assert.DoesNotContain("propose_offer", app.Model.SeenTools);
         Assert.Contains(app.Model.SeenSystem, m => m.Contains("Always mention the job code."));
         Assert.Contains(app.Model.SeenSystem, m => m.Contains("applicant_id: 7") && m.Contains("Layla Hassan"));
+        // The open record is named, and the reply follows the language of the message (English here, with no X-Lang).
+        Assert.Contains(app.Model.SeenSystem, m => m.Contains("Records open on the screen: applicant_id: 7"));
+        Assert.Contains(app.Model.SeenSystem, m => m.Contains("last message is in English"));
     }
 
     [Fact]
