@@ -16,12 +16,8 @@ public sealed class AgentSettingsService(IAppDbContext db, ICurrentActor actor, 
 {
     public async Task<AgentSetting> CurrentAsync(CancellationToken ct = default)
     {
-        var s = await db.AgentSettings.FirstOrDefaultAsync(ct);
-        if (s != null) return s;
-        s = new AgentSetting { UpdatedAt = clock.UtcNow };
-        db.AgentSettings.Add(s);
-        await db.SaveChangesAsync(ct);
-        return s;
+        // The schema script creates the row; this only covers a database where it was removed by hand.
+        return await db.AgentSettings.FirstOrDefaultAsync(ct) ?? new AgentSetting { UpdatedAt = clock.UtcNow };
     }
 
     /// <summary>For the settings page. The model key is never returned, only whether one is stored.</summary>
@@ -47,6 +43,7 @@ public sealed class AgentSettingsService(IAppDbContext db, ICurrentActor actor, 
     public async Task<object> SaveAsync(AgentSettingsInput input, CancellationToken ct = default)
     {
         var s = await CurrentAsync(ct);
+        if (db.AgentSettings.Local.All(x => x != s)) db.AgentSettings.Add(s);
         s.IsEnabled = input.IsEnabled;
         s.ModelBaseUrl = TextUtil.Clip(input.ModelBaseUrl?.Trim(), 300);
         s.ModelName = TextUtil.Clip(input.ModelName?.Trim(), 100);

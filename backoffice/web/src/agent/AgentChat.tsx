@@ -109,7 +109,12 @@ export function AgentChat({ panel = false }: { panel?: boolean }) {
   const end = useRef<HTMLDivElement>(null);
 
   useEffect(() => save(key, state), [key, state]);
-  useEffect(() => end.current?.scrollIntoView({ behavior: "smooth", block: "end" }), [state.turns.length, running]);
+  // Scroll only the message list (scrollIntoView can move the whole page on phones).
+  const list = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = list.current;
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [state.turns, running]);
   useEffect(() => () => stop.current?.abort(), []);
 
   const ask = async (q: string, hidden = false) => {
@@ -232,7 +237,7 @@ export function AgentChat({ panel = false }: { panel?: boolean }) {
           <Button variant="link" size="sm" disabled={running} onClick={() => setState({ thread: newId(), turns: [], surfaces: {} })}
             icon={<Plus size={20} aria-hidden="true" />}>{t("asst.new_chat")}</Button>
         </div>
-        <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6" aria-live="polite">
+        <div ref={list} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 sm:p-6" aria-live="polite">
           {visible.length === 0 && (
             <div className="space-y-3">
               <Note>{t("asst.intro")}</Note>

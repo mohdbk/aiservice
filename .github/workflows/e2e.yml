@@ -60,7 +60,7 @@ jobs:
       - name: Logs
         if: always()
         run: |
-          echo "--- api"; tail -60 api.log; echo "--- agent"; tail -80 agent.log; echo "--- model"; tail -20 model.log; echo "--- web"; tail -20 web.log
+          echo "--- api errors"; grep -n -A12 "fail:\|Exception" api.log | head -80; echo "--- agent errors"; grep -n -A12 "fail:\|Exception" agent.log | head -80; echo "--- api"; tail -30 api.log; echo "--- agent"; tail -80 agent.log; echo "--- model"; tail -20 model.log; echo "--- web"; tail -20 web.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:

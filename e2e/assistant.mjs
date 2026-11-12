@@ -5,8 +5,8 @@ const BASE = process.env.BASE_URL || "http://localhost:4173";
 const errors = [];
 const browser = await chromium.launch();
 let failed = false;
-for (const lang of ["ar", "en"]) {
-  const ctx = await browser.newContext({ ...devices["iPhone 13"] });
+for (const [lang, device] of [["ar", "Pixel 7"], ["en", "iPhone 13"], ["ar", "iPhone 13"]]) {
+  const ctx = await browser.newContext({ ...devices[device] });
   const page = await ctx.newPage();
   page.on("pageerror", (e) => errors.push(`${lang} pageerror: ${e.message}`));
   page.on("console", (m) => { if (m.type() === "error") errors.push(`${lang} console: ${m.text()}`); });
@@ -32,14 +32,14 @@ for (const lang of ["ar", "en"]) {
   await box.press("Enter");
   try {
     await page.locator(".mh-chat-drawer").getByText("Fake reply: there are open jobs.").waitFor({ timeout: 30000 });
-    console.log(`ok   ${lang}: reply streamed into the panel`);
+    console.log(`ok   ${lang} ${device}: reply streamed into the panel`);
   } catch {
     failed = true;
     console.error(`FAIL ${lang}: no reply in the panel`);
   }
   const text = await page.locator("body").innerText();
   if (text.trim().length < 20) { failed = true; console.error(`FAIL ${lang}: blank page`); }
-  await page.screenshot({ path: `shots/assistant-${lang}-phone.png` });
+  await page.screenshot({ path: `shots/assistant-${lang}-${device.replace(/\s/g, "")}.png` });
   await ctx.close();
 }
 await browser.close();
