@@ -122,7 +122,8 @@ public sealed class BackofficeJobService(IAppDbContext db, ICodeGenerator codes,
         j.Title = TextUtil.Clip(input.Title?.Trim(), 140);
         j.Description = html.Clean(input.Description);
         j.DepartmentId = input.DepartmentId;
-        j.Location = TextUtil.Clip(input.Location?.Trim(), 140);
+        // An emirate is kept under its Arabic name, so it shows in either language; anything else as typed.
+        j.Location = Locations.Find(input.Location) is { } emirate ? emirate.Ar : TextUtil.Clip(input.Location?.Trim(), 140);
         j.EmploymentType = Parse<EmploymentType>(input.EmploymentType, "employment_type");
         j.Status = Parse<JobStatus>(input.Status, "status");
         j.IsPublished = input.IsPublished;

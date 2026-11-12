@@ -1150,5 +1150,7 @@
  "audit.save_comment": "Save Comment",
  "audit.comments_count": "{n} comments",
  "audit.same_request": "Show everything from the same request",
- "audit.via_note": "Done through the AI assistant: a person approved the assistant's proposal, or the assistant read this for them."
+ "audit.via_note": "Done through the AI assistant: a person approved the assistant's proposal, or the assistant read this for them.",
+ "jobs.location_other": "Other Location",
+ "jobs.location_other_hint": "Shown as typed in both languages."
 }

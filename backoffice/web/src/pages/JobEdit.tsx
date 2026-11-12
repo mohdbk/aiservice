@@ -27,6 +27,12 @@ type Job = {
   criteria_current: boolean; row_version: string | null; role_profile_id: number | null; weights: Weights;
 };
 
+/** The emirates, stored by their Arabic name (shown in the reader's language on the portal). */
+const EMIRATES = [
+  ["أبوظبي", "Abu Dhabi"], ["دبي", "Dubai"], ["الشارقة", "Sharjah"], ["عجمان", "Ajman"],
+  ["أم القيوين", "Umm Al Quwain"], ["رأس الخيمة", "Ras Al Khaimah"], ["الفجيرة", "Fujairah"],
+] as const;
+
 const EMPTY: Job = {
   title: "", description: "", department_id: null, location: "", employment_type: "FullTime", status: "Draft", is_published: false,
   posted_on: "", closes_on: "", salary_min: null, salary_max: null, salary_currency: "AED", salary_period: "Month", show_salary: false,
@@ -139,7 +145,18 @@ export default function JobEdit() {
               <Toggle label={t("jobs.published")} checked={job.is_published} onChange={(v) => set("is_published", v)} />
               <SelectInput label={t("jobs.department")} value={job.department_id ?? ""} onChange={(e) => set("department_id", e.target.value ? Number(e.target.value) : null)}
                 options={[{ value: "", label: t("common.none") }, ...(lk?.departments || []).map((d) => ({ value: d.id, label: d.name }))]} />
-              <TextInput label={t("jobs.location")} value={job.location} onChange={(e) => set("location", e.target.value)} />
+              {(() => {
+                const known = EMIRATES.find(([ar, en]) => ar === job.location || en.toLowerCase() === job.location.trim().toLowerCase());
+                const other = !known && job.location !== "";
+                return (
+                  <>
+                    <SelectInput label={t("jobs.location")} value={known ? known[0] : other ? "__other" : ""}
+                      onChange={(e) => set("location", e.target.value === "__other" ? " " : e.target.value)}
+                      options={[{ value: "", label: "" }, ...EMIRATES.map(([ar, en]) => ({ value: ar, label: panel === "en" ? en : ar })), { value: "__other", label: t("jobs.location_other") }]} />
+                    {other && <TextInput label={t("jobs.location_other")} hint={t("jobs.location_other_hint")} value={job.location.trim()} onChange={(e) => set("location", e.target.value || " ")} />}
+                  </>
+                );
+              })()}
               <SelectInput required label={t("jobs.employment_type")} value={job.employment_type} onChange={(e) => set("employment_type", e.target.value)}
                 options={["FullTime", "PartTime", "Contract", "Temporary", "Internship"].map((s) => ({ value: s, label: t(`emp.${s}`) }))} />
               <div className="grid grid-cols-2 gap-3">

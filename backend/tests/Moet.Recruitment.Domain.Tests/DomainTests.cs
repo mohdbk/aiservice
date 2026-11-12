@@ -516,4 +516,14 @@ public class PersonalityTests
         Assert.Equal(["Fast", "Practical"], note.ToReport().StrengthsEn);
         Assert.Equal("invalid_value", Assert.Throws<DomainException>(() => new TypeNote { Type = "ABCD", NameAr = "x", NameEn = "x" }.Validate()).Code);
     }
+
+    [Fact]
+    public void Emirates_show_in_the_reader_language_and_other_places_as_typed()
+    {
+        Assert.Equal("Abu Dhabi", Locations.In("أبوظبي", "en"));
+        Assert.Equal("Abu Dhabi", Locations.In("ابو ظبي", "en"));
+        Assert.Equal("دبي", Locations.In("Dubai", "ar"));
+        Assert.Equal("رأس الخيمة", Locations.In("ras al-khaimah", "ar"));
+        Assert.Equal("Remote", Locations.In("Remote", "ar"));
+    }
 }
