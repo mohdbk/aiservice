@@ -1,4 +1,5 @@
-// Client for moet_careers.portal_api on the internal Frappe server. Uses the service user's API key.
+// Client for the recruitment API's portal endpoints (/api/portal/{method}) on the internal network, using the portal's
+// service key. Older installations can still point FRAPPE_URL at moet_careers.portal_api on Frappe.
 export class FrappeError extends Error {
   constructor(code, status = 502, params = {}) {
     super(code);
@@ -9,7 +10,7 @@ export class FrappeError extends Error {
 }
 
 export function createFrappe(cfg, fetchImpl = globalThis.fetch) {
-  const base = `${cfg.frappeUrl}/api/method/moet_careers.portal_api.`;
+  const base = cfg.apiUrl ? `${cfg.apiUrl}/api/portal/` : `${cfg.frappeUrl}/api/method/moet_careers.portal_api.`;
   const headers = () => {
     const h = { Accept: "application/json", Authorization: `token ${cfg.apiKey}:${cfg.apiSecret}` };
     if (cfg.frappeSite) h["X-Frappe-Site-Name"] = cfg.frappeSite;

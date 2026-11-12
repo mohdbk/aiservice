@@ -5,6 +5,8 @@ const bool = (v, d) => (v === undefined || v === "" ? d : !["0", "false", "no", 
 export function loadConfig(overrides = {}) {
   const c = {
     port: Number(env.PORT || 8080),
+    // The recruitment API (.NET). FRAPPE_URL is still read for older installations.
+    apiUrl: (env.RECRUITMENT_API_URL || "").replace(/\/+$/, ""),
     frappeUrl: (env.FRAPPE_URL || "").replace(/\/+$/, ""),
     frappeSite: env.FRAPPE_SITE || "",
     apiKey: env.CAREERS_PORTAL_API_KEY || "",
@@ -22,8 +24,8 @@ export function loadConfig(overrides = {}) {
     ...overrides,
   };
   if (!c.mock) {
-    const missing = ["frappeUrl", "apiKey", "apiSecret"].filter((k) => !c[k]);
-    if (missing.length) throw new Error(`Missing settings: ${missing.join(", ")} (FRAPPE_URL, CAREERS_PORTAL_API_KEY, CAREERS_PORTAL_API_SECRET)`);
+    const missing = [c.apiUrl || c.frappeUrl ? null : "RECRUITMENT_API_URL", c.apiKey ? null : "CAREERS_PORTAL_API_KEY", c.apiSecret ? null : "CAREERS_PORTAL_API_SECRET"].filter(Boolean);
+    if (missing.length) throw new Error(`Missing settings: ${missing.join(", ")}`);
   }
   if (!c.sessionSecret || c.sessionSecret.length < 32) {
     if (!c.mock) throw new Error("SESSION_SECRET must be at least 32 characters");
