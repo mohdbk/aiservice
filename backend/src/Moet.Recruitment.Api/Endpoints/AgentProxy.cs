@@ -44,6 +44,8 @@ public static class AgentProxy
         // The screen the staff member has open (page, record), so "this applicant" can be resolved by the agent.
         var screen = ctx.Request.Headers["X-Agent-Context"].ToString();
         if (screen.Length is > 0 and <= 4000) req.Headers.TryAddWithoutValidation("X-Agent-Context", screen);
+        // The person's role, so the assistant only offers the tools they may use (the API still checks every call).
+        req.Headers.TryAddWithoutValidation("X-Agent-Role", ctx.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "");
         req.Headers.TryAddWithoutValidation("X-Lang", ctx.Request.Headers["X-Lang"].ToString() == "en" ? "en" : "ar");
 
         HttpResponseMessage res;

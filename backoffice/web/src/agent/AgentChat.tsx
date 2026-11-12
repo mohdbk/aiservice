@@ -1,4 +1,4 @@
-import { ArrowCircleUp, ChatCircleDots, CheckCircle, CircleNotch, ClockCounterClockwise, Lightbulb, Plus, ShareNetwork, StopCircle, Trash } from "@phosphor-icons/react";
+import { ArrowCircleUp, ChatCircleDots, CheckCircle, CircleNotch, ClockCounterClockwise, File as FileIcon, Lightbulb, Paperclip, Plus, ShareNetwork, StopCircle, Trash, X } from "@phosphor-icons/react";
 import { FormEvent, ReactElement, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Button, Empty, ErrorState, Loading, Modal, Note } from "../components/ui";
@@ -104,6 +104,26 @@ export function AgentChat({ panel = false }: { panel?: boolean }) {
   const info = useAsync(() => api<Info>("/agent/info"), []);
   const screen = useScreen();
   const [text, setText] = useState("");
+  const [files, setFiles] = useState<{ id: string; name: string }[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const picker = useRef<HTMLInputElement>(null);
+  const attach = async (list: FileList | null) => {
+    if (!list?.length) return;
+    setUploading(true);
+    try {
+      for (const f of [...list].slice(0, 5)) {
+        const form = new FormData();
+        form.append("file", f);
+        const r = await api<{ id: string; file_name: string }>("/agent/attachments", { body: form });
+        setFiles((x) => [...x, { id: r.id, name: r.file_name }]);
+      }
+    } catch (e) {
+      toast(errorText(e instanceof ApiError ? e : new ApiError("server", 500)), "error");
+    } finally {
+      setUploading(false);
+      if (picker.current) picker.current.value = "";
+    }
+  };
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [acting, setActing] = useState<string | null>(null);
@@ -229,9 +249,12 @@ export function AgentChat({ panel = false }: { panel?: boolean }) {
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    const q = text.trim();
-    if (!q || running) return;
+    const typed = text.trim();
+    if ((!typed && files.length === 0) || running || uploading) return;
+    // Attachments travel with the message as references the assistant reads with read_attachment.
+    const q = [typed || (lang === "en" ? "Please look at the attached file." : "يرجى الاطلاع على الملف المرفق."), ...files.map((f) => `[Attachment: ${f.name}, id: ${f.id}]`)].join("\n");
     setText("");
+    setFiles([]);
     ask(q);
   };
 
@@ -327,7 +350,7 @@ export function AgentChat({ panel = false }: { panel?: boolean }) {
                   </ul>
                 )}
                 {/* m-0: the design system gives paragraphs a bottom margin, which left an empty line inside the bubble. */}
-                {m.role === "user" ? <p className="m-0 whitespace-pre-line" dir="auto">{m.text}</p> : m.text.trim() && <Markdown text={m.text} />}
+                {m.role === "user" ? <UserText text={m.text} /> : m.text.trim() && <Markdown text={m.text} />}
                 {m.surfaces?.map((id) => state.surfaces[id] && <A2Surface key={id} surface={state.surfaces[id]} busy={acting === id} onAction={onAction} emptyText={t("common.choose")}
                   onData={(sid, path, value) => setState((s) => ({ ...s, surfaces: writeData(s.surfaces, sid, path, value) }))} />)}
               </div>
@@ -342,14 +365,27 @@ export function AgentChat({ panel = false }: { panel?: boolean }) {
           {error && <ErrorState error={error} />}
           <div ref={end} />
         </div>
+        {files.length > 0 && (
+          <ul className="flex flex-wrap gap-2 border-t border-aeblack-100 bg-white px-3 pt-2" aria-label={t("asst.attached")}>
+            {files.map((f) => (
+              <li key={f.id} className="inline-flex items-center gap-1 rounded-full bg-primary-50 px-3 py-1 text-xs text-primary-800">
+                <FileIcon size={16} aria-hidden="true" /><span className="max-w-48 truncate" dir="auto">{f.name}</span>
+                <button type="button" className="rounded-full p-0.5 hover:bg-primary-100" aria-label={t("asst.remove_attachment")} onClick={() => setFiles((x) => x.filter((y) => y.id !== f.id))}><X size={14} /></button>
+              </li>
+            ))}
+          </ul>
+        )}
         <form onSubmit={submit} className="flex items-end gap-2 border-t border-aeblack-100 bg-white p-3">
+          <input ref={picker} type="file" className="hidden" multiple accept=".pdf,.docx,.txt,.csv,.md,.png,.jpg,.jpeg" onChange={(e) => attach(e.target.files)} />
+          <Button variant="outline" aria-label={t("asst.attach")} title={t("asst.attach_hint")} busy={uploading} disabled={running}
+            onClick={() => picker.current?.click()} icon={<Paperclip size={24} aria-hidden="true" />} />
           <label htmlFor="asst-q" className="sr-only">{t("asst.placeholder")}</label>
           <textarea id="asst-q" rows={2} dir="auto" className="flex-1 resize-none rounded-xl border border-aeblack-200 p-3 outline-none focus:border-primary-500"
             placeholder={t("asst.placeholder")} value={text} onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); (e.currentTarget.form as HTMLFormElement).requestSubmit(); } }} />
           {running
             ? <Button variant="outline" aria-label={t("asst.stop")} onClick={() => stop.current?.abort()} icon={<StopCircle size={24} aria-hidden="true" />}><span className="hidden sm:inline">{t("asst.stop")}</span></Button>
-            : <Button type="submit" aria-label={t("asst.send")} disabled={!text.trim()} icon={<ArrowCircleUp size={24} aria-hidden="true" />}><span className="hidden sm:inline">{t("asst.send")}</span></Button>}
+            : <Button type="submit" aria-label={t("asst.send")} disabled={(!text.trim() && files.length === 0) || uploading} icon={<ArrowCircleUp size={24} aria-hidden="true" />}><span className="hidden sm:inline">{t("asst.send")}</span></Button>}
         </form>
       </div>
       {history && <History onClose={() => setHistory(false)} onOpen={openConversation} current={state.thread} />}
@@ -381,5 +417,22 @@ function History({ onClose, onOpen, current }: { onClose: () => void; onOpen: (t
         </ul>
       )}
     </Modal>
+  );
+}
+
+/** A user message: its text, and any attached files as chips (the references the assistant reads stay out of sight). */
+function UserText({ text }: { text: string }) {
+  const lines = text.split("\n");
+  const files = lines.map((l) => /^\[Attachment: (.+), id: [0-9a-f-]{36}\]$/.exec(l)).filter((m): m is RegExpExecArray => !!m).map((m) => m[1]);
+  const body = lines.filter((l) => !/^\[Attachment: .+, id: [0-9a-f-]{36}\]$/.test(l)).join("\n");
+  return (
+    <>
+      <p className="m-0 whitespace-pre-line" dir="auto">{body}</p>
+      {files.length > 0 && (
+        <ul className="mt-2 flex flex-wrap gap-1.5">
+          {files.map((f, i) => <li key={i} className="inline-flex items-center gap-1 rounded-full bg-white/70 px-2 py-0.5 text-xs"><FileIcon size={14} aria-hidden="true" /><span dir="auto">{f}</span></li>)}
+        </ul>
+      )}
+    </>
   );
 }

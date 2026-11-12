@@ -22,8 +22,10 @@ export async function api<T = any>(path: string, opts: Opts = {}): Promise<T> {
       credentials: "same-origin",
       // X-Lang: lists come back with English names and titles when the backoffice is in English.
       headers: { Accept: "application/json", "X-Lang": location.pathname.startsWith("/en") ? "en" : "ar",
-        ...(method !== "GET" ? { "X-Backoffice": "1" } : {}), ...(opts.body !== undefined ? { "Content-Type": "application/json" } : {}) },
-      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+        ...(method !== "GET" ? { "X-Backoffice": "1" } : {}),
+        // Files go as multipart (the browser sets the boundary); everything else as JSON.
+        ...(opts.body !== undefined && !(opts.body instanceof FormData) ? { "Content-Type": "application/json" } : {}) },
+      body: opts.body === undefined ? undefined : opts.body instanceof FormData ? opts.body : JSON.stringify(opts.body),
     });
   } catch {
     throw new ApiError("network", 0);

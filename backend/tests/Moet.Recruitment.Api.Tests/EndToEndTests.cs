@@ -174,7 +174,7 @@ public class EndToEndTests
         // Assistant settings: the model key is stored encrypted, never shown, and only the agent service can read it.
         var settings = await Read(await admin.GetAsync("/api/backoffice/agent-settings"));
         Assert.True(settings.GetProperty("is_enabled").GetBoolean());
-        Assert.Equal(25, settings.GetProperty("tools").GetArrayLength());
+        Assert.Equal(42, settings.GetProperty("tools").GetArrayLength());
         var put = new
         {
             is_enabled = true, model_base_url = "http://llm.internal/v1", model_name = "qwen3", api_key = "sk-secret-123", clear_api_key = false,

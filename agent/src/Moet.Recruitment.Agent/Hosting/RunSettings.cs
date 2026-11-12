@@ -91,6 +91,9 @@ public sealed class SettingsChatClient(IChatClient fallback, AgentSettingsProvid
         if (s.Temperature is { } temperature) o.Temperature = temperature;
         if (o.Tools is { Count: > 0 } tools && s.DisabledTools.Count > 0)
             o.Tools = tools.Where(t => !s.DisabledTools.Contains(t.Name)).ToList();
+        // System administrators' tools are offered to system administrators only (the API refuses them to others anyway).
+        if (o.Tools is { Count: > 0 } all && ctx?.Request.Headers["X-Agent-Role"].ToString() != "Administrator")
+            o.Tools = all.Where(t => !SystemAdminTools.Contains(t.Name)).ToList();
         if (steps > s.MaxSteps)
         {
             // Out of steps: no more tools, answer with what has been found.
@@ -114,6 +117,8 @@ public sealed class SettingsChatClient(IChatClient fallback, AgentSettingsProvid
     }
 
     public const string MessageLangKey = "message_lang";
+
+    public static readonly HashSet<string> SystemAdminTools = ["get_system_health", "get_assistant_usage", "list_data_requests", "get_audit_log"];
 
     /// <summary>"ar" or "en" from the user's latest typed message (button events, which are JSON, are skipped), or null.</summary>
     static string? MessageLanguage(IEnumerable<ChatMessage> messages)
