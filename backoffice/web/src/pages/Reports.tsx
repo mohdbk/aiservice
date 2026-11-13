@@ -10,6 +10,11 @@ type Report = {
   drop_off: Record<string, number>;
   departments: { department_id: number | null; name: string; applied: number; interviewed: number; offered: number; hired: number }[];
   weeks: { week: string; applied: number }[];
+  fairness: {
+    given: number; emirati_share_applied: number; emirati_share_hired: number | null;
+    groups: { group: string; applied: number; interviewed: number; offered: number; hired: number; interview_rate: number; offer_rate: number; hire_rate: number;
+      interview_ratio: number | null; offer_ratio: number | null; flagged: boolean }[];
+  };
 };
 
 const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0);
@@ -155,10 +160,48 @@ export default function Reports() {
                   </table>
                 </div>
               </Card>
+              {r.fairness && <Fairness f={r.fairness} total={r.funnel[0]?.count ?? 0} />}
             </>
           )}
         </div>
       )}
     </>
+  );
+}
+
+/** Emiratisation and fairness: each nationality group's progress through the stages, and how it compares with the best group. */
+function Fairness({ f, total }: { f: Report["fairness"]; total: number }) {
+  const { t } = useLang();
+  const ratio = (v: number | null) => (v == null ? "-" : v.toFixed(2));
+  return (
+    <Card title={t("rep.fairness")}>
+      <div className="mb-4"><Note>{t("rep.fairness_hint")}</Note></div>
+      <div className="mb-4 grid gap-4 sm:grid-cols-3">
+        <Stat label={t("rep.emirati_applied")} value={`${f.emirati_share_applied}%`} />
+        <Stat label={t("rep.emirati_hired")} value={f.emirati_share_hired == null ? "-" : `${f.emirati_share_hired}%`} />
+        <Stat label={t("rep.nationality_given")} value={`${f.given} / ${total}`} />
+      </div>
+      {f.groups.some((g) => g.flagged) && <div className="mb-4"><Note tone="warning">{t("rep.fairness_flag")}</Note></div>}
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[40rem] text-sm">
+          <thead><tr className="border-b border-aeblack-100 text-aeblack-500">
+            {["rep.group", "rep.stage.applied", "rep.stage.interviewed", "rep.stage.offered", "rep.stage.hired", "rep.interview_ratio", "rep.offer_ratio"].map((k) => <th key={k} className="py-2 text-start font-semibold">{t(k)}</th>)}
+          </tr></thead>
+          <tbody>
+            {f.groups.map((g) => (
+              <tr key={g.group} className={`border-b border-aeblack-50 ${g.flagged ? "bg-aered-50" : ""}`}>
+                <td className="py-2 font-semibold">{t(`rep.group.${g.group}`)}{g.flagged && <span className="ms-2 text-xs font-semibold text-aered-700">{t("rep.flagged")}</span>}</td>
+                <td className="tabular-nums">{g.applied}</td>
+                <td className="tabular-nums">{g.interviewed} <span className="text-aeblack-500">({g.interview_rate}%)</span></td>
+                <td className="tabular-nums">{g.offered} <span className="text-aeblack-500">({g.offer_rate}%)</span></td>
+                <td className="tabular-nums">{g.hired} <span className="text-aeblack-500">({g.hire_rate}%)</span></td>
+                <td className="tabular-nums" dir="ltr">{ratio(g.interview_ratio)}</td>
+                <td className="tabular-nums" dir="ltr">{ratio(g.offer_ratio)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
   );
 }

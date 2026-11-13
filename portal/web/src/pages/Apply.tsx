@@ -1,4 +1,4 @@
-import { Briefcase, Envelope, FileText, GlobeHemisphereEast, ListChecks, PaperPlaneTilt, Phone, UploadSimple, UserCircle } from "@phosphor-icons/react";
+import { Briefcase, Envelope, FileText, Flag, GlobeHemisphereEast, ListChecks, PaperPlaneTilt, Phone, UploadSimple, UserCircle } from "@phosphor-icons/react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, ApiError, fileToBase64, Job, ScreeningQuestion } from "../api";
@@ -77,6 +77,7 @@ export default function Apply() {
   const { data: job, error: loadError } = useAsync((signal) => api<Job>(`/api/jobs/${encodeURIComponent(id)}?lang=${lang}`, { signal }), [id, lang]);
   const [phone, setPhone] = useState("");
   const [country, setCountry] = useState("");
+  const [nationality, setNationality] = useState("");
   const [note, setNote] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [declared, setDeclared] = useState(false);
@@ -106,7 +107,7 @@ export default function Apply() {
     try {
       const data = await fileToBase64(file);
       const r = await api<{ application: string }>("/api/applications", {
-        body: { job: job.id, phone: phone.trim(), country, cover_note: note, declaration: true, talent_pool: talentPool, lang, screening, cv: { name: file.name, type: file.type, data } },
+        body: { job: job.id, phone: phone.trim(), country, nationality, cover_note: note, declaration: true, talent_pool: talentPool, lang, screening, cv: { name: file.name, type: file.type, data } },
       });
       navigate(`${path(`/applications/${encodeURIComponent(r.application)}`)}?new=1`);
     } catch (err) {
@@ -144,6 +145,12 @@ export default function Apply() {
             </Field>
             <Field id="country" label={t("apply.country")} prefix={GlobeHemisphereEast}>
               <select id="country" value={country} onChange={(e) => setCountry(e.target.value)} autoComplete="country-name">
+                <option value="">{t("apply.country_choose")}</option>
+                {config.countries.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </Field>
+            <Field id="nationality" label={t("apply.nationality")} prefix={Flag}>
+              <select id="nationality" value={nationality} onChange={(e) => setNationality(e.target.value)}>
                 <option value="">{t("apply.country_choose")}</option>
                 {config.countries.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>

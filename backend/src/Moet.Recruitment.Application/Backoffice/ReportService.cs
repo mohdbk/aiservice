@@ -29,7 +29,7 @@ public sealed class ReportService(IAppDbContext db, IRequestLanguage language, I
         // Bounded: a report covers at most 50,000 applications.
         var apps = await q.OrderBy(a => a.Id).Take(50000).Select(a => new
         {
-            a.Id, a.CreatedAt, a.Status, a.ScreeningOutcome, a.JobOpening!.DepartmentId,
+            a.Id, a.CreatedAt, a.Status, a.ScreeningOutcome, a.JobOpening!.DepartmentId, a.Nationality,
         }).ToListAsync(ct);
         var ids = apps.Select(a => a.Id).ToList();
 
@@ -101,6 +101,35 @@ public sealed class ReportService(IAppDbContext db, IRequestLanguage language, I
             hired = g.Count(a => hired.Contains(a.Id)),
         }).OrderByDescending(x => x.applied).ToList();
 
+        // Fairness: how each group (Emirati, other nationalities, not given) moves through the stages. The impact ratio compares
+        // each group's rate with the best group's; below 0.8 (the four-fifths rule) is flagged when the group is large enough to tell.
+        static string Group(string n) => n.Length == 0 ? "not_given" : n == "United Arab Emirates" ? "emirati" : "other";
+        var groups = apps.GroupBy(a => Group(a.Nationality)).Select(g =>
+        {
+            var applied = g.Count();
+            double Rate(int n) => applied == 0 ? 0 : Math.Round(100.0 * n / applied, 1);
+            var si = g.Count(a => screenedIn.Contains(a.Id));
+            var iv = g.Count(a => interviewed.Contains(a.Id));
+            var of = g.Count(a => offered.Contains(a.Id));
+            var hi = g.Count(a => hired.Contains(a.Id));
+            return new { group = g.Key, applied, screened_in = si, interviewed = iv, offered = of, hired = hi, interview_rate = Rate(iv), offer_rate = Rate(of), hire_rate = Rate(hi) };
+        }).OrderBy(x => x.group == "emirati" ? 0 : x.group == "other" ? 1 : 2).ToList();
+        var bestInterview = groups.Where(g => g.group != "not_given").Select(g => g.interview_rate).DefaultIfEmpty(0).Max();
+        var bestOffer = groups.Where(g => g.group != "not_given").Select(g => g.offer_rate).DefaultIfEmpty(0).Max();
+        var fairness = new
+        {
+            given = apps.Count(a => a.Nationality.Length > 0),
+            emirati_share_applied = apps.Count == 0 ? 0 : Math.Round(100.0 * apps.Count(a => Group(a.Nationality) == "emirati") / apps.Count, 1),
+            emirati_share_hired = hired.Count == 0 ? (double?)null : Math.Round(100.0 * apps.Count(a => hired.Contains(a.Id) && Group(a.Nationality) == "emirati") / hired.Count, 1),
+            groups = groups.Select(g => new
+            {
+                g.group, g.applied, g.screened_in, g.interviewed, g.offered, g.hired, g.interview_rate, g.offer_rate, g.hire_rate,
+                interview_ratio = g.group == "not_given" || bestInterview == 0 ? (double?)null : Math.Round(g.interview_rate / bestInterview, 2),
+                offer_ratio = g.group == "not_given" || bestOffer == 0 ? (double?)null : Math.Round(g.offer_rate / bestOffer, 2),
+                flagged = g.group != "not_given" && g.applied >= 20 && ((bestInterview > 0 && g.interview_rate / bestInterview < 0.8) || (bestOffer > 0 && g.offer_rate / bestOffer < 0.8)),
+            }),
+        };
+
         // Applications per week (weeks start on Monday), every week of the period present.
         var firstMonday = start.AddDays(-(((int)start.DayOfWeek + 6) % 7));
         var weeks = new List<object>();
@@ -121,7 +150,7 @@ public sealed class ReportService(IAppDbContext db, IRequestLanguage language, I
             {
                 to_interview_days = Median(toInterview), to_offer_days = Median(toOffer), to_hire_days = Median(toHire), hires = toHire.Count,
             },
-            tests, drop_off = dropOff, departments = byDepartment, weeks,
+            tests, drop_off = dropOff, departments = byDepartment, weeks, fairness,
         };
     }
 }

@@ -111,7 +111,7 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
             }).ToListAsync(ct);
         return new
         {
-            id = a.Id, code = a.Code, reference = a.Reference, full_name = a.FullName, email = a.Email, phone = a.Phone, country = a.Country,
+            id = a.Id, code = a.Code, reference = a.Reference, full_name = a.FullName, email = a.Email, phone = a.Phone, country = a.Country, nationality = a.Nationality,
             cover_note = a.CoverNote, status = a.Status.ToString(), language = a.LanguageCode, created_at = a.CreatedAt,
             job = new { id = a.JobOpeningId, code = a.JobOpening!.Code, title = a.JobOpening.In(en ? "en" : "ar").Title },
             cv = cv == null ? null : new { file_name = cv.FileName, content_type = cv.ContentType, size = cv.SizeBytes, url = $"/api/backoffice/applicants/{a.Id}/cv" },

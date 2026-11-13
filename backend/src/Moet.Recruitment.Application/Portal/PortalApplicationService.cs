@@ -15,7 +15,7 @@ namespace Moet.Recruitment.Application.Portal;
 
 public sealed record ApplyInput(
     string? Email, string? Epoch, string? Job, string? Phone, string? Country, string? CoverNote, string? Declaration,
-    string? Lang, string? Screening, string? FileName, byte[]? Cv, string? TalentPool = null);
+    string? Lang, string? Screening, string? FileName, byte[]? Cv, string? TalentPool = null, string? Nationality = null);
 
 public sealed record StatusView(string Code, string Tone);
 
@@ -60,7 +60,7 @@ public sealed class PortalApplicationService(
         {
             Code = await codes.NextAsync(CodeKind.JobApplication, ct), JobOpeningId = job.Id, ApplicantAccountId = user.Id,
             FullName = user.FullName, Email = user.Email, Phone = TextUtil.Clip(input.Phone!.Trim(), 30),
-            Country = Countries.IsKnown(input.Country) ? input.Country! : "", CoverNote = TextUtil.Clip(input.CoverNote?.Trim(), 4000),
+            Country = Countries.IsKnown(input.Country) ? input.Country! : "", Nationality = Countries.IsKnown(input.Nationality) ? input.Nationality! : "", CoverNote = TextUtil.Clip(input.CoverNote?.Trim(), 4000),
             Status = ApplicationStatus.Open, LanguageCode = lang, DeclarationAcceptedAt = now, CvFileId = file.Id,
             ScreeningOutcome = evaluation.Outcome(asked), CreatedAt = now, UpdatedAt = now,
             CvAnalysis = new CvAnalysis { Status = s.AutoScoreApplications ? CvAnalysisStatus.Pending : CvAnalysisStatus.Skipped, UpdatedAt = now },

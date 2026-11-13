@@ -1232,5 +1232,19 @@
  "alerts.admins": "System Administrators Who Receive Alerts",
  "alerts.extra": "More Recipients",
  "alerts.extra_hint": "Email addresses, separated by commas.",
- "alerts.last": "Last alert: {at}"
+ "alerts.last": "Last alert: {at}",
+ "rep.fairness": "Emiratisation and Fairness",
+ "rep.fairness_hint": "Nationality is optional on the application form and is used only for this report, never for screening or scoring. A ratio compares each group's rate with the best group's.",
+ "rep.emirati_applied": "Emirati Share of Applicants",
+ "rep.emirati_hired": "Emirati Share of Hires",
+ "rep.nationality_given": "Applicants Who Gave a Nationality",
+ "rep.fairness_flag": "A group's interview or offer rate is below four-fifths of the best group's. Review the criteria and steps for that stage.",
+ "rep.group": "Group",
+ "rep.group.emirati": "Emirati",
+ "rep.group.other": "Other Nationalities",
+ "rep.group.not_given": "Not Given",
+ "rep.interview_ratio": "Interview Ratio",
+ "rep.offer_ratio": "Offer Ratio",
+ "rep.flagged": "Below 0.8",
+ "apps.nationality": "Nationality"
 }

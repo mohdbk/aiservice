@@ -61,7 +61,7 @@ public static class PortalEndpoints
                 ("add_correction", true) => await apps.AddCorrectionAsync(input["email"], input["epoch"], input["name"], input["note"], ct),
                 ("apply", true) => await apps.ApplyAsync(new ApplyInput(input["email"], input["epoch"], input["job"], input["phone"],
                     input["country"], input["cover_note"], input["declaration"], input["lang"], input["screening"],
-                    input.File?.FileName, await BytesAsync(input.File, ct), input["talent_pool"]), ct),
+                    input.File?.FileName, await BytesAsync(input.File, ct), input["talent_pool"], input["nationality"]), ct),
                 ("my_data", false) => await pdp.ExportAsync(await acc.RequireAsync(input["email"], input["epoch"], ct), ct),
                 ("data_requests", false) => await pdp.MyRequestsAsync(await acc.RequireAsync(input["email"], input["epoch"], ct), ct),
                 ("talent_pool", true) => await pdp.SetTalentPoolAsync(await acc.RequireAsync(input["email"], input["epoch"], ct), input["join"] == "1", "account", ct),

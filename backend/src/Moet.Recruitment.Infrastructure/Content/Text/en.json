@@ -338,5 +338,6 @@
  "offer.accepted": "You accepted the offer. The team will contact you about the next steps.",
  "offer.declined": "You declined the offer.",
  "error.offer_not_open": "This offer is no longer open.",
- "common.back": "Back"
+ "common.back": "Back",
+ "apply.nationality": "Nationality"
 }

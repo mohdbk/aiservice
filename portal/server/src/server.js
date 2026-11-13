@@ -231,7 +231,7 @@ export function createApp(cfg = loadConfig(), deps = {}) {
       if (!CV_EXT.test(name)) throw new HttpError(400, "cv_type");
       const data = Buffer.from(cv.data, "base64");
       if (!data.length) throw new HttpError(400, "cv_empty");
-      const result = await frappe.apply({ email: u.email, epoch: u.epoch || 0, job: str(b.job, 140), phone: str(b.phone, 30), country: str(b.country, 140),
+      const result = await frappe.apply({ email: u.email, epoch: u.epoch || 0, job: str(b.job, 140), phone: str(b.phone, 30), country: str(b.country, 140), nationality: str(b.nationality, 140),
         cover_note: str(b.cover_note, 4000), declaration: b.declaration ? "1" : "0", talent_pool: b.talent_pool === true ? "1" : "0", lang: str(b.lang, 10),
         screening: JSON.stringify(b.screening && typeof b.screening === "object" && !Array.isArray(b.screening) ? b.screening : {}).slice(0, 20000) },
       { name, data, type: str(cv.type, 100) });

@@ -15,6 +15,8 @@ public class JobApplication
     public string Email { get; set; } = "";
     public string Phone { get; set; } = "";
     public string Country { get; set; } = "";
+    /// <summary>The candidate's nationality (optional; for Emiratisation reporting, never for screening or scoring).</summary>
+    public string Nationality { get; set; } = "";
     public string CoverNote { get; set; } = "";
     public ApplicationStatus Status { get; set; } = ApplicationStatus.Open;
     public string Source { get; set; } = "Portal";

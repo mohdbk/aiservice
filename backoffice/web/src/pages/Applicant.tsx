@@ -12,7 +12,7 @@ import { appTone, screenTone } from "./Applicants";
 import { useLookups } from "./JobEdit";
 
 type Detail = {
-  id: number; code: string; reference: string; full_name: string; email: string; phone: string; country: string; cover_note: string; status: string;
+  id: number; code: string; reference: string; full_name: string; email: string; phone: string; country: string; nationality?: string; cover_note: string; status: string;
   language: string; created_at: string; job: { id: number; code: string; title: string };
   cv: { file_name: string; content_type: string; size: number; url: string } | null;
   screening: { outcome: string; answers: { question: string; answer: string; meets: boolean | null }[] };
@@ -150,6 +150,7 @@ export default function Applicant() {
                 <li className="flex items-center gap-2"><Envelope size={20} aria-hidden="true" /><a href={`mailto:${a.email}`} dir="ltr">{a.email}</a></li>
                 <li className="flex items-center gap-2"><Phone size={20} aria-hidden="true" /><span dir="ltr">{a.phone}</span></li>
                 <li><span className="text-aeblack-500">{t("app.country")}:</span> {a.country}</li>
+                {a.nationality && <li><span className="text-aeblack-500">{t("apps.nationality")}:</span> {a.nationality}</li>}
                 <li><span className="text-aeblack-500">{t("app.reference")}:</span> <span dir="ltr">{a.reference}</span></li>
                 <li><span className="text-aeblack-500">{t("apps.applied")}:</span> {date(a.created_at, true)}</li>
               </ul>

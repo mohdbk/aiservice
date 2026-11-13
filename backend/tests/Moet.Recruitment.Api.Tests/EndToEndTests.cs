@@ -103,7 +103,7 @@ public class EndToEndTests
         using var form = new MultipartFormDataContent
         {
             { new StringContent("layla@example.test"), "email" }, { new StringContent(epoch), "epoch" }, { new StringContent(code), "job" },
-            { new StringContent("+971501234567"), "phone" }, { new StringContent("United Arab Emirates"), "country" },
+            { new StringContent("+971501234567"), "phone" }, { new StringContent("United Arab Emirates"), "country" }, { new StringContent("United Arab Emirates"), "nationality" },
             { new StringContent("1"), "declaration" }, { new StringContent("ar"), "lang" }, { new StringContent("{\"sq1\":\"No\"}"), "screening" },
         };
         var pdf = new ByteArrayContent("%PDF-1.4\n%test\n"u8.ToArray());
@@ -259,6 +259,10 @@ public class EndToEndTests
         Assert.Equal(7, report.GetProperty("funnel").GetArrayLength());
         Assert.True(report.GetProperty("funnel")[0].GetProperty("count").GetInt32() >= 1);
         Assert.True(report.GetProperty("weeks").GetArrayLength() >= 13);
+        // Fairness: the applicant above gave a nationality (Emirati), counted in its group.
+        var fairness = report.GetProperty("fairness");
+        Assert.True(fairness.GetProperty("given").GetInt32() >= 1);
+        Assert.Contains(fairness.GetProperty("groups").EnumerateArray(), g => g.GetProperty("group").GetString() == "emirati" && g.GetProperty("applied").GetInt32() >= 1);
 
         // Personality settings: band cut-offs and HR's own notes for a type (reset brings back the built-in notes).
         var ps = await Read(await admin.GetAsync("/api/backoffice/personality-settings"));
