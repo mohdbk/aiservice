@@ -45,6 +45,12 @@ public static class AgentSetup
           choose: propose_interview_times. Offers: propose_offer_status. Interviews: propose_interview_status. Job selection weights
           and role profile: propose_job_selection. Letters: get_document. System administrators also have health, usage, data
           requests and the audit log.
+        - Screening criteria: get_job_criteria shows them and whether HR approved them; propose_job_criteria drafts or approves a list
+          taken from the job's requirements; propose_score_again scores all CVs again after a change.
+        - CVs: read_cv gives the CV text (personal details removed) when comparing candidates or checking a detail. Quote what the CV
+          says; never guess.
+        - Assessment follow-up: get_assessment_link (when an email did not arrive), propose_reexam (another attempt), propose_deadline
+          (an exact new deadline in the ministry's time zone) and propose_extra_time (an accommodation).
 
         Showing results
         - After finding people, call show_applicants to show them as cards, or compare_applicants to compare 2 to 5.

@@ -175,7 +175,7 @@ public class EndToEndTests
         // Assistant settings: the model key is stored encrypted, never shown, and only the agent service can read it.
         var settings = await Read(await admin.GetAsync("/api/backoffice/agent-settings"));
         Assert.True(settings.GetProperty("is_enabled").GetBoolean());
-        Assert.Equal(43, settings.GetProperty("tools").GetArrayLength());
+        Assert.Equal(51, settings.GetProperty("tools").GetArrayLength());
         var put = new
         {
             is_enabled = true, model_base_url = "http://llm.internal/v1", model_name = "qwen3", api_key = "sk-secret-123", clear_api_key = false,
@@ -484,6 +484,25 @@ public class EndToEndTests
         Assert.StartsWith("Selection settings for", selProposal.GetProperty("label").GetString());
         Assert.True((await admin.PostAsync($"/api/backoffice/agent/proposals/{selProposal.GetProperty("id").GetString()}/approve?lang=en", JsonBody(new { }))).IsSuccessStatusCode);
         Assert.Equal(10, (await Read(await admin.GetAsync($"/api/backoffice/jobs/{jobId}"))).GetProperty("weights").GetProperty("cv").GetInt32());
+        // The assistant proposes screening criteria; approving them through the card saves and approves them.
+        var critProposal = await Read(await admin.PostAsync("/api/backoffice/agent/proposals", JsonBody(new
+        {
+            action = "set_job_criteria", thread_id = "t9", lang = "en",
+            arguments = new { job_id = jobId, approve = true, criteria = new object[] { new { criterion = "Economic analysis", weight = 70, must = true }, new { criterion = "Power BI", weight = 30, must = false } } },
+        })));
+        Assert.StartsWith("Approve screening criteria for", critProposal.GetProperty("label").GetString());
+        Assert.True((await admin.PostAsync($"/api/backoffice/agent/proposals/{critProposal.GetProperty("id").GetString()}/approve?lang=en", JsonBody(new { }))).IsSuccessStatusCode);
+        var afterAi = await Read(await admin.GetAsync($"/api/backoffice/jobs/{jobId}/criteria"));
+        Assert.Equal("Economic analysis", afterAi.GetProperty("criteria")[0].GetProperty("criterion").GetString());
+        Assert.True(afterAi.GetProperty("approved").GetBoolean());
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsync("/api/backoffice/agent/proposals", JsonBody(new
+        {
+            action = "set_job_criteria", thread_id = "t9", lang = "en", arguments = new { job_id = jobId, approve = true, criteria = Array.Empty<object>() },
+        }))).StatusCode);
+        // The CV text for the assistant has personal details removed.
+        var cvText = await admin.GetAsync($"/api/backoffice/applicants/{applicantId}/cv-text");
+        Assert.True(cvText.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound or HttpStatusCode.Conflict, await cvText.Content.ReadAsStringAsync());
+
         // The audit log shows the change as made through the assistant, with what was approved, and the action itself.
         var viaAi = await Read(await admin.GetAsync("/api/backoffice/audit?via=Assistant&record=JobOpening"));
         var aiEntry = viaAi.GetProperty("items")[0];

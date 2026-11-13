@@ -22,6 +22,11 @@ public static class AgentActions
         ["set_offer_status"] = ["status"],
         ["set_interview_status"] = ["status"],
         ["set_job_selection"] = ["role_profile_id", "w_cv", "w_tests", "w_interview", "w_personality"],
+        ["set_job_criteria"] = ["approve"],
+        ["score_job_again"] = [],
+        ["allow_reexam"] = ["extra_attempts", "deadline_days", "deadline_at", "notify"],
+        ["change_deadline"] = ["deadline_at", "notify"],
+        ["set_extra_time"] = ["percent"],
     };
 }
 

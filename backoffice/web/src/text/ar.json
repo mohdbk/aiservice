@@ -1358,5 +1358,15 @@
  "error.criteria_not_approved": "اعتمد المعايير أولاً.",
  "error.ai_not_configured": "نموذج الذكاء الاصطناعي غير مُعد.",
  "error.description_too_short": "اكتب الوصف الوظيفي أولاً.",
- "error.criteria_not_suggested": "تعذر اقتراح معايير من هذا الوصف. أضفها بنفسك."
+ "error.criteria_not_suggested": "تعذر اقتراح معايير من هذا الوصف. أضفها بنفسك.",
+ "asst.tool.get_job_criteria": "قراءة معايير الفرز",
+ "asst.tool.propose_job_criteria": "إعداد معايير الفرز",
+ "asst.tool.propose_score_again": "التحضير لإعادة تقييم السير الذاتية",
+ "asst.tool.read_cv": "قراءة السيرة الذاتية",
+ "asst.tool.get_assessment_link": "جلب رابط التقييم",
+ "asst.tool.propose_reexam": "إعداد محاولة إضافية",
+ "asst.tool.propose_deadline": "إعداد موعد نهائي جديد",
+ "asst.tool.propose_extra_time": "إعداد وقت إضافي",
+ "error.criteria_invalid": "أدخل من 1 إلى 10 معايير، لكل منها صياغة ووزن من 1 إلى 100.",
+ "error.cv_unreadable": "تعذرت قراءة السيرة الذاتية."
 }

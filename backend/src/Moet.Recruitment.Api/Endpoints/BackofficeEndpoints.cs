@@ -110,6 +110,7 @@ public static class BackofficeEndpoints
         });
         staff.MapPost("/applicants/{id:int}/status", (int id, StatusBody b, BackofficeApplicantService s, CancellationToken ct) => s.SetStatusAsync(id, b.Status, ct));
         staff.MapPost("/applicants/{id:int}/notes", (int id, NoteBody b, BackofficeApplicantService s, CancellationToken ct) => s.AddNoteAsync(id, b.Text, ct));
+        staff.MapGet("/applicants/{id:int}/cv-text", (int id, BackofficeApplicantService s, CancellationToken ct) => s.CvTextAsync(id, ct));
         staff.MapGet("/jobs/{id:int}/criteria", (int id, CriteriaService s, CancellationToken ct) => s.GetAsync(id, ct));
         staff.MapPut("/jobs/{id:int}/criteria", (int id, CriteriaInput b, CriteriaService s, CancellationToken ct) => s.SaveAsync(id, b, ct));
         staff.MapPost("/jobs/{id:int}/criteria/suggest", (int id, CriteriaService s, CancellationToken ct) => s.SuggestAsync(id, ct));

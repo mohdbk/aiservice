@@ -1358,5 +1358,15 @@
  "error.criteria_not_approved": "Approve the criteria first.",
  "error.ai_not_configured": "The AI model is not set up.",
  "error.description_too_short": "Write the job description first.",
- "error.criteria_not_suggested": "No criteria could be suggested from this description. Add them yourself."
+ "error.criteria_not_suggested": "No criteria could be suggested from this description. Add them yourself.",
+ "asst.tool.get_job_criteria": "Reading the screening criteria",
+ "asst.tool.propose_job_criteria": "Preparing screening criteria",
+ "asst.tool.propose_score_again": "Preparing to score CVs again",
+ "asst.tool.read_cv": "Reading the CV",
+ "asst.tool.get_assessment_link": "Getting the assessment link",
+ "asst.tool.propose_reexam": "Preparing another attempt",
+ "asst.tool.propose_deadline": "Preparing a new deadline",
+ "asst.tool.propose_extra_time": "Preparing extra time",
+ "error.criteria_invalid": "Give 1 to 10 criteria, each with wording and a weight from 1 to 100.",
+ "error.cv_unreadable": "The CV could not be read."
 }

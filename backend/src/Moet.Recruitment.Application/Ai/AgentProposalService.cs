@@ -20,7 +20,7 @@ public sealed record ProposalInput(string? Action, JsonElement Arguments, string
 public sealed class AgentProposalService(
     IAppDbContext db, ICurrentActor actor, IClock clock, ContentService content, PortalMailer mailer, AgentSettingsService settings, IAuditContext audit,
     BackofficeApplicantService applicants, BackofficeInterviewService interviews, BackofficeJobService jobs, BackofficeSetupService setup,
-    BookingService bookings, TalentPoolService talent)
+    BookingService bookings, TalentPoolService talent, CriteriaService criteria, BackofficeAssessmentService assessments)
 {
 
     static IReadOnlyDictionary<string, string[]> Editable => AgentActions.Editable;
@@ -193,6 +193,39 @@ public sealed class AgentProposalService(
                 await jobs.SetSelectionAsync(jobId, I(a, "role_profile_id"), new SelectionWeights(I(a, "w_cv"), I(a, "w_tests"), I(a, "w_interview"), I(a, "w_personality")), ct);
                 return (ar ? "تم تحديث إعدادات الاختيار للوظيفة." : "The job's selection settings were updated.", $"/jobs/{jobId}");
             }
+            case "set_job_criteria":
+            {
+                var jobId = I(a, "job_id");
+                var approve = B(a, "approve");
+                await criteria.SaveAsync(jobId, new CriteriaInput(CriteriaOf(a), approve), ct);
+                return (approve
+                    ? ar ? "تم اعتماد معايير الفرز، ويجري تقييم السير الذاتية المنتظرة." : "Screening criteria approved; waiting CVs are being scored."
+                    : ar ? "حُفظت معايير الفرز كمسودة لمراجعتها واعتمادها." : "Screening criteria saved as a draft for review and approval.", $"/jobs/{jobId}?tab=criteria");
+            }
+            case "score_job_again":
+            {
+                var jobId = I(a, "job_id");
+                await criteria.ScoreAgainAsync(jobId, ct);
+                return (ar ? "يجري إعادة تقييم السير الذاتية لهذه الوظيفة." : "The job's CVs are being scored again.", $"/jobs/{jobId}?tab=criteria");
+            }
+            case "allow_reexam":
+            {
+                var invId = I(a, "invitation_id");
+                await assessments.ReexamAsync(invId, Math.Max(1, I(a, "extra_attempts")), I(a, "deadline_days") is > 0 and var days ? days : 7, B(a, "notify"), ct, Opt(a, "deadline_at"));
+                return (ar ? "تم منح محاولة إضافية في التقييم." : "Another attempt was allowed.", await InvitationLinkAsync(invId, ct));
+            }
+            case "change_deadline":
+            {
+                var invId = I(a, "invitation_id");
+                await assessments.ChangeDeadlineAsync(invId, S(a, "deadline_at"), B(a, "notify"), ct);
+                return (ar ? "تم تغيير الموعد النهائي للتقييم." : "The assessment deadline was changed.", await InvitationLinkAsync(invId, ct));
+            }
+            case "set_extra_time":
+            {
+                var invId = I(a, "invitation_id");
+                await assessments.ExtraTimeAsync(invId, I(a, "percent"), ct);
+                return (ar ? "تم تحديث الوقت الإضافي للتقييم." : "The assessment's extra time was updated.", await InvitationLinkAsync(invId, ct));
+            }
             case "suggest_english":
                 await setup.SuggestEnglishAsync(S(a, "kind"), I(a, "id"), ct);
                 return (ar ? "تم طلب النسخة الإنجليزية، وستكون جاهزة للمراجعة بعد قليل." : "English suggestion requested; it will be ready for review shortly.", null);
@@ -239,6 +272,41 @@ public sealed class AgentProposalService(
                 var weights = $"{I(a, "w_tests")}/{I(a, "w_interview")}/{I(a, "w_personality")}/{I(a, "w_cv")}";
                 return ar ? $"إعدادات الاختيار لوظيفة {job.In("ar").Title}: الأوزان (اختبارات/مقابلات/شخصية/سيرة) {weights}"
                     : $"Selection settings for {job.In("en").Title}: weights (tests/interviews/personality/CV) {weights}";
+            }
+            case "set_job_criteria":
+            {
+                var jobId = I(a, "job_id");
+                var job = await db.JobOpenings.Include(j => j.Translations).FirstOrDefaultAsync(j => j.Id == jobId, ct) ?? throw DomainException.NotFound();
+                var list = CriteriaOf(a);
+                if (list.Count is 0 or > CriteriaService.Max || list.Any(c => string.IsNullOrWhiteSpace(c.criterion) || c.weight is <= 0 or > 100))
+                    throw DomainException.Invalid("criteria_invalid");
+                var lines = string.Join("; ", list.Select(c => $"{c.criterion} ({c.weight:0.##}{(c.must ? (ar ? "، إلزامي" : ", must-have") : "")})"));
+                return B(a, "approve")
+                    ? ar ? $"اعتماد معايير الفرز لوظيفة {job.In("ar").Title}: {lines}" : $"Approve screening criteria for {job.In("en").Title}: {lines}"
+                    : ar ? $"حفظ معايير الفرز كمسودة لوظيفة {job.In("ar").Title}: {lines}" : $"Save draft screening criteria for {job.In("en").Title}: {lines}";
+            }
+            case "score_job_again":
+            {
+                var jobId = I(a, "job_id");
+                var job = await db.JobOpenings.Include(j => j.Translations).FirstOrDefaultAsync(j => j.Id == jobId, ct) ?? throw DomainException.NotFound();
+                var n = await db.JobApplications.CountAsync(x => x.JobOpeningId == jobId && x.AnonymisedAt == null, ct);
+                return ar ? $"إعادة تقييم {n} سيرة ذاتية لوظيفة {job.In("ar").Title} وفق المعايير المعتمدة" : $"Score the {n} CVs for {job.In("en").Title} again against the approved criteria";
+            }
+            case "allow_reexam" or "change_deadline" or "set_extra_time":
+            {
+                var invId = I(a, "invitation_id");
+                var inv = await db.Invitations.Where(x => x.Id == invId).Select(x => new { x.Code, Name = x.JobApplication!.FullName, Test = x.Assessment!.Title })
+                    .FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
+                if (name == "set_extra_time" && I(a, "percent") is < 0 or > 100) throw DomainException.Invalid("extra_time_invalid");
+                var deadline = Opt(a, "deadline_at") is { } at ? clock.LocalHuman(clock.Deadline(at)) : null;
+                if (name == "change_deadline" && deadline == null) throw DomainException.Invalid("deadline_invalid");
+                return name switch
+                {
+                    "allow_reexam" => ar ? $"منح {inv.Name} محاولة إضافية في {inv.Test} ({inv.Code})، الموعد النهائي {deadline ?? $"بعد {Math.Max(1, I(a, "deadline_days") is > 0 and var d ? d : 7)} أيام"}"
+                        : $"Allow {inv.Name} another attempt at {inv.Test} ({inv.Code}), deadline {deadline ?? $"in {(I(a, "deadline_days") is > 0 and var d2 ? d2 : 7)} days"}",
+                    "change_deadline" => ar ? $"تغيير الموعد النهائي لتقييم {inv.Name} في {inv.Test} ({inv.Code}) إلى {deadline}" : $"Change {inv.Name}'s deadline for {inv.Test} ({inv.Code}) to {deadline}",
+                    _ => ar ? $"وقت إضافي {I(a, "percent")}% لـ {inv.Name} في {inv.Test} ({inv.Code})" : $"Extra time of {I(a, "percent")}% for {inv.Name} on {inv.Test} ({inv.Code})",
+                };
             }
             case "suggest_english":
                 if (S(a, "kind") is not ("job" or "screening" or "question" or "assessment")) throw DomainException.Invalid("invalid_value");
@@ -322,6 +390,22 @@ public sealed class AgentProposalService(
         e.TryGetProperty(name, out var v) ? v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : v.ValueKind is JsonValueKind.Null ? "" : v.GetRawText() : "";
 
     static string? Opt(JsonElement e, string name) => S(e, name) is { Length: > 0 } s ? s : null;
+
+    static bool B(JsonElement e, string name) =>
+        e.TryGetProperty(name, out var v) && (v.ValueKind == JsonValueKind.True || (v.ValueKind == JsonValueKind.String && v.GetString() is "true" or "1" or "yes"));
+
+    /// <summary>The criteria list of a set_job_criteria proposal.</summary>
+    static List<CriterionInput> CriteriaOf(JsonElement a)
+    {
+        if (!a.TryGetProperty("criteria", out var arr) || arr.ValueKind != JsonValueKind.Array) return [];
+        return arr.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.Object).Select(x => new CriterionInput(
+            TextUtil.Clip(S(x, "criterion").Trim(), 300),
+            x.TryGetProperty("weight", out var w) && (w.ValueKind == JsonValueKind.Number ? w.TryGetDecimal(out var n) : decimal.TryParse(S(x, "weight"), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out n)) ? n : 0,
+            B(x, "must"))).ToList();
+    }
+
+    async Task<string?> InvitationLinkAsync(int invitationId, CancellationToken ct) =>
+        await db.Invitations.Where(x => x.Id == invitationId).Select(x => (int?)x.JobApplicationId).FirstOrDefaultAsync(ct) is { } appId ? $"/applicants/{appId}?tab=tests" : null;
 
     static int I(JsonElement e, string name) =>
         e.TryGetProperty(name, out var v) && (v.ValueKind == JsonValueKind.Number ? v.TryGetInt32(out var n) : int.TryParse(v.ValueKind == JsonValueKind.String ? v.GetString() : null, out n)) ? n : 0;
