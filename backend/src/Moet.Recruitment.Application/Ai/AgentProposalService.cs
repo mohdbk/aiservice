@@ -639,11 +639,11 @@ public sealed class AgentProposalService(
             {
                 if (!actor.IsSystemAdmin) throw DomainException.Forbidden();
                 var sid = I(a, "staff_id");
-                var who = await db.StaffUsers.Where(x => x.Id == sid).Select(x => x.FullName).FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
+                var person = await db.StaffUsers.Where(x => x.Id == sid).Select(x => x.FullName).FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
                 var limit = Opt(a, "limit") is null ? (int?)null : I(a, "limit");
                 if (limit is < 0 or > 5000) throw DomainException.Invalid("agent_daily_limit");
-                return limit == null ? ar ? $"إرجاع الحد اليومي للمساعد لـ {who} إلى الافتراضي" : $"Set {who}'s daily assistant limit back to the default"
-                    : ar ? $"الحد اليومي للمساعد لـ {who}: {limit} رسالة" : $"Daily assistant limit for {who}: {limit} messages";
+                return limit == null ? ar ? $"إرجاع الحد اليومي للمساعد لـ {person} إلى الافتراضي" : $"Set {person}'s daily assistant limit back to the default"
+                    : ar ? $"الحد اليومي للمساعد لـ {person}: {limit} رسالة" : $"Daily assistant limit for {person}: {limit} messages";
             }
             case "run_health_check":
                 if (!actor.IsSystemAdmin) throw DomainException.Forbidden();
