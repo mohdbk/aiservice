@@ -90,3 +90,23 @@ html[lang|="ar"] [lang|="en"] { font-family: "Roboto Variable", "Roboto", "Noto 
 /* Input with a leading icon (design system .control-prefix) */
 .aegov-form-control .form-control-input > .control-prefix + input,
 .aegov-form-control .form-control-input > .control-prefix + select { padding-inline-start: .5rem; }
+
+/* Checked checkboxes and radios: the design system removes the browser's own drawing (appearance: none) but does not draw the
+   checked state, so a ticked box looked empty. A filled box with a white tick, and a ring with a dot for radios. */
+input[type="checkbox"]:checked, input[type="radio"]:checked {
+  background-color: var(--form-check-accent, var(--color-primary-600));
+  border-color: var(--form-check-accent, var(--color-primary-600));
+  background-repeat: no-repeat; background-position: center;
+}
+input[type="checkbox"]:checked {
+  background-size: 80% 80%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' d='M3.5 8.5l3 3 6-7'/%3E%3C/svg%3E");
+}
+input[type="radio"] { border-radius: 9999px; }
+input[type="radio"]:checked {
+  background-size: 100% 100%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='3.2' fill='white'/%3E%3C/svg%3E");
+}
+input[type="checkbox"]:checked:disabled, input[type="radio"]:checked:disabled { opacity: .5; }
+input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { outline: 2px solid var(--color-primary-600); outline-offset: 2px; }
+html.mc-contrast input[type="checkbox"]:checked, html.mc-contrast input[type="radio"]:checked { background-color: #ffeb3b; border-color: #ffeb3b; }

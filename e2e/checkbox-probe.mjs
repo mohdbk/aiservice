@@ -2,7 +2,7 @@
 import { chromium } from "playwright";
 import fs from "node:fs";
 const css = fs.readdirSync("portal/web/dist/assets").filter((f) => f.endsWith(".css")).map((f) => fs.readFileSync(`portal/web/dist/assets/${f}`, "utf8")).join("\n");
-const html = `<!doctype html><html lang="en" dir="ltr"><head><style>${css}</style></head><body class="p-6">
+const html = `<!doctype html><html lang="en" dir="ltr"><head><style>${css}</style></head><body class="p-6 space-y-3">
 <div class="aegov-check-item"><input id="a" type="checkbox"><label for="a">aegov-check-item</label></div>
 <label class="flex items-center gap-3"><input id="b" type="checkbox" class="h-5 w-5 rounded accent-primary-600"><span>screening checkbox</span></label>
 <label class="flex items-center gap-3"><input id="c" type="radio" name="r" class="h-5 w-5 rounded-full accent-primary-600"><span>screening radio</span></label>
