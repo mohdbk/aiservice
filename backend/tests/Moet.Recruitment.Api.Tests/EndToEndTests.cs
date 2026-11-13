@@ -496,12 +496,12 @@ public class EndToEndTests
         Assert.Equal(HttpStatusCode.BadRequest, (await recruiter.PostAsync("/api/backoffice/two-step/enable", JsonBody(new { code = "000000" }))).StatusCode);
         var step = Moet.Recruitment.Domain.Identity.Totp.StepAt(DateTime.UtcNow);
         Assert.True((await recruiter.PostAsync("/api/backoffice/two-step/enable", JsonBody(new { code = Moet.Recruitment.Domain.Identity.Totp.Code(secret, step) }))).IsSuccessStatusCode);
-        var second = app.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
-        second.DefaultRequestHeaders.Add("X-Backoffice", "1");
-        var noCode = await second.PostAsync("/api/backoffice/sign-in", JsonBody(new { email = "recruiter@moet.test", password = "Recruiter-Password-123" }));
+        var phoneUser = app.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
+        phoneUser.DefaultRequestHeaders.Add("X-Backoffice", "1");
+        var noCode = await phoneUser.PostAsync("/api/backoffice/sign-in", JsonBody(new { email = "recruiter@moet.test", password = "Recruiter-Password-123" }));
         Assert.Equal(HttpStatusCode.Unauthorized, noCode.StatusCode);
         Assert.Contains("code_required", await noCode.Content.ReadAsStringAsync());
-        Assert.True((await second.PostAsync("/api/backoffice/sign-in", JsonBody(new { email = "recruiter@moet.test", password = "Recruiter-Password-123", code = Moet.Recruitment.Domain.Identity.Totp.Code(secret, step + 1) }))).IsSuccessStatusCode);
+        Assert.True((await phoneUser.PostAsync("/api/backoffice/sign-in", JsonBody(new { email = "recruiter@moet.test", password = "Recruiter-Password-123", code = Moet.Recruitment.Domain.Identity.Totp.Code(secret, step + 1) }))).IsSuccessStatusCode);
         var staffList = await Read(await admin.GetAsync("/api/backoffice/staff?q=recruiter"));
         var recruiterId = staffList.GetProperty("items")[0].GetProperty("id").GetInt32();
         Assert.True(staffList.GetProperty("items")[0].GetProperty("two_step").GetBoolean());
