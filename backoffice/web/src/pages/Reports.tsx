@@ -61,14 +61,14 @@ function Weeks({ weeks }: { weeks: Report["weeks"] }) {
 }
 
 export default function Reports() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   usePageTitle(t("nav.reports"));
   const [params, setParams] = useSearchParams();
   const get = (k: string) => params.get(k) || "";
   const set = (k: string, v: string) => { const p = new URLSearchParams(params); if (v) p.set(k, v); else p.delete(k); setParams(p, { replace: true }); };
   const qs = new URLSearchParams([...params.entries()].filter(([k]) => ["from", "to", "job", "department"].includes(k))).toString();
   const report = useAsync(() => api<Report>(`/reports/hiring${qs ? `?${qs}` : ""}`), [qs]);
-  const jobs = useAsync(() => api<{ items: { id: number; title: string }[] }>("/jobs?size=100&sort=created&dir=desc"), []);
+  const jobs = useAsync(() => api<{ items: { id: number; title: string; title_en: string }[] }>("/jobs?size=100&sort=created&dir=desc"), []);
   const lookups = useAsync(() => api<{ departments: { id: number; name: string }[] }>("/lookups"), []);
   const r = report.data;
   const applied = r?.funnel[0]?.count || 0;
@@ -84,7 +84,7 @@ export default function Reports() {
         <TextInput label={t("rep.from")} type="date" value={get("from") || r?.from || ""} onChange={(e) => set("from", e.target.value)} />
         <TextInput label={t("rep.to")} type="date" value={get("to") || r?.to || ""} onChange={(e) => set("to", e.target.value)} />
         <SelectInput label={t("apps.job")} value={get("job")} onChange={(e) => set("job", e.target.value)}
-          options={[{ value: "", label: t("common.all") }, ...(jobs.data?.items || []).map((j) => ({ value: j.id, label: j.title }))]} />
+          options={[{ value: "", label: t("common.all") }, ...(jobs.data?.items || []).map((j) => ({ value: j.id, label: lang === "en" && j.title_en ? j.title_en : j.title }))]} />
         <SelectInput label={t("jobs.department")} value={get("department")} onChange={(e) => set("department", e.target.value)}
           options={[{ value: "", label: t("common.all") }, ...(lookups.data?.departments || []).map((d) => ({ value: d.id, label: d.name }))]} />
       </div>

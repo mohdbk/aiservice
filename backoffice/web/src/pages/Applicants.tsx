@@ -12,16 +12,16 @@ export const appTone = (s: string) => (s === "Open" ? "blue" : s === "Accepted" 
 export const screenTone = (s: string) => (s === "Meets" ? "green" : s === "DoesNotMeet" ? "red" : "gray");
 
 export default function Applicants() {
-  const { t, to, date } = useLang();
+  const { t, to, date, lang } = useLang();
   usePageTitle(t("apps.title"));
-  const jobs = useAsync(() => api<{ items: { id: number; title: string }[] }>("/jobs?size=100&sort=created&dir=desc"), []);
+  const jobs = useAsync(() => api<{ items: { id: number; title: string; title_en: string }[] }>("/jobs?size=100&sort=created&dir=desc"), []);
   const list = useList<Row>("/applicants", ["job", "status", "screening", "ai", "minScore", "from", "to"]);
   return (
     <>
       <PageHeader title={t("apps.title")} subtitle={list.data && t("apps.total", { count: list.data.total })} />
       <DataTable list={list} rowKey={(a) => a.id} searchLabel={t("apps.search_hint")}
         filters={[
-          { key: "job", label: t("apps.job"), options: (jobs.data?.items || []).map((j) => ({ value: String(j.id), label: j.title })) },
+          { key: "job", label: t("apps.job"), options: (jobs.data?.items || []).map((j) => ({ value: String(j.id), label: lang === "en" && j.title_en ? j.title_en : j.title })) },
           { key: "status", label: t("common.status"), options: opts(t, "app.status.", ["Open", "Replied", "Hold", "Accepted", "Rejected"]) },
           { key: "screening", label: t("apps.screening"), options: opts(t, "screen.", ["Meets", "DoesNotMeet", "NoRequirements", "NoQuestions"]) },
           { key: "ai", label: t("apps.ai"), options: opts(t, "ai.", ["Scored", "Waiting", "Pending", "Processing", "Failed", "Skipped"]) },

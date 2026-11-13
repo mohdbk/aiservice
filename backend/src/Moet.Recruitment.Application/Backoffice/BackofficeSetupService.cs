@@ -188,7 +188,7 @@ public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor
         assessments = await db.Assessments.AsNoTracking().Where(a => a.Status == AssessmentStatus.Published).OrderBy(a => a.Title)
             .Select(a => new { id = a.Id, title = en ? a.Translations.Where(t => t.LanguageCode == En && t.Title != "").Select(t => t.Title).FirstOrDefault() ?? a.Title : a.Title }).ToListAsync(ct),
         screening_questions = await db.ScreeningQuestions.AsNoTracking().Where(q => q.IsActive).OrderBy(q => q.Text)
-            .Select(q => new { id = q.Id, text = q.Text, answer_type = q.AnswerType, options = q.Options.OrderBy(o => o.SortOrder).Select(o => new { id = o.Id, text = o.Text }).ToList() })
+            .Select(q => new { id = q.Id, text = en ? q.Translations.Where(t => t.LanguageCode == En && t.Text != "").Select(t => t.Text).FirstOrDefault() ?? q.Text : q.Text, answer_type = q.AnswerType, options = q.Options.OrderBy(o => o.SortOrder).Select(o => new { id = o.Id, text = en ? o.Translations.Where(t => t.LanguageCode == En && t.Text != "").Select(t => t.Text).FirstOrDefault() ?? o.Text : o.Text }).ToList() })
             .ToListAsync(ct),
         categories = await db.Questions.AsNoTracking().Where(x => x.Category != "").Select(x => x.Category).Distinct().OrderBy(x => x).ToListAsync(ct),
         job_families = await db.Questions.AsNoTracking().Where(x => x.JobFamily != "").Select(x => x.JobFamily).Distinct().OrderBy(x => x).ToListAsync(ct),

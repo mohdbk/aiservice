@@ -11,11 +11,11 @@ type Row = {
 
 /** Candidates who agreed to be considered for other jobs, searchable by what is in their CVs, and invited to apply. */
 export default function TalentPool() {
-  const { t, date } = useLang();
+  const { t, date, lang } = useLang();
   usePageTitle(t("nav.talent_pool"));
   const toast = useToast();
   const list = useList<Row>("/talent-pool", ["cv", "job"]);
-  const jobs = useAsync(() => api<{ items: { id: number; title: string }[] }>("/jobs?size=100&status=Open&published=true"), []);
+  const jobs = useAsync(() => api<{ items: { id: number; title: string; title_en: string }[] }>("/jobs?size=100&status=Open&published=true"), []);
   const [invite, setInvite] = useState<Row | null>(null);
   const [jobId, setJobId] = useState(list.get("job"));
   const [cv, setCv] = useState(list.get("cv"));
@@ -29,7 +29,7 @@ export default function TalentPool() {
     <>
       <PageHeader title={t("nav.talent_pool")} subtitle={list.data ? t("pool.subtitle", { n: list.data.total }) : undefined} />
       <DataTable list={list} rowKey={(r) => r.id} searchLabel={t("pool.search")}
-        filters={[{ key: "job", label: t("pool.not_applied_to"), options: (jobs.data?.items || []).map((j) => ({ value: String(j.id), label: j.title })) }]}
+        filters={[{ key: "job", label: t("pool.not_applied_to"), options: (jobs.data?.items || []).map((j) => ({ value: String(j.id), label: lang === "en" && j.title_en ? j.title_en : j.title })) }]}
         toolbar={<form className="flex items-end gap-2" onSubmit={(e) => { e.preventDefault(); list.set({ cv: cv.trim() || null }); }}>
           <TextInput label={t("pool.cv_text")} value={cv} onChange={(e) => setCv(e.target.value)} wrapClass="min-w-48" />
           <Button type="submit" variant="outline" size="sm">{t("common.search")}</Button>
@@ -56,7 +56,7 @@ export default function TalentPool() {
           {error && <ErrorState error={error} />}
           <p className="text-sm text-aeblack-600">{t("pool.invite_hint")}</p>
           <SelectInput required label={t("apps.job")} value={jobId} onChange={(e) => setJobId(e.target.value)}
-            options={[{ value: "", label: "" }, ...(jobs.data?.items || []).map((j) => ({ value: String(j.id), label: j.title }))]} />
+            options={[{ value: "", label: "" }, ...(jobs.data?.items || []).map((j) => ({ value: String(j.id), label: lang === "en" && j.title_en ? j.title_en : j.title }))]} />
         </Modal>
       )}
     </>

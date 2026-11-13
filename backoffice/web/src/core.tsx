@@ -45,6 +45,8 @@ export async function api<T = any>(path: string, opts: Opts = {}): Promise<T> {
 }
 
 export function useAsync<T>(fn: () => Promise<T>, deps: unknown[]) {
+  // Names and titles come back in the backoffice's language, so switching language loads them again.
+  const { lang } = useParams();
   const [state, setState] = useState<{ data?: T; error?: ApiError; loading: boolean }>({ loading: true });
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -58,7 +60,7 @@ export function useAsync<T>(fn: () => Promise<T>, deps: unknown[]) {
       live = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [...deps, tick]);
+  }, [...deps, tick, lang]);
   const reload = useCallback(() => setTick((n) => n + 1), []);
   return { ...state, reload, setData: (d: T) => setState({ data: d, loading: false }) };
 }
