@@ -188,11 +188,8 @@ function AssistantPanel() {
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Popup className="mh-chat-drawer">
-          <div className="flex items-center justify-between border-b border-aeblack-100 bg-white p-3">
-            <Dialog.Title className="inline-flex items-center gap-2 text-lg font-bold"><ChatCircleDots size={24} className="text-primary-600" aria-hidden="true" />{t("asst.title")}</Dialog.Title>
-            <Dialog.Close className="rounded p-1 hover:bg-aeblack-100" aria-label={t("app.close")}><X size={24} /></Dialog.Close>
-          </div>
-          <div className="min-h-0 flex-1"><ErrorBoundary compact><AgentChat panel /></ErrorBoundary></div>
+          <Dialog.Title className="sr-only">{t("asst.title")}</Dialog.Title>
+          <div className="min-h-0 flex-1"><ErrorBoundary compact><AgentChat panel onClose={() => setOpen(false)} /></ErrorBoundary></div>
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>

@@ -1499,5 +1499,16 @@
  "asst.tool.propose_health_check": "Preparing a health check",
  "asst.tool.propose_audit_comment": "Preparing an audit comment",
  "jobs.col_title": "Job Title",
- "q.edit": "Edit Question"
+ "q.edit": "Edit Question",
+ "asst.expand": "Full Screen",
+ "asst.collapse": "Exit Full Screen",
+ "asst.greet_morning": "Good Morning, {name}",
+ "asst.greet_afternoon": "Good Afternoon, {name}",
+ "asst.greet_evening": "Good Evening, {name}",
+ "asst.ready": "Ready",
+ "asst.steps": "Steps Taken ({count})",
+ "asst.context": "Using this page: {page}",
+ "asst.enter_hint": "Enter to send, Shift and Enter for a new line",
+ "asst.approval_hint": "Changes always wait for your approval",
+ "asst.try": "Try Asking"
 }

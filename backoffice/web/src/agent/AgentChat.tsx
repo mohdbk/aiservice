@@ -1,5 +1,6 @@
-import { ArrowBendDownRight, ArrowCircleUp, ChatCircleDots, CheckCircle, CircleNotch, ClockCounterClockwise, File as FileIcon, Lightbulb, Paperclip, Plus, ShareNetwork, StopCircle, Trash, X } from "@phosphor-icons/react";
+import { ArrowBendDownRight, ArrowsIn, ArrowsOut, ArrowUp, CaretDown, CaretRight, CheckCircle, CircleNotch, ClockCounterClockwise, Eye, File as FileIcon, Lightbulb, NotePencil, Paperclip, ShareNetwork, ShieldCheck, Sparkle, Stop, Trash, X } from "@phosphor-icons/react";
 import { FormEvent, ReactElement, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Button, Empty, ErrorState, Loading, Modal, Note } from "../components/ui";
 import { ApiError, api, useAsync, useAuth, useLang, useToast } from "../core";
@@ -94,7 +95,7 @@ function Markdown({ text }: { text: string }) {
 }
 
 /** The assistant chat: AG-UI run streaming, A2UI surfaces, and the open screen as context. Used by the page and the side panel. */
-export function AgentChat({ panel = false }: { panel?: boolean }) {
+export function AgentChat({ panel = false, onClose }: { panel?: boolean; onClose?: () => void }) {
   const { t, lang, errorText } = useLang();
   const nav = useNavigate();
   const { me } = useAuth();
@@ -129,6 +130,19 @@ export function AgentChat({ panel = false }: { panel?: boolean }) {
   const [acting, setActing] = useState<string | null>(null);
   const stop = useRef<AbortController | null>(null);
   const end = useRef<HTMLDivElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  // The message box grows with what is typed, up to about six lines.
+  const box = useRef<HTMLTextAreaElement>(null);
+  const grow = (el: HTMLTextAreaElement) => { el.style.height = "auto"; el.style.height = `${Math.min(el.scrollHeight, 168)}px`; };
+  useEffect(() => { if (!text && box.current) box.current.style.height = ""; }, [text]);
+  useEffect(() => { box.current?.focus(); }, [expanded]);
+  // Full screen hides the page behind it from scrolling.
+  useEffect(() => {
+    if (!expanded) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [expanded]);
 
   useEffect(() => save(key, state), [key, state]);
   const [params, setParams] = useSearchParams();
@@ -306,109 +320,202 @@ export function AgentChat({ panel = false }: { panel?: boolean }) {
 
   const examples = ((lang === "en" ? info.data?.examples_en : info.data?.examples_ar) || t("asst.examples_default")).split("\n").map((x) => x.trim()).filter(Boolean).slice(0, 6);
   if (info.data && !info.data.is_enabled) return <Note tone="warning">{t("error.assistant_off")}</Note>;
-  // An assistant turn shows once something arrives (a step, text or a card); until then the typing dots stand in for it.
+  // An assistant turn shows once something arrives (a step, text or a card); until then the working line stands in for it.
   const visible = state.turns.filter((x) => !x.hidden && (x.role === "user" || x.text.trim() || x.tools?.length || x.surfaces?.length));
-  return (
-    <>
-      <div className={`flex flex-col bg-whitely-50 ${panel ? "h-full" : "mc-surface h-[calc(100dvh-11rem)] min-h-[26rem] rounded-2xl border border-aeblack-100 sm:h-[calc(100vh-16rem)]"}`}>
-        {/* The open screen still goes to the assistant with each message; it is not shown here. */}
-        <div className="flex items-center justify-end gap-2 border-b border-aeblack-100 bg-white px-4 py-2">
-          <Button variant="link" size="sm" onClick={() => setHistory(true)} icon={<ClockCounterClockwise size={20} aria-hidden="true" />}>
-            <span className={panel ? "sr-only" : "hidden sm:inline"}>{t("asst.history")}</span></Button>
-          {title && !running && <Button variant="link" size="sm" onClick={share} icon={<ShareNetwork size={20} aria-hidden="true" />}>
-            <span className={panel ? "sr-only" : "hidden sm:inline"}>{t("asst.share")}</span></Button>}
-          <Button variant="link" size="sm" disabled={running} onClick={() => { setState({ thread: newId(), turns: [], surfaces: {} }); setSharedBy(""); }}
-            icon={<Plus size={20} aria-hidden="true" />}>{t("asst.new_chat")}</Button>
+  const last = state.turns[state.turns.length - 1];
+  const step = running ? [...(last?.tools ?? [])].reverse().find((x) => !x.done && x.name !== "suggest_next_actions") : undefined;
+  const label = (name: string) => (t(`asst.tool.${name}`) === `asst.tool.${name}` ? name : t(`asst.tool.${name}`));
+  const hour = new Date().getHours();
+  const greet = t(hour < 12 ? "asst.greet_morning" : hour < 18 ? "asst.greet_afternoon" : "asst.greet_evening", { name: (me?.full_name || "").split(" ")[0] });
+  const where = panel ? screen().heading : undefined;
+
+  const body = (
+    <div className={`mh-asst flex flex-col ${expanded ? "fixed inset-0 z-[60] bg-whitely-50" : panel ? "h-full" : "mc-surface h-[calc(100dvh-11rem)] min-h-[26rem] overflow-hidden rounded-2xl border border-aeblack-100 sm:h-[calc(100vh-16rem)]"}`}
+      role={expanded ? "dialog" : undefined} aria-modal={expanded || undefined} aria-label={expanded ? t("asst.title") : undefined}
+      onKeyDown={(e) => { if (e.key === "Escape" && expanded) { e.stopPropagation(); setExpanded(false); } }}>
+      {/* Top bar: who is answering and what it is doing, and the conversation's tools. */}
+      <div className="flex items-center gap-3 border-b border-aeblack-100 bg-white px-3 py-2 sm:px-4">
+        <span className={`mh-asst-avatar ${running ? "is-working" : ""}`} aria-hidden="true"><Sparkle size={20} /></span>
+        <div className="min-w-0 flex-1">
+          <p className="m-0 truncate text-sm font-bold text-aeblack-900">{t("asst.title")}</p>
+          <p className="m-0 flex items-center gap-1.5 truncate text-xs text-aeblack-500" aria-live="polite">
+            <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${running ? "animate-pulse bg-primary-500" : "bg-aegreen-500"}`} aria-hidden="true" />
+            <span className="truncate">{running ? (step ? label(step.name) : t("asst.thinking")) : t("asst.ready")}</span>
+          </p>
         </div>
-        <div ref={list} className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 sm:p-6" aria-live="polite">
+        <div className="flex shrink-0 items-center">
+          <IconButton label={t("asst.history")} onClick={() => setHistory(true)}><ClockCounterClockwise size={20} /></IconButton>
+          {title && !running && <IconButton label={t("asst.share")} onClick={share}><ShareNetwork size={20} /></IconButton>}
+          <IconButton label={t("asst.new_chat")} disabled={running} onClick={() => { setState({ thread: newId(), turns: [], surfaces: {} }); setSharedBy(""); }}><NotePencil size={20} /></IconButton>
+          <IconButton label={expanded ? t("asst.collapse") : t("asst.expand")} onClick={() => setExpanded((x) => !x)}>
+            {expanded ? <ArrowsIn size={20} /> : <ArrowsOut size={20} />}
+          </IconButton>
+          {onClose && !expanded && <IconButton label={t("app.close")} onClick={onClose}><X size={20} /></IconButton>}
+        </div>
+      </div>
+
+      <div ref={list} className="min-h-0 flex-1 overflow-y-auto overscroll-contain" aria-live="polite">
+        <div className={`mx-auto w-full space-y-5 p-4 sm:p-6 ${expanded ? "max-w-4xl" : ""}`}>
           {sharedBy && <Note>{t("asst.shared_by", { name: sharedBy })}</Note>}
           {visible.length === 0 && (
-            <div className="space-y-3">
-              <Note>{t("asst.intro")}</Note>
+            <div className="space-y-5">
+              <div className="mh-asst-hero rounded-2xl p-5 sm:p-6">
+                <span className="mh-asst-avatar is-large mb-3" aria-hidden="true"><Sparkle size={28} /></span>
+                <p className="m-0 text-xl font-bold text-aeblack-900 sm:text-2xl">{greet}</p>
+                <p className="m-0 mt-1 max-w-xl text-sm leading-6 text-aeblack-700">{t("asst.intro")}</p>
+              </div>
               {(suggestions.data?.length ?? 0) > 0 && (
-                <div>
-                  <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-aeblack-700"><Lightbulb size={20} className="text-primary-600" aria-hidden="true" />{t("asst.suggested")}</p>
-                  <ul className="space-y-2">{suggestions.data!.map((x) => (
-                    <li key={x.key}><button type="button" className="w-full rounded-xl border border-aeblack-100 bg-white px-3 py-2 text-start text-sm hover:border-primary-300 hover:bg-primary-50"
-                      onClick={() => ask(lang === "en" ? x.ask_en : x.ask_ar)}>{lang === "en" ? x.text_en : x.text_ar}</button></li>
+                <section aria-labelledby="asst-suggested">
+                  <h2 id="asst-suggested" className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-aeblack-700"><Lightbulb size={20} className="text-primary-600" aria-hidden="true" />{t("asst.suggested")}</h2>
+                  <ul className={`grid gap-2 ${panel && !expanded ? "" : "sm:grid-cols-2"}`}>{suggestions.data!.map((x) => (
+                    <li key={x.key}>
+                      <button type="button" className="mh-asst-card group flex h-full w-full items-center gap-3 text-start" onClick={() => ask(lang === "en" ? x.ask_en : x.ask_ar)}>
+                        <span className="flex h-9 min-w-9 shrink-0 items-center justify-center rounded-lg bg-primary-50 px-2 text-sm font-bold tabular-nums text-primary-800">{x.count}</span>
+                        <span className="min-w-0 flex-1 text-sm text-aeblack-800">{lang === "en" ? x.text_en : x.text_ar}</span>
+                        <CaretRight size={16} className="shrink-0 text-aeblack-400 transition group-hover:translate-x-0.5 group-hover:text-primary-700 rtl:-scale-x-100 rtl:group-hover:-translate-x-0.5" aria-hidden="true" />
+                      </button>
+                    </li>
                   ))}</ul>
-                </div>
+                </section>
               )}
-              {examples.length > 0 && <ul className="flex flex-wrap gap-2">{examples.map((x) => (
-                <li key={x}><button type="button" className="rounded-full border border-primary-200 bg-white px-3 py-1.5 text-start text-sm text-primary-800 hover:bg-primary-50"
-                  onClick={() => ask(x)}>{x}</button></li>
-              ))}</ul>}
+              {examples.length > 0 && (
+                <section aria-labelledby="asst-try">
+                  <h2 id="asst-try" className="mb-2 text-sm font-semibold text-aeblack-700">{t("asst.try")}</h2>
+                  <Chips items={examples} onPick={(x) => ask(x)} />
+                </section>
+              )}
             </div>
           )}
-          {visible.map((m) => (
-            <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[92%] rounded-2xl text-sm leading-6 ${panel ? "" : "sm:max-w-[85%]"} ${m.role === "user" ? "mh-chat-user px-4 py-3"
-                : m.surfaces?.some((id) => state.surfaces[id]) ? "w-full py-1" /* cards carry their own frame: no second border around them */ : "mh-chat-bot w-full px-4 py-3"}`}>
-                {m.role === "assistant" && <ChatCircleDots size={20} className="mb-1 text-primary-600" aria-hidden="true" />}
-                {m.tools && m.tools.length > 0 && (
-                  <ul className={`flex flex-wrap gap-2 ${m.text.trim() || m.surfaces?.length ? "mb-2" : "mb-0"}`} aria-label={t("asst.thinking")}>
-                    {m.tools.filter((x) => x.name !== "suggest_next_actions").map((x) => (
-                      <li key={x.id} className="inline-flex items-center gap-1 rounded-full bg-whitely-100 px-3 py-1 text-xs text-aeblack-600">
-                        {x.done ? <CheckCircle size={16} className="text-aegreen-600" aria-hidden="true" /> : <CircleNotch size={16} className="animate-spin" aria-hidden="true" />}
-                        {t(`asst.tool.${x.name}`) === `asst.tool.${x.name}` ? x.name : t(`asst.tool.${x.name}`)}
-                      </li>
-                    ))}
-                  </ul>
+          {visible.map((m) => m.role === "user" ? (
+            <div key={m.id} className="flex justify-end">
+              <div className={`mh-chat-user max-w-[88%] rounded-2xl rounded-ee-md px-4 py-3 text-sm leading-6 ${panel && !expanded ? "" : "sm:max-w-[75%]"}`}><UserText text={m.text} /></div>
+            </div>
+          ) : (
+            <div key={m.id} className="flex items-start gap-3">
+              <span className="mh-asst-avatar is-small mt-0.5" aria-hidden="true"><Sparkle size={16} /></span>
+              <div className="min-w-0 flex-1 space-y-3 text-sm leading-6">
+                {m.tools && m.tools.some((x) => x.name !== "suggest_next_actions") && (
+                  <Steps tools={m.tools.filter((x) => x.name !== "suggest_next_actions")} label={label} live={running && m.id === last?.id} />
                 )}
-                {/* m-0: the design system gives paragraphs a bottom margin, which left an empty line inside the bubble. */}
-                {m.role === "user" ? <UserText text={m.text} /> : m.text.trim() && <Markdown text={m.text} />}
+                {m.text.trim() && <div className="mh-chat-bot rounded-2xl rounded-ss-md px-4 py-3"><Markdown text={m.text} /></div>}
                 {m.surfaces?.map((id) => state.surfaces[id] && <A2Surface key={id} surface={state.surfaces[id]} busy={acting === id} onAction={onAction} emptyText={t("common.choose")}
                   onData={(sid, path, value) => setState((s) => ({ ...s, surfaces: writeData(s.surfaces, sid, path, value) }))} />)}
-                {m.role === "assistant" && m.next && m.next.length > 0 && m.id === visible[visible.length - 1]?.id && !running && (
-                  <div className="mt-3 border-t border-aeblack-100 pt-3">
+                {m.next && m.next.length > 0 && m.id === visible[visible.length - 1]?.id && !running && (
+                  <div>
                     <p className="mb-2 text-xs font-semibold text-aeblack-500">{t("asst.next")}</p>
-                    <ul className="flex flex-wrap gap-2">
-                      {m.next.map((q) => (
-                        <li key={q}><button type="button" onClick={() => ask(q)} dir="auto"
-                          className="inline-flex items-center gap-1 rounded-full border border-primary-200 bg-primary-50 px-3 py-1.5 text-start text-xs font-semibold text-primary-800 hover:bg-primary-100 focus-visible:outline-2">
-                          <ArrowBendDownRight size={14} className="shrink-0 rtl:-scale-x-100" aria-hidden="true" />{q}
-                        </button></li>
-                      ))}
-                    </ul>
+                    <Chips items={m.next} onPick={(q) => ask(q)} arrow />
                   </div>
                 )}
               </div>
             </div>
           ))}
-          {running && (
-            <div className="flex justify-start" role="status">
-              <span className="mh-typing" aria-hidden="true"><i /><i /><i /></span>
-              <span className="sr-only">{t("asst.thinking")}</span>
+          {running && !(last?.text.trim() || last?.surfaces?.length || last?.tools?.length) && (
+            <div className="flex items-center gap-3" role="status">
+              <span className="mh-asst-avatar is-small is-working" aria-hidden="true"><Sparkle size={16} /></span>
+              <span className="mh-shimmer text-sm font-medium">{t("asst.thinking")}</span>
             </div>
           )}
           {error && <ErrorState error={error} />}
           <div ref={end} />
         </div>
-        {files.length > 0 && (
-          <ul className="flex flex-wrap gap-2 border-t border-aeblack-100 bg-white px-3 pt-2" aria-label={t("asst.attached")}>
-            {files.map((f) => (
-              <li key={f.id} className="inline-flex items-center gap-1 rounded-full bg-primary-50 px-3 py-1 text-xs text-primary-800">
-                <FileIcon size={16} aria-hidden="true" /><span className="max-w-48 truncate" dir="auto">{f.name}</span>
-                <button type="button" className="rounded-full p-0.5 hover:bg-primary-100" aria-label={t("asst.remove_attachment")} onClick={() => setFiles((x) => x.filter((y) => y.id !== f.id))}><X size={14} /></button>
-              </li>
-            ))}
-          </ul>
-        )}
-        <form onSubmit={submit} className="flex items-end gap-2 border-t border-aeblack-100 bg-white p-3">
-          <input ref={picker} type="file" className="hidden" multiple accept=".pdf,.docx,.txt,.csv,.md,.png,.jpg,.jpeg" onChange={(e) => attach(e.target.files)} />
-          <Button variant="outline" aria-label={t("asst.attach")} title={t("asst.attach_hint")} busy={uploading} disabled={running}
-            onClick={() => picker.current?.click()} icon={<Paperclip size={24} aria-hidden="true" />} />
-          <label htmlFor="asst-q" className="sr-only">{t("asst.placeholder")}</label>
-          <textarea id="asst-q" rows={2} dir="auto" className="flex-1 resize-none rounded-xl border border-aeblack-200 p-3 outline-none focus:border-primary-500"
-            placeholder={t("asst.placeholder")} value={text} onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); (e.currentTarget.form as HTMLFormElement).requestSubmit(); } }} />
-          {running
-            ? <Button variant="outline" aria-label={t("asst.stop")} onClick={() => stop.current?.abort()} icon={<StopCircle size={24} aria-hidden="true" />}><span className="hidden sm:inline">{t("asst.stop")}</span></Button>
-            : <Button type="submit" aria-label={t("asst.send")} disabled={(!text.trim() && files.length === 0) || uploading} icon={<ArrowCircleUp size={24} aria-hidden="true" />}><span className="hidden sm:inline">{t("asst.send")}</span></Button>}
+      </div>
+
+      {/* Composer: attach, write and send in one frame, all on the same line. */}
+      <div className="border-t border-aeblack-100 bg-white px-3 pb-2 pt-3 sm:px-4">
+        <form onSubmit={submit} className={`mx-auto w-full ${expanded ? "max-w-4xl" : ""}`}>
+          <div className="mh-composer">
+            {files.length > 0 && (
+              <ul className="flex flex-wrap gap-2 px-2 pt-2" aria-label={t("asst.attached")}>
+                {files.map((f) => (
+                  <li key={f.id} className="inline-flex items-center gap-1 rounded-full bg-primary-50 py-1 pe-1 ps-3 text-xs text-primary-800">
+                    <FileIcon size={16} aria-hidden="true" /><span className="max-w-48 truncate" dir="auto">{f.name}</span>
+                    <button type="button" className="rounded-full p-0.5 hover:bg-primary-100" aria-label={t("asst.remove_attachment")} onClick={() => setFiles((x) => x.filter((y) => y.id !== f.id))}><X size={14} /></button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="flex items-end gap-1 p-1.5">
+              <input ref={picker} type="file" className="hidden" multiple accept=".pdf,.docx,.txt,.csv,.md,.png,.jpg,.jpeg" onChange={(e) => attach(e.target.files)} />
+              <button type="button" className="mh-composer-btn" aria-label={t("asst.attach")} title={t("asst.attach_hint")} disabled={running || uploading} onClick={() => picker.current?.click()}>
+                {uploading ? <CircleNotch size={22} className="animate-spin" aria-hidden="true" /> : <Paperclip size={22} aria-hidden="true" />}
+              </button>
+              <label htmlFor="asst-q" className="sr-only">{t("asst.placeholder")}</label>
+              <textarea id="asst-q" ref={box} rows={1} dir="auto" className="mh-composer-input"
+                placeholder={t("asst.placeholder")} value={text} onChange={(e) => { setText(e.target.value); grow(e.currentTarget); }}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); (e.currentTarget.form as HTMLFormElement).requestSubmit(); } }} />
+              {running
+                ? <button type="button" className="mh-composer-btn is-stop" aria-label={t("asst.stop")} title={t("asst.stop")} onClick={() => stop.current?.abort()}><Stop size={20} aria-hidden="true" /></button>
+                : <button type="submit" className="mh-composer-btn is-send" aria-label={t("asst.send")} title={t("asst.send")} disabled={(!text.trim() && files.length === 0) || uploading}>
+                    <ArrowUp size={20} aria-hidden="true" /></button>}
+            </div>
+          </div>
+          <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-1 text-[11px] text-aeblack-500">
+            <span className="inline-flex items-center gap-1"><ShieldCheck size={14} className="text-aegreen-600" aria-hidden="true" />{t("asst.approval_hint")}</span>
+            {where ? <span className="inline-flex min-w-0 items-center gap-1"><Eye size={14} aria-hidden="true" /><span className="truncate">{t("asst.context", { page: where })}</span></span>
+              : <span className="hidden sm:inline">{t("asst.enter_hint")}</span>}
+          </div>
         </form>
       </div>
+    </div>
+  );
+
+  return (
+    <>
+      {expanded ? <>{!panel && <div className="h-[calc(100vh-16rem)]" />}{createPortal(body, document.body)}</> : body}
       {history && <History onClose={() => setHistory(false)} onOpen={openConversation} current={state.thread} />}
     </>
+  );
+}
+
+/** A small round toolbar button with its name as tooltip and for screen readers. */
+function IconButton({ label, onClick, disabled, children }: { label: string; onClick: () => void; disabled?: boolean; children: ReactElement }) {
+  return (
+    <button type="button" className="flex h-9 w-9 items-center justify-center rounded-full text-aeblack-600 transition hover:bg-primary-50 hover:text-primary-800 disabled:opacity-40"
+      aria-label={label} title={label} disabled={disabled} onClick={onClick}>{children}</button>
+  );
+}
+
+/** Choice chips that wrap from the reading start, all the same height. Each chip keeps the page's direction; only its text follows its own language. */
+function Chips({ items, onPick, arrow = false }: { items: string[]; onPick: (x: string) => void; arrow?: boolean }) {
+  return (
+    <ul className="flex flex-wrap justify-start gap-2">
+      {items.map((x) => (
+        <li key={x} className="max-w-full">
+          <button type="button" onClick={() => onPick(x)}
+            className="mh-asst-chip inline-flex max-w-full items-center gap-1.5 text-start">
+            {arrow && <ArrowBendDownRight size={14} className="shrink-0 rtl:-scale-x-100" aria-hidden="true" />}
+            <span dir="auto" className="min-w-0">{x}</span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** What the assistant looked at or prepared: live while it works, then folded into one line that opens. */
+function Steps({ tools, label, live }: { tools: Tool[]; label: (name: string) => string; live: boolean }) {
+  const { t } = useLang();
+  const [open, setOpen] = useState(false);
+  const show = live || open;
+  return (
+    <div className="text-xs text-aeblack-600">
+      {!live && (
+        <button type="button" className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 font-semibold hover:bg-whitely-100" aria-expanded={open} onClick={() => setOpen((x) => !x)}>
+          <CheckCircle size={16} className="text-aegreen-600" aria-hidden="true" />{t("asst.steps", { count: tools.length })}
+          <CaretDown size={12} className={`transition ${open ? "rotate-180" : ""}`} aria-hidden="true" />
+        </button>
+      )}
+      {show && (
+        <ol className={`mh-asst-steps ${live ? "" : "mt-1"}`} aria-label={t("asst.thinking")}>
+          {tools.map((x) => (
+            <li key={x.id} className="flex items-center gap-2">
+              {x.done ? <CheckCircle size={16} className="shrink-0 text-aegreen-600" aria-hidden="true" /> : <CircleNotch size={16} className="shrink-0 animate-spin text-primary-600" aria-hidden="true" />}
+              <span className={x.done ? "" : "mh-shimmer font-medium"}>{label(x.name)}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
   );
 }
 

@@ -1499,5 +1499,16 @@
  "asst.tool.propose_health_check": "إعداد فحص الحالة",
  "asst.tool.propose_audit_comment": "إعداد تعليق التدقيق",
  "jobs.col_title": "المسمى الوظيفي",
- "q.edit": "تعديل السؤال"
+ "q.edit": "تعديل السؤال",
+ "asst.expand": "ملء الشاشة",
+ "asst.collapse": "الخروج من ملء الشاشة",
+ "asst.greet_morning": "صباح الخير، {name}",
+ "asst.greet_afternoon": "مساء الخير، {name}",
+ "asst.greet_evening": "مساء الخير، {name}",
+ "asst.ready": "جاهز",
+ "asst.steps": "الخطوات المنفذة ({count})",
+ "asst.context": "يستعين بهذه الصفحة: {page}",
+ "asst.enter_hint": "Enter للإرسال، و Shift مع Enter لسطر جديد",
+ "asst.approval_hint": "أي تغيير ينتظر موافقتك دائماً",
+ "asst.try": "جرّب أن تسأل"
 }
