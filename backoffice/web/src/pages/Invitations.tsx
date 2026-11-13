@@ -36,7 +36,7 @@ export default function Invitations() {
             <div className="flex flex-wrap gap-2">
               {(x.status === "Invited" || x.status === "InProgress") && <AssessmentLinkButton id={x.id} />}
               {(x.to_mark || x.last_attempt) && x.status !== "InProgress"
-                ? <Link className="aegov-btn btn-outline btn-sm" to={to(`/marking/${x.to_mark || x.last_attempt}`)}>{t("app.mark")}</Link> : null}
+                ? <Link className="aegov-btn btn-outline btn-sm" to={to(`/marking/${x.to_mark || x.last_attempt}`)}>{x.to_mark ? t("app.mark") : t("inv.view_result")}</Link> : null}
             </div>
           ) },
         ]} />

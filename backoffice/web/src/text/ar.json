@@ -1460,5 +1460,6 @@
  "test.rules.scoring": "التقييم",
  "test.rules.personality": "تقييم الاستبيان",
  "test.rules.taking": "أداء التقييم",
- "test.pass_mark_hint": "النسبة المئوية من النقاط المطلوبة للنجاح في التقييم كله."
+ "test.pass_mark_hint": "النسبة المئوية من النقاط المطلوبة للنجاح في التقييم كله.",
+ "inv.view_result": "عرض النتيجة"
 }

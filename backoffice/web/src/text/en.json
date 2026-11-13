@@ -1460,5 +1460,6 @@
  "test.rules.scoring": "Scoring",
  "test.rules.personality": "Questionnaire Scoring",
  "test.rules.taking": "Taking the Assessment",
- "test.pass_mark_hint": "Percent of the points needed to pass the whole assessment."
+ "test.pass_mark_hint": "Percent of the points needed to pass the whole assessment.",
+ "inv.view_result": "View Result"
 }
