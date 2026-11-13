@@ -182,7 +182,9 @@ html[lang|="ar"] [lang|="en"] { font-family: "Roboto Variable", "Roboto", "Noto 
     linear-gradient(180deg, #fffdf8, #fbf6ea); }
 .mh-asst-card { min-height: 3.25rem; padding: .6rem .75rem; border-radius: .9rem; background: #fff; border: 1px solid var(--color-aeblack-100); transition: border-color .15s, box-shadow .15s, transform .15s; }
 .mh-asst-card:hover { border-color: var(--color-primary-300); box-shadow: 0 4px 14px rgb(146 114 42 / .12); transform: translateY(-1px); }
-.mh-asst-chip { min-height: 2.25rem; padding: .4rem .85rem; border-radius: 9999px; font-size: .8125rem; font-weight: 600; line-height: 1.35;
+/* One line of arrow and text; long suggestions wrap inside the chip, the arrow stays beside the first line. */
+.mh-asst-chip { display: inline-flex !important; flex-direction: row !important; flex-wrap: nowrap !important; align-items: flex-start; gap: .4rem; max-width: 100%; text-align: start;
+  min-height: 2.25rem; padding: .45rem .85rem; border-radius: 1.125rem; font-size: .8125rem; font-weight: 600; line-height: 1.35;
   color: var(--color-primary-800); background: #fff; border: 1px solid var(--color-primary-200); transition: background .15s, border-color .15s; }
 .mh-asst-chip:hover { background: var(--color-primary-50); border-color: var(--color-primary-400); }
 .mh-asst-steps { display: flex; flex-direction: column; gap: .35rem; padding-inline-start: .75rem; border-inline-start: 2px solid var(--color-primary-100); margin-inline-start: .5rem; }

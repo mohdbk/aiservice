@@ -64,7 +64,8 @@ function Markdown({ text }: { text: string }) {
   const lines = text.split("\n");
   const out: ReactElement[] = [];
   let i = 0;
-  const inline = (s: string) => s.split(/(\*\*[^*]+\*\*)/g).map((p, k) => (p.startsWith("**") && p.endsWith("**") ? <strong key={k}>{p.slice(2, -2)}</strong> : <span key={k}>{p}</span>));
+  const inline = (s: string) => s.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((p, k) => (p.startsWith("**") && p.endsWith("**") ? <strong key={k}>{p.slice(2, -2)}</strong>
+    : p.length > 2 && p.startsWith("`") && p.endsWith("`") ? <span key={k} className="font-semibold">{p.slice(1, -1).replace(/_/g, " ")}</span> : <span key={k}>{p}</span>));
   while (i < lines.length) {
     const l = lines[i];
     if (l.trim().startsWith("|")) {
@@ -337,7 +338,7 @@ export function AgentChat({ panel = false, onClose }: { panel?: boolean; onClose
       <div className="flex items-center gap-3 border-b border-aeblack-100 bg-white px-3 py-2 sm:px-4">
         <span className={`mh-asst-avatar ${running ? "is-working" : ""}`} aria-hidden="true"><Sparkle size={20} /></span>
         <div className="min-w-0 flex-1">
-          <p className="m-0 truncate text-sm font-bold text-aeblack-900">{t("asst.title")}</p>
+          <p className="m-0 truncate text-sm font-bold text-aeblack-900">{panel && !expanded ? t("nav.assistant") : t("asst.title")}</p>
           <p className="m-0 flex items-center gap-1.5 truncate text-xs text-aeblack-500" aria-live="polite">
             <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${running ? "animate-pulse bg-primary-500" : "bg-aegreen-500"}`} aria-hidden="true" />
             <span className="truncate">{running ? (step ? label(step.name) : t("asst.thinking")) : t("asst.ready")}</span>
@@ -482,8 +483,8 @@ function Chips({ items, onPick, arrow = false }: { items: string[]; onPick: (x: 
       {items.map((x) => (
         <li key={x} className="max-w-full">
           <button type="button" onClick={() => onPick(x)}
-            className="mh-asst-chip inline-flex max-w-full items-center gap-1.5 text-start">
-            {arrow && <ArrowBendDownRight size={14} className="shrink-0 rtl:-scale-x-100" aria-hidden="true" />}
+            className="mh-asst-chip">
+            {arrow && <ArrowBendDownRight size={14} className="mt-[3px] shrink-0 rtl:-scale-x-100" aria-hidden="true" />}
             <span dir="auto" className="min-w-0">{x}</span>
           </button>
         </li>

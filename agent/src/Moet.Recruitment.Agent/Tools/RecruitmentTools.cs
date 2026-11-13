@@ -249,7 +249,9 @@ public sealed class RecruitmentTools(BackofficeApi api)
             try { a = await api.GetAsync($"applicants/{id}", ct); }
             catch (BackofficeException e) { return Error(e.Code); }
             var score = Score(a);
-            var header = s.Row([s.Text(Str(a, "full_name"), "h4"), s.Text(score, "h4")], justify: "spaceBetween");
+            // The CV score shows only when there is one (no placeholder dash).
+            var header = score == "-" ? s.Text(Str(a, "full_name"), "h4")
+                : s.Row([s.Text(Str(a, "full_name"), "h4"), s.Text($"{score}/100", "h5")], justify: "spaceBetween");
             var job = s.Text($"{Str(a, "code")} · {Str(a.GetProperty("job"), "title")} · {Str(a, "status")}", "caption");
             var parts = new List<string> { header, job };
             if (a.TryGetProperty("analysis", out var an) && an.ValueKind == JsonValueKind.Object)

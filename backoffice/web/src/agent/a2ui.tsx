@@ -1,3 +1,4 @@
+import { CaretRight } from "@phosphor-icons/react";
 import { ReactNode } from "react";
 import { Button, SelectInput, TextArea, TextInput, Tick } from "../components/ui";
 
@@ -106,10 +107,13 @@ export function A2Surface({ surface, busy, onAction, onData, emptyText = "" }: {
         return <Tag dir="auto" className={TEXT[variant] ?? TEXT.body}>{text}</Tag>;
       }
       case "Row":
-        return <div className={`grid grid-flow-col auto-cols-[minmax(7.5rem,1fr)] items-center gap-3 ${JUSTIFY[c.justify] ?? ""}`}>{kids()}</div>;
+        // A row with a justification is one line (a name and its score); without one it is a comparison row of equal columns.
+        if (c.justify && JUSTIFY[c.justify])
+          return <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 ${JUSTIFY[c.justify]}`}>{Array.isArray(c.children) ? c.children.map((k: string) => <div key={k} className="min-w-0">{draw(k)}</div>) : null}</div>;
+        return <div className="grid grid-flow-col auto-cols-[minmax(7.5rem,1fr)] items-center gap-3">{kids()}</div>;
       case "Column":
       case "List":
-        return <div className="flex flex-col gap-3">{Array.isArray(c.children) ? c.children.map((k: string) => <div key={k}>{draw(k)}</div>) : null}</div>;
+        return <div className="flex flex-col gap-2">{Array.isArray(c.children) ? c.children.map((k: string) => <div key={k} className="min-w-0">{draw(k)}</div>) : null}</div>;
       case "Card":
         return <div className="mh-a2-card overflow-x-auto rounded-xl border border-aeblack-100 bg-white p-4 shadow-sm"><div className="min-w-fit">{draw(c.child)}</div></div>;
       case "Divider":
@@ -164,6 +168,18 @@ export function A2Surface({ surface, busy, onAction, onData, emptyText = "" }: {
       case "Button": {
         const ev = c.action?.event;
         const label = surface.components[c.child];
+        const fire = () => ev && onAction({
+          name: ev.name, surfaceId: surface.id, sourceComponentId: c.id, timestamp: new Date().toISOString(), context: resolve(ev.context ?? {}, surface.data),
+        });
+        const text = label?.component === "Text" ? String(resolve(label.text, surface.data) ?? "") : draw(c.child);
+        // A borderless button reads as a link at the card's edge (no button padding pushing it inwards).
+        if (c.variant === "borderless" && ev?.name !== "cancel_proposal")
+          return (
+            <button type="button" disabled={!ev || busy} onClick={fire}
+              className="group inline-flex items-center gap-1 text-sm font-semibold text-primary-700 hover:text-primary-800 disabled:opacity-50">
+              <span className="group-hover:underline">{text}</span><CaretRight size={14} className="rtl:-scale-x-100" aria-hidden="true" />
+            </button>
+          );
         return (
           <Button size="sm" variant={c.variant === "borderless" ? "link" : "primary"} busy={busy && c.variant !== "borderless"}
             disabled={!ev || busy || !passes(c.checks, surface.data)}

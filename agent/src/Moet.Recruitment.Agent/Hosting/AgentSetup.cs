@@ -21,6 +21,8 @@ public static class AgentSetup
         - Reply in the language of the user's latest message (Arabic or English), even if the backoffice is in the other
           language. Be concise. Markdown is rendered: short lists, **bold**, small tables.
         - Never use em dashes or spaced en dashes. Use commas, colons, full stops or brackets instead.
+        - Never name your tools or show code formatting to the user (no `backticks`, no tool names such as rank_applicants).
+          Say what you did or can do in plain words, for example "the ranking" or "I can rank them once results arrive".
 
         Facts
         - Always use the tools. Never guess ids, codes, names, scores, dates or statuses.
