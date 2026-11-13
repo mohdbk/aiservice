@@ -169,6 +169,12 @@ for (const [view, opts] of Object.entries(VIEWS)) {
       await ask(lang === "ar" ? "اعرض نموذج المقابلة" : "Show the interview form", "Form shown.");
       await ask(lang === "ar" ? "أضف ملاحظة" : "Add a note", "Proposal ready.");
     }, true);
+    // A fresh conversation in full screen: the welcome, suggestions and examples.
+    await shoot(ctx, `bo_${view}_${lang}_zz_chat_full`, `${BASE}/${lang}/assistant`, async (p) => {
+      await p.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("mh-agent-")).forEach((k) => localStorage.removeItem(k)));
+      await p.reload({ waitUntil: "networkidle" });
+      await p.locator(`button[aria-label="${lang === "ar" ? "ملء الشاشة" : "Full Screen"}"]`).click();
+    });
     if (view === "phone") {
       await shoot(ctx, `bo_${view}_${lang}_zz_menu`, `${BASE}/${lang}/applicants`, (p) => p.locator(`header button[aria-label="${lang === "ar" ? "القائمة" : "Menu"}"]`).click());
       await shoot(ctx, `bo_${view}_${lang}_zz_assistant_panel`, `${BASE}/${lang}/applicants`, (p) => p.locator(".mh-assistant-fab").click());
