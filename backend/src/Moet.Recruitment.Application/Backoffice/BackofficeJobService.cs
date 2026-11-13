@@ -187,6 +187,29 @@ public sealed class BackofficeJobService(IAppDbContext db, ICodeGenerator codes,
         return new { id = j.Id, code = j.Code, approval_pending = approvalNeeded };
     }
 
+    /// <summary>
+    /// The job's status (Draft, Open or Closed) and whether it shows on the career portal, nothing else. Publishing may need a
+    /// recruitment admin's approval, exactly as when saving the job.
+    /// </summary>
+    public async Task<object> SetPublishingAsync(int id, string status, bool publish, CancellationToken ct = default)
+    {
+        var j = await Load(id).FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
+        j.Status = Parse<JobStatus>(status, "status");
+        var approvalNeeded = publish && !j.IsPublished && await approvals.NeededAsync(ApprovalKind.JobPublish, ct);
+        j.IsPublished = publish && !approvalNeeded;
+        if (j.Status == JobStatus.Open) j.PostedOn ??= clock.Today();
+        j.UpdatedAt = clock.UtcNow;
+        j.UpdatedByStaffId = actor.Id;
+        j.Validate();
+        await db.SaveChangesAsync(ct);
+        if (approvalNeeded)
+        {
+            await approvals.RequestAsync(ApprovalKind.JobPublish, j.Id, $"{j.Code} {j.Title}", "", ct);
+            await db.SaveChangesAsync(ct);
+        }
+        return new { id = j.Id, approval_pending = approvalNeeded };
+    }
+
     /// <summary>The job's selection settings only: the role profile (0 for none) and the weights of the combined score.</summary>
     public async Task<object> SetSelectionAsync(int id, int roleProfileId, SelectionWeights w, CancellationToken ct = default)
     {

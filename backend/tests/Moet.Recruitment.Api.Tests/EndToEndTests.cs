@@ -528,6 +528,42 @@ public class EndToEndTests
         Assert.StartsWith("New requisition: 2 x Tourism Analyst", reqProposal.GetProperty("label").GetString());
         Assert.True((await admin.PostAsync($"/api/backoffice/agent/proposals/{reqProposal.GetProperty("id").GetString()}/approve?lang=en", JsonBody(new { }))).IsSuccessStatusCode);
         Assert.Contains((await Read(await admin.GetAsync("/api/backoffice/requisitions?q=Tourism"))).GetProperty("items").EnumerateArray(), r => r.GetProperty("title_en").GetString() == "Tourism Analyst");
+        // More assistant actions: a setup item, a bank question and a draft test from it, publishing (cancelled), and guards.
+        async Task<JsonElement> ProposeAndApprove(string action, object arguments, string labelStart)
+        {
+            var p = await Read(await admin.PostAsync("/api/backoffice/agent/proposals", JsonBody(new { action, arguments, thread_id = "t9", lang = "en" })));
+            Assert.StartsWith(labelStart, p.GetProperty("label").GetString());
+            var r = await admin.PostAsync($"/api/backoffice/agent/proposals/{p.GetProperty("id").GetString()}/approve?lang=en", JsonBody(new { }));
+            Assert.True(r.IsSuccessStatusCode, await r.Content.ReadAsStringAsync());
+            return await Read(r);
+        }
+        await ProposeAndApprove("add_setup_item", new { kind = "department", name = "إدارة البيانات", name_en = "Data Office" }, "Add a department: Data Office");
+        Assert.Contains((await Read(await admin.GetAsync("/api/backoffice/departments?q=Data%20Office&size=50"))).GetProperty("items").EnumerateArray(), d => d.ToString().Contains("Data Office"));
+        var bankQ = await ProposeAndApprove("add_bank_question", new
+        {
+            question_type = "SingleChoice", text = "ما عاصمة الإمارات؟", text_en = "What is the capital of the UAE?", difficulty = "Easy", points = "2",
+            options = new object[] { new { text = "أبوظبي", text_en = "Abu Dhabi", correct = true }, new { text = "دبي", text_en = "Dubai", correct = false } },
+        }, "Add a SingleChoice question (2 points)");
+        var bankId = int.Parse(bankQ.GetProperty("link").GetString()!.Split('/').Last());
+        Assert.Equal(2, (await Read(await admin.GetAsync($"/api/backoffice/questions/{bankId}"))).GetProperty("options").GetArrayLength());
+        await ProposeAndApprove("create_draft_test", new { title = "اختبار المعرفة العامة", title_en = "General Knowledge", minutes = "10", pass_mark = "50", question_ids = new[] { bankId } },
+            "Create a draft test: General Knowledge, 1 questions, 10 minutes");
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsync("/api/backoffice/agent/proposals", JsonBody(new
+        {
+            action = "create_draft_test", thread_id = "t9", lang = "en", arguments = new { title = "x", question_ids = new[] { 999999 } },
+        }))).StatusCode);
+        var pubProposal = await Read(await admin.PostAsync("/api/backoffice/agent/proposals", JsonBody(new
+        {
+            action = "set_job_publishing", thread_id = "t9", lang = "en", arguments = new { job_id = jobId, status = "Closed", publish = false },
+        })));
+        Assert.EndsWith("status Closed, not published", pubProposal.GetProperty("label").GetString());
+        Assert.True((await admin.PostAsync($"/api/backoffice/agent/proposals/{pubProposal.GetProperty("id").GetString()}/cancel", JsonBody(new { }))).IsSuccessStatusCode);
+        var myId = (await Read(await admin.GetAsync("/api/backoffice/me"))).GetProperty("id").GetInt32();
+        Assert.Equal(HttpStatusCode.Conflict, (await admin.PostAsync("/api/backoffice/agent/proposals", JsonBody(new
+        {
+            action = "staff_access", thread_id = "t9", lang = "en", arguments = new { staff_id = myId, action = "disable" },
+        }))).StatusCode);
+        await ProposeAndApprove("run_health_check", new { }, "Run the system health check now");
 
         // The CV text for the assistant has personal details removed.
         var cvText = await admin.GetAsync($"/api/backoffice/applicants/{applicantId}/cv-text");

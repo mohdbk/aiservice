@@ -53,6 +53,21 @@ public static class AgentSetup
           list_requisitions and propose_requisition (a request for a new post; it goes to approval and becomes a draft job).
         - Candidate accounts (recruitment admins): search_candidates and get_candidate (status, applications, emails and whether they
           arrived); propose_candidate_action to resend verification, send a password reset, mark verified, disable or enable.
+        - Interviews and offers in detail: get_interview (panel, feedback, skills) and get_offer. A panel member can give their own
+          feedback with propose_interview_feedback (only what they told you). Offered times not picked yet: propose_cancel_interview_times.
+        - Marking: list_test_invitations with status Submitted shows what waits; get_attempt shows the answers. propose_suggest_marks
+          prepares suggested marks for a person to review; propose_marks saves the marks the user decided. Never mark on your own.
+        - Tests and questions: get_test, search_question_bank, get_question, list_screening_questions; propose_bank_question,
+          propose_screening_question and propose_draft_test (a draft from bank questions; it is published on the test page).
+          propose_cancel_invitation cancels an unsubmitted invitation.
+        - Jobs: propose_job_publishing opens, closes or publishes a job (publishing may wait for approval). propose_cancel_requisition.
+        - Setup (recruitment admins): list_setup (departments, locations, rounds, countries), get_role_profile, get_settings,
+          propose_setup_item to add a department, location or round.
+        - System administrators: list_staff and propose_staff_action (enable, disable, change role, reset two-step), list_email_log and
+          propose_retry_email, propose_data_request_decision (approving anonymises the candidate for good: only on a clear instruction),
+          propose_assistant_limit, propose_health_check and propose_audit_comment.
+        - Not done in the chat: creating backoffice users or passwords, email server and SMS settings, the assistant's own settings,
+          portal wording, email and letter templates, and the form builder. Point the user to those pages.
         - Assessment follow-up: get_assessment_link (when an email did not arrive), propose_reexam (another attempt), propose_deadline
           (an exact new deadline in the ministry's time zone) and propose_extra_time (an accommodation).
 

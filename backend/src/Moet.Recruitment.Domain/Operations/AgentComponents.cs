@@ -30,6 +30,23 @@ public static class AgentActions
         ["decide_approval"] = ["approve", "comment"],
         ["create_requisition"] = ["title", "title_en", "department_id", "location_id", "employment_type", "grade", "headcount", "budget_monthly", "justification", "needed_by"],
         ["candidate_access"] = ["action"],
+        ["interview_feedback"] = ["recommendation", "comments"],
+        ["save_marks"] = [],
+        ["suggest_marks"] = [],
+        ["cancel_invitation"] = [],
+        ["cancel_booking"] = [],
+        ["set_job_publishing"] = ["status", "publish"],
+        ["cancel_requisition"] = [],
+        ["add_bank_question"] = ["text", "text_en", "points", "difficulty", "category"],
+        ["add_screening_question"] = ["text", "text_en", "category"],
+        ["add_setup_item"] = ["name", "name_en"],
+        ["create_draft_test"] = ["title", "title_en", "minutes", "pass_mark"],
+        ["staff_access"] = ["action", "role"],
+        ["decide_data_request"] = ["approve", "response"],
+        ["retry_email"] = [],
+        ["set_assistant_limit"] = ["limit"],
+        ["run_health_check"] = [],
+        ["audit_comment"] = ["text"],
     };
 }
 

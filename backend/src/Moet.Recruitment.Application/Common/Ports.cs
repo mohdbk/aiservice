@@ -91,6 +91,8 @@ public interface ICurrentActor
     string Name { get; }
     /// <summary>A recruitment admin or administrator (who can approve jobs, offers and requisitions).</summary>
     bool IsAdmin => false;
+    /// <summary>An administrator (system settings, staff accounts, data requests, email log).</summary>
+    bool IsSystemAdmin => false;
 }
 
 public interface IPasswordHasher

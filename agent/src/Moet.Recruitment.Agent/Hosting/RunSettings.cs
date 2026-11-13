@@ -122,9 +122,11 @@ public sealed class SettingsChatClient(IChatClient fallback, AgentSettingsProvid
 
     public const string MessageLangKey = "message_lang";
 
-    public static readonly HashSet<string> SystemAdminTools = ["get_system_health", "get_assistant_usage", "list_data_requests", "get_audit_log"];
+    public static readonly HashSet<string> SystemAdminTools = ["get_system_health", "get_assistant_usage", "list_data_requests", "get_audit_log",
+        "list_staff", "list_email_log", "propose_staff_action", "propose_data_request_decision", "propose_retry_email", "propose_assistant_limit", "propose_health_check", "propose_audit_comment"];
 
-    public static readonly HashSet<string> RecruitmentAdminTools = ["search_candidates", "get_candidate", "propose_candidate_action", "propose_decide_approval"];
+    public static readonly HashSet<string> RecruitmentAdminTools = ["search_candidates", "get_candidate", "propose_candidate_action", "propose_decide_approval",
+        "get_settings", "list_setup", "propose_setup_item"];
 
     /// <summary>"ar" or "en" from the user's latest typed message (button events, which are JSON, are skipped), or null.</summary>
     static string? MessageLanguage(IEnumerable<ChatMessage> messages)

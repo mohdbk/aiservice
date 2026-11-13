@@ -21,7 +21,8 @@ public sealed class AgentProposalService(
     IAppDbContext db, ICurrentActor actor, IClock clock, ContentService content, PortalMailer mailer, AgentSettingsService settings, IAuditContext audit,
     BackofficeApplicantService applicants, BackofficeInterviewService interviews, BackofficeJobService jobs, BackofficeSetupService setup,
     BookingService bookings, TalentPoolService talent, CriteriaService criteria, BackofficeAssessmentService assessments,
-    ApprovalService approvals, CandidateService candidates)
+    ApprovalService approvals, CandidateService candidates, StaffAuthService staff, DataProtectionService dataProtection, BackofficeEmailService email,
+    SystemService system, HealthAlertService health)
 {
 
     static IReadOnlyDictionary<string, string[]> Editable => AgentActions.Editable;
@@ -256,6 +257,134 @@ public sealed class AgentProposalService(
                 }
                 return (ar ? "تم تنفيذ الإجراء على حساب المرشح." : "Done on the candidate's account.", "/candidates");
             }
+            case "interview_feedback":
+            {
+                var interviewId = I(a, "interview_id");
+                await interviews.FeedbackAsync(interviewId, new FeedbackInput(S(a, "recommendation"), S(a, "comments"), Ratings(a)), ct);
+                return (ar ? "تم حفظ تقييمك للمقابلة." : "Your interview feedback was saved.", $"/interviews/{interviewId}");
+            }
+            case "save_marks":
+            {
+                var attemptId = I(a, "attempt_id");
+                var r = JsonSerializer.SerializeToElement(await assessments.SaveMarksAsync(attemptId, Marks(a), ct));
+                var left = r.TryGetProperty("still_to_mark", out var l) ? l.GetInt32() : 0;
+                return (left == 0 ? ar ? "تم حفظ الدرجات واكتمل التصحيح." : "Marks saved; marking is complete."
+                    : ar ? $"تم حفظ الدرجات، وبقي {left} أسئلة للتصحيح." : $"Marks saved; {left} questions still to mark.", $"/marking/{attemptId}");
+            }
+            case "suggest_marks":
+            {
+                var attemptId = I(a, "attempt_id");
+                await assessments.SuggestMarksAsync(attemptId, ct);
+                return (ar ? "يجري إعداد الدرجات المقترحة، وستظهر في صفحة التصحيح للمراجعة." : "Suggested marks are being prepared; they will show on the marking page for review.", $"/marking/{attemptId}");
+            }
+            case "cancel_invitation":
+            {
+                var invId = I(a, "invitation_id");
+                var link = await InvitationLinkAsync(invId, ct);
+                await assessments.CancelInvitationAsync(invId, ct);
+                return (ar ? "تم إلغاء دعوة التقييم." : "The assessment invitation was cancelled.", link);
+            }
+            case "cancel_booking":
+            {
+                var bookingId = I(a, "booking_id");
+                var appId = await db.InterviewBookings.Where(b => b.Id == bookingId).Select(b => (int?)b.JobApplicationId).FirstOrDefaultAsync(ct);
+                await bookings.CancelAsync(bookingId, ct);
+                return (ar ? "تم سحب مواعيد المقابلة المقترحة." : "The offered interview times were withdrawn.", appId is { } x ? $"/applicants/{x}" : null);
+            }
+            case "set_job_publishing":
+            {
+                var jobId = I(a, "job_id");
+                var r = JsonSerializer.SerializeToElement(await jobs.SetPublishingAsync(jobId, S(a, "status"), B(a, "publish"), ct));
+                var pending = r.TryGetProperty("approval_pending", out var ap) && ap.ValueKind == JsonValueKind.True;
+                return (pending ? ar ? "تم الحفظ، والنشر بانتظار موافقة مسؤول التوظيف." : "Saved; publishing waits for a recruitment admin's approval."
+                    : ar ? "تم تحديث حالة الوظيفة ونشرها." : "The job's status and publishing were updated.", $"/jobs/{jobId}");
+            }
+            case "cancel_requisition":
+            {
+                await approvals.CancelRequisitionAsync(I(a, "requisition_id"), ct);
+                return (ar ? "تم إلغاء طلب الوظيفة." : "The requisition was cancelled.", "/requisitions");
+            }
+            case "add_bank_question":
+            {
+                var r = JsonSerializer.SerializeToElement(await assessments.SaveQuestionAsync(null, Question(a), ct));
+                var id = r.TryGetProperty("id", out var idv) ? idv.GetInt32() : 0;
+                return (ar ? "تمت إضافة السؤال إلى بنك الأسئلة." : "Question added to the question bank.", id > 0 ? $"/questions/{id}" : "/questions");
+            }
+            case "add_screening_question":
+            {
+                await setup.SaveScreeningQuestionAsync(null, Screening(a), ct);
+                return (ar ? "تمت إضافة سؤال الطلب." : "Application question added.", "/screening");
+            }
+            case "add_setup_item":
+            {
+                if (!actor.IsAdmin) throw DomainException.Forbidden();
+                switch (S(a, "kind"))
+                {
+                    case "department": await setup.SaveDepartmentAsync(null, new NamedInput(S(a, "name"), Opt(a, "name_en"), true, null, null), ct); break;
+                    case "round": await setup.SaveRoundAsync(null, new NamedInput(S(a, "name"), Opt(a, "name_en"), true, Opt(a, "description"), Skills(a)), ct); break;
+                    case "location": await setup.SaveLocationAsync(null, new LocationInput(S(a, "name"), Opt(a, "name_en"), true, 100), ct); break;
+                    default: throw DomainException.Invalid("invalid_value");
+                }
+                return (ar ? "تمت الإضافة إلى الإعدادات." : "Added to the setup lists.", S(a, "kind") switch { "department" => "/setup/departments", "round" => "/setup/rounds", _ => "/setup/locations" });
+            }
+            case "create_draft_test":
+            {
+                var r = JsonSerializer.SerializeToElement(await assessments.SaveAssessmentAsync(null, Test(a), ct));
+                var id = r.TryGetProperty("id", out var idv) ? idv.GetInt32() : 0;
+                return (ar ? "تم إنشاء مسودة الاختبار، وراجعها ثم انشرها من صفحة الاختبار." : "Draft test created; review and publish it from the test page.", id > 0 ? $"/tests/{id}" : "/tests");
+            }
+            case "staff_access":
+            {
+                if (!actor.IsSystemAdmin) throw DomainException.Forbidden();
+                var staffId2 = I(a, "staff_id");
+                if (staffId2 == staffId) throw DomainException.Conflict("own_account");
+                var u = await db.StaffUsers.AsNoTracking().FirstOrDefaultAsync(x => x.Id == staffId2, ct) ?? throw DomainException.NotFound();
+                switch (S(a, "action"))
+                {
+                    case "enable": await staff.SaveAsync(u.Id, u.Email, u.FullName, u.Role.ToString(), true, null, ct); break;
+                    case "disable": await staff.SaveAsync(u.Id, u.Email, u.FullName, u.Role.ToString(), false, null, ct); break;
+                    case "set_role": await staff.SaveAsync(u.Id, u.Email, u.FullName, S(a, "role"), u.IsEnabled, null, ct); break;
+                    case "reset_two_step": await staff.ResetTwoStepAsync(u.Id, ct); break;
+                    default: throw DomainException.Invalid("invalid_value");
+                }
+                return (ar ? "تم تنفيذ الإجراء على حساب المستخدم." : "Done on the user's account.", "/setup/staff");
+            }
+            case "decide_data_request":
+            {
+                if (!actor.IsSystemAdmin) throw DomainException.Forbidden();
+                var reqId = I(a, "request_id");
+                if (B(a, "approve")) await dataProtection.ApproveAsync(reqId, Opt(a, "response"), ct);
+                else await dataProtection.DeclineAsync(reqId, Opt(a, "response"), ct);
+                return (B(a, "approve") ? ar ? "تمت الموافقة على الطلب وإخفاء هوية بيانات المرشح." : "Request approved; the candidate's data was anonymised."
+                    : ar ? "تم رفض الطلب." : "Request declined.", "/setup/data-protection");
+            }
+            case "retry_email":
+            {
+                if (!actor.IsSystemAdmin) throw DomainException.Forbidden();
+                await email.RetryAsync(L(a, "email_id"), ct);
+                return (ar ? "ستتم إعادة محاولة إرسال الرسالة." : "The email will be sent again.", "/setup/email-log");
+            }
+            case "set_assistant_limit":
+            {
+                if (!actor.IsSystemAdmin) throw DomainException.Forbidden();
+                await system.SetAssistantLimitAsync(I(a, "staff_id"), Opt(a, "limit") is null ? null : I(a, "limit"), ct);
+                return (ar ? "تم تحديث الحد اليومي للمساعد." : "The assistant's daily limit was updated.", "/setup/assistant-usage");
+            }
+            case "run_health_check":
+            {
+                if (!actor.IsSystemAdmin) throw DomainException.Forbidden();
+                var problems = await health.ProblemsAsync(null, ct);
+                var emailed = await health.CheckAsync(null, ct);
+                var list = string.Join(ar ? "؛ " : "; ", problems.Select(x => ar ? x.Ar : x.En));
+                return (problems.Count == 0 ? ar ? "لا توجد مشكلات." : "No problems found."
+                    : (ar ? $"المشكلات: {list}" : $"Problems: {list}") + (emailed ? ar ? " (أُرسل تنبيه بالبريد)" : " (alert emailed)" : ""), "/setup/health");
+            }
+            case "audit_comment":
+            {
+                if (!actor.IsSystemAdmin) throw DomainException.Forbidden();
+                await system.CommentAsync(L(a, "audit_id"), S(a, "text"), ct);
+                return (ar ? "تمت إضافة التعليق إلى سجل التدقيق." : "Comment added to the audit log.", "/setup/audit");
+            }
             case "suggest_english":
                 await setup.SuggestEnglishAsync(S(a, "kind"), I(a, "id"), ct);
                 return (ar ? "تم طلب النسخة الإنجليزية، وستكون جاهزة للمراجعة بعد قليل." : "English suggestion requested; it will be ready for review shortly.", null);
@@ -375,6 +504,158 @@ public sealed class AgentProposalService(
                     _ => ar ? $"وقت إضافي {I(a, "percent")}% لـ {inv.Name} في {inv.Test} ({inv.Code})" : $"Extra time of {I(a, "percent")}% for {inv.Name} on {inv.Test} ({inv.Code})",
                 };
             }
+            case "interview_feedback":
+            {
+                var interviewId = I(a, "interview_id");
+                var i = await db.Interviews.Where(x => x.Id == interviewId).Select(x => new { x.Code, Name = x.JobApplication!.FullName, OnPanel = x.Panelists.Any(p => p.StaffUserId == actor.Id) })
+                    .FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
+                if (!i.OnPanel) throw DomainException.Forbidden("not_on_panel");
+                if (!Enum.TryParse<Recommendation>(S(a, "recommendation"), out var rec)) throw DomainException.Invalid("invalid_value");
+                var ratings = Ratings(a);
+                var detail = ratings.Count > 0 ? $" ({string.Join(", ", ratings.Select(r => $"{r.Skill} {r.Rating}"))})" : "";
+                return ar ? $"تقييمك لمقابلة {i.Name} ({i.Code}): {(rec == Recommendation.Cleared ? "اجتاز" : "لم يجتز")}{detail}" : $"Your feedback for the interview with {i.Name} ({i.Code}): {rec}{detail}";
+            }
+            case "save_marks" or "suggest_marks":
+            {
+                var attemptId = I(a, "attempt_id");
+                var t = await db.Attempts.Where(x => x.Id == attemptId).Select(x => new { Name = x.Invitation!.JobApplication!.FullName, Test = x.Invitation.Assessment!.Title, x.Invitation.Code })
+                    .FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
+                if (name == "suggest_marks")
+                    return ar ? $"اقتراح درجات لإجابات {t.Name} المكتوبة في {t.Test} ({t.Code}) لتراجعها" : $"Suggest marks for {t.Name}'s written answers in {t.Test} ({t.Code}) for you to review";
+                var marks = Marks(a);
+                if (marks.Count == 0 || marks.Any(m => m.Points is < 0)) throw DomainException.Invalid("invalid_value");
+                var total = marks.Sum(m => m.Points ?? 0);
+                return ar ? $"حفظ درجات {marks.Count} أسئلة لـ {t.Name} في {t.Test} ({t.Code})، المجموع {total:0.##}" : $"Save marks for {marks.Count} questions for {t.Name} in {t.Test} ({t.Code}), total {total:0.##}";
+            }
+            case "cancel_invitation":
+            {
+                var invId = I(a, "invitation_id");
+                var inv = await db.Invitations.Where(x => x.Id == invId).Select(x => new { x.Code, Name = x.JobApplication!.FullName, Test = x.Assessment!.Title }).FirstOrDefaultAsync(ct)
+                    ?? throw DomainException.NotFound();
+                return ar ? $"إلغاء دعوة {inv.Name} إلى {inv.Test} ({inv.Code})" : $"Cancel {inv.Name}'s invitation to {inv.Test} ({inv.Code})";
+            }
+            case "cancel_booking":
+            {
+                var bookingId = I(a, "booking_id");
+                var b = await db.InterviewBookings.Where(x => x.Id == bookingId).Select(x => new { x.Status, Name = db.JobApplications.Where(j => j.Id == x.JobApplicationId).Select(j => j.FullName).FirstOrDefault() })
+                    .FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
+                if (b.Status != BookingStatus.Open) throw DomainException.Conflict("booking_closed");
+                return ar ? $"سحب مواعيد المقابلة المقترحة على {b.Name}" : $"Withdraw the interview times offered to {b.Name}";
+            }
+            case "set_job_publishing":
+            {
+                var jobId = I(a, "job_id");
+                var job = await db.JobOpenings.Include(j => j.Translations).FirstOrDefaultAsync(j => j.Id == jobId, ct) ?? throw DomainException.NotFound();
+                if (!Enum.TryParse<JobStatus>(S(a, "status"), out var st)) throw DomainException.Invalid("invalid_value");
+                var pub = B(a, "publish");
+                return ar ? $"وظيفة {job.In("ar").Title} ({job.Code}): الحالة {(st == JobStatus.Open ? "مفتوحة" : st == JobStatus.Closed ? "مغلقة" : "مسودة")}، {(pub ? "منشورة في بوابة الوظائف" : "غير منشورة")}"
+                    : $"{job.In("en").Title} ({job.Code}): status {st}, {(pub ? "published on the career portal" : "not published")}";
+            }
+            case "cancel_requisition":
+            {
+                var reqId = I(a, "requisition_id");
+                var r = await db.Requisitions.Where(x => x.Id == reqId).Select(x => new { x.Code, x.Title, x.Status }).FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
+                if (r.Status != RequisitionStatus.Pending) throw DomainException.Conflict("approval_closed");
+                return ar ? $"إلغاء طلب الوظيفة {r.Title} ({r.Code})" : $"Cancel the requisition {r.Title} ({r.Code})";
+            }
+            case "add_bank_question":
+            {
+                var q = Question(a);
+                if (!Enum.TryParse<QuestionType>(q.QuestionType, out var qt) || !Enum.TryParse<Difficulty>(q.Difficulty, out _)) throw DomainException.Invalid("invalid_value");
+                if (string.IsNullOrWhiteSpace(q.Text)) throw DomainException.Invalid("text_required");
+                if (qt is QuestionType.SingleChoice or QuestionType.MultipleChoice && ((q.Options?.Count ?? 0) < 2 || q.Options!.All(o => !o.Correct)))
+                    throw DomainException.Invalid("options_invalid");
+                return ar ? $"إضافة سؤال ({qt}، {q.Points:0.##} درجة) إلى بنك الأسئلة: {TextUtil.Clip(q.Text, 200)}" : $"Add a {qt} question ({q.Points:0.##} points) to the question bank: {TextUtil.Clip(q.TextEn ?? q.Text, 200)}";
+            }
+            case "add_screening_question":
+            {
+                var q = Screening(a);
+                if (!Enum.TryParse<AnswerType>(q.AnswerType, out var at)) throw DomainException.Invalid("invalid_value");
+                if (string.IsNullOrWhiteSpace(q.Text)) throw DomainException.Invalid("text_required");
+                return ar ? $"إضافة سؤال طلب ({at}): {TextUtil.Clip(q.Text, 200)}" : $"Add an application question ({at}): {TextUtil.Clip(q.TextEn ?? q.Text, 200)}";
+            }
+            case "add_setup_item":
+            {
+                if (!actor.IsAdmin) throw DomainException.Forbidden();
+                if (string.IsNullOrWhiteSpace(S(a, "name"))) throw DomainException.Invalid("name_required");
+                var kind = S(a, "kind") switch
+                {
+                    "department" => ar ? "إدارة" : "department",
+                    "round" => ar ? "مرحلة مقابلة" : "interview round",
+                    "location" => ar ? "موقع" : "location",
+                    _ => throw DomainException.Invalid("invalid_value"),
+                };
+                return ar ? $"إضافة {kind}: {S(a, "name")}" : $"Add a {kind}: {Opt(a, "name_en") ?? S(a, "name")}";
+            }
+            case "create_draft_test":
+            {
+                var t = Test(a);
+                if (string.IsNullOrWhiteSpace(t.Title)) throw DomainException.Invalid("title_required");
+                if (!Enum.TryParse<AssessmentType>(t.AssessmentType, out _)) throw DomainException.Invalid("invalid_value");
+                var ids = t.Sections![0].Items!.Select(i => i.QuestionId!.Value).ToList();
+                var found = await db.Questions.CountAsync(q => ids.Contains(q.Id), ct);
+                if (ids.Count == 0 || found != ids.Distinct().Count()) throw DomainException.Invalid("question_not_found");
+                var minutes = t.Sections[0].Minutes;
+                return ar ? $"إنشاء مسودة اختبار: {t.Title}، {ids.Count} أسئلة، {(minutes > 0 ? $"{minutes} دقيقة" : "بدون مؤقت")}، درجة النجاح {t.PassMark:0.##}%"
+                    : $"Create a draft test: {t.TitleEn ?? t.Title}, {ids.Count} questions, {(minutes > 0 ? $"{minutes} minutes" : "no timer")}, pass mark {t.PassMark:0.##}%";
+            }
+            case "staff_access":
+            {
+                if (!actor.IsSystemAdmin) throw DomainException.Forbidden();
+                var sid = I(a, "staff_id");
+                if (sid == actor.Id) throw DomainException.Conflict("own_account");
+                var u = await db.StaffUsers.Where(x => x.Id == sid).Select(x => new { x.FullName, x.Email }).FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
+                var what = S(a, "action") switch
+                {
+                    "enable" => ar ? "تفعيل حساب" : "Enable the account of",
+                    "disable" => ar ? "تعطيل حساب" : "Disable the account of",
+                    "reset_two_step" => ar ? "إعادة ضبط التحقق بخطوتين لحساب" : "Reset two-step verification for",
+                    "set_role" when Enum.TryParse<StaffRole>(S(a, "role"), out var role) => ar ? $"تغيير الدور إلى {RoleAr(role)} لحساب" : $"Change the role to {role} for",
+                    _ => throw DomainException.Invalid("invalid_value"),
+                };
+                return $"{what} {u.FullName} ({u.Email})";
+            }
+            case "decide_data_request":
+            {
+                if (!actor.IsSystemAdmin) throw DomainException.Forbidden();
+                var reqId = I(a, "request_id");
+                var r = await db.DataRequests.Where(x => x.Id == reqId).Select(x => new { x.Kind, x.Status, x.Requester }).FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
+                if (r.Status != DataRequestStatus.Open) throw DomainException.Conflict("request_closed");
+                if (B(a, "approve"))
+                    return ar ? $"الموافقة على طلب {r.Requester}: إخفاء هوية حسابه وطلباته نهائياً (لا يمكن التراجع، وتُحفظ سجلات من تم تعيينهم)"
+                        : $"Approve {r.Requester}'s request: permanently anonymise their account and applications (cannot be undone; hired records are kept)";
+                if (string.IsNullOrWhiteSpace(S(a, "response"))) throw DomainException.Invalid("reason_required");
+                return ar ? $"رفض طلب {r.Requester} (السبب: {S(a, "response")})" : $"Decline {r.Requester}'s request (reason: {S(a, "response")})";
+            }
+            case "retry_email":
+            {
+                if (!actor.IsSystemAdmin) throw DomainException.Forbidden();
+                var emailId = L(a, "email_id");
+                var m = await db.EmailMessages.Where(x => x.Id == emailId).Select(x => new { x.ToAddress, x.Subject, x.Status }).FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
+                if (m.Status != EmailStatus.Failed) throw DomainException.Conflict("email_not_failed");
+                return ar ? $"إعادة إرسال «{m.Subject}» إلى {m.ToAddress}" : $"Send \"{m.Subject}\" to {m.ToAddress} again";
+            }
+            case "set_assistant_limit":
+            {
+                if (!actor.IsSystemAdmin) throw DomainException.Forbidden();
+                var sid = I(a, "staff_id");
+                var who = await db.StaffUsers.Where(x => x.Id == sid).Select(x => x.FullName).FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
+                var limit = Opt(a, "limit") is null ? (int?)null : I(a, "limit");
+                if (limit is < 0 or > 5000) throw DomainException.Invalid("agent_daily_limit");
+                return limit == null ? ar ? $"إرجاع الحد اليومي للمساعد لـ {who} إلى الافتراضي" : $"Set {who}'s daily assistant limit back to the default"
+                    : ar ? $"الحد اليومي للمساعد لـ {who}: {limit} رسالة" : $"Daily assistant limit for {who}: {limit} messages";
+            }
+            case "run_health_check":
+                if (!actor.IsSystemAdmin) throw DomainException.Forbidden();
+                return ar ? "تشغيل فحص حالة النظام الآن، وإرسال تنبيه بالبريد إذا لزم" : "Run the system health check now and email an alert if needed";
+            case "audit_comment":
+            {
+                if (!actor.IsSystemAdmin) throw DomainException.Forbidden();
+                var auditId = L(a, "audit_id");
+                var e = await db.AuditEntries.Where(x => x.Id == auditId).Select(x => new { x.EntityName, x.EntityKey }).FirstOrDefaultAsync(ct) ?? throw DomainException.NotFound();
+                if (S(a, "text").Trim().Length is < 1 or > 2000) throw DomainException.Invalid("note_length");
+                return ar ? $"تعليق على سجل التدقيق ({e.EntityName} {e.EntityKey}): {TextUtil.Clip(S(a, "text"), 300)}" : $"Comment on the audit entry ({e.EntityName} {e.EntityKey}): {TextUtil.Clip(S(a, "text"), 300)}";
+            }
             case "suggest_english":
                 if (S(a, "kind") is not ("job" or "screening" or "question" or "assessment")) throw DomainException.Invalid("invalid_value");
                 return ar ? $"اقتراح النسخة الإنجليزية ({KindAr(S(a, "kind"))} رقم {I(a, "id")})" : $"Suggest English text ({S(a, "kind")} {I(a, "id")})";
@@ -469,6 +750,56 @@ public sealed class AgentProposalService(
             TextUtil.Clip(S(x, "criterion").Trim(), 300),
             x.TryGetProperty("weight", out var w) && (w.ValueKind == JsonValueKind.Number ? w.TryGetDecimal(out var n) : decimal.TryParse(S(x, "weight"), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out n)) ? n : 0,
             B(x, "must"))).ToList();
+    }
+
+    static string RoleAr(StaffRole r) => r switch
+    {
+        StaffRole.Recruiter => "موظف توظيف", StaffRole.RecruitmentAdmin => "مسؤول توظيف", _ => "مسؤول النظام",
+    };
+
+    static decimal D(JsonElement e, string name) =>
+        e.TryGetProperty(name, out var v) && (v.ValueKind == JsonValueKind.Number ? v.TryGetDecimal(out var n)
+            : decimal.TryParse(v.ValueKind == JsonValueKind.String ? v.GetString() : null, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out n)) ? n : 0;
+
+    static long L(JsonElement e, string name) =>
+        e.TryGetProperty(name, out var v) && (v.ValueKind == JsonValueKind.Number ? v.TryGetInt64(out var n) : long.TryParse(v.ValueKind == JsonValueKind.String ? v.GetString() : null, out n)) ? n : 0;
+
+    static IEnumerable<JsonElement> Arr(JsonElement a, string name) =>
+        a.TryGetProperty(name, out var arr) && arr.ValueKind == JsonValueKind.Array ? arr.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.Object).ToList() : [];
+
+    static List<RatingInput> Ratings(JsonElement a) =>
+        Arr(a, "ratings").Select(x => new RatingInput(TextUtil.Clip(S(x, "skill").Trim(), 100), Math.Clamp(I(x, "rating"), 0, 9))).Where(r => r.Skill.Length > 0).Take(20).ToList();
+
+    static List<MarkInput> Marks(JsonElement a) =>
+        Arr(a, "marks").Select(x => new MarkInput(I(x, "question_id"), Opt(x, "points") is null ? null : D(x, "points"), Opt(x, "comment"))).Where(m => m.QuestionId > 0).Take(200).ToList();
+
+    static List<string>? Skills(JsonElement a) =>
+        a.TryGetProperty("skills", out var arr) && arr.ValueKind == JsonValueKind.Array
+            ? arr.EnumerateArray().Select(x => x.ToString().Trim()).Where(x => x.Length > 0).Take(20).ToList()
+            : Opt(a, "skills")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Take(20).ToList();
+
+    /// <summary>A question bank question from the assistant. English text waits for review like any suggestion.</summary>
+    static QuestionInput Question(JsonElement a) => new(
+        Opt(a, "question_type") ?? "SingleChoice", S(a, "text"), Opt(a, "text_en"), false, Opt(a, "category"), Opt(a, "job_family"), Opt(a, "difficulty") ?? "Medium",
+        D(a, "points") is > 0 and var pts ? pts : 1, null, Opt(a, "rubric"), I(a, "max_words") is > 0 and var mw ? mw : null, true,
+        Arr(a, "options").Select(o => new OptionInput(S(o, "text"), Opt(o, "text_en"), B(o, "correct"))).Take(10).ToList(),
+        a.TryGetProperty("accepted_answers", out var acc) && acc.ValueKind == JsonValueKind.Array ? acc.EnumerateArray().Select(x => x.ToString()).Take(20).ToList() : null);
+
+    static ScreeningQuestionInput Screening(JsonElement a) => new(
+        S(a, "text"), Opt(a, "text_en"), false, Opt(a, "answer_type") ?? "YesNo", Opt(a, "category"), true,
+        Arr(a, "options").Select(o => new ScreeningOptionInput(null, S(o, "text"), Opt(o, "text_en"))).Take(20).ToList());
+
+    /// <summary>A draft test with one section holding the chosen bank questions. It is published later from the test page.</summary>
+    static AssessmentInput Test(JsonElement a)
+    {
+        var ids = a.TryGetProperty("question_ids", out var arr) && arr.ValueKind == JsonValueKind.Array
+            ? arr.EnumerateArray().Select(x => x.ValueKind == JsonValueKind.Number ? x.GetInt32() : int.TryParse(x.GetString(), out var v) ? v : 0).Where(x => x > 0).Distinct().Take(200).ToList()
+            : Ids(a, "question_ids");
+        var pass = Math.Clamp(D(a, "pass_mark") is > 0 and var pm ? pm : 60, 0, 100);
+        var section = new SectionInput(null, S(a, "title"), Opt(a, "title_en"), null, null, Math.Clamp(I(a, "minutes"), 0, 600), 0,
+            ids.Select(id => new ItemInput(id, null, null, null, 0, null)).ToList());
+        return new AssessmentInput(S(a, "title"), Opt(a, "title_en"), Opt(a, "instructions"), Opt(a, "instructions_en"), false,
+            Opt(a, "assessment_type") ?? "KnowledgeTest", "Draft", pass, 1, "Highest", true, true, false, 7, [section]);
     }
 
     static RequisitionInput Requisition(JsonElement a) => new(

@@ -59,6 +59,8 @@ public sealed class HttpCurrentActor(IHttpContextAccessor http) : ICurrentActor
 
     public bool IsAdmin => Type == ActorType.Staff && http.HttpContext!.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value is "RecruitmentAdmin" or "Administrator";
 
+    public bool IsSystemAdmin => Type == ActorType.Staff && http.HttpContext!.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value is "Administrator";
+
     public int? Id => Type == ActorType.Staff && int.TryParse(http.HttpContext!.User.FindFirst("sid")?.Value, out var id) ? id : null;
 
     public string Name => Type switch
