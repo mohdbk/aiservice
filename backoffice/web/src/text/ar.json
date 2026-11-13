@@ -1291,5 +1291,12 @@
  "asmlink.mail.Queued": "بانتظار الإرسال",
  "asmlink.mail.Failed": "فشل الإرسال",
  "asmlink.mail.Sending": "جارٍ الإرسال",
- "error.portal_url_missing": "عنوان بوابة التوظيف غير محدد (الإعدادات › عنوان البوابة)، لذلك لا يمكن إنشاء الرابط."
+ "error.portal_url_missing": "عنوان بوابة التوظيف غير محدد (الإعدادات › عنوان البوابة)، لذلك لا يمكن إنشاء الرابط.",
+ "multi.search": "ابحث بالاسم أو البريد",
+ "multi.none": "لا توجد نتائج.",
+ "multi.clear": "مسح البحث",
+ "multi.remove": "إزالة {name}",
+ "multi.chosen": "تم اختيار {n}",
+ "multi.count": "تم اختيار {n} من {total}",
+ "int.panel_hint": "اكتب للبحث عن الأشخاص، وحدد جميع أعضاء اللجنة."
 }

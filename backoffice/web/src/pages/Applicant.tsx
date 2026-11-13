@@ -1,4 +1,5 @@
 import { AssessmentLinkButton } from "../components/AssessmentLink";
+import { MultiSelect } from "../components/MultiSelect";
 import { ArrowClockwise, CalendarDots, CalendarPlus, Plus, Trash, DownloadSimple, Envelope, Exam, FileText, Handshake, Phone } from "@phosphor-icons/react";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -338,15 +339,8 @@ export function InterviewDialog({ open, onClose, lookups, onSave, busy, initial 
         <TextInput required label={t("int.to")} type="time" value={f.to} onChange={(e) => set("to", e.target.value)} />
       </div>
       <TextInput label={t("int.location")} value={f.location} onChange={(e) => set("location", e.target.value)} />
-      <fieldset>
-        <legend className="mb-2 text-sm font-semibold">{t("int.panel")}</legend>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {(lookups?.staff || []).map((s) => (
-            <Tick key={s.id} label={s.name} checked={f.panelists.includes(s.id)}
-              onChange={(v) => set("panelists", v ? [...f.panelists, s.id] : f.panelists.filter((x) => x !== s.id))} />
-          ))}
-        </div>
-      </fieldset>
+      <MultiSelect label={t("int.panel")} hint={t("int.panel_hint")} value={f.panelists} onChange={(v) => set("panelists", v)}
+        options={(lookups?.staff || []).map((s) => ({ value: s.id, label: s.name, hint: s.email }))} />
       <TextArea label={t("int.notes")} value={f.notes} onChange={(e) => set("notes", e.target.value)} />
     </Modal>
   );
@@ -455,15 +449,8 @@ function BookingDialog({ onClose, lookups, onSave, busy }: {
         )}
       </fieldset>
       <TextInput label={t("int.location")} value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} />
-      <fieldset>
-        <legend className="mb-2 text-sm font-semibold">{t("int.panel")}</legend>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {(lookups?.staff || []).map((s) => (
-            <Tick key={s.id} label={s.name} checked={f.panelists.includes(s.id)}
-              onChange={(v) => setF({ ...f, panelists: v ? [...f.panelists, s.id] : f.panelists.filter((x) => x !== s.id) })} />
-          ))}
-        </div>
-      </fieldset>
+      <MultiSelect label={t("int.panel")} hint={t("int.panel_hint")} value={f.panelists} onChange={(v) => setF({ ...f, panelists: v })}
+        options={(lookups?.staff || []).map((s) => ({ value: s.id, label: s.name, hint: s.email }))} />
     </Modal>
   );
 }

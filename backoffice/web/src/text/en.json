@@ -1291,5 +1291,12 @@
  "asmlink.mail.Queued": "Waiting to Send",
  "asmlink.mail.Failed": "Failed",
  "asmlink.mail.Sending": "Sending",
- "error.portal_url_missing": "The careers portal address is not set (Settings › Portal Address), so no link can be made."
+ "error.portal_url_missing": "The careers portal address is not set (Settings › Portal Address), so no link can be made.",
+ "multi.search": "Search by name or email",
+ "multi.none": "No matches.",
+ "multi.clear": "Clear search",
+ "multi.remove": "Remove {name}",
+ "multi.chosen": "{n} chosen",
+ "multi.count": "{n} of {total} chosen",
+ "int.panel_hint": "Type to find people; tick everyone on the panel."
 }
