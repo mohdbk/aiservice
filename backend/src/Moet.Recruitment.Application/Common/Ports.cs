@@ -48,6 +48,7 @@ public interface IAppDbContext
     DbSet<TypeNote> TypeNotes { get; }
     DbSet<DataRequest> DataRequests { get; }
     DbSet<ApprovalRequest> ApprovalRequests { get; }
+    DbSet<HealthAlertSetting> HealthAlertSettings { get; }
     DbSet<Requisition> Requisitions { get; }
     DbSet<InterviewBooking> InterviewBookings { get; }
     DbSet<TextSetting> TextSettings { get; }

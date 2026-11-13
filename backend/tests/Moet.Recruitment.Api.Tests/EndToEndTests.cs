@@ -470,6 +470,14 @@ public class EndToEndTests
         Assert.Equal(before.GetProperty("items")[0].GetProperty("full_name").GetString(), after.GetProperty("items")[0].GetProperty("full_name").GetString());
         Assert.True((await admin.GetAsync("/api/backoffice/jobs")).IsSuccessStatusCode);   // the session survived (its keys were restored too)
 
+        // Health alerts: on by default, administrators listed, extra addresses checked, a check runs on demand.
+        var alerts = await Read(await admin.GetAsync("/api/backoffice/health-alerts"));
+        Assert.True(alerts.GetProperty("is_enabled").GetBoolean());
+        Assert.Contains(alerts.GetProperty("administrators").EnumerateArray(), e => e.GetString() == "admin@moet.test");
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsync("/api/backoffice/health-alerts", JsonBody(new { is_enabled = true, extra_recipients = "not-an-address" }))).StatusCode);
+        Assert.True((await admin.PutAsync("/api/backoffice/health-alerts", JsonBody(new { is_enabled = true, extra_recipients = "ops@moet.test" }))).IsSuccessStatusCode);
+        Assert.True((await admin.PostAsync("/api/backoffice/health-alerts/check", JsonBody(new { }))).IsSuccessStatusCode);
+
         // Approvals: with job approval on, a recruiter's publish waits in the inbox until a recruitment admin approves it;
         // a requisition, once approved, becomes a draft job.
         Assert.True((await admin.PostAsync("/api/backoffice/staff", JsonBody(new { email = "recruiter@moet.test", full_name = "Recruiter One", role = "Recruiter", is_enabled = true, password = "Recruiter-Password-123" }))).IsSuccessStatusCode);

@@ -261,6 +261,10 @@ public static class BackofficeEndpoints
         sys.MapPost("/text-settings/test", (TextTestBody b, TextService s, CancellationToken ct) => s.TestAsync(b.To, ct));
         sys.MapGet("/assistant-usage", (SystemService s, CancellationToken ct) => s.AssistantUsageAsync(ct));
         sys.MapPut("/assistant-usage/{staffId:int}", (int staffId, AssistantLimitBody b, SystemService s, CancellationToken ct) => s.SetAssistantLimitAsync(staffId, b.Limit, ct));
+        sys.MapGet("/health-alerts", (HealthAlertService s, CancellationToken ct) => s.GetAsync(ct));
+        sys.MapPut("/health-alerts", (HealthAlertInput b, HealthAlertService s, CancellationToken ct) => s.SaveAsync(b, ct));
+        sys.MapPost("/health-alerts/check", async (HealthAlertService s, CancellationToken ct) =>
+            new { problems = (await s.ProblemsAsync(null, ct)).Select(p => new { key = p.Key, en = p.En, ar = p.Ar }), emailed = await s.CheckAsync(null, ct) });
         sys.MapGet("/health", async (SystemService s, IHttpClientFactory http, IConfiguration cfg, CancellationToken ct) =>
         {
             // The assistant service answers on /healthz when it is set up and running.

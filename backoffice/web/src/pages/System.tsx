@@ -1,5 +1,5 @@
 import { ArrowClockwise, CheckCircle, PencilSimple, WarningCircle, XCircle } from "@phosphor-icons/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DataTable, opts, useList } from "../components/DataTable";
 import { Badge, Button, Card, ErrorState, Loading, Modal, Note, PageHeader, SectionTabs, SelectInput, TextArea, TextInput, Toggle, useSaving } from "../components/ui";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
@@ -234,6 +234,7 @@ export function HealthPage() {
         {box(t("health.email"), h.email.state, [["health.queued", h.email.queued], ["health.sent_day", h.email.sent_day], ["health.failed_day", h.email.failed_day]])}
         {box(t("health.cv"), h.cv_scoring.state, [["health.waiting", h.cv_scoring.waiting], ["health.failed", h.cv_scoring.failed]])}
       </div>
+      <HealthAlerts />
       <Backups />
       {h.background.recent_failures.length > 0 && (
         <Card title={t("health.failures")} className="mt-6">
@@ -563,6 +564,40 @@ function Backups() {
           )}
         </>
       )}
+    </Card>
+  );
+}
+
+type Alerts = { is_enabled: boolean; extra_recipients: string; administrators: string[]; email_configured: boolean; last_alert_at: string | null; open_problems: string[] };
+
+/** Emails to system administrators when a health check fails, daily while it lasts, and once when it is resolved. */
+function HealthAlerts() {
+  const { t, date } = useLang();
+  const toast = useToast();
+  const data = useAsync(() => api<Alerts>("/health-alerts"), []);
+  const [a, setA] = useState<Alerts | null>(null);
+  const { busy, error, run } = useSaving();
+  useEffect(() => { if (data.data) setA(data.data); }, [data.data]);
+  if (!a) return null;
+  const save = async () => {
+    if (await run(() => api("/health-alerts", { method: "PUT", body: { is_enabled: a.is_enabled, extra_recipients: a.extra_recipients } })) !== undefined) {
+      toast(t("common.saved"));
+      data.reload();
+    }
+  };
+  return (
+    <Card title={t("alerts.title")} className="mt-6" actions={<Button size="sm" busy={busy} onClick={save}>{t("common.save")}</Button>}>
+      {error && <div className="mb-3"><ErrorState error={error} /></div>}
+      {!a.email_configured && <div className="mb-3"><Note tone="warning">{t("alerts.no_email")}</Note></div>}
+      <div className="space-y-4">
+        <Toggle label={t("alerts.enabled")} hint={t("alerts.enabled_hint")} checked={a.is_enabled} onChange={(v) => setA({ ...a, is_enabled: v })} />
+        <div className="text-sm">
+          <p className="font-semibold text-aeblack-800">{t("alerts.admins")}</p>
+          <p className="text-aeblack-600" dir="ltr">{a.administrators.join(", ") || "-"}</p>
+        </div>
+        <TextArea label={t("alerts.extra")} hint={t("alerts.extra_hint")} dir="ltr" rows={2} value={a.extra_recipients} onChange={(e) => setA({ ...a, extra_recipients: e.target.value })} />
+        {a.last_alert_at && <p className="text-xs text-aeblack-500">{t("alerts.last", { at: date(a.last_alert_at, true) })}</p>}
+      </div>
     </Card>
   );
 }

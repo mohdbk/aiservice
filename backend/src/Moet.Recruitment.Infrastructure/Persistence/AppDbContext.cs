@@ -58,6 +58,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
     public DbSet<TypeNote> TypeNotes => Set<TypeNote>();
     public DbSet<DataRequest> DataRequests => Set<DataRequest>();
     public DbSet<ApprovalRequest> ApprovalRequests => Set<ApprovalRequest>();
+    public DbSet<HealthAlertSetting> HealthAlertSettings => Set<HealthAlertSetting>();
     public DbSet<Requisition> Requisitions => Set<Requisition>();
     public DbSet<InterviewBooking> InterviewBookings => Set<InterviewBooking>();
     public DbSet<TextSetting> TextSettings => Set<TextSetting>();

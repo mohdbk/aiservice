@@ -245,6 +245,7 @@ static class ModelMap
         });
         m.Entity<DataRequest>(e => e.ToTable("DataRequest", "ops"));
         m.Entity<ApprovalRequest>(e => e.ToTable("ApprovalRequest", "hiring"));
+        m.Entity<HealthAlertSetting>(e => { e.ToTable("HealthAlertSetting", "ops"); e.Property(x => x.Id).ValueGeneratedNever(); });
         m.Entity<Requisition>(e => e.ToTable("Requisition", "hiring"));
         m.Entity<InterviewBooking>(e =>
         {

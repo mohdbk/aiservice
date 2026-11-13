@@ -1224,5 +1224,13 @@
  "error.headcount_invalid": "Headcount must be between 1 and 500.",
  "error.requisition_locked": "This requisition has already been decided.",
  "asst.next": "Next Steps",
- "asst.tool.suggest_next_actions": "Suggesting next steps"
+ "asst.tool.suggest_next_actions": "Suggesting next steps",
+ "alerts.title": "Health Alerts",
+ "alerts.no_email": "Email is not set up, so alerts cannot be sent.",
+ "alerts.enabled": "Email Alerts When a Check Fails",
+ "alerts.enabled_hint": "Checked every 10 minutes. One email when a problem starts or changes, a reminder each day while it lasts, and one when it is resolved.",
+ "alerts.admins": "System Administrators Who Receive Alerts",
+ "alerts.extra": "More Recipients",
+ "alerts.extra_hint": "Email addresses, separated by commas.",
+ "alerts.last": "Last alert: {at}"
 }

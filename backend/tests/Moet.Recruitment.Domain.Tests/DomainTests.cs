@@ -539,3 +539,22 @@ public class PersonalityTests
         Assert.Equal("Dubai", dubai.LocationIn("en"));   // an emirate needs no translation
     }
 }
+
+public class HealthAlertTests
+{
+    [Fact]
+    public void Alerts_when_problems_change_daily_while_they_last_and_once_when_cleared()
+    {
+        var now = new DateTime(2026, 11, 13, 8, 0, 0, DateTimeKind.Utc);
+        var s = new HealthAlertSetting();
+        Assert.False(s.ShouldAlert("", now));                       // all fine, nothing sent before
+        Assert.True(s.ShouldAlert("email_failed", now));            // a new problem
+        s.LastProblems = "email_failed"; s.LastAlertAt = now;
+        Assert.False(s.ShouldAlert("email_failed", now.AddHours(3)));
+        Assert.True(s.ShouldAlert("email_failed", now.AddDays(1)));   // daily reminder
+        Assert.True(s.ShouldAlert("email_failed,jobs_stuck", now.AddHours(1)));
+        Assert.True(s.ShouldAlert("", now.AddHours(1)));              // all clear
+        s.ExtraRecipients = "ops@moet.gov.ae, it@moet.gov.ae\nnot-an-address";
+        Assert.Equal(2, s.Extra().Count);
+    }
+}

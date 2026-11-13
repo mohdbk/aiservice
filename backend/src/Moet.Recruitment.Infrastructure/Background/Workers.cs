@@ -111,6 +111,8 @@ public sealed class JobWorker(IServiceScopeFactory scopes, ILogger<JobWorker> lo
     DateTime _nextDaily = DateTime.MinValue;
     // The first backup waits a while after start, so a restore or a seed can finish first.
     DateTime _nextBackup = DateTime.UtcNow.AddMinutes(30);
+    DateTime _nextHealth = DateTime.UtcNow.AddMinutes(5);
+    static DateTime? _backupFailedAt;
 
     protected override async Task ExecuteAsync(CancellationToken stop)
     {
@@ -177,18 +179,27 @@ public sealed class JobWorker(IServiceScopeFactory scopes, ILogger<JobWorker> lo
     async Task SchedulesAsync(CancellationToken ct)
     {
         var now = DateTime.UtcNow;
-        if (now < _nextHourly && now < _nextDaily && now < _nextBackup) return;
+        if (now < _nextHourly && now < _nextDaily && now < _nextBackup && now < _nextHealth) return;
         using var scope = scopes.CreateScope();
+        if (now >= _nextHealth)
+        {
+            _nextHealth = now.AddMinutes(10);
+            var extra = _backupFailedAt is { } bf && now - bf < TimeSpan.FromDays(1)
+                ? new[] { new HealthAlertService.Problem("backup_failed", "The last scheduled backup failed.", "فشل آخر نسخ احتياطي مجدول.") } : null;
+            try { await scope.ServiceProvider.GetRequiredService<HealthAlertService>().CheckAsync(extra, ct); }
+            catch (Exception e) when (e is Microsoft.Data.SqlClient.SqlException or InvalidOperationException) { log.LogError(e, "Health alert check failed"); }
+        }
         if (now >= _nextBackup)
         {
             var backups = scope.ServiceProvider.GetRequiredService<BackupService>();
             _nextBackup = now.AddHours(backups.IntervalHours);
             if (backups.IsConfigured)
             {
-                try { await backups.BackUpAsync(ct); AppMetrics.Backups.Add(1); }
+                try { await backups.BackUpAsync(ct); AppMetrics.Backups.Add(1); _backupFailedAt = null; }
                 catch (Exception e) when (e is HttpRequestException or Microsoft.Data.SqlClient.SqlException or TaskCanceledException)
                 {
                     log.LogError(e, "Scheduled backup failed");
+                    _backupFailedAt = now;
                 }
             }
         }
