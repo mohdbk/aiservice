@@ -64,6 +64,29 @@ async function overflow(page) {
   });
 }
 
+/** Buttons, links and fields under the floating assistant button, at the top and with the page scrolled to the end. */
+async function underFab(page) {
+  return page.evaluate(async () => {
+    const fab = document.querySelector(".mh-assistant-fab");
+    if (!fab) return [];
+    const hits = new Set();
+    for (const y of [0, document.documentElement.scrollHeight]) {
+      window.scrollTo(0, y);
+      await new Promise((r) => setTimeout(r, 100));
+      const f = fab.getBoundingClientRect();
+      for (const el of document.querySelectorAll("button, a[href], input, select, textarea, [role=button], [role=tab]")) {
+        if (fab.contains(el) || el.closest(".mh-chat-drawer, .mh-dialog, .sr-only, .mc-skip")) continue;
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0) continue;
+        if (r.left < f.right && r.right > f.left && r.top < f.bottom && r.bottom > f.top)
+          hits.add(`${el.tagName.toLowerCase()} "${(el.textContent || el.getAttribute("aria-label") || "").trim().slice(0, 30)}"`);
+      }
+    }
+    window.scrollTo(0, 0);
+    return [...hits].slice(0, 4);
+  });
+}
+
 async function shoot(ctx, name, url, after, full = false) {
   const page = await ctx.newPage();
   const errors = [];
@@ -75,6 +98,7 @@ async function shoot(ctx, name, url, after, full = false) {
     if (after) { await after(page); await page.waitForTimeout(400); }
     await page.screenshot({ path: `shots/${name}.png`, fullPage: !after || full });
     const o = await overflow(page);
+    if (!after) { const u = await underFab(page); if (u.length) note(`UNDER ${name}: under the assistant button: ${u.join(", ")}`); }
     if (o.doc > o.w + 1 || o.out.length) note(`WIDE  ${name}: page ${o.doc}px on a ${o.w}px screen\n        ${o.out.join("\n        ")}`);
     if (name.endsWith("_en_dashboard") || name.endsWith("_en_jobs") && name.startsWith("po_")) {
       const fonts = await page.evaluate(async () => {
@@ -121,6 +145,8 @@ for (const [view, opts] of Object.entries(VIEWS)) {
     ["email_templates", "/setup/email-templates"], ["document_templates", "/setup/document-templates"], ["components", "/setup/components"], ["component_new", "/setup/components/new"],
     ["staff", "/setup/staff"], ["email_server", "/setup/email-server"], ["texts", "/setup/texts"], ["handoff", "/setup/handoff"], ["agent_settings", "/setup/assistant"], ["email_log", "/setup/email-log"], ["assistant_usage", "/setup/assistant-usage"], ["audit", "/setup/audit"], ["health", "/setup/health"], ["data_protection", "/setup/data-protection"],
     ["password", "/password"], ["two_step", "/two-step"], ["approvals", "/approvals"], ["requisitions", "/requisitions"],
+    ["candidates", "/candidates"], ["countries", "/setup/countries"], ["offer_templates", "/setup/offer-templates"], ["test_new", "/tests/new"],
+    ["question_new", "/questions/new"],
   ].filter(Boolean);
   for (const lang of ["ar", "en"]) {
     for (const [name, path] of pages) await shoot(ctx, `bo_${view}_${lang}_${name}`, `${BASE}/${lang}${path}`);
