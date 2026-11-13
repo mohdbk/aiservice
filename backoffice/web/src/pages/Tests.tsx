@@ -45,7 +45,7 @@ export default function Tests() {
           { key: "type", label: t("test.type"), sort: "type", render: (x) => t(`type.${x.assessment_type}`) },
           { key: "status", label: t("common.status"), sort: "status", render: (x) => <Badge tone={x.status === "Published" ? "green" : x.status === "Draft" ? "amber" : "gray"}>{t(`status.${x.status}`)}</Badge> },
           { key: "sections", label: t("test.sections"), render: (x) => <span className="text-sm">{x.sections} · {t("test.minutes_total", { minutes: x.minutes })}</span> },
-          { key: "pass", label: t("test.pass_mark"), sort: "pass_mark", render: (x) => x.assessment_type === "Personality" ? <span className="text-aeblack-400">-</span> : <span className="tabular-nums" dir="ltr">{x.pass_mark}%</span> },
+          { key: "pass", label: t("test.pass_mark"), sort: "pass_mark", render: (x) => x.assessment_type === "Personality" ? <span className="text-aeblack-500">-</span> : <span className="tabular-nums" dir="ltr">{x.pass_mark}%</span> },
           { key: "inv", label: t("test.invitations"), render: (x) => <Link to={to(`/invitations?assessment=${x.id}`)} className="tabular-nums">{x.invitations}</Link> },
           { key: "en", label: t("common.english"), render: (x) => <EnglishBadge state={x.english || "Missing"} /> },
         ]} />

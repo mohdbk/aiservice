@@ -39,12 +39,13 @@ function Bars({ rows }: { rows: { label: string; value: number; note?: string }[
 
 /** Applications per week as columns, with the count on hover and the busiest week labelled. */
 function Weeks({ weeks }: { weeks: Report["weeks"] }) {
-  const { date } = useLang();
+  const { t, date } = useLang();
   const max = Math.max(1, ...weeks.map((w) => w.applied));
   const peak = weeks.reduce((p, w) => (w.applied > p.applied ? w : p), weeks[0]);
+  const label = t("rep.weeks_label", { n: weeks.length, total: weeks.reduce((s, w) => s + w.applied, 0), peak: peak ? date(peak.week) : "-", max: peak?.applied ?? 0 });
   return (
     <div>
-      <div className="flex h-40 items-end gap-0.5 border-b border-aeblack-200" dir="ltr" role="img" aria-label="">
+      <div className="flex h-40 items-end gap-0.5 border-b border-aeblack-200" dir="ltr" role="img" aria-label={label}>
         {weeks.map((w) => (
           <div key={w.week} className="group relative flex h-full flex-1 items-end" title={`${date(w.week)}: ${w.applied}`}>
             <div className="w-full rounded-t bg-primary-500 group-hover:bg-primary-700" style={{ height: `${(w.applied / max) * 100}%`, minHeight: w.applied ? 2 : 0 }} />

@@ -1275,5 +1275,6 @@
  "health.virus": "Virus Scanning",
  "health.virus_required": "Uploads refused while it is down",
  "error.file_rejected": "This file could not be accepted. Upload a different file.",
- "error.scan_unavailable": "Files cannot be uploaded right now. Try again in a few minutes."
+ "error.scan_unavailable": "Files cannot be uploaded right now. Try again in a few minutes.",
+ "rep.weeks_label": "Applications per week over {n} weeks: {total} in all, the most ({max}) in the week of {peak}."
 }

@@ -108,7 +108,7 @@ export default function AgentSettings() {
                 <ul className="grid gap-2 sm:grid-cols-2">
                   {s.tools.filter(match).map((tool) => (
                     <li key={tool}>
-                      <Tick label={<>{t(`asst.tool.${tool}`)} <code dir="ltr" className="text-xs text-aeblack-400">{tool}</code></>}
+                      <Tick label={<>{t(`asst.tool.${tool}`)} <code dir="ltr" className="text-xs text-aeblack-500">{tool}</code></>}
                         checked={!s.disabled_tools.includes(tool)} onChange={(on) => toggleTool(tool, on)} />
                     </li>
                   ))}

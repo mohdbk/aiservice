@@ -143,7 +143,7 @@ function OfferCard({ offer, appId, onDone }: { offer: Offer; appId: string; onDo
     <section className="mc-surface mt-6 rounded-2xl border-2 border-primary-200 bg-white p-6" aria-labelledby="offer-title">
       <h2 id="offer-title" className="font-heading text-lg font-semibold text-aeblack-900">{t("offer.title")}</h2>
       <p className="mt-1 text-aeblack-700">{offer.position_title}{offer.start_date && <> · {t("offer.start", { date: formatDate(offer.start_date) })}</>}</p>
-      {offer.letter_html && <div className="mt-4 max-h-[28rem] overflow-auto rounded-xl border border-aeblack-100 p-4" dangerouslySetInnerHTML={{ __html: offer.letter_html }} />}
+      {offer.letter_html && <div className="mt-4 max-h-[28rem] overflow-auto rounded-xl border border-aeblack-100 p-4 focus-visible:outline-2" tabIndex={0} role="region" aria-label={t("offer.title")} dangerouslySetInnerHTML={{ __html: offer.letter_html }} />}
       {error ? <div className="mt-4"><Alert tone="error" title={errorText(error)} /></div> : null}
       {declining ? (
         <div className="mt-4 space-y-3">

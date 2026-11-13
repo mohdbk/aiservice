@@ -23,7 +23,7 @@ function ScreeningField({ q, value, invalid, onChange }: { q: ScreeningQuestion;
   if (q.type === "Yes or No" || q.type === "Single Choice") {
     const opts = q.type === "Yes or No" ? [{ value: "Yes", label: t("common.yes") }, { value: "No", label: t("common.no") }] : q.options;
     return (
-      <fieldset className={ring} aria-invalid={invalid} aria-required={Boolean(q.required)}>
+      <fieldset className={ring} aria-invalid={invalid}>
         <legend className="mb-2 text-sm font-medium text-aeblack-800">{label}</legend>
         <div className={q.type === "Yes or No" ? "flex flex-wrap gap-3" : "space-y-2"}>
           {opts.map((o) => (
@@ -136,8 +136,8 @@ export default function Apply() {
         <form onSubmit={submit} className="mc-surface mt-6 space-y-6 rounded-2xl border border-aeblack-100 bg-white p-6 md:p-8" noValidate aria-busy={busy}>
           <h2 className="font-heading text-xl font-semibold text-aeblack-900">{t("apply.your_details")}</h2>
           <dl className="grid gap-4 rounded-xl bg-whitely-100 p-4 sm:grid-cols-2">
-            <div className="flex items-center gap-3"><IconBox icon={UserCircle} /><div><dt className="text-sm text-aeblack-600">{t("apply.name")}</dt><dd className="font-medium text-aeblack-900">{user?.full_name}</dd></div></div>
-            <div className="flex items-center gap-3"><IconBox icon={Envelope} /><div className="min-w-0"><dt className="text-sm text-aeblack-600">{t("apply.email")}</dt><dd className="truncate font-medium text-aeblack-900"><bdi>{user?.email}</bdi></dd></div></div>
+            <div className="relative flex min-h-10 flex-col justify-center ps-[3.25rem]"><dt className="text-sm text-aeblack-600"><IconBox icon={UserCircle} className="absolute start-0 top-1/2 -translate-y-1/2" />{t("apply.name")}</dt><dd className="font-medium text-aeblack-900">{user?.full_name}</dd></div>
+            <div className="relative flex min-h-10 min-w-0 flex-col justify-center ps-[3.25rem]"><dt className="text-sm text-aeblack-600"><IconBox icon={Envelope} className="absolute start-0 top-1/2 -translate-y-1/2" />{t("apply.email")}</dt><dd className="truncate font-medium text-aeblack-900"><bdi>{user?.email}</bdi></dd></div>
           </dl>
           <div className="grid gap-5 md:grid-cols-2">
             <Field id="phone" label={t("apply.phone")} hint={t("apply.phone_hint")} prefix={Phone}>

@@ -67,9 +67,9 @@ export default function JobPage() {
             <h2 className="mb-4 font-heading text-lg font-semibold text-aeblack-900">{t("job.details")}</h2>
             <dl className="space-y-3">
               {meta.filter(([, , v]) => v).map(([icon, label, value]) => (
-                <div key={label} className="flex items-center gap-3">
-                  <IconBox icon={META_ICONS[icon]} />
-                  <div><dt className="text-sm text-aeblack-600">{label}</dt><dd className="font-medium text-aeblack-900">{value}</dd></div>
+                <div key={label} className="relative flex min-h-10 flex-col justify-center ps-[3.25rem]">
+                  <dt className="text-sm text-aeblack-600"><IconBox icon={META_ICONS[icon]} className="absolute start-0 top-1/2 -translate-y-1/2" />{label}</dt>
+                  <dd className="font-medium text-aeblack-900">{value}</dd>
                 </div>
               ))}
             </dl>

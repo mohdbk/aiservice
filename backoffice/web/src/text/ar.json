@@ -1275,5 +1275,6 @@
  "health.virus": "فحص الفيروسات",
  "health.virus_required": "رفض الملفات عند تعطله",
  "error.file_rejected": "تعذر قبول هذا الملف. ارفع ملفاً آخر.",
- "error.scan_unavailable": "لا يمكن رفع الملفات حالياً. حاول بعد دقائق."
+ "error.scan_unavailable": "لا يمكن رفع الملفات حالياً. حاول بعد دقائق.",
+ "rep.weeks_label": "الطلبات أسبوعياً خلال {n} أسبوعاً: {total} طلباً، وأكثرها ({max}) في أسبوع {peak}."
 }

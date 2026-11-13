@@ -289,11 +289,11 @@ export default function Layout({ children }: { children: ReactNode }) {
           <nav aria-label={t("footer.portal_links")} dir={config.dir} className="md:justify-self-end">
             <p className="mb-3 font-semibold text-whitely-50">{t("footer.portal_links")}</p>
             <ul className="space-y-2 text-sm">
-              <li><Link className="inline-flex items-center gap-2 hover:text-primary-300" to={path()}><Briefcase size={20} aria-hidden="true" />{t("nav.jobs")}</Link></li>
-              <li><Link className="inline-flex items-center gap-2 hover:text-primary-300" to={path("/applications")}><Files size={20} aria-hidden="true" />{t("nav.my_applications")}</Link></li>
+              <li><Link className="inline-flex items-center gap-2 text-aeblack-100 hover:text-primary-300" to={path()}><Briefcase size={20} aria-hidden="true" />{t("nav.jobs")}</Link></li>
+              <li><Link className="inline-flex items-center gap-2 text-aeblack-100 hover:text-primary-300" to={path("/applications")}><Files size={20} aria-hidden="true" />{t("nav.my_applications")}</Link></li>
               {config.main_site_url && (
                 <li>
-                  <a className="inline-flex items-center gap-2 hover:text-primary-300" href={config.main_site_url} target="_blank" rel="noopener">
+                  <a className="inline-flex items-center gap-2 text-aeblack-100 hover:text-primary-300" href={config.main_site_url} target="_blank" rel="noopener">
                     <ArrowSquareOut size={20} className="rtl:-scale-x-100" aria-hidden="true" />{t("nav.ministry_website")}<span className="sr-only">({t("nav.opens_new_tab")})</span>
                   </a>
                 </li>

@@ -327,7 +327,7 @@ export function Pager({ page, pages, onPage }: { page: number; pages: number; on
 
 /** Score as a colored number out of 100. */
 export function Score({ value }: { value?: number | null }) {
-  if (value === null || value === undefined) return <span className="text-aeblack-400">-</span>;
+  if (value === null || value === undefined) return <span className="text-aeblack-500">-</span>;
   const tone = value >= 70 ? "text-aegreen-700" : value >= 50 ? "text-camel-700" : "text-aered-700";
   return <span className={`font-bold tabular-nums ${tone}`} dir="ltr">{Math.round(value)}</span>;
 }
@@ -406,7 +406,7 @@ export function PickerField({ label, value, placeholder, onClick }: { label: Rea
       <p id={id} className="mb-1 block text-sm font-semibold text-aeblack-800">{label}</p>
       <button type="button" aria-labelledby={id} onClick={onClick}
         className="flex w-full items-center justify-between gap-2 rounded-lg border border-aeblack-200 bg-white px-3 py-2.5 text-start text-sm hover:border-primary-500 focus-visible:border-primary-500">
-        <span className={`line-clamp-2 ${value ? "" : "text-aeblack-400"}`}>{value || placeholder}</span>
+        <span className={`line-clamp-2 ${value ? "" : "text-aeblack-500"}`}>{value || placeholder}</span>
         <CaretDown size={16} className="flex-none text-aeblack-500" aria-hidden="true" />
       </button>
     </div>

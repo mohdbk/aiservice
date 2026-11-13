@@ -87,7 +87,7 @@ function NavList({ onPick }: { onPick?: () => void }) {
         if (!items.length) return null;
         return (
           <div key={gi}>
-            {g.group && <p className="mb-2 px-3 text-xs font-bold uppercase tracking-wide text-aeblack-400">{g.group}</p>}
+            {g.group && <p className="mb-2 px-3 text-xs font-bold uppercase tracking-wide text-aeblack-500">{g.group}</p>}
             <ul className="space-y-1">
               {items.map((it) => (
                 <li key={it.to}>

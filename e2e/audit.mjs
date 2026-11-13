@@ -53,6 +53,8 @@ async function overflow(page) {
         }
         if (scrolls) continue;
         if (getComputedStyle(el).position === "fixed") continue;
+        // The skip link waits off-screen until it is focused (on purpose).
+        if (el.closest(".mc-skip, .sr-only")) continue;
         const tag = el.tagName.toLowerCase() + (el.className && typeof el.className === "string" ? "." + el.className.split(" ").slice(0, 3).join(".") : "");
         out.push(`${tag} [${Math.round(r.left)}..${Math.round(r.right)}] "${(el.textContent || "").trim().slice(0, 40)}"`);
         if (out.length >= 4) break;

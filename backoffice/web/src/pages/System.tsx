@@ -48,7 +48,7 @@ export function AuditLog() {
               {r.via === "Assistant" && <Badge tone="gold">{t("audit.via.Assistant")}</Badge>}
             </span>
           ) },
-          { key: "by", label: t("audit.by"), sort: "by", render: (r) => <>{r.by || t(`audit.actor.${r.actor_type}`)}{r.ip && <span className="block text-xs text-aeblack-400" dir="ltr">{r.ip}</span>}</> },
+          { key: "by", label: t("audit.by"), sort: "by", render: (r) => <>{r.by || t(`audit.actor.${r.actor_type}`)}{r.ip && <span className="block text-xs text-aeblack-500" dir="ltr">{r.ip}</span>}</> },
           { key: "fields", label: t("audit.details"), render: (r) => (
             <div className="max-w-sm text-xs">
               <span className="block truncate text-aeblack-600" dir="ltr">{r.description || changes(r).map(([k]) => k).join(", ")}</span>

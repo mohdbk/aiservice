@@ -88,7 +88,7 @@ export function TraitProfile({ profile, summary }: { profile: TraitScore[]; summ
         {profile.map((p) => (
           <li key={p.code}>
             <div className="mb-1 flex flex-wrap items-center justify-between gap-2 text-sm">
-              <span className="font-semibold">{lang === "en" ? p.name_en : p.name_ar} <span className="text-xs text-aeblack-400" dir="ltr">({p.code})</span></span>
+              <span className="font-semibold">{lang === "en" ? p.name_en : p.name_ar} <span className="text-xs text-aeblack-500" dir="ltr">({p.code})</span></span>
               <span className="flex items-center gap-2">
                 {p.percentile != null && <span className="text-xs text-aeblack-500">{t("pers.percentile", { n: p.percentile })}</span>}
                 <Badge tone={BAND_TONE[p.band] || "gray"}>{t(`pers.band.${p.band}`)}</Badge>
