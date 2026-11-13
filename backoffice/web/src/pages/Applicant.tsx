@@ -105,7 +105,7 @@ export default function Applicant() {
           <ul className="mt-2 space-y-1">
             {a.duplicates!.map((d) => (
               <li key={d.id}>
-                <Link to={to(`/applicants/${d.id}`)} className="font-semibold">{d.full_name}</Link> <span dir="ltr">{d.email}</span>
+                <Link to={to(`/applicants/${d.id}`)} className="font-semibold text-camel-900 underline">{d.full_name}</Link> <span dir="ltr">{d.email}</span>
                 <span className="text-xs"> · {[d.same_cv && t("dup.cv"), d.same_phone && t("dup.phone"), d.same_name && t("dup.name")].filter(Boolean).join(" · ")} · {date(d.created_at)}</span>
               </li>
             ))}
