@@ -85,8 +85,13 @@ export function TraitProfile({ profile, summary, jobProfile }: { profile: TraitS
   if (profile.length === 0) return <p className="text-sm text-aeblack-500">{t("pers.no_profile")}</p>;
   if (summary?.pairs) return <TypeProfile profile={profile} summary={summary} jobProfile={jobProfile} />;
   const sums = profile.some((p) => p.sum != null);
+  const value = (p: TraitScore) => (sums && p.sum != null && p.max_sum ? p.sum / p.max_sum : p.sten / 10);
   return (
     <div className="space-y-3">
+      {profile.length >= 3 && (
+        <Radar points={profile.map((p) => ({ label: (lang === "en" ? p.name_en : p.name_ar).split(" (")[0], value: value(p),
+          text: sums && p.sum != null ? `${p.sum}/${p.max_sum}` : `${p.sten}/10` }))} />
+      )}
       <ul className="space-y-3">
         {profile.map((p) => (
           <li key={p.code}>
@@ -131,24 +136,7 @@ function TypeProfile({ profile, summary, jobProfile }: { profile: TraitScore[]; 
         <span className="rounded-xl bg-primary-50 px-4 py-2 text-2xl font-bold tracking-widest text-primary-800" dir="ltr">{summary.type}</span>
         {r && <span className="font-semibold">{en ? r.name_en : r.name_ar}</span>}
       </div>
-      <ul className="space-y-3">
-        {(summary.pairs || []).map((pr) => {
-          const a = pole(pr.first), b = pole(pr.second);
-          return (
-            <li key={pr.first} className="text-sm">
-              <div className="mb-1 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-                <span className={pr.letter === pr.first ? "font-bold" : "text-aeblack-500"}>{name(pr.first)} <span dir="ltr">({pr.first})</span></span>
-                <span className="tabular-nums text-xs text-aeblack-500" dir="ltr">{a?.sum ?? "-"}/{a?.max_sum ?? "-"} · {b?.sum ?? "-"}/{b?.max_sum ?? "-"}</span>
-                <span className={`text-end ${pr.letter === pr.second ? "font-bold" : "text-aeblack-500"}`}>{name(pr.second)} <span dir="ltr">({pr.second})</span></span>
-              </div>
-              <div className="flex h-2.5 overflow-hidden rounded-full bg-aeblack-100" role="img" aria-label={`${name(pr.first)} ${pr.first_mean} · ${name(pr.second)} ${pr.second_mean}`}>
-                <div className={pr.letter === pr.first ? "bg-primary-500" : "bg-primary-200"} style={{ width: `${(pr.first_mean / (pr.first_mean + pr.second_mean || 1)) * 100}%` }} />
-                <div className={pr.letter === pr.second ? "bg-primary-500" : "bg-primary-200"} style={{ flex: 1 }} />
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+      <Preferences pairs={summary.pairs || []} name={name} pole={pole} />
       {r && (
         <div className="grid gap-4 sm:grid-cols-2">
           <div><p className="mb-1 text-sm font-semibold">{t("pers.strengths")}</p>
@@ -220,5 +208,101 @@ export function RoleFits({ summary, jobProfile }: { summary: PersonalitySummary;
       </div>
       )}
     </div>
+  );
+}
+
+const CLARITY = [[0.1, "Slight"], [0.3, "Moderate"], [0.6, "Clear"], [1.01, "VeryClear"]] as const;
+
+/**
+ * The 16-type result as preference clarity: one row per pair (E or I, S or N, T or F, J or P). A bar grows from the middle
+ * towards the preferred side, as long as the preference is clear (a short bar means the person sits close to the middle and
+ * may use both). The letters of the type are the sides the bars point to.
+ */
+function Preferences({ pairs, name, pole }: {
+  pairs: NonNullable<PersonalitySummary["pairs"]>; name: (c: string) => string; pole: (c: string) => TraitScore | undefined;
+}) {
+  const { t } = useLang();
+  return (
+    <div className="rounded-xl border border-aeblack-100 p-4" dir="ltr">
+      <p className="mb-3 text-sm font-semibold" dir="auto">{t("pers.clarity_title")}</p>
+      <ul className="space-y-4">
+        {pairs.map((pr) => {
+          const total = pr.first_mean + pr.second_mean || 1;
+          const share = pr.first_mean / total;                 // 0..1 towards the first pole
+          const clarity = Math.min(1, Math.abs(share - 0.5) * 2); // 0 = in the middle, 1 = fully one side
+          const toFirst = pr.letter === pr.first;
+          const level = CLARITY.find(([max]) => clarity < max)?.[1] ?? "VeryClear";
+          const a = pole(pr.first), b = pole(pr.second);
+          return (
+            <li key={pr.first}>
+              <div className="mb-1 grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-sm">
+                <span className={toFirst ? "font-bold text-primary-800" : "text-aeblack-500"} dir="auto">
+                  <span className="me-1 inline-flex h-6 w-6 items-center justify-center rounded bg-aeblack-50 text-xs font-bold" dir="ltr">{pr.first}</span>{name(pr.first)}
+                </span>
+                <span className="text-xs text-aeblack-500" dir="auto">{t(`pers.clarity.${level}`)}</span>
+                <span className={`text-end ${!toFirst ? "font-bold text-primary-800" : "text-aeblack-500"}`} dir="auto">
+                  {name(pr.second)}<span className="ms-1 inline-flex h-6 w-6 items-center justify-center rounded bg-aeblack-50 text-xs font-bold" dir="ltr">{pr.second}</span>
+                </span>
+              </div>
+              <div className="relative h-3 rounded-full bg-aeblack-50" role="img"
+                aria-label={`${name(pr.letter)} (${pr.letter}), ${t(`pers.clarity.${level}`)}: ${name(pr.first)} ${a?.sum ?? pr.first_mean}, ${name(pr.second)} ${b?.sum ?? pr.second_mean}`}>
+                <span className="absolute inset-y-[-3px] left-1/2 w-0.5 -translate-x-1/2 bg-aeblack-300" aria-hidden="true" />
+                <span className="absolute inset-y-0 rounded-full bg-primary-500"
+                  style={toFirst ? { right: "50%", width: `${Math.max(2, clarity * 50)}%` } : { left: "50%", width: `${Math.max(2, clarity * 50)}%` }} />
+              </div>
+              <div className="mt-1 flex justify-between text-[11px] tabular-nums text-aeblack-500">
+                <span>{a?.sum ?? "-"}/{a?.max_sum ?? "-"}</span><span>{b?.sum ?? "-"}/{b?.max_sum ?? "-"}</span>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * A radar (spider) chart of the Big Five: one axis per trait from the centre (lowest) to the edge (highest), rings at each
+ * fifth, the person's profile as one shape. The values and bands are also listed below it, so nothing depends on the shape alone.
+ */
+function Radar({ points }: { points: { label: string; value: number; text: string }[] }) {
+  const { t } = useLang();
+  const size = 320, c = size / 2, r = 108;
+  const n = points.length;
+  const at = (i: number, v: number) => {
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / n;
+    return [c + Math.cos(a) * r * v, c + Math.sin(a) * r * v] as const;
+  };
+  const ring = (v: number) => points.map((_, i) => at(i, v).join(",")).join(" ");
+  const shape = points.map((p, i) => at(i, Math.max(0.02, Math.min(1, p.value))).join(",")).join(" ");
+  return (
+    <figure className="mx-auto w-full max-w-sm">
+      <svg viewBox={`0 0 ${size} ${size}`} className="h-auto w-full" role="img"
+        aria-label={`${t("pers.radar_label")}: ${points.map((p) => `${p.label} ${p.text}`).join(", ")}`}>
+        {[0.2, 0.4, 0.6, 0.8, 1].map((v) => (
+          <polygon key={v} points={ring(v)} fill={v === 1 ? "var(--color-whitely-50, #fafaf7)" : "none"} stroke="var(--color-aeblack-100, #e5e5e5)" strokeWidth={1} />
+        ))}
+        {points.map((_, i) => {
+          const [x, y] = at(i, 1);
+          return <line key={i} x1={c} y1={c} x2={x} y2={y} stroke="var(--color-aeblack-100, #e5e5e5)" strokeWidth={1} />;
+        })}
+        <polygon points={shape} fill="var(--color-primary-500, #b68a35)" fillOpacity={0.22} stroke="var(--color-primary-600, #92722a)" strokeWidth={2} strokeLinejoin="round" />
+        {points.map((p, i) => {
+          const [x, y] = at(i, Math.max(0.02, Math.min(1, p.value)));
+          return <circle key={i} cx={x} cy={y} r={4} fill="var(--color-primary-600, #92722a)" stroke="#fff" strokeWidth={2} />;
+        })}
+        {points.map((p, i) => {
+          const [x, y] = at(i, 1.2);
+          const anchor = Math.abs(x - c) < 8 ? "middle" : x > c ? "start" : "end";
+          return (
+            <text key={i} x={x} y={y} textAnchor={anchor} dominantBaseline="middle" className="fill-aeblack-800" style={{ fontSize: 11, fontWeight: 600 }}>
+              <tspan x={x} dy="-0.4em">{p.label}</tspan>
+              <tspan x={x} dy="1.2em" className="fill-aeblack-500" style={{ fontWeight: 400 }}>{p.text}</tspan>
+            </text>
+          );
+        })}
+      </svg>
+      <figcaption className="text-center text-xs text-aeblack-500">{t("pers.radar_caption")}</figcaption>
+    </figure>
   );
 }

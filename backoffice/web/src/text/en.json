@@ -1461,5 +1461,12 @@
  "test.rules.personality": "Questionnaire Scoring",
  "test.rules.taking": "Taking the Assessment",
  "test.pass_mark_hint": "Percent of the points needed to pass the whole assessment.",
- "inv.view_result": "View Result"
+ "inv.view_result": "View Result",
+ "pers.clarity_title": "Preference Clarity",
+ "pers.clarity.Slight": "Slight",
+ "pers.clarity.Moderate": "Moderate",
+ "pers.clarity.Clear": "Clear",
+ "pers.clarity.VeryClear": "Very Clear",
+ "pers.radar_label": "Personality profile",
+ "pers.radar_caption": "Centre is lowest, edge is highest. No shape is better than another."
 }

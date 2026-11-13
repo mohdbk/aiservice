@@ -366,5 +366,6 @@
  "alerts.add": "Add Alert",
  "alerts.full": "You have the most alerts allowed ({n}). Remove one to add another.",
  "error.alert_empty": "Add words to look for, or choose a department or location.",
- "error.too_many_alerts": "You have the most alerts allowed. Remove one to add another."
+ "error.too_many_alerts": "You have the most alerts allowed. Remove one to add another.",
+ "asm.auto_next": "Move to the Next Question Automatically"
 }

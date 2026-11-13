@@ -12,17 +12,21 @@ function countWords(s: string) {
   return (s.match(/\S+/g) || []).length;
 }
 
-function Answer({ q, value, onChange, onUpload, disabled }: {
-  q: AsmQuestion; value: unknown; onChange: (v: unknown, immediate?: boolean) => void; onUpload: (f: File) => void; disabled: boolean;
+function Answer({ q, value, onChange, onUpload, onPicked, disabled }: {
+  q: AsmQuestion; value: unknown; onChange: (v: unknown, immediate?: boolean) => void; onUpload: (f: File) => void; onPicked?: () => void; disabled: boolean;
 }) {
   const { t } = useSite();
+  // Only a tap or click moves on: arrow keys also change a radio, and moving then would skip questions.
+  const pointer = useRef(false);
+  const pick = (key: string) => { onChange(key, true); if (pointer.current) onPicked?.(); pointer.current = false; };
+  const tap = { onPointerDown: () => { pointer.current = true; }, onKeyDown: () => { pointer.current = false; } };
   const radio = "flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition hover:border-primary-400";
   if (q.type === "Single Choice" || q.type === "True or False") {
     return (
       <fieldset className="space-y-3"><legend className="sr-only">{t("asm.your_answer")}</legend>
         {q.options.map((o) => (
-          <label key={o.key} className={`${radio} ${value === o.key ? "border-primary-600 bg-primary-50" : "border-aeblack-100 bg-white"}`}>
-            <input type="radio" name={q.key} className="mt-1 h-5 w-5 rounded-full accent-primary-600" checked={value === o.key} disabled={disabled} onChange={() => onChange(o.key, true)} />
+          <label key={o.key} {...tap} className={`${radio} ${value === o.key ? "border-primary-600 bg-primary-50" : "border-aeblack-100 bg-white"}`}>
+            <input type="radio" name={q.key} className="mt-1 h-5 w-5 rounded-full accent-primary-600" checked={value === o.key} disabled={disabled} onChange={() => pick(o.key)} />
             <span>{o.text}</span>
           </label>
         ))}
@@ -35,8 +39,8 @@ function Answer({ q, value, onChange, onUpload, disabled }: {
       <fieldset><legend className="sr-only">{t("asm.your_answer")}</legend>
         <div className="grid gap-2 sm:grid-cols-5">
           {q.options.map((o) => (
-            <label key={o.key} className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 text-sm transition hover:border-primary-400 sm:flex-col sm:justify-center sm:text-center ${value === o.key ? "border-primary-600 bg-primary-50" : "border-aeblack-100 bg-white"}`}>
-              <input type="radio" name={q.key} className="h-5 w-5 accent-primary-600" checked={value === o.key} disabled={disabled} onChange={() => onChange(o.key, true)} />
+            <label key={o.key} {...tap} className={`flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3 text-sm transition hover:border-primary-400 sm:flex-col sm:justify-center sm:text-center ${value === o.key ? "border-primary-600 bg-primary-50" : "border-aeblack-100 bg-white"}`}>
+              <input type="radio" name={q.key} className="h-5 w-5 accent-primary-600" checked={value === o.key} disabled={disabled} onChange={() => pick(o.key)} />
               <span>{o.text}</span>
             </label>
           ))}
@@ -51,7 +55,7 @@ function Answer({ q, value, onChange, onUpload, disabled }: {
         {q.options.map((o) => {
           const on = vals.includes(o.key);
           return (
-            <label key={o.key} className={`${radio} ${on ? "border-primary-600 bg-primary-50" : "border-aeblack-100 bg-white"}`}>
+            <label key={o.key} {...tap} className={`${radio} ${on ? "border-primary-600 bg-primary-50" : "border-aeblack-100 bg-white"}`}>
               <input type="checkbox" className="mt-1 h-5 w-5 rounded accent-primary-600" checked={on} disabled={disabled}
                 onChange={() => onChange(on ? vals.filter((v) => v !== o.key) : [...vals, o.key], true)} />
               <span>{o.text}</span>
@@ -182,6 +186,17 @@ export default function TakeAssessment() {
     }
   }, [st, base, load, t]);
 
+  const [autoNext, setAutoNext] = useState(() => { try { return localStorage.getItem("asm.auto_next") !== "0"; } catch { return true; } });
+  const toggleAuto = (v: boolean) => { setAutoNext(v); try { localStorage.setItem("asm.auto_next", v ? "1" : "0"); } catch { /* not kept */ } };
+  /** After a choice is tapped, show the next question (a short pause so the choice is seen). Not after the last question. */
+  const advance = (from: number) => {
+    if (!autoNext) return;
+    window.setTimeout(() => {
+      setIndex((i) => (i === from && i < (st?.section.questions.length ?? 0) - 1 ? i + 1 : i));
+      window.requestAnimationFrame(() => document.getElementById("question-title")?.focus({ preventScroll: false }));
+    }, 350);
+  };
+
   const change = (key: string, value: unknown, immediate = false) => {
     setAnswers((a) => ({ ...a, [key]: value }));
     window.clearTimeout(timers.current[key]);
@@ -272,11 +287,16 @@ export default function TakeAssessment() {
           <span>{t("asm.question_of", { n: index + 1, count: qs.length })}</span>
           {q.type !== "Agreement Scale" && <span>{t("asm.points", { points: q.points })}</span>}
         </div>
-        <div id="question-title" className="mc-prose mb-6 text-lg font-medium text-aeblack-900" lang={cl} dir={cdir} dangerouslySetInnerHTML={{ __html: q.text }} />
-        <div lang={cl} dir={cdir}><Answer q={q} value={answers[q.key]} disabled={moving} onChange={(v, im) => change(q.key, v, im)} onUpload={(f) => upload(q.key, f)} /></div>
+        <div id="question-title" tabIndex={-1} className="mc-prose mb-6 outline-none text-lg font-medium text-aeblack-900" lang={cl} dir={cdir} dangerouslySetInnerHTML={{ __html: q.text }} />
+        <div lang={cl} dir={cdir}><Answer q={q} value={answers[q.key]} disabled={moving} onChange={(v, im) => change(q.key, v, im)} onUpload={(f) => upload(q.key, f)} onPicked={() => advance(index)} /></div>
       </section>
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+      <label className="mt-4 flex w-fit cursor-pointer items-center gap-2 text-sm text-aeblack-700">
+        <input type="checkbox" className="h-4 w-4 accent-primary-600" checked={autoNext} onChange={(e) => toggleAuto(e.target.checked)} />
+        {t("asm.auto_next")}
+      </label>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <button type="button" className="aegov-btn btn-outline" disabled={index === 0} onClick={() => setIndex((i) => i - 1)}>
           <CaretLeft size={20} className="rtl:-scale-x-100" aria-hidden="true" />{t("asm.previous")}
         </button>

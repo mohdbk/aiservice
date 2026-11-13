@@ -1461,5 +1461,12 @@
  "test.rules.personality": "تقييم الاستبيان",
  "test.rules.taking": "أداء التقييم",
  "test.pass_mark_hint": "النسبة المئوية من النقاط المطلوبة للنجاح في التقييم كله.",
- "inv.view_result": "عرض النتيجة"
+ "inv.view_result": "عرض النتيجة",
+ "pers.clarity_title": "وضوح التفضيل",
+ "pers.clarity.Slight": "طفيف",
+ "pers.clarity.Moderate": "متوسط",
+ "pers.clarity.Clear": "واضح",
+ "pers.clarity.VeryClear": "واضح جداً",
+ "pers.radar_label": "الملف الشخصي",
+ "pers.radar_caption": "المركز هو الأدنى والحافة هي الأعلى. لا يوجد شكل أفضل من آخر."
 }
