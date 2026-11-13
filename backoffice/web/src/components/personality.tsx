@@ -266,12 +266,14 @@ function Preferences({ pairs, name, pole }: {
  * fifth, the person's profile as one shape. The values and bands are also listed below it, so nothing depends on the shape alone.
  */
 function Radar({ points }: { points: { label: string; value: number; text: string }[] }) {
-  const { t } = useLang();
+  const { t, dir } = useLang();
+  // Arabic goes round the other way: after the top, the next trait is on the right, read from right to left.
+  const turn = dir === "rtl" ? -1 : 1;
   // Wider than tall, so long trait names on the left and right have room; long names wrap onto two lines.
   const w = 460, h = 330, cx = w / 2, cy = h / 2 + 6, r = 104;
   const n = points.length;
   const at = (i: number, v: number) => {
-    const a = -Math.PI / 2 + (i * 2 * Math.PI) / n;
+    const a = -Math.PI / 2 + (turn * i * 2 * Math.PI) / n;
     return [cx + Math.cos(a) * r * v, cy + Math.sin(a) * r * v] as const;
   };
   const lines = (label: string) => {
@@ -288,7 +290,7 @@ function Radar({ points }: { points: { label: string; value: number; text: strin
   const shape = points.map((p, i) => at(i, Math.max(0.02, Math.min(1, p.value))).join(",")).join(" ");
   return (
     <figure className="mx-auto w-full max-w-md">
-      <svg viewBox={`0 0 ${w} ${h}`} className="h-auto w-full overflow-visible" role="img"
+      <svg viewBox={`0 0 ${w} ${h}`} style={{ direction: "ltr" }} className="h-auto w-full overflow-visible" role="img"
         aria-label={`${t("pers.radar_label")}: ${points.map((p) => `${p.label} ${p.text}`).join(", ")}`}>
         {[0.2, 0.4, 0.6, 0.8, 1].map((v) => (
           <polygon key={v} points={ring(v)} fill={v === 1 ? "var(--color-whitely-50, #fafaf7)" : "none"} stroke="var(--color-aeblack-100, #e5e5e5)" strokeWidth={1} />
