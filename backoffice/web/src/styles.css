@@ -111,16 +111,20 @@ html[lang|="ar"] [lang|="en"] { font-family: "Roboto Variable", "Roboto", "Noto 
    made the list 1px taller than its box and phones showed a vertical scroll. Sideways scrolling stays, without a bar. */
 .mh-tabs { display: flex; gap: .25rem; box-shadow: inset 0 -1px 0 var(--color-aeblack-100); overflow-y: hidden; scrollbar-width: none; overscroll-behavior-x: contain; }
 .mh-tabs::-webkit-scrollbar { display: none; }
-/* Tabs: a bar grows under the tab on hover (light) and stays under the selected one (gold); the label darkens. */
+/* Tabs: the selected tab (aria-selected, set on every tab) has a gold bar and dark label; on devices that hover, a light bar
+   previews the others. No background box, and no sticky hover after a tap on touch screens. */
 .mh-tab { position: relative; display: inline-flex; flex: none; align-items: center; gap: .5rem; padding: .75rem 1rem; font-weight: 600; color: var(--color-aeblack-500);
-  border-radius: .6rem .6rem 0 0; transition: color .15s, background-color .15s; }
-.mh-tab::after { content: ""; position: absolute; inset-inline: .6rem; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: var(--color-primary-300);
+  background: transparent; transition: color .15s; -webkit-tap-highlight-color: transparent; }
+.mh-tab::after { content: ""; position: absolute; inset-inline: .6rem; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: var(--color-primary-200);
   transform: scaleX(0); transition: transform .2s ease, background-color .15s; }
-.mh-tab:hover { color: var(--color-aeblack-800); background: var(--color-whitely-100, #f7f7f7); }
-.mh-tab:hover::after { transform: scaleX(1); }
-.mh-tab[data-selected] { color: var(--color-primary-800); background: transparent; }
-.mh-tab[data-selected]::after { transform: scaleX(1); background: var(--color-primary-600); }
-.mh-tab:focus-visible { outline: 2px solid var(--color-primary-500); outline-offset: -2px; }
+@media (hover: hover) {
+  .mh-tab:hover { color: var(--color-aeblack-800); }
+  .mh-tab:hover::after { transform: scaleX(1); }
+}
+.mh-tab[aria-selected="true"], .mh-tab[data-selected], .mh-tab[data-active] { color: var(--color-primary-800); }
+.mh-tab[aria-selected="true"]::after, .mh-tab[data-selected]::after, .mh-tab[data-active]::after { transform: scaleX(1); background: var(--color-primary-600); }
+.mh-tab:focus { outline: none; }
+.mh-tab:focus-visible { outline: 2px solid var(--color-primary-500); outline-offset: -2px; border-radius: .5rem; }
 
 /* Side menu items: a gold bar on the reading-start edge marks the open page. */
 .mh-nav-item { position: relative; display: flex; align-items: center; gap: .75rem; border-radius: .6rem; padding: .6rem .75rem; font-weight: 600;
