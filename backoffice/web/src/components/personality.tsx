@@ -117,7 +117,7 @@ export function TraitProfile({ profile, summary, jobProfile }: { profile: TraitS
 function Bar({ value, label }: { value: number; label: string }) {
   const pct = Math.round(Math.max(0, Math.min(1, value)) * 100);
   return (
-    <div className="h-2.5 overflow-hidden rounded-full bg-aeblack-100" dir="ltr" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={label}>
+    <div className="h-2.5 overflow-hidden rounded-full bg-aeblack-100" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={label}>
       <div className="h-full rounded-full bg-primary-500" style={{ width: `${pct}%` }} />
     </div>
   );
