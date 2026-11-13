@@ -103,7 +103,8 @@ public sealed class ReportService(IAppDbContext db, IRequestLanguage language, I
 
         // Fairness: how each group (Emirati, other nationalities, not given) moves through the stages. The impact ratio compares
         // each group's rate with the best group's; below 0.8 (the four-fifths rule) is flagged when the group is large enough to tell.
-        static string Group(string n) => n.Length == 0 ? "not_given" : n == "United Arab Emirates" ? "emirati" : "other";
+        var uae = await db.Countries.AsNoTracking().Where(c => c.Code == Domain.Content.Country.UaeCode).Select(c => c.NameEn).FirstOrDefaultAsync(ct) ?? "United Arab Emirates";
+        string Group(string n) => n.Length == 0 ? "not_given" : n == uae ? "emirati" : "other";
         var groups = apps.GroupBy(a => Group(a.Nationality)).Select(g =>
         {
             var applied = g.Count();

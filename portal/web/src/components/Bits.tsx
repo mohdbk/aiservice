@@ -43,12 +43,18 @@ export function Steps({ current }: { current: 1 | 2 | 3 }) {
   );
 }
 
-export function Field({ id, label, hint, optional, prefix: P, children }: { id: string; label: string; hint?: string; optional?: boolean; prefix?: Icon; children: ReactNode }) {
+export function RequiredMark() {
+  return <span className="text-aered-600" aria-hidden="true"> *</span>;
+}
+
+/** A labelled field. Required fields carry a red asterisk (screen readers hear "required" from the input itself). */
+export function Field({ id, label, hint, optional, required, prefix: P, children }: { id: string; label: string; hint?: string; optional?: boolean; required?: boolean; prefix?: Icon; children: ReactNode }) {
   const { t } = useSite();
   return (
     <div className="aegov-form-control">
       <label htmlFor={id}>
         {label}
+        {required && <RequiredMark />}
         {optional && <span className="ms-1 font-normal text-aeblack-500">({t("common.optional")})</span>}
       </label>
       <div className="form-control-input">

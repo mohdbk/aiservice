@@ -16,6 +16,7 @@ public interface IAppDbContext
     DbSet<PortalText> PortalTexts { get; }
     DbSet<Department> Departments { get; }
     DbSet<JobLocation> JobLocations { get; }
+    DbSet<Country> Countries { get; }
     DbSet<StaffUser> StaffUsers { get; }
     DbSet<ApplicantAccount> ApplicantAccounts { get; }
     DbSet<AccountToken> AccountTokens { get; }

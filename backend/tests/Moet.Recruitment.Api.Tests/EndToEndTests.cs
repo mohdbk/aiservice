@@ -203,6 +203,15 @@ public class EndToEndTests
         var info = await Read(await admin.GetAsync("/api/backoffice/agent/info"));
         Assert.Equal(20, info.GetProperty("history_turns").GetInt32());
 
+        // Countries: HR's list, with a name per language; the portal offers it in the page's language, the English name is stored.
+        var countries = await Read(await admin.GetAsync("/api/backoffice/countries?q=AE"));
+        var uaeRow = countries.GetProperty("items").EnumerateArray().First(c => c.GetProperty("code").GetString() == "AE");
+        Assert.Equal("الإمارات العربية المتحدة", uaeRow.GetProperty("name_ar").GetString());
+        Assert.Equal(HttpStatusCode.Conflict, (await admin.PostAsync("/api/backoffice/countries", JsonBody(new { code = "AE", name_ar = "س", name_en = "Duplicate", is_active = true, sort_order = 0 }))).StatusCode);
+        var portalConfig = await Read(await portal.GetAsync("/api/portal/config?lang=ar"));
+        Assert.Contains(portalConfig.GetProperty("message").GetProperty("countries").EnumerateArray(),
+            c => c.GetProperty("value").GetString() == "United Arab Emirates" && c.GetProperty("label").GetString() == "الإمارات العربية المتحدة");
+
         // Time zone: a known zone is saved and used for times; an unknown one is refused; the default comes back.
         var settingsNow = await Read(await admin.GetAsync("/api/backoffice/settings"));
         Assert.Equal("Asia/Dubai", settingsNow.GetProperty("time_zone").GetString());

@@ -168,7 +168,8 @@ export function createMockFrappe() {
       if (!l) return out;
       lang(l);
       return { ...out, lang: l, dir: l === "ar" ? "rtl" : "ltr", text: { ...readText("en"), ...readText(l) }, main_site_url: "https://www.moet.gov.ae",
-        logo: "", logo_dark: "", allow_signup: true, max_cv_mb: 5, countries: ["United Arab Emirates", "Egypt", "India", "Jordan", "United Kingdom"] };
+        logo: "", logo_dark: "", allow_signup: true, max_cv_mb: 5, countries: [["Egypt", "مصر"], ["India", "الهند"], ["Jordan", "الأردن"], ["United Arab Emirates", "الإمارات العربية المتحدة"], ["United Kingdom", "المملكة المتحدة"]]
+          .map(([value, ar]) => ({ value, label: l === "ar" ? ar : value })) };
     },
     async jobs({ lang: l, q = "", department = "", location = "", page = 1 }) {
       lang(l);

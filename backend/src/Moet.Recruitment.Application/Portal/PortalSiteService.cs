@@ -46,7 +46,11 @@ public sealed class PortalSiteService(IAppDbContext db, ContentService content, 
         o["logo_dark"] = s.LogoDarkFileId != null ? "/api/logo?dark=1" : "";
         o["allow_signup"] = s.AllowSignup;
         o["max_cv_mb"] = (int)s.MaxCvMb;
-        o["countries"] = Countries.All;
+        // The countries HR keeps, in this language, ordered by HR's sort order then by name; the value stays the English name.
+        var l = lang == "ar" ? "ar" : "en";
+        o["countries"] = (await db.Countries.AsNoTracking().Where(c => c.IsActive).ToListAsync(ct))
+            .OrderBy(c => c.SortOrder).ThenBy(c => c.NameIn(l), StringComparer.Create(new System.Globalization.CultureInfo(l == "ar" ? "ar-AE" : "en-GB"), true))
+            .Select(c => new { value = c.NameEn, label = c.NameIn(l) }).ToList();
         return o;
     }
 

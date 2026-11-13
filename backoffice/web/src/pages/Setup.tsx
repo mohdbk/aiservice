@@ -90,6 +90,56 @@ export function Locations() {
   );
 }
 
+// ---------------- countries ----------------
+type CountryRow = { id: number; code: string; name_ar: string; name_en: string; is_active: boolean; sort_order: number; applications: number };
+
+/** The countries for country of residence and nationality on the application form, with a name per language. */
+export function Countries() {
+  const { t, lang } = useLang();
+  const en = lang === "en";
+  usePageTitle(t("setup.countries"));
+  const toast = useToast();
+  const list = useList<CountryRow>("/countries", ["active"]);
+  const [f, setF] = useState<Partial<CountryRow> | null>(null);
+  const { busy, error, run } = useSaving();
+  const save = async () => {
+    if (!f) return;
+    const body = { code: f.code || "", name_ar: f.name_ar || "", name_en: f.name_en || "", is_active: f.is_active ?? true, sort_order: f.sort_order ?? 0 };
+    if (await run(() => api(f.id ? `/countries/${f.id}` : "/countries", { method: f.id ? "PUT" : "POST", body })) !== undefined) {
+      toast(t("common.saved"));
+      setF(null);
+      list.reload();
+    }
+  };
+  return (
+    <>
+      <PageHeader title={t("setup.countries")} subtitle={t("setup.countries_hint")}
+        actions={<Button onClick={() => setF({ is_active: true, sort_order: 0 })} icon={<Plus size={20} aria-hidden="true" />}>{t("common.add")}</Button>} />
+      <DataTable list={list} rowKey={(d) => d.id} searchLabel={t("common.search")}
+        filters={[{ key: "active", label: t("common.status"), options: [{ value: "true", label: t("common.active") }, { value: "false", label: t("common.inactive") }] }]}
+        columns={[
+          { key: "name", label: t("common.name"), sort: en ? "name_en" : "name_ar", render: (d) => <button type="button" className="text-start font-semibold text-primary-700" onClick={() => setF(d)}>{en ? d.name_en : d.name_ar}</button> },
+          { key: "other", label: en ? t("setup.name_ar") : t("setup.name_en"), render: (d) => <span dir={en ? "rtl" : "ltr"}>{en ? d.name_ar : d.name_en}</span> },
+          { key: "code", label: t("setup.country_code"), sort: "code", render: (d) => <span dir="ltr" className="font-mono">{d.code}</span> },
+          { key: "order", label: t("roles.sort_order"), sort: "order", render: (d) => <span className="tabular-nums">{d.sort_order}</span> },
+          { key: "apps", label: t("setup.country_applications"), render: (d) => <span className="tabular-nums">{d.applications}</span> },
+          { key: "active", label: t("common.status"), render: (d) => <Badge tone={d.is_active ? "green" : "gray"}>{d.is_active ? t("common.active") : t("common.inactive")}</Badge> },
+        ]} />
+      {f && (
+        <Modal open onClose={() => setF(null)} title={f.id ? t("common.edit") : t("common.add")} footer={<>
+          <Button variant="outline" onClick={() => setF(null)}>{t("common.cancel")}</Button><Button busy={busy} onClick={save}>{t("common.save")}</Button></>}>
+          {error && <ErrorState error={error} />}
+          <TextInput required label={<FlagLabel lang="ar">{t("setup.name_ar")}</FlagLabel>} dir="rtl" value={f.name_ar || ""} onChange={(e) => setF({ ...f, name_ar: e.target.value })} />
+          <TextInput required label={<FlagLabel lang="en">{t("setup.name_en")}</FlagLabel>} hint={f.id ? t("setup.country_rename_hint") : undefined} dir="ltr" value={f.name_en || ""} onChange={(e) => setF({ ...f, name_en: e.target.value })} />
+          <TextInput required label={t("setup.country_code")} hint={t("setup.country_code_hint")} dir="ltr" maxLength={2} value={f.code || ""} onChange={(e) => setF({ ...f, code: e.target.value.toUpperCase().replace(/[^A-Z]/g, "") })} />
+          <TextInput label={t("roles.sort_order")} hint={t("setup.country_order_hint")} type="number" value={f.sort_order ?? 0} onChange={(e) => setF({ ...f, sort_order: Number(e.target.value) || 0 })} />
+          <Toggle label={t("common.active")} hint={t("setup.country_active_hint")} checked={f.is_active ?? true} onChange={(v) => setF({ ...f, is_active: v })} />
+        </Modal>
+      )}
+    </>
+  );
+}
+
 // ---------------- interview rounds ----------------
 type Round = { id: number; name: string; name_en: string; description: string; is_active: boolean; skills: string[] };
 

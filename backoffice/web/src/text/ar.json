@@ -1369,5 +1369,15 @@
  "asst.tool.propose_extra_time": "إعداد وقت إضافي",
  "error.criteria_invalid": "أدخل من 1 إلى 10 معايير، لكل منها صياغة ووزن من 1 إلى 100.",
  "error.cv_unreadable": "تعذرت قراءة السيرة الذاتية.",
- "error.from_address_invalid": "أدخل عنوان مرسل صحيحاً (عنوان المرسل)، مثل نفس عنوان اسم المستخدم."
+ "error.from_address_invalid": "أدخل عنوان مرسل صحيحاً (عنوان المرسل)، مثل نفس عنوان اسم المستخدم.",
+ "setup.countries": "الدول",
+ "setup.countries_hint": "قائمة دولة الإقامة والجنسية في نموذج التقديم. تظهر كل لغة باسمها؛ الترتيب الأصغر أولاً ثم حسب الاسم.",
+ "setup.country_code": "الرمز",
+ "setup.country_code_hint": "رمز ISO من حرفين، مثل AE.",
+ "setup.country_applications": "الطلبات",
+ "setup.country_rename_hint": "تحفظ الطلبات الاسم الإنجليزي؛ تغيير الاسم يحدّثها أيضاً.",
+ "setup.country_order_hint": "0 للترتيب الأبجدي؛ الرقم السالب يضعها في الأعلى.",
+ "setup.country_active_hint": "الدول غير النشطة لا تظهر في النموذج، وتبقى في الطلبات السابقة.",
+ "error.country_exists": "توجد دولة بهذا الرمز أو الاسم الإنجليزي.",
+ "nav.countries": "الدول"
 }

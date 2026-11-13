@@ -58,6 +58,24 @@ public class Department
         lang == SourceLanguageCode ? Name : Translations.FirstOrDefault(t => t.LanguageCode == lang)?.Name is { Length: > 0 } n ? n : Name;
 }
 
+/// <summary>
+/// A country in the list HR keeps, for the country of residence and nationality on the application form. Applications store
+/// the English name (so reports and filters stay stable); each language shows its own name.
+/// </summary>
+public class Country
+{
+    public int Id { get; set; }
+    public string Code { get; set; } = "";
+    public string NameAr { get; set; } = "";
+    public string NameEn { get; set; } = "";
+    public bool IsActive { get; set; } = true;
+    public int SortOrder { get; set; }
+
+    public const string UaeCode = "AE";
+
+    public string NameIn(string lang) => lang == "ar" ? NameAr : NameEn;
+}
+
 /// <summary>A place jobs are based in (an emirate, a city, an office abroad), with its name in each language.</summary>
 public class JobLocation
 {

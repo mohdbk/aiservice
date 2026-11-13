@@ -29,7 +29,7 @@ import TwoStep from "./pages/TwoStep";
 import Requisitions from "./pages/Requisitions";
 import PersonalitySettings from "./pages/PersonalitySettings";
 import Screening from "./pages/Screening";
-import { Departments, Locations, Password, PortalText, Rounds, Settings, Staff } from "./pages/Setup";
+import { Countries, Departments, Locations, Password, PortalText, Rounds, Settings, Staff } from "./pages/Setup";
 import SignIn from "./pages/SignIn";
 import TestEdit from "./pages/TestEdit";
 import Tests from "./pages/Tests";
@@ -71,6 +71,7 @@ function Guarded() {
         <Route path="two-step" element={<TwoStep />} />
         <Route path="setup/departments" element={<Departments />} />
         <Route path="setup/locations" element={<Locations />} />
+        <Route path="setup/countries" element={<Countries />} />
         <Route path="setup/rounds" element={<Rounds />} />
         <Route path="setup/settings" element={<Settings />} />
         <Route path="setup/portal-text" element={<PortalText />} />

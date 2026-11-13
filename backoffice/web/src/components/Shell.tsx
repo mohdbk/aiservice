@@ -1,7 +1,7 @@
 import { Dialog, Menu } from "@base-ui/react";
 import {
   Briefcase, CalendarCheck, CaretDown, ChatCircleDots, ClipboardText, Exam, FileText, Gear, Handshake, Key, List, ListChecks,
-  Cube, EnvelopeSimple, HardDrives, Robot, Scroll, SignOut, SquaresFour, Target, Tray, Translate, TreeStructure, UserCircle, Users, UsersThree, X, Brain, ChartBar, ClockCounterClockwise, Pulse, ChartLine, ShieldCheck, ChatText, UsersFour, ArrowsLeftRight, MapPin, Stamp, DeviceMobile } from "@phosphor-icons/react";
+  Cube, EnvelopeSimple, HardDrives, Robot, Scroll, SignOut, SquaresFour, Target, Tray, Translate, TreeStructure, UserCircle, Users, UsersThree, X, Brain, ChartBar, ClockCounterClockwise, Pulse, ChartLine, ShieldCheck, ChatText, UsersFour, ArrowsLeftRight, MapPin, Stamp, DeviceMobile, GlobeHemisphereEast } from "@phosphor-icons/react";
 import { ReactNode, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { api, useAuth, useLang } from "../core";
@@ -51,6 +51,7 @@ function useNav(): { group?: string; items: Item[] }[] {
       items: [
         { to: "/setup/departments", label: t("nav.departments"), icon: i(TreeStructure), admin: true },
         { to: "/setup/locations", label: t("nav.locations"), icon: i(MapPin), admin: true },
+        { to: "/setup/countries", label: t("nav.countries"), icon: i(GlobeHemisphereEast), admin: true },
         { to: "/setup/rounds", label: t("nav.rounds"), icon: i(UsersThree), admin: true },
         { to: "/setup/settings", label: t("nav.settings"), icon: i(Gear), admin: true },
         { to: "/setup/portal-text", label: t("nav.portal_text"), icon: i(Translate), admin: true },

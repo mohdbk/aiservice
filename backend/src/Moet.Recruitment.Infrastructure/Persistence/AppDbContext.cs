@@ -26,6 +26,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
     public DbSet<PortalText> PortalTexts => Set<PortalText>();
     public DbSet<Department> Departments => Set<Department>();
     public DbSet<JobLocation> JobLocations => Set<JobLocation>();
+    public DbSet<Country> Countries => Set<Country>();
     public DbSet<StaffUser> StaffUsers => Set<StaffUser>();
     public DbSet<ApplicantAccount> ApplicantAccounts => Set<ApplicantAccount>();
     public DbSet<AccountToken> AccountTokens => Set<AccountToken>();

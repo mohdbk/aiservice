@@ -19,6 +19,8 @@ public sealed record PortalTextInput(string Lang, string Key, string Text, bool 
 
 public sealed record LocationInput(string Name, string? NameEn, bool IsActive, int SortOrder);
 
+public sealed record CountryInput(string? Code, string? NameAr, string? NameEn, bool IsActive, int SortOrder);
+
 public sealed record NamedInput(string Name, string? NameEn, bool IsActive, string? Description, IReadOnlyList<string>? Skills);
 
 /// <summary>Screening questions, dashboard, lookups and settings.</summary>
@@ -253,6 +255,48 @@ public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor
         }
         await db.SaveChangesAsync(ct);
         return new { id = d.Id };
+    }
+
+    // ---------------- countries ----------------
+
+    public Task<PageResult<object>> CountriesAsync(ListQuery lq, bool? active, CancellationToken ct = default)
+    {
+        var q = db.Countries.AsNoTracking().AsQueryable();
+        if (active != null) q = q.Where(c => c.IsActive == active);
+        if (lq.Term.Length > 0) q = q.Where(c => c.NameEn.Contains(lq.Term) || c.NameAr.Contains(lq.Term) || c.Code == lq.Term.ToUpper());
+        var sorts = new Sorts<Country>("order", false).Add("order", c => c.SortOrder).Add("name_en", c => c.NameEn).Add("name_ar", c => c.NameAr).Add("code", c => c.Code);
+        return q.PageAsync(lq, sorts, c => (object)new
+        {
+            id = c.Id, code = c.Code, name_ar = c.NameAr, name_en = c.NameEn, is_active = c.IsActive, sort_order = c.SortOrder,
+            applications = db.JobApplications.Count(a => a.Country == c.NameEn || a.Nationality == c.NameEn),
+        }, ct);
+    }
+
+    public async Task<object> SaveCountryAsync(int? id, CountryInput input, CancellationToken ct = default)
+    {
+        var code = (input.Code ?? "").Trim().ToUpperInvariant();
+        var ar = TextUtil.NoEmDash(TextUtil.Clip(input.NameAr?.Trim(), 140));
+        var en = TextUtil.NoEmDash(TextUtil.Clip(input.NameEn?.Trim(), 140));
+        if (code.Length != 2 || !code.All(char.IsAsciiLetterUpper)) throw DomainException.Invalid("invalid_value", new Dictionary<string, object?> { ["field"] = "code" });
+        if (ar.Length == 0 || en.Length == 0) throw DomainException.Invalid("name_required");
+        if (await db.Countries.AnyAsync(c => c.Id != (id ?? 0) && (c.Code == code || c.NameEn == en), ct)) throw DomainException.Conflict("country_exists");
+        Country c;
+        if (id == null) db.Countries.Add(c = new Country());
+        else c = await db.Countries.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound();
+        var oldEn = c.NameEn;
+        c.Code = code;
+        c.NameAr = ar;
+        c.NameEn = en;
+        c.IsActive = input.IsActive;
+        c.SortOrder = Math.Clamp(input.SortOrder, -1000, 1000);
+        // Applications keep the English name: a renamed country is renamed on them too.
+        if (id != null && oldEn.Length > 0 && oldEn != en)
+        {
+            await db.JobApplications.Where(a => a.Country == oldEn).ExecuteUpdateAsync(u => u.SetProperty(a => a.Country, en), ct);
+            await db.JobApplications.Where(a => a.Nationality == oldEn).ExecuteUpdateAsync(u => u.SetProperty(a => a.Nationality, en), ct);
+        }
+        await db.SaveChangesAsync(ct);
+        return new { id = c.Id };
     }
 
     public Task<PageResult<object>> RoundsAsync(ListQuery lq, CancellationToken ct = default)

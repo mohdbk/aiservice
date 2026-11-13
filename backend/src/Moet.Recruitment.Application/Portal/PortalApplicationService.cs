@@ -61,7 +61,7 @@ public sealed class PortalApplicationService(
         {
             Code = await codes.NextAsync(CodeKind.JobApplication, ct), JobOpeningId = job.Id, ApplicantAccountId = user.Id,
             FullName = user.FullName, Email = user.Email, Phone = TextUtil.Clip(input.Phone!.Trim(), 30),
-            Country = Countries.IsKnown(input.Country) ? input.Country! : "", Nationality = Countries.IsKnown(input.Nationality) ? input.Nationality! : "", CoverNote = TextUtil.Clip(input.CoverNote?.Trim(), 4000),
+            Country = await KnownCountryAsync(input.Country, ct), Nationality = await KnownCountryAsync(input.Nationality, ct), CoverNote = TextUtil.Clip(input.CoverNote?.Trim(), 4000),
             Status = ApplicationStatus.Open, LanguageCode = lang, DeclarationAcceptedAt = now, CvFileId = file.Id,
             ScreeningOutcome = evaluation.Outcome(asked), CreatedAt = now, UpdatedAt = now,
             CvAnalysis = new CvAnalysis { Status = s.AutoScoreApplications ? CvAnalysisStatus.Pending : CvAnalysisStatus.Skipped, UpdatedAt = now },
@@ -103,6 +103,14 @@ public sealed class PortalApplicationService(
             new Dictionary<string, string> { ["job_title"] = job.In(lang).Title, ["reference"] = app.Reference }, ct);
         await db.SaveChangesAsync(ct);
         return new { application = app.Code, reference = app.Reference };
+    }
+
+    /// <summary>A country from HR's list (by its English name, or its Arabic name or code from an older client), stored in English; "" otherwise.</summary>
+    async Task<string> KnownCountryAsync(string? value, CancellationToken ct)
+    {
+        var v = value?.Trim() ?? "";
+        if (v.Length == 0) return "";
+        return await db.Countries.AsNoTracking().Where(c => c.NameEn == v || c.NameAr == v || c.Code == v).Select(c => c.NameEn).FirstOrDefaultAsync(ct) ?? "";
     }
 
     static string Slug(string name)

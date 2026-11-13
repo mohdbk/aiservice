@@ -207,6 +207,9 @@ public static class BackofficeEndpoints
         var setup = api.MapGroup("").RequireAuthorization(StaffPolicies.Admin);
         setup.MapGet("/approval-settings", (ApprovalService s, CancellationToken ct) => s.SettingsAsync(ct));
         setup.MapPut("/approval-settings", (ApprovalSettingsInput b, ApprovalService s, CancellationToken ct) => s.SaveSettingsAsync(b, ct));
+        setup.MapGet("/countries", ([AsParameters] ListQuery lq, bool? active, BackofficeSetupService s, CancellationToken ct) => s.CountriesAsync(lq, active, ct));
+        setup.MapPost("/countries", (CountryInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveCountryAsync(null, b, ct));
+        setup.MapPut("/countries/{id:int}", (int id, CountryInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveCountryAsync(id, b, ct));
         setup.MapGet("/locations", ([AsParameters] ListQuery lq, BackofficeSetupService s, CancellationToken ct) => s.LocationsAsync(lq, ct));
         setup.MapPost("/locations", (LocationInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveLocationAsync(null, b, ct));
         setup.MapPut("/locations/{id:int}", (int id, LocationInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveLocationAsync(id, b, ct));

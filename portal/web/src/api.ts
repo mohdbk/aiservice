@@ -61,7 +61,8 @@ export type SiteConfig = {
   logo_dark: string;
   allow_signup: boolean;
   max_cv_mb: number;
-  countries: string[];
+  /** HR's country list: the value is the English name (what is stored), the label is in the page's language. */
+  countries: ({ value: string; label: string } | string)[];
 };
 export type Salary = { currency: string; min: number; max: number; per: string } | null;
 export type Job = {

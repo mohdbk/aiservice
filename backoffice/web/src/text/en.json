@@ -1369,5 +1369,15 @@
  "asst.tool.propose_extra_time": "Preparing extra time",
  "error.criteria_invalid": "Give 1 to 10 criteria, each with wording and a weight from 1 to 100.",
  "error.cv_unreadable": "The CV could not be read.",
- "error.from_address_invalid": "Enter a valid sender address (From Address), for example the same address as the user name."
+ "error.from_address_invalid": "Enter a valid sender address (From Address), for example the same address as the user name.",
+ "setup.countries": "Countries",
+ "setup.countries_hint": "The list for country of residence and nationality on the application form. Each language shows its own name; lower sort order comes first, then by name.",
+ "setup.country_code": "Code",
+ "setup.country_code_hint": "Two-letter ISO code, for example AE.",
+ "setup.country_applications": "Applications",
+ "setup.country_rename_hint": "Applications store the English name; renaming updates them too.",
+ "setup.country_order_hint": "0 for alphabetical order; a negative number puts it at the top.",
+ "setup.country_active_hint": "Inactive countries are not offered on the form; past applications keep them.",
+ "error.country_exists": "A country with this code or English name already exists.",
+ "nav.countries": "Countries"
 }

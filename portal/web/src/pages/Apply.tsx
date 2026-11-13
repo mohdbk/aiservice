@@ -3,7 +3,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, ApiError, fileToBase64, Job, ScreeningQuestion } from "../api";
 import { useAuth } from "../auth";
-import { Field, IconBox, Steps } from "../components/Bits";
+import { Field, IconBox, RequiredMark, Steps } from "../components/Bits";
 import { Alert, Skeleton, Spinner } from "../components/States";
 import { usePageTitle, useSite } from "../site";
 import { useAsync } from "../useAsync";
@@ -78,6 +78,8 @@ export default function Apply() {
   const [phone, setPhone] = useState("");
   const [country, setCountry] = useState("");
   const [nationality, setNationality] = useState("");
+  // The list comes as { value, label } (an older back end sends plain names).
+  const countries = (config.countries || []).map((c: { value: string; label: string } | string) => (typeof c === "string" ? { value: c, label: c } : c));
   const [note, setNote] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [declared, setDeclared] = useState(false);
@@ -140,25 +142,25 @@ export default function Apply() {
             <div className="relative flex min-h-10 min-w-0 flex-col justify-center ps-[3.25rem]"><dt className="text-sm text-aeblack-600"><IconBox icon={Envelope} className="absolute start-0 top-1/2 -translate-y-1/2" />{t("apply.email")}</dt><dd className="truncate font-medium text-aeblack-900"><bdi>{user?.email}</bdi></dd></div>
           </dl>
           <div className="grid gap-5 md:grid-cols-2">
-            <Field id="phone" label={t("apply.phone")} hint={t("apply.phone_hint")} prefix={Phone}>
+            <Field id="phone" label={t("apply.phone")} hint={t("apply.phone_hint")} required prefix={Phone}>
               <input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" required maxLength={30} dir="ltr" className="rtl:text-right" aria-describedby="phone-hint" />
             </Field>
-            <Field id="country" label={t("apply.country")} prefix={GlobeHemisphereEast}>
+            <Field id="country" label={t("apply.country")} optional prefix={GlobeHemisphereEast}>
               <select id="country" value={country} onChange={(e) => setCountry(e.target.value)} autoComplete="country-name">
                 <option value="">{t("apply.country_choose")}</option>
-                {config.countries.map((c) => <option key={c} value={c}>{c}</option>)}
+                {countries.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </Field>
             <Field id="nationality" label={t("apply.nationality")} optional prefix={Flag}>
               <select id="nationality" value={nationality} onChange={(e) => setNationality(e.target.value)}>
                 <option value="">{t("apply.country_choose")}</option>
-                {config.countries.map((c) => <option key={c} value={c}>{c}</option>)}
+                {countries.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </Field>
           </div>
 
           <div>
-            <p className="mb-1 block text-sm font-medium leading-6 text-aeblack-800" id="cv-label">{t("apply.cv")}</p>
+            <p className="mb-1 block text-sm font-medium leading-6 text-aeblack-800" id="cv-label">{t("apply.cv")}<RequiredMark /></p>
             <input id="cv" type="file" className="peer sr-only" accept=".pdf,.docx,.jpg,.jpeg,.png" aria-labelledby="cv-label cv-choose" aria-describedby="cv-hint"
               onChange={(e) => setFile(e.target.files?.[0] || null)} />
             <label htmlFor="cv" className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-8 text-center transition peer-focus-visible:ring-2 peer-focus-visible:ring-primary-600 ${file ? "border-aegreen-500 bg-aegreen-50" : "border-primary-300 bg-whitely-50 hover:border-primary-500 hover:bg-primary-50"}`}>
@@ -193,7 +195,7 @@ export default function Apply() {
 
           <div className="aegov-check-item">
             <input id="declaration" type="checkbox" checked={declared} onChange={(e) => setDeclared(e.target.checked)} required />
-            <label htmlFor="declaration">{t("apply.declaration")}</label>
+            <label htmlFor="declaration">{t("apply.declaration")}<RequiredMark /></label>
           </div>
 
           <div ref={errRef}>{error ? <Alert tone="error" title={errorText(error)} /> : null}</div>

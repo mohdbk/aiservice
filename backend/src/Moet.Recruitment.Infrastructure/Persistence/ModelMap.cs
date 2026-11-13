@@ -26,6 +26,7 @@ static class ModelMap
             e.ToTable("JobLocation", "core");
             e.HasMany(x => x.Translations).WithOne().HasForeignKey(t => t.JobLocationId).OnDelete(DeleteBehavior.Cascade);
         });
+        m.Entity<Country>(e => e.ToTable("Country", "core"));
         m.Entity<JobLocationTranslation>(e => { e.ToTable("JobLocationTranslation", "core"); e.HasKey(x => new { x.JobLocationId, x.LanguageCode }); });
         m.Entity<DepartmentTranslation>(e => { e.ToTable("DepartmentTranslation", "core"); e.HasKey(x => new { x.DepartmentId, x.LanguageCode }); });
 
