@@ -16,6 +16,11 @@ public class StaffUser
     public DateTime? LastSignInAt { get; set; }
     /// <summary>This person's assistant messages per day; null uses the assistant's default and 0 turns it off for them.</summary>
     public short? AgentDailyLimit { get; set; }
+    /// <summary>Two-step sign-in: the authenticator secret (encrypted), one being set up, when it was turned on, and the last code's step (each code works once).</summary>
+    public string TotpSecretProtected { get; set; } = "";
+    public string TotpPendingProtected { get; set; } = "";
+    public DateTime? TotpEnabledAt { get; set; }
+    public long TotpLastStep { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 

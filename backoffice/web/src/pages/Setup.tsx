@@ -230,7 +230,7 @@ export function PortalText() {
 }
 
 // ---------------- staff accounts ----------------
-type StaffRow = { id: number; email: string; full_name: string; role: string; is_enabled: boolean; last_sign_in_at: string | null };
+type StaffRow = { id: number; email: string; full_name: string; role: string; is_enabled: boolean; last_sign_in_at: string | null; two_step?: boolean };
 
 export function Staff() {
   const { t, date } = useLang();
@@ -262,6 +262,7 @@ export function Staff() {
           { key: "email", label: t("auth.email"), sort: "email", render: (u) => <span dir="ltr">{u.email}</span> },
           { key: "role", label: t("setup.role"), sort: "role", render: (u) => t(`role.${u.role}`) },
           { key: "enabled", label: t("setup.enabled"), render: (u) => <Badge tone={u.is_enabled ? "green" : "gray"}>{u.is_enabled ? t("common.yes") : t("common.no")}</Badge> },
+          { key: "two_step", label: t("twostep.title"), render: (u) => <Badge tone={u.two_step ? "green" : "gray"}>{u.two_step ? t("twostep.on") : t("twostep.off")}</Badge> },
           { key: "last", label: t("setup.last_sign_in"), sort: "last_sign_in", render: (u) => date(u.last_sign_in_at, true) },
         ]} />
       {f && (
@@ -273,6 +274,16 @@ export function Staff() {
           <SelectInput required label={t("setup.role")} value={f.role || "Recruiter"} onChange={(e) => setF({ ...f, role: e.target.value })} options={roles} />
           <TextInput label={t("auth.password")} type="password" autoComplete="new-password" hint={t("setup.password_hint")} value={f.password || ""} onChange={(e) => setF({ ...f, password: e.target.value })} />
           <Toggle label={t("setup.enabled")} checked={f.is_enabled ?? true} onChange={(v) => setF({ ...f, is_enabled: v })} />
+          {f.id && f.two_step && (
+            <div className="rounded-lg border border-aeblack-100 p-3">
+              <p className="text-sm font-semibold">{t("twostep.title")}: {t("twostep.on")}</p>
+              <p className="mb-2 text-xs text-aeblack-500">{t("twostep.reset_hint")}</p>
+              <Button size="sm" variant="outline" busy={busy} onClick={async () => {
+                if (!window.confirm(t("twostep.reset_confirm"))) return;
+                if (await run(() => api(`/staff/${f.id}/two-step/reset`, { body: {} })) !== undefined) { toast(t("common.saved")); setF(null); list.reload(); }
+              }}>{t("twostep.reset")}</Button>
+            </div>
+          )}
         </Modal>
       )}
     </>

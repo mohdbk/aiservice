@@ -1,4 +1,4 @@
-import { Eye, EyeSlash, LockKey, SignIn as SignInIcon } from "@phosphor-icons/react";
+import { DeviceMobile, Eye, EyeSlash, LockKey, SignIn as SignInIcon } from "@phosphor-icons/react";
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { LangFlag } from "../components/flags";
@@ -16,6 +16,9 @@ export default function SignIn() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
+  // Two-step sign-in: after a right password, people who turned it on are asked for the code from their authenticator app.
+  const [needCode, setNeedCode] = useState(false);
+  const [code, setCode] = useState("");
   const { busy, error, run } = useSaving();
   useEffect(() => {
     document.documentElement.lang = lang;
@@ -27,9 +30,10 @@ export default function SignIn() {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const m = await run(() => api<Me>("/sign-in", { body: { email, password } }));
+    const m = await run(() => api<Me>("/sign-in", { body: needCode ? { email, password, code } : { email, password } }));
     if (m) setMe(m);
   };
+  useEffect(() => { if (error?.code === "code_required") setNeedCode(true); }, [error]);
   const other = lang === "ar" ? "en" : "ar";
   return (
     <div className="mc-hero flex min-h-screen flex-col">
@@ -47,7 +51,7 @@ export default function SignIn() {
             <h1 className="flex items-center gap-2 text-2xl font-bold text-aeblack-900"><LockKey size={24} className="text-primary-600" aria-hidden="true" />{t("auth.title")}</h1>
             <p className="mt-2 text-sm text-aeblack-600">{t("auth.intro")}</p>
           </div>
-          {error && <ErrorState error={error} />}
+          {error && error.code !== "code_required" && <ErrorState error={error} />}
           <TextInput label={t("auth.email")} type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} />
           <div className="relative">
             <TextInput label={t("auth.password")} type={show ? "text" : "password"} dir="ltr" autoComplete="current-password" required style={{ paddingRight: "3.25rem" }} value={password} onChange={(e) => setPassword(e.target.value)} />
@@ -56,6 +60,13 @@ export default function SignIn() {
               {show ? <EyeSlash size={24} /> : <Eye size={24} />}
             </button>
           </div>
+          {needCode && (
+            <div className="space-y-2">
+              <p className="flex items-center gap-2 text-sm text-aeblack-600"><DeviceMobile size={20} className="text-primary-600" aria-hidden="true" />{t("twostep.enter_code")}</p>
+              <TextInput label={t("twostep.code")} inputMode="numeric" autoComplete="one-time-code" dir="ltr" maxLength={7} required autoFocus
+                value={code} onChange={(e) => setCode(e.target.value.replace(/[^0-9 ]/g, ""))} />
+            </div>
+          )}
           <Button type="submit" className="btn-block w-full" busy={busy} icon={<SignInIcon size={20} aria-hidden="true" />}>{t("auth.sign_in")}</Button>
         </form>
       </main>

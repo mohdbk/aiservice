@@ -13,7 +13,9 @@ namespace Moet.Recruitment.Api.Endpoints;
 /// <summary>The recruitment backoffice's API (/api/backoffice). Staff sign in with a cookie; changes need the X-Backoffice header.</summary>
 public static class BackofficeEndpoints
 {
-    public sealed record SignInBody(string? Email, string? Password);
+    public sealed record SignInBody(string? Email, string? Password, string? Code = null);
+    public sealed record CodeBody(string? Code);
+    public sealed record DisableTwoStepBody(string? Password, string? Code);
     public sealed record PasswordBody(string? Current, string? Next);
     public sealed record StatusBody(string? Status);
     public sealed record NoteBody(string? Text);
@@ -29,7 +31,7 @@ public static class BackofficeEndpoints
 
         api.MapPost("/sign-in", async (SignInBody b, HttpContext ctx, StaffAuthService auth, CancellationToken ct) =>
         {
-            var s = await auth.SignInAsync(b.Email, b.Password, ct);
+            var s = await auth.SignInAsync(b.Email, b.Password, b.Code, ct);
             await ctx.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, StaffCookie.Principal(s));
             return Results.Ok(Me(s.FullName, s.Email, s.Role.ToString(), s.Id));
         }).RequireRateLimiting("sign-in");
@@ -48,6 +50,13 @@ public static class BackofficeEndpoints
             await ctx.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return Results.Ok(new { ok = true });
         });
+
+        // two-step sign-in (the signed-in person's own)
+        staff.MapGet("/two-step", (ClaimsPrincipal u, StaffAuthService auth, CancellationToken ct) => auth.TwoStepAsync(int.Parse(u.FindFirstValue("sid")!), ct));
+        staff.MapPost("/two-step/setup", (ClaimsPrincipal u, StaffAuthService auth, CancellationToken ct) => auth.SetUpTwoStepAsync(int.Parse(u.FindFirstValue("sid")!), ct));
+        staff.MapPost("/two-step/enable", (CodeBody b, ClaimsPrincipal u, StaffAuthService auth, CancellationToken ct) => auth.EnableTwoStepAsync(int.Parse(u.FindFirstValue("sid")!), b.Code, ct));
+        staff.MapPost("/two-step/disable", (DisableTwoStepBody b, ClaimsPrincipal u, StaffAuthService auth, CancellationToken ct) =>
+            auth.DisableTwoStepAsync(int.Parse(u.FindFirstValue("sid")!), b.Password, b.Code, ct));
 
         // dashboard and lookups
         staff.MapGet("/dashboard", (BackofficeSetupService s, CancellationToken ct) => s.DashboardAsync(ct));
@@ -261,6 +270,7 @@ public static class BackofficeEndpoints
         sys.MapPost("/text-settings/test", (TextTestBody b, TextService s, CancellationToken ct) => s.TestAsync(b.To, ct));
         sys.MapGet("/assistant-usage", (SystemService s, CancellationToken ct) => s.AssistantUsageAsync(ct));
         sys.MapPut("/assistant-usage/{staffId:int}", (int staffId, AssistantLimitBody b, SystemService s, CancellationToken ct) => s.SetAssistantLimitAsync(staffId, b.Limit, ct));
+        sys.MapPost("/staff/{id:int}/two-step/reset", (int id, StaffAuthService s, CancellationToken ct) => s.ResetTwoStepAsync(id, ct));
         sys.MapGet("/health-alerts", (HealthAlertService s, CancellationToken ct) => s.GetAsync(ct));
         sys.MapPut("/health-alerts", (HealthAlertInput b, HealthAlertService s, CancellationToken ct) => s.SaveAsync(b, ct));
         sys.MapPost("/health-alerts/check", async (HealthAlertService s, CancellationToken ct) =>

@@ -558,3 +558,21 @@ public class HealthAlertTests
         Assert.Equal(2, s.Extra().Count);
     }
 }
+
+public class TotpTests
+{
+    [Fact]
+    public void Matches_the_rfc_6238_test_vector_and_refuses_reuse()
+    {
+        // RFC 6238 appendix B: secret "12345678901234567890", time 59 s gives 94287082 (8 digits), whose last 6 are 287082.
+        var secret = System.Text.Encoding.ASCII.GetBytes("12345678901234567890");
+        Assert.Equal("287082", Moet.Recruitment.Domain.Identity.Totp.Code(secret, 1));
+        var at = DateTimeOffset.FromUnixTimeSeconds(59).UtcDateTime;
+        Assert.Equal(1, Moet.Recruitment.Domain.Identity.Totp.Verify(secret, "287 082", at, 0));
+        Assert.Null(Moet.Recruitment.Domain.Identity.Totp.Verify(secret, "287082", at, 1));   // used already
+        Assert.Null(Moet.Recruitment.Domain.Identity.Totp.Verify(secret, "123456", at, 0));
+        var b32 = Moet.Recruitment.Domain.Identity.Totp.Base32(secret);
+        Assert.Equal("GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ", b32);
+        Assert.Equal(secret, Moet.Recruitment.Domain.Identity.Totp.FromBase32(b32));
+    }
+}

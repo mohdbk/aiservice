@@ -489,6 +489,25 @@ public class EndToEndTests
         var recruiter = app.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
         recruiter.DefaultRequestHeaders.Add("X-Backoffice", "1");
         Assert.True((await recruiter.PostAsync("/api/backoffice/sign-in", JsonBody(new { email = "recruiter@moet.test", password = "Recruiter-Password-123" }))).IsSuccessStatusCode);
+        // Two-step sign-in: the recruiter adds the authenticator, then needs a code to sign in (each code works once).
+        var setup2 = await Read(await recruiter.PostAsync("/api/backoffice/two-step/setup", JsonBody(new { })));
+        var secret = Moet.Recruitment.Domain.Identity.Totp.FromBase32(setup2.GetProperty("secret").GetString()!);
+        Assert.StartsWith("otpauth://totp/", setup2.GetProperty("uri").GetString());
+        Assert.Equal(HttpStatusCode.BadRequest, (await recruiter.PostAsync("/api/backoffice/two-step/enable", JsonBody(new { code = "000000" }))).StatusCode);
+        var step = Moet.Recruitment.Domain.Identity.Totp.StepAt(DateTime.UtcNow);
+        Assert.True((await recruiter.PostAsync("/api/backoffice/two-step/enable", JsonBody(new { code = Moet.Recruitment.Domain.Identity.Totp.Code(secret, step) }))).IsSuccessStatusCode);
+        var second = app.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
+        second.DefaultRequestHeaders.Add("X-Backoffice", "1");
+        var noCode = await second.PostAsync("/api/backoffice/sign-in", JsonBody(new { email = "recruiter@moet.test", password = "Recruiter-Password-123" }));
+        Assert.Equal(HttpStatusCode.Unauthorized, noCode.StatusCode);
+        Assert.Contains("code_required", await noCode.Content.ReadAsStringAsync());
+        Assert.True((await second.PostAsync("/api/backoffice/sign-in", JsonBody(new { email = "recruiter@moet.test", password = "Recruiter-Password-123", code = Moet.Recruitment.Domain.Identity.Totp.Code(secret, step + 1) }))).IsSuccessStatusCode);
+        var staffList = await Read(await admin.GetAsync("/api/backoffice/staff?q=recruiter"));
+        var recruiterId = staffList.GetProperty("items")[0].GetProperty("id").GetInt32();
+        Assert.True(staffList.GetProperty("items")[0].GetProperty("two_step").GetBoolean());
+        Assert.True((await admin.PostAsync($"/api/backoffice/staff/{recruiterId}/two-step/reset", JsonBody(new { }))).IsSuccessStatusCode);
+        Assert.True((await recruiter.PostAsync("/api/backoffice/sign-in", JsonBody(new { email = "recruiter@moet.test", password = "Recruiter-Password-123" }))).IsSuccessStatusCode);
+
         var pending = await Read(await recruiter.PostAsync("/api/backoffice/jobs", JsonBody(new
         {
             title = "مدقق", description = "<p>تدقيق</p>", department_id = (int?)null, location = "دبي", employment_type = "FullTime", status = "Open", is_published = true,

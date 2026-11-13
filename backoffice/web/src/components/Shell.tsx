@@ -1,7 +1,7 @@
 import { Dialog, Menu } from "@base-ui/react";
 import {
   Briefcase, CalendarCheck, CaretDown, ChatCircleDots, ClipboardText, Exam, FileText, Gear, Handshake, Key, List, ListChecks,
-  Cube, EnvelopeSimple, HardDrives, Robot, Scroll, SignOut, SquaresFour, Target, Tray, Translate, TreeStructure, UserCircle, Users, UsersThree, X, Brain, ChartBar, ClockCounterClockwise, Pulse, ChartLine, ShieldCheck, ChatText, UsersFour, ArrowsLeftRight, MapPin, Stamp } from "@phosphor-icons/react";
+  Cube, EnvelopeSimple, HardDrives, Robot, Scroll, SignOut, SquaresFour, Target, Tray, Translate, TreeStructure, UserCircle, Users, UsersThree, X, Brain, ChartBar, ClockCounterClockwise, Pulse, ChartLine, ShieldCheck, ChatText, UsersFour, ArrowsLeftRight, MapPin, Stamp, DeviceMobile } from "@phosphor-icons/react";
 import { ReactNode, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { api, useAuth, useLang } from "../core";
@@ -165,6 +165,7 @@ function UserMenu() {
             </div>
             <Menu.Separator className="my-1 h-px bg-aeblack-100" />
             <Menu.Item className="mh-item" onClick={() => nav(to("/password"))}><Key size={20} aria-hidden="true" />{t("auth.change_password")}</Menu.Item>
+            <Menu.Item className="mh-item" onClick={() => nav(to("/two-step"))}><DeviceMobile size={20} aria-hidden="true" />{t("twostep.title")}</Menu.Item>
             <Menu.Item className="mh-item" onClick={signOut}><SignOut size={20} aria-hidden="true" />{t("auth.sign_out")}</Menu.Item>
           </Menu.Popup>
         </Menu.Positioner>

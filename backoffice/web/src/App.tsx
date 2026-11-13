@@ -25,6 +25,7 @@ import Reports from "./pages/Reports";
 import { AssistantUsage, AuditLog, DataProtection, HandOffSettings, HealthPage, TextMessages } from "./pages/System";
 import TalentPool from "./pages/TalentPool";
 import Approvals from "./pages/Approvals";
+import TwoStep from "./pages/TwoStep";
 import Requisitions from "./pages/Requisitions";
 import PersonalitySettings from "./pages/PersonalitySettings";
 import Screening from "./pages/Screening";
@@ -67,6 +68,7 @@ function Guarded() {
         <Route path="marking/:id" element={<Marking />} />
         <Route path="assistant" element={<Assistant />} />
         <Route path="password" element={<Password />} />
+        <Route path="two-step" element={<TwoStep />} />
         <Route path="setup/departments" element={<Departments />} />
         <Route path="setup/locations" element={<Locations />} />
         <Route path="setup/rounds" element={<Rounds />} />
