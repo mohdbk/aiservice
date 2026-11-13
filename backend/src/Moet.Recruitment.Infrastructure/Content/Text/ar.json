@@ -341,5 +341,15 @@
  "common.back": "رجوع",
  "apply.nationality": "الجنسية",
  "error.file_rejected": "تعذر قبول هذا الملف. ارفع ملفاً آخر.",
- "error.scan_unavailable": "لا يمكن رفع الملفات حالياً. حاول بعد دقائق."
+ "error.scan_unavailable": "لا يمكن رفع الملفات حالياً. حاول بعد دقائق.",
+ "app.timeline": "ما تم حتى الآن",
+ "app.tl.submitted": "تم تقديم الطلب",
+ "app.tl.assessment_invited": "دعوة إلى تقييم",
+ "app.tl.assessment_done": "تم إكمال التقييم",
+ "app.tl.interview_planned": "تم تحديد موعد المقابلة",
+ "app.tl.interview_done": "تمت المقابلة",
+ "app.tl.offer_sent": "تم إرسال عرض العمل",
+ "app.tl.offer_accepted": "تم قبول العرض",
+ "app.tl.offer_declined": "تم رفض العرض",
+ "app.tl.closed": "تم إغلاق الطلب"
 }

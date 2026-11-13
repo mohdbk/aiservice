@@ -364,6 +364,7 @@ public class EndToEndTests
         var detailWithTimes = await Read(await portal.GetAsync($"/api/portal/application?lang=en&email=layla@example.test&epoch={epoch}&name={appCode}"));
         var slots = detailWithTimes.GetProperty("message").GetProperty("booking").GetProperty("slots");
         Assert.Equal(2, slots.GetArrayLength());
+        Assert.Equal("submitted", detailWithTimes.GetProperty("message").GetProperty("timeline")[0].GetProperty("key").GetString());
         var picked = await Read(await portal.PostAsync("/api/portal/book_interview", JsonBody(new { email = "layla@example.test", epoch, name = appCode, slot = slots[1].GetProperty("id").GetInt32() })));
         Assert.Equal("13:00", picked.GetProperty("message").GetProperty("from").GetString());
         Assert.Equal(HttpStatusCode.Conflict, (await portal.PostAsync("/api/portal/book_interview", JsonBody(new { email = "layla@example.test", epoch, name = appCode, slot = slots[0].GetProperty("id").GetInt32() }))).StatusCode);

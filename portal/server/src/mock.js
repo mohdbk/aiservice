@@ -238,7 +238,8 @@ export function createMockFrappe() {
           { position: "Software Engineer", employer: "Gulf Tech", start: "2018-01", end: "2021-02" }],
           education: [{ degree: "MSc Computer Science", institution: "Khalifa University", end: "2017" }],
           skills: ["Python", "LLM agents", "Kubernetes", "PostgreSQL", "Arabic NLP"], languages: ["Arabic (Native)", "English (Fluent)"],
-          certificates: ["AWS Solutions Architect"] } : null };
+          certificates: ["AWS Solutions Architect"] } : null,
+        timeline: [{ key: "submitted", date: a.submitted, state: "done" }].concat(a.status.code === "interview" ? [{ key: "interview_planned", date: a.submitted, state: "current" }] : []) };
     },
     async addCorrection(u, id, note) {
       own(u, id);

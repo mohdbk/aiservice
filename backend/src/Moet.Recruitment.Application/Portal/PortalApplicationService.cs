@@ -188,7 +188,39 @@ public sealed class PortalApplicationService(
             details_state = state, details = Details(cv?.ProfileJson, cv?.YearsOfExperience),
             booking = await bookings.OpenForCandidateAsync(a.Id, lang, ct),
             offer = await OfferAsync(a.Id, lang, ct),
+            timeline = await TimelineAsync(a, ct),
         };
+    }
+
+    /// <summary>
+    /// What has happened with the application so far, oldest first: submitted, assessments, interviews, the offer and the
+    /// outcome. Dates only, in neutral words (never who reviewed it or how).
+    /// </summary>
+    async Task<List<object>> TimelineAsync(JobApplication a, CancellationToken ct)
+    {
+        static string D(DateTime d) => d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var now = clock.UtcNow;
+        var steps = new List<(DateTime At, string Key, string State)> { (a.CreatedAt, "submitted", "done") };
+        var invitations = await db.Invitations.AsNoTracking().Where(i => i.JobApplicationId == a.Id)
+            .Select(i => new { i.CreatedAt, i.Status, SubmittedAt = i.Attempts.Max(t => t.SubmittedAt) }).ToListAsync(ct);
+        foreach (var i in invitations)
+        {
+            if (i.Status is InvitationStatus.Submitted or InvitationStatus.Marked) steps.Add((i.SubmittedAt ?? i.CreatedAt, "assessment_done", "done"));
+            else if (i.Status is InvitationStatus.Invited or InvitationStatus.InProgress) steps.Add((i.CreatedAt, "assessment_invited", "current"));
+        }
+        var interviews = await db.Interviews.AsNoTracking().Where(i => i.JobApplicationId == a.Id && i.Status != InterviewStatus.Cancelled)
+            .Select(i => new { i.StartsAt }).ToListAsync(ct);
+        foreach (var i in interviews) steps.Add((i.StartsAt, i.StartsAt <= now ? "interview_done" : "interview_planned", i.StartsAt <= now ? "done" : "current"));
+        var offer = await db.JobOffers.AsNoTracking().Where(o => o.JobApplicationId == a.Id && o.Status != OfferStatus.Draft && o.Status != OfferStatus.Withdrawn)
+            .OrderByDescending(o => o.CreatedAt).Select(o => new { o.Status, o.CreatedAt, o.UpdatedAt }).FirstOrDefaultAsync(ct);
+        if (offer != null)
+        {
+            steps.Add((offer.CreatedAt, "offer_sent", offer.Status == OfferStatus.Sent ? "current" : "done"));
+            if (offer.Status == OfferStatus.Accepted) steps.Add((offer.UpdatedAt, "offer_accepted", "done"));
+            if (offer.Status == OfferStatus.Declined) steps.Add((offer.UpdatedAt, "offer_declined", "done"));
+        }
+        if (a.Status == ApplicationStatus.Rejected) steps.Add((a.UpdatedAt, "closed", "done"));
+        return steps.OrderBy(x => x.At).Select(x => (object)new { key = x.Key, date = D(x.At), state = x.State }).ToList();
     }
 
     /// <summary>A sent offer waiting for the candidate's answer, with its letter; or the answer they gave.</summary>

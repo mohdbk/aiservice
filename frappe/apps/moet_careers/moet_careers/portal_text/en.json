@@ -341,5 +341,15 @@
  "common.back": "Back",
  "apply.nationality": "Nationality",
  "error.file_rejected": "This file could not be accepted. Upload a different file.",
- "error.scan_unavailable": "Files cannot be uploaded right now. Try again in a few minutes."
+ "error.scan_unavailable": "Files cannot be uploaded right now. Try again in a few minutes.",
+ "app.timeline": "What Has Happened",
+ "app.tl.submitted": "Application submitted",
+ "app.tl.assessment_invited": "Invited to an assessment",
+ "app.tl.assessment_done": "Assessment completed",
+ "app.tl.interview_planned": "Interview scheduled",
+ "app.tl.interview_done": "Interview held",
+ "app.tl.offer_sent": "Job offer sent",
+ "app.tl.offer_accepted": "Offer accepted",
+ "app.tl.offer_declined": "Offer declined",
+ "app.tl.closed": "Application closed"
 }

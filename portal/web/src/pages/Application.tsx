@@ -1,7 +1,7 @@
 import { Briefcase, CalendarCheck, Certificate, ChatText, Check, GraduationCap, Hourglass, Icon, PaperPlaneTilt, Toolbox, Translate } from "@phosphor-icons/react";
 import { FormEvent, ReactNode, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import { api, ApiError, ApplicationDetail, Booking, Details, Offer } from "../api";
+import { api, ApiError, ApplicationDetail, Booking, Details, Offer, TimelineStep } from "../api";
 import { IconBox, StatusBadge, Steps } from "../components/Bits";
 import { Breadcrumb } from "../components/Breadcrumb";
 import { Alert, Skeleton, Spinner } from "../components/States";
@@ -21,6 +21,27 @@ function Progress({ code }: { code: string }) {
           <span className={`flex items-center gap-1 text-xs sm:text-sm ${i + 1 === reached ? "font-semibold text-aeblack-900" : "text-aeblack-600"}`}>
             {i + 1 < reached && <Check size={16} weight="bold" className="text-primary-600" aria-hidden="true" />}{s}
           </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** What has happened with the application so far, oldest first, with dates. */
+function Timeline({ steps }: { steps: TimelineStep[] }) {
+  const { t, formatDate } = useSite();
+  return (
+    <ol className="mt-6 border-t border-aeblack-100 pt-4" aria-label={t("app.timeline")}>
+      {steps.map((s, i) => (
+        <li key={`${s.key}-${i}`} className="relative flex gap-3 pb-4 last:pb-0">
+          {i < steps.length - 1 && <span className="absolute start-[11px] top-6 h-[calc(100%-1rem)] w-0.5 bg-aeblack-100" aria-hidden="true" />}
+          <span className={`relative z-[1] mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${s.state === "done" ? "bg-primary-600 text-white" : "border-2 border-primary-600 bg-white"}`} aria-hidden="true">
+            {s.state === "done" && <Check size={14} weight="bold" />}
+          </span>
+          <div>
+            <p className={`text-sm ${s.state === "current" ? "font-semibold text-aeblack-900" : "text-aeblack-800"}`}>{t(`app.tl.${s.key}`)}</p>
+            <p className="text-xs text-aeblack-600"><bdi>{formatDate(s.date)}</bdi></p>
+          </div>
         </li>
       ))}
     </ol>
@@ -199,6 +220,7 @@ export default function Application() {
           <StatusBadge status={data.status} large />
         </div>
         <Progress code={data.status.code} />
+        {data.timeline && data.timeline.length > 1 && <Timeline steps={data.timeline} />}
         <dl className="mt-6 grid gap-4 border-t border-aeblack-100 pt-4 sm:grid-cols-2">
           <div><dt className="text-sm text-aeblack-600">{t("app.submitted_on")}</dt><dd className="font-medium">{formatDate(data.submitted)}</dd></div>
           <div><dt className="text-sm text-aeblack-600">{t("app.reference")}</dt><dd className="font-medium" dir="ltr">{data.reference}</dd></div>
