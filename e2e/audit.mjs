@@ -1,8 +1,31 @@
 // Design audit: screenshots of every backoffice and portal page in Arabic and English, on a desktop and a phone, with a
-// report of anything wider than the screen (horizontal scrolling on phones) and console errors.
+// report of anything wider than the screen (horizontal scrolling on phones), console errors, and accessibility problems
+// (axe-core, WCAG 2.1 A and AA, serious and critical only, on the desktop views).
 // Usage: BASE_URL=http://127.0.0.1:4173 PORTAL_URL=http://127.0.0.1:8080 node audit.mjs  (writes shots/ and shots/report.txt)
 import { chromium, devices } from "playwright";
 import fs from "node:fs";
+import { createRequire } from "node:module";
+
+// axe-core is optional: without it the audit runs as before.
+let AXE = "";
+try { AXE = fs.readFileSync(createRequire(import.meta.url).resolve("axe-core/axe.min.js"), "utf8"); } catch { /* not installed */ }
+const a11yTotals = {};
+
+/** Serious and critical WCAG 2.1 A/AA problems on the page (evaluated outside the page's own script rules, so CSP does not block it). */
+async function a11y(page, name) {
+  if (!AXE) return;
+  await page.evaluate(AXE);
+  const found = await page.evaluate(async () => {
+    // eslint-disable-next-line no-undef
+    const r = await axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] }, resultTypes: ["violations"] });
+    return r.violations.filter((v) => v.impact === "serious" || v.impact === "critical")
+      .map((v) => ({ id: v.id, impact: v.impact, help: v.help, n: v.nodes.length, where: v.nodes.slice(0, 2).map((x) => x.target.join(" ")).join(" ; ") }));
+  });
+  for (const v of found) {
+    a11yTotals[v.id] = (a11yTotals[v.id] || 0) + v.n;
+    note(`A11Y  ${name}: ${v.id} (${v.impact}, ${v.n}) ${v.help}\n        ${v.where}`);
+  }
+}
 
 const BASE = process.env.BASE_URL, PORTAL = process.env.PORTAL_URL;
 const report = [];
@@ -60,6 +83,7 @@ async function shoot(ctx, name, url, after, full = false) {
       });
       note(`FONTS ${name}: ${fonts}`);
     }
+    if (name.includes("_desktop_") && !after) await a11y(page, name);
     if (errors.length) note(`ERROR ${name}: ${errors.slice(0, 3).join(" | ")}`);
   } catch (e) {
     note(`FAIL  ${name}: ${e.message.split("\n")[0]}`);
@@ -94,7 +118,7 @@ for (const [view, opts] of Object.entries(VIEWS)) {
     ["departments", "/setup/departments"], ["locations", "/setup/locations"], ["rounds", "/setup/rounds"], ["settings", "/setup/settings"], ["portal_text", "/setup/portal-text"],
     ["email_templates", "/setup/email-templates"], ["document_templates", "/setup/document-templates"], ["components", "/setup/components"], ["component_new", "/setup/components/new"],
     ["staff", "/setup/staff"], ["email_server", "/setup/email-server"], ["texts", "/setup/texts"], ["handoff", "/setup/handoff"], ["agent_settings", "/setup/assistant"], ["email_log", "/setup/email-log"], ["assistant_usage", "/setup/assistant-usage"], ["audit", "/setup/audit"], ["health", "/setup/health"], ["data_protection", "/setup/data-protection"],
-    ["password", "/password"],
+    ["password", "/password"], ["two_step", "/two-step"], ["approvals", "/approvals"], ["requisitions", "/requisitions"],
   ].filter(Boolean);
   for (const lang of ["ar", "en"]) {
     for (const [name, path] of pages) await shoot(ctx, `bo_${view}_${lang}_${name}`, `${BASE}/${lang}${path}`);
@@ -154,5 +178,6 @@ if (PORTAL) {
 }
 
 await browser.close();
+if (AXE) note(`\nAccessibility (serious and critical, all desktop pages): ${Object.keys(a11yTotals).length === 0 ? "none" : Object.entries(a11yTotals).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join(", ")}`);
 fs.writeFileSync("shots/report.txt", report.join("\n") + "\n");
 console.log(`\n${report.length} findings`);

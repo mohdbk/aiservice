@@ -61,7 +61,7 @@ jobs:
           API=http://localhost:5080 PORTAL_KEY=e2e-portal-key:e2e-secret-0123456789 node backoffice/scripts/seed-demo.mjs
       - name: Screenshots
         run: |
-          mkdir -p e2e/run && cd e2e/run && npm init -y >/dev/null && npm install playwright@1.49.1 --no-audit --no-fund >/dev/null
+          mkdir -p e2e/run && cd e2e/run && npm init -y >/dev/null && npm install playwright@1.49.1 axe-core@4.10.2 --no-audit --no-fund >/dev/null
           npx playwright install --with-deps chromium >/dev/null
           cp ../audit.mjs . && BASE_URL=http://127.0.0.1:4173 PORTAL_URL=http://127.0.0.1:8080 node audit.mjs
       - name: Logs
