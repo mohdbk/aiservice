@@ -1510,5 +1510,7 @@
  "asst.context": "Using this page: {page}",
  "asst.enter_hint": "Enter to send, Shift and Enter for a new line",
  "asst.approval_hint": "Changes always wait for your approval",
- "asst.try": "Try Asking"
+ "asst.try": "Try Asking",
+ "app.collapse_menu": "Collapse Menu",
+ "app.expand_menu": "Expand Menu"
 }

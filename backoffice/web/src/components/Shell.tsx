@@ -1,7 +1,7 @@
 import { Dialog, Menu } from "@base-ui/react";
 import {
   Briefcase, CalendarCheck, CaretDown, ChatCircleDots, ClipboardText, Exam, FileText, Gear, Handshake, Key, List, ListChecks,
-  Cube, EnvelopeSimple, HardDrives, Robot, Scroll, SignOut, SquaresFour, Target, Tray, Translate, TreeStructure, UserCircle, Users, UsersThree, X, Brain, ChartBar, ClockCounterClockwise, Pulse, ChartLine, ShieldCheck, ChatText, UsersFour, ArrowsLeftRight, MapPin, Stamp, DeviceMobile, GlobeHemisphereEast, IdentificationCard } from "@phosphor-icons/react";
+  Cube, EnvelopeSimple, HardDrives, Robot, Scroll, SignOut, SquaresFour, Target, Tray, Translate, TreeStructure, UserCircle, Users, UsersThree, X, Brain, ChartBar, ClockCounterClockwise, Pulse, ChartLine, ShieldCheck, ChatText, UsersFour, ArrowsLeftRight, MapPin, Stamp, DeviceMobile, GlobeHemisphereEast, IdentificationCard, CaretUpDown, SidebarSimple } from "@phosphor-icons/react";
 import { ReactNode, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { api, useAuth, useLang } from "../core";
@@ -78,25 +78,27 @@ function useNav(): { group?: string; items: Item[] }[] {
   ];
 }
 
-function NavList({ onPick }: { onPick?: () => void }) {
-  const { to } = useLang();
+function NavList({ onPick, collapsed = false }: { onPick?: () => void; collapsed?: boolean }) {
+  const { to, t } = useLang();
   const { me } = useAuth();
   const groups = useNav();
   return (
-    <nav className="space-y-6 p-4" aria-label="Main">
+    <nav className={collapsed ? "space-y-3 px-2 py-4" : "space-y-6 p-4"} aria-label={t("app.menu")}>
       {groups.map((g, gi) => {
         const items = g.items.filter((it) => (!it.admin || me?.can_administer) && (!it.sys || me?.is_administrator));
         if (!items.length) return null;
         return (
           <div key={gi}>
-            {g.group && <p className="mb-2 px-3 text-xs font-bold uppercase tracking-wide text-aeblack-500">{g.group}</p>}
+            {g.group && (collapsed
+              ? gi > 0 && <hr className="mx-2 mb-3 border-aeblack-100" aria-hidden="true" />
+              : <p className="mb-2 px-3 text-xs font-bold uppercase tracking-wide text-aeblack-500">{g.group}</p>)}
             <ul className="space-y-1">
               {items.map((it) => (
                 <li key={it.to}>
-                  <NavLink to={to(it.to)} end={it.to === "/"} onClick={onPick}
-                    className={({ isActive }) => `flex items-center gap-3 rounded-lg px-3 py-2.5 font-semibold transition ${isActive ? "bg-primary-50 text-primary-800" : "text-aeblack-700 hover:bg-aeblack-50 hover:text-primary-700"}`}>
+                  <NavLink to={to(it.to)} end={it.to === "/"} onClick={onPick} title={collapsed ? it.label : undefined}
+                    className={({ isActive }) => `mh-nav-item ${collapsed ? "is-collapsed" : ""} ${isActive ? "is-active" : ""}`}>
                     {it.icon}
-                    <span>{it.label}</span>
+                    <span className={collapsed ? "sr-only" : "min-w-0"}>{it.label}</span>
                   </NavLink>
                 </li>
               ))}
@@ -106,6 +108,13 @@ function NavList({ onPick }: { onPick?: () => void }) {
       })}
     </nav>
   );
+}
+
+/** The menu's width: full, or icons only. Remembered in this browser. */
+function useCollapsed() {
+  const [collapsed, set] = useState(() => { try { return localStorage.getItem("mh-nav-collapsed") === "1"; } catch { return false; } });
+  const toggle = () => set((c) => { try { localStorage.setItem("mh-nav-collapsed", c ? "0" : "1"); } catch { /* not kept */ } return !c; });
+  return [collapsed, toggle] as const;
 }
 
 function Brand() {
@@ -132,7 +141,7 @@ function LanguageSwitch() {
   );
 }
 
-function UserMenu() {
+function UserMenu({ placement = "header", collapsed = false }: { placement?: "header" | "sidebar"; collapsed?: boolean }) {
   const { t, to } = useLang();
   const { me, setMe } = useAuth();
   const nav = useNavigate();
@@ -145,19 +154,33 @@ function UserMenu() {
       nav(to("/sign-in"));
     }
   };
+  const initials = me.full_name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+  const sidebar = placement === "sidebar";
   return (
     <Menu.Root>
-      <Menu.Trigger className="inline-flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold text-aeblack-800 hover:bg-aeblack-100">
-        <UserCircle size={24} aria-hidden="true" />
-        <span className="hidden max-w-40 truncate md:inline">{me.full_name}</span>
-        <CaretDown size={16} className="hidden sm:block" aria-hidden="true" />
-      </Menu.Trigger>
+      {sidebar ? (
+        <Menu.Trigger className={`mh-user ${collapsed ? "is-collapsed" : ""}`} aria-label={`${me.full_name}, ${t(`role.${me.role}`)}`} title={collapsed ? me.full_name : undefined}>
+          <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary-600 text-sm font-bold text-white" aria-hidden="true">{initials}</span>
+          {!collapsed && <>
+            <span className="min-w-0 flex-1 text-start leading-tight">
+              <span className="block truncate text-sm font-bold text-aeblack-900">{me.full_name}</span>
+              <span className="block truncate text-xs text-aeblack-500">{t(`role.${me.role}`)}</span>
+            </span>
+            <CaretUpDown size={16} className="shrink-0 text-aeblack-500" aria-hidden="true" />
+          </>}
+        </Menu.Trigger>
+      ) : (
+        <Menu.Trigger className="inline-flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-semibold text-aeblack-800 hover:bg-aeblack-100" aria-label={me.full_name}>
+          <UserCircle size={24} aria-hidden="true" />
+          <CaretDown size={16} className="hidden sm:block" aria-hidden="true" />
+        </Menu.Trigger>
+      )}
       <Menu.Portal>
-        <Menu.Positioner sideOffset={6} align="end">
+        <Menu.Positioner sideOffset={8} side={sidebar ? "top" : "bottom"} align={sidebar ? "start" : "end"} className="z-[80]">
           <Menu.Popup className="mh-popup">
             <div className="flex items-center gap-3 px-3 py-3">
               <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary-100 text-sm font-bold text-primary-800" aria-hidden="true">
-                {me.full_name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase()}
+                {initials}
               </span>
               <div className="min-w-0 leading-tight">
                 <div className="truncate text-sm font-bold text-aeblack-900">{me.full_name}</div>
@@ -205,6 +228,7 @@ export function Shell({ children }: { children: ReactNode }) {
     document.documentElement.dir = dir;
   }, [lang, dir]);
   useEffect(() => setOpen(false), [loc.pathname]);
+  const [collapsed, toggleCollapsed] = useCollapsed();
   const menu = (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger className="rounded-lg p-2 text-aeblack-700 hover:bg-aeblack-100 lg:hidden" aria-label={t("app.menu")}><List size={24} /></Dialog.Trigger>
@@ -234,14 +258,23 @@ export function Shell({ children }: { children: ReactNode }) {
           <div dir={dir} className="flex shrink-0 items-center gap-0.5 sm:gap-1">
             {dir === "rtl" && menu}
             <LanguageSwitch />
-            <UserMenu />
+            {/* On wide screens the account sits at the bottom of the side menu. */}
+            <div className="lg:hidden"><UserMenu /></div>
           </div>
         </div>
       </header>
       {!/\/assistant$/.test(loc.pathname) && <AssistantPanel />}
       <div className="flex">
-        <aside className="sticky top-20 hidden h-[calc(100vh-5rem)] w-64 flex-none overflow-y-auto border-e border-aeblack-100 bg-white lg:block">
-          <NavList />
+        <aside className={`sticky top-20 hidden h-[calc(100vh-5rem)] flex-none flex-col border-e border-aeblack-100 bg-white transition-[width] duration-200 lg:flex ${collapsed ? "w-[4.5rem]" : "w-64"}`}>
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden"><NavList collapsed={collapsed} /></div>
+          <div className={`space-y-1 border-t border-aeblack-100 ${collapsed ? "p-2" : "p-3"}`}>
+            <button type="button" onClick={toggleCollapsed} aria-expanded={!collapsed} title={collapsed ? t("app.expand_menu") : undefined}
+              className={`mh-nav-item w-full ${collapsed ? "is-collapsed" : ""}`}>
+              <SidebarSimple size={22} className="rtl:-scale-x-100" aria-hidden="true" />
+              <span className={collapsed ? "sr-only" : ""}>{collapsed ? t("app.expand_menu") : t("app.collapse_menu")}</span>
+            </button>
+            <UserMenu placement="sidebar" collapsed={collapsed} />
+          </div>
         </aside>
         <main id="main" className="mh-main min-w-0 flex-1 px-4 py-6 sm:px-8 sm:py-8"><ErrorBoundary key={loc.pathname}>{children}</ErrorBoundary></main>
       </div>

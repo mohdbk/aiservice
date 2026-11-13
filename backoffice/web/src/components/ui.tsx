@@ -289,7 +289,7 @@ export function ActionMenu({ label, items, icon }: { label: ReactNode; icon?: Re
         <CaretDown size={16} aria-hidden="true" />
       </Menu.Trigger>
       <Menu.Portal>
-        <Menu.Positioner sideOffset={6} align="end">
+        <Menu.Positioner sideOffset={6} align="end" className="z-[80]">
           <Menu.Popup className="mh-popup">
             {items.map((it, i) => (
               <Menu.Item key={i} className="mh-item" disabled={it.disabled} onClick={it.onClick}>{it.label}</Menu.Item>

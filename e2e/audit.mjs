@@ -73,8 +73,8 @@ async function underFab(page) {
     if (!fab) return [];
     const hits = new Set();
     for (const y of [document.documentElement.scrollHeight]) {
-      window.scrollTo(0, y);
-      await new Promise((r) => setTimeout(r, 100));
+      window.scrollTo({ top: y, behavior: "instant" });
+      await new Promise((r) => setTimeout(r, 250));
       const f = fab.getBoundingClientRect();
       for (const el of document.querySelectorAll("button, a[href], input, select, textarea, [role=button], [role=tab]")) {
         if (fab.contains(el) || el.closest(".mh-chat-drawer, .mh-dialog, .sr-only, .mc-skip")) continue;

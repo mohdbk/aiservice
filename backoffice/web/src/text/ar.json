@@ -1510,5 +1510,7 @@
  "asst.context": "يستعين بهذه الصفحة: {page}",
  "asst.enter_hint": "Enter للإرسال، و Shift مع Enter لسطر جديد",
  "asst.approval_hint": "أي تغيير ينتظر موافقتك دائماً",
- "asst.try": "جرّب أن تسأل"
+ "asst.try": "جرّب أن تسأل",
+ "app.collapse_menu": "طي القائمة",
+ "app.expand_menu": "توسيع القائمة"
 }

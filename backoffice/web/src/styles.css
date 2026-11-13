@@ -102,18 +102,39 @@ html[lang|="ar"] [lang|="en"] { font-family: "Roboto Variable", "Roboto", "Noto 
 .mh-popup { background: #fff; border: 1px solid var(--color-aeblack-100); border-radius: .75rem; box-shadow: 0 12px 32px rgb(0 0 0 / .12); padding: .25rem; min-width: 16rem; max-width: calc(100vw - 2rem); outline: none; z-index: 50; }
 .mh-item { display: flex; align-items: center; gap: .5rem; padding: .625rem .75rem; border-radius: .5rem; cursor: pointer; font-size: .875rem; color: var(--color-aeblack-800); outline: none; }
 .mh-item[data-highlighted] { background: var(--color-primary-50); color: var(--color-primary-800); }
-.mh-backdrop { position: fixed; inset: 0; background: rgb(0 0 0 / .4); z-index: 40; }
-.mh-dialog { position: fixed; z-index: 50; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(40rem, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); overflow: auto; background: #fff; border-radius: 1rem; padding: 1.5rem; box-shadow: 0 24px 64px rgb(0 0 0 / .2); }
-.mh-drawer { position: fixed; z-index: 50; top: 0; bottom: 0; inset-inline-start: 0; width: min(18rem, 85vw); background: #fff; overflow: auto; box-shadow: 0 0 40px rgb(0 0 0 / .2); }
+.mh-backdrop { position: fixed; inset: 0; background: rgb(0 0 0 / .4); z-index: 61; }
+.mh-dialog { position: fixed; z-index: 62; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(40rem, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); overflow: auto; background: #fff; border-radius: 1rem; padding: 1.5rem; box-shadow: 0 24px 64px rgb(0 0 0 / .2); }
+.mh-drawer { position: fixed; z-index: 62; top: 0; bottom: 0; inset-inline-start: 0; width: min(18rem, 85vw); background: #fff; overflow: auto; box-shadow: 0 0 40px rgb(0 0 0 / .2); }
 
 /* Language tabs (Base UI Tabs) */
 /* The baseline is an inset shadow (not a border the tabs overlap with a negative margin): with overflow-x set, the overlap
    made the list 1px taller than its box and phones showed a vertical scroll. Sideways scrolling stays, without a bar. */
 .mh-tabs { display: flex; gap: .25rem; box-shadow: inset 0 -1px 0 var(--color-aeblack-100); overflow-y: hidden; scrollbar-width: none; overscroll-behavior-x: contain; }
 .mh-tabs::-webkit-scrollbar { display: none; }
-.mh-tab { position: relative; display: inline-flex; flex: none; align-items: center; gap: .5rem; padding: .75rem 1rem; font-weight: 600; color: var(--color-aeblack-500); border-bottom: 3px solid transparent; }
-.mh-tab[data-selected] { color: var(--color-primary-700); border-bottom-color: var(--color-primary-600); }
-.mh-tab:hover { color: var(--color-primary-700); }
+/* Tabs: a bar grows under the tab on hover (light) and stays under the selected one (gold); the label darkens. */
+.mh-tab { position: relative; display: inline-flex; flex: none; align-items: center; gap: .5rem; padding: .75rem 1rem; font-weight: 600; color: var(--color-aeblack-500);
+  border-radius: .6rem .6rem 0 0; transition: color .15s, background-color .15s; }
+.mh-tab::after { content: ""; position: absolute; inset-inline: .6rem; bottom: 0; height: 3px; border-radius: 3px 3px 0 0; background: var(--color-primary-300);
+  transform: scaleX(0); transition: transform .2s ease, background-color .15s; }
+.mh-tab:hover { color: var(--color-aeblack-800); background: var(--color-whitely-100, #f7f7f7); }
+.mh-tab:hover::after { transform: scaleX(1); }
+.mh-tab[data-selected] { color: var(--color-primary-800); background: transparent; }
+.mh-tab[data-selected]::after { transform: scaleX(1); background: var(--color-primary-600); }
+.mh-tab:focus-visible { outline: 2px solid var(--color-primary-500); outline-offset: -2px; }
+
+/* Side menu items: a gold bar on the reading-start edge marks the open page. */
+.mh-nav-item { position: relative; display: flex; align-items: center; gap: .75rem; border-radius: .6rem; padding: .6rem .75rem; font-weight: 600;
+  color: var(--color-aeblack-700); transition: background-color .15s, color .15s; }
+.mh-nav-item:hover { background: var(--color-whitely-100, #f7f7f7); color: var(--color-primary-800); }
+.mh-nav-item.is-active { background: var(--color-primary-50); color: var(--color-primary-800); }
+.mh-nav-item.is-active::before { content: ""; position: absolute; inset-inline-start: -.5rem; top: .45rem; bottom: .45rem; width: 3px; border-radius: 3px; background: var(--color-primary-600); }
+.mh-nav-item.is-collapsed { justify-content: center; padding: .6rem; }
+.mh-nav-item.is-collapsed.is-active::before { inset-inline-start: -.5rem; }
+.mh-nav-item:focus-visible { outline: 2px solid var(--color-primary-500); outline-offset: 1px; }
+/* The account at the bottom of the side menu. */
+.mh-user { display: flex; width: 100%; align-items: center; gap: .65rem; border-radius: .75rem; padding: .5rem; transition: background-color .15s; }
+.mh-user:hover, .mh-user[data-popup-open] { background: var(--color-whitely-100, #f7f7f7); }
+.mh-user.is-collapsed { justify-content: center; padding: .35rem; }
 
 /* Switch (Base UI Switch) */
 .mh-switch { position: relative; display: inline-flex; width: 2.75rem; height: 1.5rem; border-radius: 999px; background: var(--color-aeblack-200); transition: background .15s; flex: none; }
