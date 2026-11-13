@@ -20,7 +20,7 @@ COPY --from=build /app .
 # published app. Kept in the image, so letters print offline.
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 RUN /app/.playwright/node/linux-x64/node /app/.playwright/package/cli.js install --with-deps --only-shell chromium \
-    && rm -rf /var/lib/apt/lists/* && chmod -R a+rX /ms-playwright
+    && rm -rf /var/lib/apt/lists/* && chmod -R a+rX /ms-playwright /app/.playwright && chmod a+x /app/.playwright/node/linux-x64/node
 ENV ASPNETCORE_HTTP_PORTS=8080 TRUST_PROXY=1
 EXPOSE 8080
 USER $APP_UID
