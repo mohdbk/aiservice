@@ -448,15 +448,17 @@ public sealed class RecruitmentTools(BackofficeApi api)
         ], "round_id", "date", "from", "to");
 
     [Description("Proposes inviting an applicant to a published test (ids from get_lookups). Shows an approval card.")]
-    public Task<JsonElement> ProposeTestInvitation(int applicantId, int testId, [Description("Days to complete it")] int? deadlineDays = null, CancellationToken ct = default) =>
+    public Task<JsonElement> ProposeTestInvitation(int applicantId, int testId, [Description("Days to complete it")] int? deadlineDays = null,
+        [Description("Or an exact deadline in the ministry's time zone, yyyy-MM-ddTHH:mm (wins over days)")] string? deadlineAt = null, CancellationToken ct = default) =>
         Propose("invite_to_test", new JsonObject
         {
             ["applicant_id"] = applicantId, ["assessment_id"] = testId.ToString(CultureInfo.InvariantCulture),
-            ["deadline_days"] = deadlineDays?.ToString(CultureInfo.InvariantCulture) ?? "",
+            ["deadline_days"] = deadlineDays?.ToString(CultureInfo.InvariantCulture) ?? "", ["deadline_at"] = deadlineAt ?? "",
         }, ct, (s, lookups) =>
         [
             s.ChoicePicker(L("الاختبار", "Test"), "/form/assessment_id", Options(lookups, "assessments", "title"), required: true),
             s.TextField(L("عدد أيام الإنجاز", "Days to Complete"), "/form/deadline_days", "number"),
+            s.DateTimeInput(L("أو موعد نهائي محدد", "Or an Exact Deadline"), "/form/deadline_at", date: true, time: true),
         ], "assessment_id");
 
     [Description("Proposes a draft job offer (not sent to the candidate). Dates YYYY-MM-DD. Shows an approval card the user can edit.")]

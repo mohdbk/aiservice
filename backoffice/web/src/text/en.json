@@ -1298,5 +1298,17 @@
  "multi.remove": "Remove {name}",
  "multi.chosen": "{n} chosen",
  "multi.count": "{n} of {total} chosen",
- "int.panel_hint": "Type to find people; tick everyone on the panel."
+ "int.panel_hint": "Type to find people; tick everyone on the panel.",
+ "setup.time_zone": "Time Zone",
+ "setup.time_zone_hint": "Interview times, deadlines, letters and reports use it. Now: {zone}.",
+ "setup.time_zone_default": "Default (UAE, Asia/Dubai)",
+ "deadline.label": "Deadline",
+ "deadline.in_days": "Number of Days",
+ "deadline.exact": "Exact Date and Time",
+ "deadline.at": "Deadline",
+ "deadline.zone": "In the ministry's time zone ({zone}).",
+ "deadline.change": "Change Deadline",
+ "deadline.change_hint": "Set a new deadline. If the assessment has expired, it opens again.",
+ "error.deadline_invalid": "Choose a deadline at least 10 minutes from now and within a year.",
+ "error.invitation_closed": "This assessment is finished or cancelled."
 }

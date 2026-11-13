@@ -344,11 +344,22 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
         };
     }
 
-    public async Task<object> ReexamAsync(int id, int extraAttempts, int deadlineDays, bool notify, CancellationToken ct = default)
+    /// <summary>Moves an invitation's deadline to an exact local date and time (an expired one opens again), optionally telling the candidate.</summary>
+    public async Task<object> ChangeDeadlineAsync(int id, string? deadlineAt, bool notify, CancellationToken ct = default)
     {
         var inv = await db.Invitations.Include(i => i.Assessment).Include(i => i.JobApplication).FirstOrDefaultAsync(i => i.Id == id, ct)
                   ?? throw DomainException.NotFound();
-        inv.AllowReexam(extraAttempts, deadlineDays, clock.UtcNow);
+        inv.ChangeDeadline(clock.Deadline(deadlineAt) ?? throw DomainException.Invalid("deadline_invalid"), clock.UtcNow);
+        if (notify) await workflow.EmailAsync(inv, inv.Assessment!, inv.JobApplication!, "reexam", ct);
+        await db.SaveChangesAsync(ct);
+        return new { status = inv.Status.ToString(), deadline_at = inv.DeadlineAt };
+    }
+
+    public async Task<object> ReexamAsync(int id, int extraAttempts, int deadlineDays, bool notify, CancellationToken ct = default, string? deadlineAt = null)
+    {
+        var inv = await db.Invitations.Include(i => i.Assessment).Include(i => i.JobApplication).FirstOrDefaultAsync(i => i.Id == id, ct)
+                  ?? throw DomainException.NotFound();
+        inv.AllowReexam(extraAttempts, deadlineDays, clock.UtcNow, clock.Deadline(deadlineAt));
         if (notify) await workflow.EmailAsync(inv, inv.Assessment!, inv.JobApplication!, "reexam", ct);
         await db.SaveChangesAsync(ct);
         return new { attempts_allowed = (int)inv.AttemptsAllowed, deadline_at = inv.DeadlineAt };

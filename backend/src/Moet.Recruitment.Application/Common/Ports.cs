@@ -70,7 +70,10 @@ public interface IAppDbContext
 public interface IClock
 {
     DateTime UtcNow { get; }
+    /// <summary>The ministry's time zone (Settings; TIME_ZONE or Asia/Dubai until one is chosen).</summary>
     TimeZoneInfo Zone { get; }
+    /// <summary>Switches to another time zone (an IANA name such as Asia/Dubai); false when the name is not known.</summary>
+    bool UseZone(string? id) => false;
 }
 
 /// <summary>Who is acting, for audit and "approved by" fields.</summary>

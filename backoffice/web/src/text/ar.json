@@ -1298,5 +1298,17 @@
  "multi.remove": "إزالة {name}",
  "multi.chosen": "تم اختيار {n}",
  "multi.count": "تم اختيار {n} من {total}",
- "int.panel_hint": "اكتب للبحث عن الأشخاص، وحدد جميع أعضاء اللجنة."
+ "int.panel_hint": "اكتب للبحث عن الأشخاص، وحدد جميع أعضاء اللجنة.",
+ "setup.time_zone": "المنطقة الزمنية",
+ "setup.time_zone_hint": "تُستخدم لمواعيد المقابلات والمواعيد النهائية والخطابات والتقارير. الحالية: {zone}.",
+ "setup.time_zone_default": "الافتراضية (الإمارات، Asia/Dubai)",
+ "deadline.label": "الموعد النهائي",
+ "deadline.in_days": "عدد الأيام",
+ "deadline.exact": "تاريخ ووقت محدد",
+ "deadline.at": "الموعد النهائي",
+ "deadline.zone": "بتوقيت الوزارة ({zone}).",
+ "deadline.change": "تغيير الموعد النهائي",
+ "deadline.change_hint": "حدد موعداً نهائياً جديداً. إذا انتهت صلاحية التقييم فسيُفتح من جديد.",
+ "error.deadline_invalid": "اختر موعداً نهائياً بعد 10 دقائق على الأقل وخلال سنة.",
+ "error.invitation_closed": "هذا التقييم منتهٍ أو ملغى."
 }

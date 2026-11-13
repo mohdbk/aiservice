@@ -74,6 +74,7 @@ public static class DependencyInjection
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var portalUrl = (cfg["PORTAL_URL"] ?? "").Trim().TrimEnd('/');
         var settings = await db.PortalSettings.FirstAsync(ct);
+        if (!services.GetRequiredService<IClock>().UseZone(settings.TimeZone)) logger.LogWarning("Unknown time zone {Zone} in settings; using the default", settings.TimeZone);
         if (portalUrl.Length > 0 && settings.PortalUrl.Length == 0)
         {
             settings.PortalUrl = portalUrl;

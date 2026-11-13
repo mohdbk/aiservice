@@ -1,5 +1,6 @@
 import { AssessmentLinkButton } from "../components/AssessmentLink";
 import { MultiSelect } from "../components/MultiSelect";
+import { DEFAULT_DEADLINE, Deadline, DeadlinePicker, deadlineBody, localIn } from "../components/DeadlinePicker";
 import { ArrowClockwise, CalendarDots, CalendarPlus, Plus, Trash, DownloadSimple, Envelope, Exam, FileText, Handshake, Phone } from "@phosphor-icons/react";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -47,7 +48,7 @@ export default function Applicant() {
   const { data, error, loading, reload } = useAsync(() => api<Detail>(`/applicants/${id}`), [id]);
   const lookups = useLookups();
   const [tab, setTab] = useState("overview");
-  const [dialog, setDialog] = useState<"" | "interview" | "offer" | "invite" | "reexam" | "document" | "times">("");
+  const [dialog, setDialog] = useState<"" | "interview" | "offer" | "invite" | "reexam" | "deadline" | "document" | "times">("");
   const [bookingsKey, setBookingsKey] = useState(0);
   const [reexamFor, setReexamFor] = useState<number | null>(null);
   const [note, setNote] = useState("");
@@ -196,6 +197,7 @@ export default function Applicant() {
               {inv.status !== "Cancelled" && <AssessmentLinkButton id={inv.id} />}
               <ActionMenu label={t("common.actions")} items={[
                 { label: t("app.reexam"), onClick: () => { setReexamFor(inv.id); setDialog("reexam"); } },
+                { label: t("deadline.change"), onClick: () => { setReexamFor(inv.id); setDialog("deadline"); }, disabled: ["Submitted", "Marked", "Cancelled"].includes(inv.status) },
                 { label: t("app.cancel_invite"), onClick: () => post(`/invitations/${inv.id}/cancel`, {}, t("common.saved")), disabled: inv.status === "Cancelled" },
               ]} />
             </>}>
@@ -277,6 +279,8 @@ export default function Applicant() {
         onSave={(body) => post(`/applicants/${a.id}/invite`, body, t("common.saved"))} />
       <ReexamDialog open={dialog === "reexam"} onClose={() => setDialog("")} busy={act.busy}
         onSave={(body) => post(`/invitations/${reexamFor}/reexam`, body, t("common.saved"))} />
+      {dialog === "deadline" && <DeadlineDialog open onClose={() => setDialog("")} busy={act.busy}
+        onSave={(body) => post(`/invitations/${reexamFor}/deadline`, body, t("common.saved"))} />}
       <InterviewDialog open={dialog === "interview"} onClose={() => setDialog("")} lookups={lk} busy={act.busy}
         onSave={(body) => post("/interviews", { ...body, application_id: a.id }, t("common.saved"))} />
       {dialog === "times" && <BookingDialog onClose={() => setDialog("")} lookups={lk} busy={act.busy}
@@ -290,14 +294,30 @@ export default function Applicant() {
 function InviteDialog({ open, onClose, tests, onSave, busy }: { open: boolean; onClose: () => void; tests: { id: number; title: string }[]; onSave: (b: unknown) => void; busy: boolean }) {
   const { t } = useLang();
   const [test, setTest] = useState("");
-  const [days, setDays] = useState(7);
+  const [deadline, setDeadline] = useState<Deadline>(DEFAULT_DEADLINE);
   return (
     <Modal open={open} onClose={onClose} title={t("app.invite")} footer={<>
       <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
-      <Button busy={busy} disabled={!test} onClick={() => onSave({ assessment_id: Number(test), deadline_days: days })}>{t("app.invite")}</Button>
+      <Button busy={busy} disabled={!test || (deadline.mode === "exact" && !deadline.at)} onClick={() => onSave({ assessment_id: Number(test), ...deadlineBody(deadline) })}>{t("app.invite")}</Button>
     </>}>
       <SelectInput required label={t("app.test")} value={test} onChange={(e) => setTest(e.target.value)} options={[{ value: "", label: "" }, ...tests.map((x) => ({ value: x.id, label: x.title }))]} />
-      <TextInput required label={t("jobs.deadline_days")} type="number" min={1} max={90} value={days} onChange={(e) => setDays(Number(e.target.value) || 7)} />
+      <DeadlinePicker value={deadline} onChange={setDeadline} />
+    </Modal>
+  );
+}
+
+function DeadlineDialog({ open, onClose, onSave, busy }: { open: boolean; onClose: () => void; onSave: (b: unknown) => void; busy: boolean }) {
+  const { t } = useLang();
+  const [deadline, setDeadline] = useState<Deadline>({ ...DEFAULT_DEADLINE, mode: "exact", at: localIn(3) });
+  const [notify, setNotify] = useState(true);
+  return (
+    <Modal open={open} onClose={onClose} title={t("deadline.change")} footer={<>
+      <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
+      <Button busy={busy} disabled={!deadline.at} onClick={() => onSave({ deadline_at: deadline.at, notify })}>{t("common.save")}</Button>
+    </>}>
+      <p className="text-sm text-aeblack-600">{t("deadline.change_hint")}</p>
+      <DeadlinePicker value={deadline} onChange={setDeadline} exactOnly />
+      <Tick label={t("inv.notify")} checked={notify} onChange={setNotify} />
     </Modal>
   );
 }
@@ -305,15 +325,15 @@ function InviteDialog({ open, onClose, tests, onSave, busy }: { open: boolean; o
 function ReexamDialog({ open, onClose, onSave, busy }: { open: boolean; onClose: () => void; onSave: (b: unknown) => void; busy: boolean }) {
   const { t } = useLang();
   const [extra, setExtra] = useState(1);
-  const [days, setDays] = useState(7);
+  const [deadline, setDeadline] = useState<Deadline>(DEFAULT_DEADLINE);
   const [notify, setNotify] = useState(true);
   return (
     <Modal open={open} onClose={onClose} title={t("app.reexam")} footer={<>
       <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
-      <Button busy={busy} onClick={() => onSave({ extra_attempts: extra, deadline_days: days, notify })}>{t("common.confirm")}</Button>
+      <Button busy={busy} disabled={deadline.mode === "exact" && !deadline.at} onClick={() => onSave({ extra_attempts: extra, notify, ...deadlineBody(deadline) })}>{t("common.confirm")}</Button>
     </>}>
       <TextInput required label={t("inv.extra_attempts")} type="number" min={1} max={5} value={extra} onChange={(e) => setExtra(Number(e.target.value) || 1)} />
-      <TextInput required label={t("jobs.deadline_days")} type="number" min={1} max={90} value={days} onChange={(e) => setDays(Number(e.target.value) || 7)} />
+      <DeadlinePicker value={deadline} onChange={setDeadline} />
       <Tick label={t("inv.notify")} checked={notify} onChange={setNotify} />
     </Modal>
   );

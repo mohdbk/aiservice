@@ -576,3 +576,41 @@ public class TotpTests
         Assert.Equal(secret, Moet.Recruitment.Domain.Identity.Totp.FromBase32(b32));
     }
 }
+
+public class TimeZoneTests
+{
+    sealed class Clock(DateTime now, string zone) : IClock
+    {
+        public DateTime UtcNow => now;
+        public TimeZoneInfo Zone => TimeZoneInfo.FindSystemTimeZoneById(zone);
+    }
+
+    [Fact]
+    public void Exact_deadlines_are_read_in_the_ministry_time_zone()
+    {
+        var now = new DateTime(2026, 11, 13, 6, 0, 0, DateTimeKind.Utc);
+        // 17:00 in Dubai (UTC+4) is 13:00 UTC; in London (UTC+0 in November) it is 17:00 UTC.
+        Assert.Equal(new DateTime(2026, 11, 20, 13, 0, 0), new Clock(now, "Asia/Dubai").Deadline("2026-11-20T17:00"));
+        Assert.Equal(new DateTime(2026, 11, 20, 17, 0, 0), new Clock(now, "Europe/London").Deadline("2026-11-20T17:00"));
+        Assert.Null(new Clock(now, "Asia/Dubai").Deadline(""));
+        Assert.Throws<DomainException>(() => new Clock(now, "Asia/Dubai").Deadline("2026-11-13T09:00"));   // 05:00 UTC, already past
+        Assert.Throws<DomainException>(() => new Clock(now, "Asia/Dubai").Deadline("2028-01-01T09:00"));   // more than a year ahead
+        Assert.Throws<DomainException>(() => new Clock(now, "Asia/Dubai").Deadline("not a date"));
+        Assert.Equal(new DateOnly(2026, 11, 13), new Clock(new DateTime(2026, 11, 12, 21, 0, 0, DateTimeKind.Utc), "Asia/Dubai").Today());
+    }
+
+    [Fact]
+    public void Changing_a_deadline_reopens_an_expired_invitation()
+    {
+        var now = new DateTime(2026, 11, 13, 6, 0, 0, DateTimeKind.Utc);
+        var inv = new Invitation { Status = InvitationStatus.Expired, DeadlineAt = now.AddDays(-1) };
+        inv.ChangeDeadline(now.AddDays(2), now);
+        Assert.Equal(InvitationStatus.Invited, inv.Status);
+        Assert.Equal(now.AddDays(2), inv.DeadlineAt);
+        var done = new Invitation { Status = InvitationStatus.Marked };
+        Assert.Throws<DomainException>(() => done.ChangeDeadline(now.AddDays(2), now));
+        var again = new Invitation { Status = InvitationStatus.Expired, AttemptsAllowed = 1, AttemptsUsed = 1 };
+        again.AllowReexam(1, 7, now, now.AddHours(30));
+        Assert.Equal(now.AddHours(30), again.DeadlineAt);
+    }
+}

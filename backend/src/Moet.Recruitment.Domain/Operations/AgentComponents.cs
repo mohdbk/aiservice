@@ -12,7 +12,7 @@ public static class AgentActions
         ["set_applicant_status"] = ["status"],
         ["add_note"] = ["text"],
         ["schedule_interview"] = ["round_id", "date", "from", "to", "location", "notes", "panel_ids"],
-        ["invite_to_test"] = ["assessment_id", "deadline_days"],
+        ["invite_to_test"] = ["assessment_id", "deadline_days", "deadline_at"],
         ["make_offer"] = ["position_title", "offer_date", "start_date", "monthly_salary", "currency", "terms"],
         ["email_candidate"] = ["subject", "body"],
         ["create_draft_job"] = ["title", "location", "employment_type", "department_id"],

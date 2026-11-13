@@ -13,7 +13,7 @@ public sealed record ScreeningQuestionInput(string Text, string? TextEn, bool En
     IReadOnlyList<ScreeningOptionInput>? Options);
 
 public sealed record SettingsInput(string MainSiteUrl, string PortalUrl, string DefaultLanguageCode, bool AllowSignup, bool RequireEmailVerification,
-    int MaxCvMb, bool AutoScoreApplications);
+    int MaxCvMb, bool AutoScoreApplications, string? TimeZone = null);
 
 public sealed record PortalTextInput(string Lang, string Key, string Text, bool Approved);
 
@@ -292,6 +292,8 @@ public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor
         {
             s.MainSiteUrl, s.PortalUrl, s.DefaultLanguageCode, s.AllowSignup, s.RequireEmailVerification, max_cv_mb = (int)s.MaxCvMb,
             s.AutoScoreApplications, has_logo = s.LogoFileId != null,
+            time_zone = clock.Zone.Id, time_zone_setting = s.TimeZone,
+            time_zones = TimeZones.Select(z => new { id = z, offset = Offset(z) }),
             languages = await db.Languages.AsNoTracking().OrderBy(l => l.SortOrder).Select(l => new { l.Code, l.NativeName, l.IsEnabled }).ToListAsync(ct),
         };
     }
@@ -307,11 +309,36 @@ public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor
         s.RequireEmailVerification = input.RequireEmailVerification;
         s.MaxCvMb = (byte)Math.Clamp(input.MaxCvMb, 1, 50);
         s.AutoScoreApplications = input.AutoScoreApplications;
+        if (input.TimeZone != null)
+        {
+            var zone = input.TimeZone.Trim();
+            if (zone.Length > 0 && (zone.Length > 64 || !clock.UseZone(zone))) throw DomainException.Invalid("invalid_value", new Dictionary<string, object?> { ["field"] = "time_zone" });
+            if (zone.Length == 0) clock.UseZone("");
+            s.TimeZone = zone;
+        }
         s.UpdatedAt = clock.UtcNow;
         s.UpdatedByStaffId = actor.Id;
         await db.SaveChangesAsync(ct);
         content.Invalidate();
         return new { ok = true };
+    }
+
+    /// <summary>Time zones offered in Settings: the Gulf and the places the ministry's offices and candidates are most often in.</summary>
+    static readonly string[] TimeZones =
+    [
+        "Asia/Dubai", "Asia/Riyadh", "Asia/Qatar", "Asia/Bahrain", "Asia/Kuwait", "Asia/Muscat", "Africa/Cairo", "Asia/Amman", "Asia/Beirut",
+        "Asia/Karachi", "Asia/Kolkata", "Asia/Singapore", "Asia/Shanghai", "Asia/Tokyo", "Europe/London", "Europe/Paris", "Europe/Berlin",
+        "Europe/Istanbul", "America/New_York", "America/Los_Angeles", "Australia/Sydney", "UTC",
+    ];
+
+    static string Offset(string id)
+    {
+        try
+        {
+            var o = TimeZoneInfo.FindSystemTimeZoneById(id).GetUtcOffset(DateTime.UtcNow);
+            return $"UTC{(o < TimeSpan.Zero ? "-" : "+")}{o.Duration():hh\\:mm}";
+        }
+        catch (Exception e) when (e is TimeZoneNotFoundException or InvalidTimeZoneException) { return ""; }
     }
 
     static string Url(string? u)

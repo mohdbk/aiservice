@@ -192,10 +192,10 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
         return new { queued = true };
     }
 
-    public async Task<object> InviteAsync(int id, int assessmentId, int? deadlineDays, CancellationToken ct = default)
+    public async Task<object> InviteAsync(int id, int assessmentId, int? deadlineDays, CancellationToken ct = default, string? deadlineAt = null)
     {
         var a = await db.JobApplications.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound();
-        var inv = await workflow.InviteAsync(a, assessmentId, deadlineDays, true, actor.Id, ct);
+        var inv = await workflow.InviteAsync(a, assessmentId, deadlineDays, true, actor.Id, ct, clock.Deadline(deadlineAt));
         await db.SaveChangesAsync(ct);
         return new { id = inv.Id, code = inv.Code };
     }

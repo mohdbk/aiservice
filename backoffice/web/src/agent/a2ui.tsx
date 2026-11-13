@@ -128,7 +128,7 @@ export function A2Surface({ surface, busy, onAction, onData, emptyText = "" }: {
       case "DateTimeInput": {
         const path = c.value?.["@path"] as string | undefined;
         const label = <>{String(v("label") ?? "")}</>;
-        return <TextInput label={label} type={c.enableDate === false ? "time" : "date"} value={String(v("value") ?? "")} disabled={locked}
+        return <TextInput label={label} type={c.enableDate === false ? "time" : c.enableTime ? "datetime-local" : "date"} value={String(v("value") ?? "")} disabled={locked}
           required={!!c.required} onChange={(e) => write(path, e.target.value)} />;
       }
       case "ChoicePicker": {

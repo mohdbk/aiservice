@@ -44,12 +44,21 @@ public class Invitation
     };
 
     /// <summary>Gives the candidate more attempts with a new deadline. Each attempt draws its own questions.</summary>
-    public void AllowReexam(int extraAttempts, int deadlineDays, DateTime now)
+    public void AllowReexam(int extraAttempts, int deadlineDays, DateTime now, DateTime? deadlineAt = null)
     {
         if (Status == InvitationStatus.InProgress) throw DomainException.Conflict("attempt_in_progress");
         AttemptsAllowed = (byte)Math.Min(50, Math.Max(AttemptsUsed, AttemptsAllowed) + Math.Max(1, extraAttempts));
-        DeadlineAt = now.AddDays(Math.Clamp(deadlineDays, 1, 90));
+        DeadlineAt = deadlineAt ?? now.AddDays(Math.Clamp(deadlineDays, 1, 90));
         if (Status is InvitationStatus.Expired or InvitationStatus.Cancelled) Status = InvitationStatus.Invited;
+        UpdatedAt = now;
+    }
+
+    /// <summary>A new deadline (earlier or later); an invitation that expired opens again when the new deadline is ahead.</summary>
+    public void ChangeDeadline(DateTime deadlineAt, DateTime now)
+    {
+        if (Status is InvitationStatus.Submitted or InvitationStatus.Marked or InvitationStatus.Cancelled) throw DomainException.Conflict("invitation_closed");
+        DeadlineAt = deadlineAt;
+        if (Status == InvitationStatus.Expired && deadlineAt > now) Status = InvitationStatus.Invited;
         UpdatedAt = now;
     }
 

@@ -137,10 +137,12 @@ export function Rounds() {
 type SettingsData = {
   main_site_url: string; portal_url: string; default_language_code: string; allow_signup: boolean; require_email_verification: boolean; max_cv_mb: number;
   auto_score_applications: boolean; languages: { code: string; native_name: string; is_enabled: boolean }[];
+  time_zone: string; time_zone_setting: string; time_zones: { id: string; offset: string }[];
 };
 
 export function Settings() {
   const { t } = useLang();
+  const { me, setMe } = useAuth();
   usePageTitle(t("setup.settings"));
   const toast = useToast();
   const loaded = useAsync(() => api<SettingsData>("/settings"), []);
@@ -150,9 +152,14 @@ export function Settings() {
   if (loaded.loading || !s) return loaded.error ? <ErrorState error={loaded.error} retry={loaded.reload} /> : <Loading />;
   const set = <K extends keyof SettingsData>(k: K, v: SettingsData[K]) => setS({ ...s, [k]: v });
   const save = async () => {
-    const { languages, ...body } = s;
-    void languages;
-    if (await run(() => api("/settings", { method: "PUT", body })) !== undefined) toast(t("common.saved"));
+    const { languages, time_zones, time_zone, time_zone_setting, ...rest } = s;
+    void languages; void time_zones; void time_zone;
+    if (await run(() => api("/settings", { method: "PUT", body: { ...rest, time_zone: time_zone_setting } })) !== undefined) {
+      toast(t("common.saved"));
+      // Times on every page follow the new zone at once.
+      setMe(me ? { ...me, time_zone: time_zone_setting || "Asia/Dubai" } : null);
+      loaded.reload();
+    }
   };
   return (
     <>
@@ -166,6 +173,9 @@ export function Settings() {
             <SelectInput required label={t("setup.default_language")} value={s.default_language_code} onChange={(e) => set("default_language_code", e.target.value)}
               options={s.languages.filter((l) => l.is_enabled).map((l) => ({ value: l.code, label: l.native_name }))} />
             <TextInput required label={t("setup.max_cv_mb")} type="number" min={1} max={50} value={s.max_cv_mb} onChange={(e) => set("max_cv_mb", Number(e.target.value) || 5)} />
+            <SelectInput required label={t("setup.time_zone")} hint={t("setup.time_zone_hint", { zone: s.time_zone })} value={s.time_zone_setting}
+              onChange={(e) => set("time_zone_setting", e.target.value)}
+              options={[{ value: "", label: t("setup.time_zone_default") }, ...s.time_zones.map((z) => ({ value: z.id, label: `${z.id.replace(/_/g, " ")} (${z.offset})` }))]} />
           </div>
         </Card>
         <Card>

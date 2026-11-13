@@ -15,12 +15,25 @@ public sealed class SystemClock : IClock
 {
     public DateTime UtcNow => DateTime.UtcNow;
 
-    public TimeZoneInfo Zone { get; } = FindZone(Environment.GetEnvironmentVariable("TIME_ZONE") ?? "Asia/Dubai");
+    static readonly TimeZoneInfo Fallback = FindZone(Environment.GetEnvironmentVariable("TIME_ZONE") ?? "Asia/Dubai")
+        ?? TimeZoneInfo.CreateCustomTimeZone("UAE", TimeSpan.FromHours(4), "UAE", "UAE");
+    // Shared by every request and the workers; set from Settings at start-up and whenever an administrator changes it.
+    static volatile TimeZoneInfo _zone = Fallback;
 
-    static TimeZoneInfo FindZone(string id)
+    public TimeZoneInfo Zone => _zone;
+
+    public bool UseZone(string? id)
+    {
+        if (string.IsNullOrWhiteSpace(id)) { _zone = Fallback; return true; }
+        if (FindZone(id.Trim()) is not { } z) return false;
+        _zone = z;
+        return true;
+    }
+
+    public static TimeZoneInfo? FindZone(string id)
     {
         try { return TimeZoneInfo.FindSystemTimeZoneById(id); }
-        catch (Exception) { return TimeZoneInfo.CreateCustomTimeZone("UAE", TimeSpan.FromHours(4), "UAE", "UAE"); }
+        catch (Exception e) when (e is TimeZoneNotFoundException or InvalidTimeZoneException) { return null; }
     }
 }
 

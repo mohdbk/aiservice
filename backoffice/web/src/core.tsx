@@ -73,6 +73,14 @@ export function translate(lang: Lang, key: string, params?: Record<string, strin
   return s;
 }
 
+/** The ministry's time zone (from Settings, sent with the signed-in user): times are shown in it whatever the browser's zone. */
+let ZONE = "Asia/Dubai";
+export const timeZone = () => ZONE;
+function setZone(z?: string) {
+  if (!z) return;
+  try { new Intl.DateTimeFormat("en", { timeZone: z }); ZONE = z; } catch { /* unknown to this browser: keep the default */ }
+}
+
 export function useLang() {
   const { lang } = useParams();
   const l: Lang = lang === "en" ? "en" : "ar";
@@ -82,8 +90,9 @@ export function useLang() {
     if (!iso) return "";
     const d = new Date(iso.length === 10 ? iso + "T00:00:00" : iso.endsWith("Z") ? iso : iso + "Z");
     if (isNaN(d.getTime())) return iso;
+    // A plain date (yyyy-mm-dd) is a calendar day; a moment is shown in the ministry's time zone.
     return new Intl.DateTimeFormat(l === "ar" ? "ar-AE-u-nu-latn" : "en-GB", {
-      day: "numeric", month: "short", year: "numeric", ...(withTime ? { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Dubai" } : {}),
+      day: "numeric", month: "short", year: "numeric", ...(iso.length > 10 ? { timeZone: ZONE } : {}), ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}),
     }).format(d);
   }, [l]);
   return { lang: l, t, errorText, date, dir: l === "ar" ? "rtl" : "ltr", to: (p: string) => `/${l}${p}` };
@@ -97,12 +106,13 @@ export function usePageTitle(title: string) {
 }
 
 // ---------------- signed-in staff ----------------
-export type Me = { id: number; full_name: string; email: string; role: string; can_administer: boolean; is_administrator: boolean };
+export type Me = { id: number; full_name: string; email: string; role: string; can_administer: boolean; is_administrator: boolean; time_zone?: string };
 type AuthState = { me: Me | null | undefined; setMe: (m: Me | null) => void };
 const AuthContext = createContext<AuthState>({ me: undefined, setMe: () => {} });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [me, setMe] = useState<Me | null | undefined>(undefined);
+  const [me, setMeState] = useState<Me | null | undefined>(undefined);
+  const setMe = useCallback((m: Me | null) => { if (m) setZone(m.time_zone); setMeState(m); }, []);
   useEffect(() => {
     api<Me>("/me").then(setMe, () => setMe(null));
     const out = () => setMe(null);

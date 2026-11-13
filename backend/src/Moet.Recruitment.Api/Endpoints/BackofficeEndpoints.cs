@@ -19,8 +19,9 @@ public static class BackofficeEndpoints
     public sealed record PasswordBody(string? Current, string? Next);
     public sealed record StatusBody(string? Status);
     public sealed record NoteBody(string? Text);
-    public sealed record InviteBody(int AssessmentId, int? DeadlineDays);
-    public sealed record ReexamBody(int ExtraAttempts, int DeadlineDays, bool Notify);
+    public sealed record InviteBody(int AssessmentId, int? DeadlineDays, string? DeadlineAt = null);
+    public sealed record ReexamBody(int ExtraAttempts, int DeadlineDays, bool Notify, string? DeadlineAt = null);
+    public sealed record DeadlineBody(string? DeadlineAt, bool Notify);
     public sealed record MarksBody(IReadOnlyList<MarkInput> Marks);
     public sealed record ApproveBody(System.Text.Json.JsonElement? Changes);
     public sealed record StaffBody(string? Email, string? FullName, string? Role, bool IsEnabled, string? Password);
@@ -29,11 +30,11 @@ public static class BackofficeEndpoints
     {
         var api = app.MapGroup("/api/backoffice");
 
-        api.MapPost("/sign-in", async (SignInBody b, HttpContext ctx, StaffAuthService auth, CancellationToken ct) =>
+        api.MapPost("/sign-in", async (SignInBody b, HttpContext ctx, StaffAuthService auth, IClock clock, CancellationToken ct) =>
         {
             var s = await auth.SignInAsync(b.Email, b.Password, b.Code, ct);
             await ctx.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, StaffCookie.Principal(s));
-            return Results.Ok(Me(s.FullName, s.Email, s.Role.ToString(), s.Id));
+            return Results.Ok(Me(s.FullName, s.Email, s.Role.ToString(), s.Id, clock.Zone.Id));
         }).RequireRateLimiting("sign-in");
 
         var staff = api.MapGroup("").RequireAuthorization(StaffPolicies.Staff);
@@ -42,8 +43,8 @@ public static class BackofficeEndpoints
             await ctx.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return Results.Ok(new { ok = true });
         });
-        staff.MapGet("/me", (ClaimsPrincipal u) =>
-            Results.Ok(Me(u.Identity!.Name!, u.FindFirstValue(ClaimTypes.Email)!, u.FindFirstValue(ClaimTypes.Role)!, int.Parse(u.FindFirstValue("sid")!))));
+        staff.MapGet("/me", (ClaimsPrincipal u, IClock clock) =>
+            Results.Ok(Me(u.Identity!.Name!, u.FindFirstValue(ClaimTypes.Email)!, u.FindFirstValue(ClaimTypes.Role)!, int.Parse(u.FindFirstValue("sid")!), clock.Zone.Id)));
         staff.MapPost("/password", async (PasswordBody b, ClaimsPrincipal u, HttpContext ctx, StaffAuthService auth, CancellationToken ct) =>
         {
             await auth.ChangePasswordAsync(int.Parse(u.FindFirstValue("sid")!), b.Current, b.Next, ct);
@@ -109,7 +110,7 @@ public static class BackofficeEndpoints
         staff.MapPost("/applicants/{id:int}/status", (int id, StatusBody b, BackofficeApplicantService s, CancellationToken ct) => s.SetStatusAsync(id, b.Status, ct));
         staff.MapPost("/applicants/{id:int}/notes", (int id, NoteBody b, BackofficeApplicantService s, CancellationToken ct) => s.AddNoteAsync(id, b.Text, ct));
         staff.MapPost("/applicants/{id:int}/rescore", (int id, BackofficeApplicantService s, CancellationToken ct) => s.RescoreAsync(id, ct));
-        staff.MapPost("/applicants/{id:int}/invite", (int id, InviteBody b, BackofficeApplicantService s, CancellationToken ct) => s.InviteAsync(id, b.AssessmentId, b.DeadlineDays, ct));
+        staff.MapPost("/applicants/{id:int}/invite", (int id, InviteBody b, BackofficeApplicantService s, CancellationToken ct) => s.InviteAsync(id, b.AssessmentId, b.DeadlineDays, ct, b.DeadlineAt));
 
         // interviews and offers
         staff.MapGet("/interviews", ([AsParameters] ListQuery lq, string? scope, string? status, int? round, int? job, BackofficeInterviewService s, CancellationToken ct) =>
@@ -149,7 +150,8 @@ public static class BackofficeEndpoints
         staff.MapGet("/role-profiles/{id:int}", (int id, RoleProfileService s, CancellationToken ct) => s.GetAsync(id, ct));
         staff.MapGet("/invitations", ([AsParameters] ListQuery lq, string? status, int? assessment, string? result, int? job, BackofficeAssessmentService s, CancellationToken ct) =>
             s.InvitationsAsync(lq, status, assessment, result, job, ct));
-        staff.MapPost("/invitations/{id:int}/reexam", (int id, ReexamBody b, BackofficeAssessmentService s, CancellationToken ct) => s.ReexamAsync(id, b.ExtraAttempts, b.DeadlineDays, b.Notify, ct));
+        staff.MapPost("/invitations/{id:int}/reexam", (int id, ReexamBody b, BackofficeAssessmentService s, CancellationToken ct) => s.ReexamAsync(id, b.ExtraAttempts, b.DeadlineDays, b.Notify, ct, b.DeadlineAt));
+        staff.MapPost("/invitations/{id:int}/deadline", (int id, DeadlineBody b, BackofficeAssessmentService s, CancellationToken ct) => s.ChangeDeadlineAsync(id, b.DeadlineAt, b.Notify, ct));
         staff.MapGet("/invitations/{id:int}/link", (int id, BackofficeAssessmentService s, CancellationToken ct) => s.LinkAsync(id, ct));
         staff.MapPost("/invitations/{id:int}/cancel", (int id, BackofficeAssessmentService s, CancellationToken ct) => s.CancelInvitationAsync(id, ct));
         staff.MapGet("/attempts/{id:int}", (int id, BackofficeAssessmentService s, CancellationToken ct) => s.AttemptAsync(id, ct));
@@ -307,9 +309,9 @@ public static class BackofficeEndpoints
         sys.MapPut("/staff/{id:int}", (int id, StaffBody b, StaffAuthService s, CancellationToken ct) => s.SaveAsync(id, b.Email, b.FullName, b.Role, b.IsEnabled, b.Password, ct));
     }
 
-    static object Me(string name, string email, string role, int id) => new
+    static object Me(string name, string email, string role, int id, string timeZone) => new
     {
-        id, full_name = name, email, role,
+        id, full_name = name, email, role, time_zone = timeZone,
         can_administer = role is "RecruitmentAdmin" or "Administrator", is_administrator = role == "Administrator",
     };
 }

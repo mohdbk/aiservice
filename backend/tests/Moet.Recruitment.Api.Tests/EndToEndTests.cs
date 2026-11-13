@@ -203,6 +203,22 @@ public class EndToEndTests
         var info = await Read(await admin.GetAsync("/api/backoffice/agent/info"));
         Assert.Equal(20, info.GetProperty("history_turns").GetInt32());
 
+        // Time zone: a known zone is saved and used for times; an unknown one is refused; the default comes back.
+        var settingsNow = await Read(await admin.GetAsync("/api/backoffice/settings"));
+        Assert.Equal("Asia/Dubai", settingsNow.GetProperty("time_zone").GetString());
+        object SettingsBody(string zone) => new
+        {
+            main_site_url = settingsNow.GetProperty("main_site_url").GetString(), portal_url = settingsNow.GetProperty("portal_url").GetString(),
+            default_language_code = settingsNow.GetProperty("default_language_code").GetString(), allow_signup = settingsNow.GetProperty("allow_signup").GetBoolean(),
+            require_email_verification = settingsNow.GetProperty("require_email_verification").GetBoolean(), max_cv_mb = settingsNow.GetProperty("max_cv_mb").GetInt32(),
+            auto_score_applications = settingsNow.GetProperty("auto_score_applications").GetBoolean(), time_zone = zone,
+        };
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsync("/api/backoffice/settings", JsonBody(SettingsBody("Mars/Olympus")))).StatusCode);
+        Assert.True((await admin.PutAsync("/api/backoffice/settings", JsonBody(SettingsBody("Europe/London")))).IsSuccessStatusCode);
+        Assert.Equal("Europe/London", (await Read(await admin.GetAsync("/api/backoffice/me"))).GetProperty("time_zone").GetString());
+        Assert.True((await admin.PutAsync("/api/backoffice/settings", JsonBody(SettingsBody("")))).IsSuccessStatusCode);
+        Assert.Equal("Asia/Dubai", (await Read(await admin.GetAsync("/api/backoffice/me"))).GetProperty("time_zone").GetString());
+
         // An assessment link for staff to send another way: unknown invitations are not found.
         Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync("/api/backoffice/invitations/999999/link")).StatusCode);
 

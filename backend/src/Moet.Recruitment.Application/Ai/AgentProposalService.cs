@@ -126,7 +126,7 @@ public sealed class AgentProposalService(
             case "invite_to_test":
             {
                 var app = await ApplicantAsync(a, ct);
-                await applicants.InviteAsync(app.Id, I(a, "assessment_id"), I(a, "deadline_days") is > 0 and var n ? n : null, ct);
+                await applicants.InviteAsync(app.Id, I(a, "assessment_id"), I(a, "deadline_days") is > 0 and var n ? n : null, ct, S(a, "deadline_at") is { Length: > 0 } at ? at : null);
                 return (ar ? $"تم إرسال دعوة الاختبار إلى {app.FullName}." : $"Test invitation sent to {app.FullName}.", $"/applicants/{app.Id}");
             }
             case "make_offer":

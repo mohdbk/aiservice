@@ -116,7 +116,7 @@ type InputProps = React.InputHTMLAttributes<HTMLInputElement> & { label: ReactNo
 
 export function TextInput({ label, hint, error, wrapClass, ...rest }: InputProps) {
   const id = useId();
-  const ltr = rest.type === "email" || rest.type === "password" || rest.type === "number" || rest.type === "date" || rest.type === "time" || rest.type === "url";
+  const ltr = rest.type === "email" || rest.type === "password" || rest.type === "number" || rest.type === "date" || rest.type === "time" || rest.type === "datetime-local" || rest.type === "url";
   return (
     <Field label={label} hint={hint} error={error} id={id} className={wrapClass} required={rest.required}>
       <input id={id} dir={ltr ? "ltr" : rest.dir} {...rest} />
