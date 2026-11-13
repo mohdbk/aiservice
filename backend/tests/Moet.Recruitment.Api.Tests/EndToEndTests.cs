@@ -309,7 +309,7 @@ public class EndToEndTests
 
         // Email templates: the eleven events exist; the sign-in emails cannot be switched off.
         var emailTemplates = await Read(await admin.GetAsync("/api/backoffice/email-templates"));
-        Assert.Equal(10, emailTemplates.GetProperty("items").EnumerateArray().Count(t => t.GetProperty("event").ValueKind == JsonValueKind.String));
+        Assert.Equal(11, emailTemplates.GetProperty("items").EnumerateArray().Count(t => t.GetProperty("event").ValueKind == JsonValueKind.String));
         var verifyId = emailTemplates.GetProperty("items").EnumerateArray().First(t => t.GetProperty("event").GetString() == "verify").GetProperty("id").GetInt32();
         var verify = await Read(await admin.GetAsync($"/api/backoffice/email-templates/{verifyId}"));
         Assert.Contains("{link}", verify.GetProperty("body_en").GetString());
