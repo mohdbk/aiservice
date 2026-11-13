@@ -92,7 +92,7 @@ export default function TestEdit() {
         title={isNew ? t("test.new") : x.title}
         subtitle={!isNew && <span className="flex flex-wrap items-center gap-2"><EnglishBadge state={x.english_status} />
           {x.question_count !== undefined && <span className="text-sm">{t("test.question_count", { count: x.question_count })}</span>}</span>}
-        actions={<Button busy={busy} onClick={save} icon={<FloppyDisk size={20} aria-hidden="true" />}>{t("common.save")}</Button>} />
+        actions={<Button busy={busy} onClick={() => save()} icon={<FloppyDisk size={20} aria-hidden="true" />}>{t("common.save")}</Button>} />
       {(error || suggest.error) && <div className="mb-4"><ErrorState error={error || suggest.error || undefined} /></div>}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-aeblack-100 bg-white p-4">
         <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
