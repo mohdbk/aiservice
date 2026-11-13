@@ -19,7 +19,8 @@ public static class BackofficeEndpoints
     public sealed record PasswordBody(string? Current, string? Next);
     public sealed record StatusBody(string? Status);
     public sealed record NoteBody(string? Text);
-    public sealed record InviteBody(int AssessmentId, int? DeadlineDays, string? DeadlineAt = null);
+    public sealed record InviteBody(int AssessmentId, int? DeadlineDays, string? DeadlineAt = null, int ExtraTimePercent = 0);
+    public sealed record ExtraTimeBody(int Percent);
     public sealed record ReexamBody(int ExtraAttempts, int DeadlineDays, bool Notify, string? DeadlineAt = null);
     public sealed record DeadlineBody(string? DeadlineAt, bool Notify);
     public sealed record MarksBody(IReadOnlyList<MarkInput> Marks);
@@ -110,7 +111,7 @@ public static class BackofficeEndpoints
         staff.MapPost("/applicants/{id:int}/status", (int id, StatusBody b, BackofficeApplicantService s, CancellationToken ct) => s.SetStatusAsync(id, b.Status, ct));
         staff.MapPost("/applicants/{id:int}/notes", (int id, NoteBody b, BackofficeApplicantService s, CancellationToken ct) => s.AddNoteAsync(id, b.Text, ct));
         staff.MapPost("/applicants/{id:int}/rescore", (int id, BackofficeApplicantService s, CancellationToken ct) => s.RescoreAsync(id, ct));
-        staff.MapPost("/applicants/{id:int}/invite", (int id, InviteBody b, BackofficeApplicantService s, CancellationToken ct) => s.InviteAsync(id, b.AssessmentId, b.DeadlineDays, ct, b.DeadlineAt));
+        staff.MapPost("/applicants/{id:int}/invite", (int id, InviteBody b, BackofficeApplicantService s, CancellationToken ct) => s.InviteAsync(id, b.AssessmentId, b.DeadlineDays, ct, b.DeadlineAt, b.ExtraTimePercent));
 
         // interviews and offers
         staff.MapGet("/interviews", ([AsParameters] ListQuery lq, string? scope, string? status, int? round, int? job, BackofficeInterviewService s, CancellationToken ct) =>
@@ -151,6 +152,7 @@ public static class BackofficeEndpoints
         staff.MapGet("/invitations", ([AsParameters] ListQuery lq, string? status, int? assessment, string? result, int? job, BackofficeAssessmentService s, CancellationToken ct) =>
             s.InvitationsAsync(lq, status, assessment, result, job, ct));
         staff.MapPost("/invitations/{id:int}/reexam", (int id, ReexamBody b, BackofficeAssessmentService s, CancellationToken ct) => s.ReexamAsync(id, b.ExtraAttempts, b.DeadlineDays, b.Notify, ct, b.DeadlineAt));
+        staff.MapPost("/invitations/{id:int}/extra-time", (int id, ExtraTimeBody b, BackofficeAssessmentService s, CancellationToken ct) => s.ExtraTimeAsync(id, b.Percent, ct));
         staff.MapPost("/invitations/{id:int}/deadline", (int id, DeadlineBody b, BackofficeAssessmentService s, CancellationToken ct) => s.ChangeDeadlineAsync(id, b.DeadlineAt, b.Notify, ct));
         staff.MapGet("/invitations/{id:int}/link", (int id, BackofficeAssessmentService s, CancellationToken ct) => s.LinkAsync(id, ct));
         staff.MapPost("/invitations/{id:int}/cancel", (int id, BackofficeAssessmentService s, CancellationToken ct) => s.CancelInvitationAsync(id, ct));

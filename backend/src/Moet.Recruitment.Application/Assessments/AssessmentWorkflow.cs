@@ -15,7 +15,7 @@ public sealed class AssessmentWorkflow(IAppDbContext db, ContentService content,
     // ---------------- invitations ----------------
 
     /// <summary>Invites the applicant (or returns their open invitation to the same test) and emails them.</summary>
-    public async Task<Invitation> InviteAsync(JobApplication app, int assessmentId, int? deadlineDays, bool sendEmail, int? staffId, CancellationToken ct = default, DateTime? deadlineAt = null)
+    public async Task<Invitation> InviteAsync(JobApplication app, int assessmentId, int? deadlineDays, bool sendEmail, int? staffId, CancellationToken ct = default, DateTime? deadlineAt = null, int extraTimePercent = 0)
     {
         var asm = await db.Assessments.Include(a => a.Translations).FirstOrDefaultAsync(a => a.Id == assessmentId, ct)
                   ?? throw DomainException.NotFound("assessment_not_found");
@@ -28,7 +28,7 @@ public sealed class AssessmentWorkflow(IAppDbContext db, ContentService content,
         {
             Code = await codes.NextAsync(CodeKind.Invitation, ct), JobApplicationId = app.Id, AssessmentId = asm.Id,
             Status = InvitationStatus.Invited, DeadlineAt = deadlineAt ?? now.AddDays(Math.Clamp(deadlineDays ?? asm.DefaultDeadlineDays, 1, 90)),
-            AttemptsAllowed = asm.MaxAttempts, LanguageCode = await content.PortalLanguageAsync(app.LanguageCode, ct),
+            AttemptsAllowed = asm.MaxAttempts, ExtraTimePercent = (byte)Math.Clamp(extraTimePercent, 0, 100), LanguageCode = await content.PortalLanguageAsync(app.LanguageCode, ct),
             CreatedAt = now, CreatedByStaffId = staffId, UpdatedAt = now,
         };
         db.Invitations.Add(inv);

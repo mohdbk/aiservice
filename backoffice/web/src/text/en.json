@@ -1310,5 +1310,12 @@
  "deadline.change": "Change Deadline",
  "deadline.change_hint": "Set a new deadline. If the assessment has expired, it opens again.",
  "error.deadline_invalid": "Choose a deadline at least 10 minutes from now and within a year.",
- "error.invitation_closed": "This assessment is finished or cancelled."
+ "error.invitation_closed": "This assessment is finished or cancelled.",
+ "extra.label": "Extra Time",
+ "extra.hint": "Added to every timed section, for a candidate who needs an accommodation.",
+ "extra.none": "None",
+ "extra.value": "+{n}%",
+ "extra.change": "Extra Time",
+ "extra.running": "If the candidate is in a section now, its time is lengthened from when it started.",
+ "error.extra_time_invalid": "Extra time must be between 0 and 100 percent."
 }

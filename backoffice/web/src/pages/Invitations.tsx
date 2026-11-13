@@ -7,7 +7,7 @@ import { invTone } from "./Applicant";
 import { useLookups } from "./JobEdit";
 
 type Row = {
-  id: number; code: string; status: string; deadline_at: string; score: number | null; result: string | null; attempts_used: number; attempts_allowed: number;
+  id: number; code: string; status: string; deadline_at: string; score: number | null; result: string | null; attempts_used: number; attempts_allowed: number; extra_time_percent?: number;
   assessment: string; applicant_id: number; applicant: string; job_title: string; to_mark: number | null; last_attempt: number | null;
 };
 
@@ -30,7 +30,7 @@ export default function Invitations() {
           { key: "test", label: t("app.test"), sort: "test", render: (x) => x.assessment },
           { key: "status", label: t("common.status"), sort: "status", render: (x) => <Badge tone={invTone(x.status)}>{t(`inv.status.${x.status}`)}</Badge> },
           { key: "deadline", label: t("app.deadline"), sort: "deadline", className: "whitespace-nowrap", render: (x) => date(x.deadline_at, true) },
-          { key: "attempts", label: t("app.attempts"), render: (x) => <span dir="ltr">{x.attempts_used} / {x.attempts_allowed}</span> },
+          { key: "attempts", label: t("app.attempts"), render: (x) => <><span dir="ltr">{x.attempts_used} / {x.attempts_allowed}</span>{!!x.extra_time_percent && <span className="block text-xs text-aeblack-500">{t("extra.label")} {t("extra.value", { n: x.extra_time_percent })}</span>}</> },
           { key: "score", label: t("apps.score"), sort: "score", render: (x) => <span className="inline-flex items-center gap-2"><Score value={x.score} />{x.result && <span className="text-xs">{t(`res.${x.result}`)}</span>}</span> },
           { key: "mark", label: t("common.actions"), render: (x) => (
             <div className="flex flex-wrap gap-2">

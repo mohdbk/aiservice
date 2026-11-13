@@ -30,7 +30,7 @@ type Detail = {
   selection?: SelectionView | null;
   duplicates?: { id: number; code: string; full_name: string; email: string; created_at: string; same_cv: boolean; same_phone: boolean; same_name: boolean }[];
   invitations: {
-    id: number; code: string; assessment_id: number; title: string; status: string; deadline_at: string; attempts_used: number; attempts_allowed: number;
+    id: number; code: string; assessment_id: number; title: string; status: string; deadline_at: string; attempts_used: number; attempts_allowed: number; extra_time_percent?: number;
     score: number | null; result: string | null; personality_model: string;
     attempts: {
       id: number; attempt_no: number; status: string; percent: number; passed: boolean | null; tab_switches: number; pastes: number; submitted_at: string | null;
@@ -48,7 +48,8 @@ export default function Applicant() {
   const { data, error, loading, reload } = useAsync(() => api<Detail>(`/applicants/${id}`), [id]);
   const lookups = useLookups();
   const [tab, setTab] = useState("overview");
-  const [dialog, setDialog] = useState<"" | "interview" | "offer" | "invite" | "reexam" | "deadline" | "document" | "times">("");
+  const [dialog, setDialog] = useState<"" | "interview" | "offer" | "invite" | "reexam" | "deadline" | "extra" | "document" | "times">("");
+  const [extraNow, setExtraNow] = useState(0);
   const [bookingsKey, setBookingsKey] = useState(0);
   const [reexamFor, setReexamFor] = useState<number | null>(null);
   const [note, setNote] = useState("");
@@ -198,12 +199,14 @@ export default function Applicant() {
               <ActionMenu label={t("common.actions")} items={[
                 { label: t("app.reexam"), onClick: () => { setReexamFor(inv.id); setDialog("reexam"); } },
                 { label: t("deadline.change"), onClick: () => { setReexamFor(inv.id); setDialog("deadline"); }, disabled: ["Submitted", "Marked", "Cancelled"].includes(inv.status) },
+                { label: t("extra.change"), onClick: () => { setReexamFor(inv.id); setExtraNow(inv.extra_time_percent ?? 0); setDialog("extra"); }, disabled: ["Submitted", "Marked", "Cancelled"].includes(inv.status) },
                 { label: t("app.cancel_invite"), onClick: () => post(`/invitations/${inv.id}/cancel`, {}, t("common.saved")), disabled: inv.status === "Cancelled" },
               ]} />
             </>}>
               <dl className="mb-4 grid gap-2 text-sm sm:grid-cols-4">
                 <div><dt className="text-aeblack-500">{t("app.deadline")}</dt><dd>{date(inv.deadline_at, true)}</dd></div>
                 <div><dt className="text-aeblack-500">{t("app.attempts")}</dt><dd dir="ltr" className="text-start">{inv.attempts_used} / {inv.attempts_allowed}</dd></div>
+                {!!inv.extra_time_percent && <div><dt className="text-aeblack-500">{t("extra.label")}</dt><dd>{t("extra.value", { n: inv.extra_time_percent })}</dd></div>}
                 {inv.personality_model === "None" && <div><dt className="text-aeblack-500">{t("apps.score")}</dt><dd><Score value={inv.score} /></dd></div>}
                 <div><dt className="text-aeblack-500">{t("app.result")}</dt><dd>{inv.result ? t(`res.${inv.result}`) : "-"}</dd></div>
               </dl>
@@ -279,6 +282,8 @@ export default function Applicant() {
         onSave={(body) => post(`/applicants/${a.id}/invite`, body, t("common.saved"))} />
       <ReexamDialog open={dialog === "reexam"} onClose={() => setDialog("")} busy={act.busy}
         onSave={(body) => post(`/invitations/${reexamFor}/reexam`, body, t("common.saved"))} />
+      {dialog === "extra" && <ExtraTimeDialog current={extraNow} onClose={() => setDialog("")} busy={act.busy}
+        onSave={(percent) => post(`/invitations/${reexamFor}/extra-time`, { percent }, t("common.saved"))} />}
       {dialog === "deadline" && <DeadlineDialog open onClose={() => setDialog("")} busy={act.busy}
         onSave={(body) => post(`/invitations/${reexamFor}/deadline`, body, t("common.saved"))} />}
       <InterviewDialog open={dialog === "interview"} onClose={() => setDialog("")} lookups={lk} busy={act.busy}
@@ -295,13 +300,41 @@ function InviteDialog({ open, onClose, tests, onSave, busy }: { open: boolean; o
   const { t } = useLang();
   const [test, setTest] = useState("");
   const [deadline, setDeadline] = useState<Deadline>(DEFAULT_DEADLINE);
+  const [extra, setExtra] = useState(0);
   return (
     <Modal open={open} onClose={onClose} title={t("app.invite")} footer={<>
       <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
-      <Button busy={busy} disabled={!test || (deadline.mode === "exact" && !deadline.at)} onClick={() => onSave({ assessment_id: Number(test), ...deadlineBody(deadline) })}>{t("app.invite")}</Button>
+      <Button busy={busy} disabled={!test || (deadline.mode === "exact" && !deadline.at)} onClick={() => onSave({ assessment_id: Number(test), extra_time_percent: extra, ...deadlineBody(deadline) })}>{t("app.invite")}</Button>
     </>}>
       <SelectInput required label={t("app.test")} value={test} onChange={(e) => setTest(e.target.value)} options={[{ value: "", label: "" }, ...tests.map((x) => ({ value: x.id, label: x.title }))]} />
       <DeadlinePicker value={deadline} onChange={setDeadline} />
+      <ExtraTimeSelect value={extra} onChange={setExtra} />
+    </Modal>
+  );
+}
+
+const EXTRA = [0, 10, 25, 33, 50, 100];
+
+/** Extra time on every timed section, for a candidate who needs an accommodation. */
+function ExtraTimeSelect({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const { t } = useLang();
+  const options = EXTRA.includes(value) ? EXTRA : [...EXTRA, value].sort((a, b) => a - b);
+  return (
+    <SelectInput label={t("extra.label")} hint={t("extra.hint")} value={value} onChange={(e) => onChange(Number(e.target.value))}
+      options={options.map((n) => ({ value: n, label: n === 0 ? t("extra.none") : t("extra.value", { n }) }))} />
+  );
+}
+
+function ExtraTimeDialog({ current, onClose, onSave, busy }: { current: number; onClose: () => void; onSave: (percent: number) => void; busy: boolean }) {
+  const { t } = useLang();
+  const [extra, setExtra] = useState(current);
+  return (
+    <Modal open onClose={onClose} title={t("extra.change")} footer={<>
+      <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
+      <Button busy={busy} onClick={() => onSave(extra)}>{t("common.save")}</Button>
+    </>}>
+      <ExtraTimeSelect value={extra} onChange={setExtra} />
+      <p className="text-sm text-aeblack-600">{t("extra.running")}</p>
     </Modal>
   );
 }

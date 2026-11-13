@@ -614,3 +614,24 @@ public class TimeZoneTests
         Assert.Equal(now.AddHours(30), again.DeadlineAt);
     }
 }
+
+public class ExtraTimeTests
+{
+    [Fact]
+    public void Extra_time_lengthens_timed_sections_including_the_running_one()
+    {
+        Assert.Equal(1500, AttemptRules.SectionSeconds(20, 25));   // 20 minutes + 25%
+        Assert.Equal(0, AttemptRules.SectionSeconds(0, 50));       // untimed stays untimed
+        var start = new DateTime(2026, 11, 13, 8, 0, 0, DateTimeKind.Utc);
+        var attempt = new Attempt { Status = AttemptStatus.InProgress, Sections = [new AttemptSection { SectionNo = 1, Minutes = 20 }] };
+        attempt.StartSection(1, 0, start);
+        Assert.Equal(start.AddMinutes(20), attempt.SectionEndsAt);
+        var inv = new Invitation { Status = InvitationStatus.InProgress, Attempts = [attempt] };
+        inv.SetExtraTime(50, start.AddMinutes(5));
+        Assert.Equal(50, inv.ExtraTimePercent);
+        Assert.Equal(start.AddMinutes(30), attempt.SectionEndsAt);
+        Assert.Throws<DomainException>(() => inv.SetExtraTime(150, start));
+        inv.SetExtraTime(0, start.AddMinutes(25));                  // shorter than time used: a short grace, never in the past
+        Assert.Equal(start.AddMinutes(25).AddSeconds(30), attempt.SectionEndsAt);
+    }
+}

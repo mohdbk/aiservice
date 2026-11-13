@@ -75,7 +75,7 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
             {
                 id = i.Id, code = i.Code, assessment_id = i.AssessmentId, title = (en ? i.Assessment!.Translations.Where(t => t.LanguageCode == "en" && t.Title != "").Select(t => t.Title).FirstOrDefault() ?? i.Assessment!.Title : i.Assessment!.Title), status = i.Status,
                 personality_model = i.Assessment.PersonalityModel,
-                deadline_at = i.DeadlineAt, attempts_used = (int)i.AttemptsUsed, attempts_allowed = (int)i.AttemptsAllowed,
+                deadline_at = i.DeadlineAt, attempts_used = (int)i.AttemptsUsed, attempts_allowed = (int)i.AttemptsAllowed, extra_time_percent = (int)i.ExtraTimePercent,
                 score = i.Score, result = i.Result,
                 attempts = i.Attempts.OrderBy(t => t.AttemptNo).Select(t => new
                 {
@@ -192,10 +192,11 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
         return new { queued = true };
     }
 
-    public async Task<object> InviteAsync(int id, int assessmentId, int? deadlineDays, CancellationToken ct = default, string? deadlineAt = null)
+    public async Task<object> InviteAsync(int id, int assessmentId, int? deadlineDays, CancellationToken ct = default, string? deadlineAt = null, int extraTimePercent = 0)
     {
         var a = await db.JobApplications.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound();
-        var inv = await workflow.InviteAsync(a, assessmentId, deadlineDays, true, actor.Id, ct, clock.Deadline(deadlineAt));
+        if (extraTimePercent is < 0 or > 100) throw DomainException.Invalid("extra_time_invalid");
+        var inv = await workflow.InviteAsync(a, assessmentId, deadlineDays, true, actor.Id, ct, clock.Deadline(deadlineAt), extraTimePercent);
         await db.SaveChangesAsync(ct);
         return new { id = inv.Id, code = inv.Code };
     }

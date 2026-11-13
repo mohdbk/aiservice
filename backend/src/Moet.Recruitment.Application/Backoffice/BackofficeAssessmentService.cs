@@ -315,7 +315,7 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
         return await q.PageAsync(lq, InvitationSorts, i => new
         {
             id = i.Id, code = i.Code, status = i.Status, deadline_at = i.DeadlineAt, score = i.Score, result = i.Result,
-            attempts_used = (int)i.AttemptsUsed, attempts_allowed = (int)i.AttemptsAllowed,
+            attempts_used = (int)i.AttemptsUsed, attempts_allowed = (int)i.AttemptsAllowed, extra_time_percent = (int)i.ExtraTimePercent,
             assessment = (en ? i.Assessment!.Translations.Where(t => t.LanguageCode == "en" && t.Title != "").Select(t => t.Title).FirstOrDefault() ?? i.Assessment!.Title : i.Assessment!.Title), applicant_id = i.JobApplicationId, applicant = i.JobApplication!.FullName,
             job_title = (en ? i.JobApplication.JobOpening!.Translations.Where(t => t.LanguageCode == "en" && t.Title != "").Select(t => t.Title).FirstOrDefault() ?? i.JobApplication.JobOpening!.Title : i.JobApplication.JobOpening!.Title),
             to_mark = i.Attempts.Where(t => t.Status == AttemptStatus.Submitted).Select(t => (int?)t.Id).FirstOrDefault(),
@@ -353,6 +353,15 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
         if (notify) await workflow.EmailAsync(inv, inv.Assessment!, inv.JobApplication!, "reexam", ct);
         await db.SaveChangesAsync(ct);
         return new { status = inv.Status.ToString(), deadline_at = inv.DeadlineAt };
+    }
+
+    /// <summary>Extra time for a candidate who needs it (applies to a section already running too).</summary>
+    public async Task<object> ExtraTimeAsync(int id, int percent, CancellationToken ct = default)
+    {
+        var inv = await db.Invitations.Include(i => i.Attempts).ThenInclude(a => a.Sections).FirstOrDefaultAsync(i => i.Id == id, ct) ?? throw DomainException.NotFound();
+        inv.SetExtraTime(percent, clock.UtcNow);
+        await db.SaveChangesAsync(ct);
+        return new { extra_time_percent = (int)inv.ExtraTimePercent };
     }
 
     public async Task<object> ReexamAsync(int id, int extraAttempts, int deadlineDays, bool notify, CancellationToken ct = default, string? deadlineAt = null)

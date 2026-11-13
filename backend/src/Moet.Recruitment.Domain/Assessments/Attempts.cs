@@ -27,6 +27,19 @@ public class Invitation
 
     public bool DeadlinePassed(DateTime now) => DeadlineAt < now;
 
+    /// <summary>
+    /// Extra time on every timed section (an accommodation, 0 to 100 percent). A section already running gets the new
+    /// length from when it started, so the candidate keeps the time they were promised.
+    /// </summary>
+    public void SetExtraTime(int percent, DateTime now)
+    {
+        if (percent is < 0 or > 100) throw DomainException.Invalid("extra_time_invalid");
+        if (Status is InvitationStatus.Submitted or InvitationStatus.Marked or InvitationStatus.Cancelled) throw DomainException.Conflict("invitation_closed");
+        ExtraTimePercent = (byte)percent;
+        foreach (var a in Attempts.Where(a => a.Status == AttemptStatus.InProgress)) a.Retime(percent, now);
+        UpdatedAt = now;
+    }
+
     /// <summary>"" when a new attempt may start, otherwise a reason code.</summary>
     public string CannotStartReason(DateTime now) => AttemptRules.CanStart(Status, AttemptsUsed, AttemptsAllowed, DeadlinePassed(now));
 
@@ -125,6 +138,15 @@ public class Attempt
         SectionStartedAt = now;
         var secs = AttemptRules.SectionSeconds(Sections.Single(s => s.SectionNo == sectionNo).Minutes, extraTimePercent);
         SectionEndsAt = secs > 0 ? now.AddSeconds(secs) : null;
+    }
+
+    /// <summary>The running section's end recalculated with another extra time (never before now).</summary>
+    public void Retime(int extraTimePercent, DateTime now)
+    {
+        if (Status != AttemptStatus.InProgress || SectionStartedAt == null || SectionEndsAt == null) return;
+        var secs = AttemptRules.SectionSeconds(Sections.Single(s => s.SectionNo == CurrentSectionNo).Minutes, extraTimePercent);
+        var end = SectionStartedAt.Value.AddSeconds(secs);
+        SectionEndsAt = end > now ? end : now.AddSeconds(30);
     }
 
     /// <summary>Moves past every section whose time is up (may submit the attempt). Returns true when anything changed.</summary>
