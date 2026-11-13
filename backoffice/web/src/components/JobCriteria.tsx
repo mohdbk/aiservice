@@ -55,7 +55,7 @@ export function JobCriteria({ jobId }: { jobId: number }) {
         {d.approved && !dirty && d.approved_at && <p className="text-sm text-aeblack-600">{t("crit.approved_by", { name: d.approved_by || "-", at: date(d.approved_at, true) })}</p>}
         {!d.approved && d.waiting > 0 && <Note tone="warning">{t("crit.waiting", { n: d.waiting })}</Note>}
         {d.description_changed && <Note tone="warning">{t("crit.description_changed")}</Note>}
-        {(saving.error || suggesting.error) && <ErrorState error={saving.error || suggesting.error} />}
+        {(saving.error || suggesting.error) && <ErrorState error={saving.error || suggesting.error || undefined} />}
 
         {rows.length === 0 ? <p className="text-sm text-aeblack-500">{t("crit.none")}</p> : (
           <div className="overflow-x-auto">
