@@ -5,6 +5,7 @@ import {
   Bilingual, Button, Card, EnglishBadge, ErrorState, LangTabs, Loading, Note, PageHeader, RichText, SectionTabs, SelectInput, TextInput, Toggle, Tick, useSaving,
 } from "../components/ui";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
+import { JobCriteria } from "../components/JobCriteria";
 import { DEFAULT_WEIGHTS, JobRanking, RoleProfileSelect, SelectionSettings, type Weights } from "../components/Selection";
 
 export type Lookups = {
@@ -230,25 +231,8 @@ export default function JobEdit() {
 
       {tab === "ranking" && id && <JobRanking jobId={id} />}
 
-      {tab === "criteria" && (
-        <Card title={t("jobs.tab.criteria")}>
-          <div className="mb-4"><Note>{t("jobs.criteria_hint")}</Note></div>
-          {job.criteria.length === 0 ? <p className="text-aeblack-500">{t("jobs.criteria_none")}</p> : (
-            <>
-              {!job.criteria_current && <div className="mb-4"><Note tone="warning">{t("jobs.criteria_stale")}</Note></div>}
-              <ul className="space-y-2">
-                {job.criteria.map((c, i) => (
-                  <li key={i} className="flex items-center justify-between gap-3 rounded-xl border border-aeblack-100 p-3">
-                    <span>{c.criterion} {c.is_must_have && <span className="ms-1 rounded-full bg-primary-100 px-2 text-xs font-semibold text-primary-800">{t("jobs.must")}</span>}</span>
-                    <span className="text-sm tabular-nums text-aeblack-500">{t("jobs.weight")} {c.weight}</span>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </Card>
-      )}
-      {tab !== "ranking" && <div className="mt-6 flex justify-end">
+      {tab === "criteria" && job.id && <JobCriteria jobId={job.id} />}
+      {tab !== "ranking" && tab !== "criteria" && <div className="mt-6 flex justify-end">
         <Button busy={busy} onClick={save} icon={<FloppyDisk size={20} aria-hidden="true" />}>{t("common.save")}</Button>
       </div>}
     </>

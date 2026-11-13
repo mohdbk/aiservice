@@ -321,6 +321,24 @@ public class EndToEndTests
         var ranking = await Read(await admin.GetAsync($"/api/backoffice/jobs/{jobId}/ranking?all=true"));
         Assert.Equal(50, ranking.GetProperty("weights").GetProperty("interview").GetInt32());
         Assert.Equal(pmId, ranking.GetProperty("role_profile_id").GetInt32());
+        // Screening criteria: HR saves a draft, approves it (CVs waiting are then scored), and can score all CVs again.
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsync($"/api/backoffice/jobs/{jobId}/criteria", JsonBody(new { approve = true, criteria = Array.Empty<object>() }))).StatusCode);
+        Assert.True((await admin.PutAsync($"/api/backoffice/jobs/{jobId}/criteria", JsonBody(new
+        {
+            approve = false, criteria = new[] { new { criterion = "3 years of data analysis", weight = 60m, must = true }, new { criterion = "SQL", weight = 40m, must = false } },
+        }))).IsSuccessStatusCode);
+        var draftCriteria = await Read(await admin.GetAsync($"/api/backoffice/jobs/{jobId}/criteria"));
+        Assert.False(draftCriteria.GetProperty("approved").GetBoolean());
+        Assert.Equal(HttpStatusCode.Conflict, (await admin.PostAsync($"/api/backoffice/jobs/{jobId}/score-again", JsonBody(new { }))).StatusCode);
+        Assert.True((await admin.PutAsync($"/api/backoffice/jobs/{jobId}/criteria", JsonBody(new
+        {
+            approve = true, criteria = new[] { new { criterion = "3 years of data analysis", weight = 60m, must = true }, new { criterion = "SQL", weight = 40m, must = false } },
+        }))).IsSuccessStatusCode);
+        var approvedCriteria = await Read(await admin.GetAsync($"/api/backoffice/jobs/{jobId}/criteria"));
+        Assert.True(approvedCriteria.GetProperty("approved").GetBoolean());
+        Assert.Equal(2, approvedCriteria.GetProperty("criteria").GetArrayLength());
+        Assert.True((await admin.PostAsync($"/api/backoffice/jobs/{jobId}/score-again", JsonBody(new { }))).IsSuccessStatusCode);
+
         // The role profile shows the jobs linked to it, and cannot be deleted while a job uses it.
         var linked = (await Read(await admin.GetAsync("/api/backoffice/role-profiles?model=WorkplaceBigFive"))).GetProperty("items").EnumerateArray().First(r => r.GetProperty("id").GetInt32() == pmId);
         Assert.True(linked.GetProperty("jobs").GetInt32() >= 1);

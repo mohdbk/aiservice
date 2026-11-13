@@ -40,11 +40,27 @@ public sealed class CvScoringHandler(IAppDbContext db, ILanguageModel model, ICv
         }
         var redacted = TextUtil.Clip(CvScoring.Redact(cv.Text, app.FullName), 40000);
         var job = await db.JobOpenings.Include(j => j.Criteria).FirstAsync(j => j.Id == app.JobOpeningId, ct);
-        var criteria = await EnsureCriteriaAsync(job, ct);
 
         var profile = await model.CompleteJsonAsync(Prompts.Profile, $"<cv>\n{redacted}\n</cv>", Prompts.ProfileSchema, "cv_profile", ct);
         var work = Arr(profile, "work").Select(w => (Str(w, "startDate"), Str(w, "endDate"))).ToList();
         var years = CvScoring.ResolveExperience(CvScoring.YearsOfExperience(work, clock.Today()), Num(profile, "stated_years_of_experience"));
+
+        // CVs are scored only against criteria HR has approved. Until then the CV details are read (so the candidate can check
+        // them) and the application waits; approving the criteria scores every waiting CV.
+        var criteria = await ApprovedCriteriaAsync(job, ct);
+        if (criteria == null)
+        {
+            c.Status = CvAnalysisStatus.Waiting;
+            c.YearsOfExperience = years;
+            c.CvLanguage = TextUtil.Clip(Str(profile, "cv_language"), 10);
+            c.ReadMethod = cv.Method;
+            c.Model = TextUtil.Clip(model.ModelName, 100);
+            c.ProfileJson = WithYears(profile, years);
+            c.Error = "";
+            c.UpdatedAt = clock.UtcNow;
+            await db.SaveChangesAsync(ct);
+            return;
+        }
 
         var list = string.Join("\n", criteria.Select((x, i) => $"{i + 1}. {x.Text} (weight {x.Weight.ToString("0.##", CultureInfo.InvariantCulture)}{(x.MustHave ? ", MUST-HAVE" : "")})"));
         var user = $"<job>\nTitle: {job.Title}\n\n{TextUtil.Clip(TextUtil.StripHtml(job.Description), 12000)}\n</job>\n\n" +
@@ -91,12 +107,26 @@ public sealed class CvScoringHandler(IAppDbContext db, ILanguageModel model, ICv
         await db.SaveChangesAsync(ct);
     }
 
-    /// <summary>The job's criteria, derived again from the description when it changed since they were made.</summary>
-    async Task<List<CvScoring.Criterion>> EnsureCriteriaAsync(JobOpening job, CancellationToken ct)
+    /// <summary>
+    /// The job's approved criteria, or null while HR has not approved any. A job without criteria gets a suggestion from
+    /// the description for HR to review (saved as a draft, not used until approved).
+    /// </summary>
+    async Task<List<CvScoring.Criterion>?> ApprovedCriteriaAsync(JobOpening job, CancellationToken ct)
+    {
+        if (job.CriteriaApprovedAt != null && job.Criteria.Count > 0)
+            return job.Criteria.OrderBy(x => x.SortOrder).Select(x => new CvScoring.Criterion(x.Criterion, x.Weight, x.IsMustHave)).ToList();
+        if (job.Criteria.Count == 0)
+        {
+            try { await SuggestCriteriaAsync(model, db, job, ct); }
+            catch (InvalidOperationException) { /* no suggestion: HR writes the criteria */ }
+        }
+        return null;
+    }
+
+    /// <summary>Replaces the job's draft criteria with a suggestion derived from the description (not approved).</summary>
+    public static async Task<List<CvScoring.Criterion>> SuggestCriteriaAsync(ILanguageModel model, IAppDbContext db, JobOpening job, CancellationToken ct)
     {
         var version = job.DescriptionVersion();
-        if (job.CriteriaVersion == version && job.Criteria.Count > 0)
-            return job.Criteria.OrderBy(x => x.SortOrder).Select(x => new CvScoring.Criterion(x.Criterion, x.Weight, x.IsMustHave)).ToList();
         var output = await model.CompleteJsonAsync(Prompts.Criteria,
             $"<job>\nTitle: {job.Title}\n\n{TextUtil.Clip(TextUtil.StripHtml(job.Description), 12000)}\n</job>", Prompts.CriteriaSchema, "job_criteria", ct);
         var list = Arr(output, "criteria").Take(6)
@@ -108,6 +138,8 @@ public sealed class CvScoringHandler(IAppDbContext db, ILanguageModel model, ICv
         var n = 0;
         foreach (var x in list) job.Criteria.Add(new JobCriterion { SortOrder = n++, Criterion = x.Text, Weight = x.Weight, IsMustHave = x.MustHave });
         job.CriteriaVersion = version;
+        job.CriteriaApprovedAt = null;
+        job.CriteriaApprovedByStaffId = null;
         await db.SaveChangesAsync(ct);
         return list;
     }

@@ -24,7 +24,7 @@ export default function Applicants() {
           { key: "job", label: t("apps.job"), options: (jobs.data?.items || []).map((j) => ({ value: String(j.id), label: j.title })) },
           { key: "status", label: t("common.status"), options: opts(t, "app.status.", ["Open", "Replied", "Hold", "Accepted", "Rejected"]) },
           { key: "screening", label: t("apps.screening"), options: opts(t, "screen.", ["Meets", "DoesNotMeet", "NoRequirements", "NoQuestions"]) },
-          { key: "ai", label: t("apps.ai"), options: opts(t, "ai.", ["Scored", "Pending", "Processing", "Failed", "Skipped"]) },
+          { key: "ai", label: t("apps.ai"), options: opts(t, "ai.", ["Scored", "Waiting", "Pending", "Processing", "Failed", "Skipped"]) },
           { key: "minScore", label: t("apps.min_score"), options: ["50", "60", "70", "80", "90"].map((v) => ({ value: v, label: `${v}+` })) },
         ]}
         toolbar={<>

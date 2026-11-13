@@ -44,4 +44,19 @@ public sealed class JobQueue(IAppDbContext db, IClock clock)
             RunAfter = clock.UtcNow + (delay ?? TimeSpan.Zero), CreatedAt = clock.UtcNow,
         });
     }
+
+    /// <summary>Queues the same work for many records in one go (records already waiting are skipped).</summary>
+    public async Task<int> EnqueueManyAsync(string jobType, IReadOnlyCollection<int> targetIds, CancellationToken ct = default)
+    {
+        if (targetIds.Count == 0) return 0;
+        var waiting = (await db.BackgroundJobs.Where(j => j.JobType == jobType && (j.Status == BackgroundJobStatus.Queued || j.Status == BackgroundJobStatus.Running))
+            .Select(j => j.TargetId).ToListAsync(ct)).ToHashSet();
+        var n = 0;
+        foreach (var id in targetIds.Distinct().Where(id => !waiting.Contains(id)))
+        {
+            db.BackgroundJobs.Add(new BackgroundJob { JobType = jobType, TargetId = id, Status = BackgroundJobStatus.Queued, RunAfter = clock.UtcNow, CreatedAt = clock.UtcNow });
+            n++;
+        }
+        return n;
+    }
 }

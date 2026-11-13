@@ -27,6 +27,9 @@ public class JobOpening
     public SalaryPeriod SalaryPeriod { get; set; } = SalaryPeriod.Month;
     public bool ShowSalary { get; set; }
     public string? CriteriaVersion { get; set; }
+    /// <summary>When HR approved the screening criteria (CVs are scored only against approved criteria), and who.</summary>
+    public DateTime? CriteriaApprovedAt { get; set; }
+    public int? CriteriaApprovedByStaffId { get; set; }
     /// <summary>The role profile (job family) personality results are matched against; its sibling of the other questionnaire is used too.</summary>
     public int? RoleProfileId { get; set; }
     /// <summary>Weights of the combined selection score (percent, adding up to 100).</summary>

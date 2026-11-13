@@ -105,6 +105,17 @@ async function main() {
   await job({ title: "مهندس برمجيات", description: "<p>تطوير الخدمات الرقمية للوزارة.</p>", status: "Draft", is_published: false, translations: [] });
   await job({ title: "مستشار موارد بشرية", description: "<p>تقديم المشورة في سياسات الموارد البشرية.</p>", department_id: depts[2], status: "Closed", posted_on: day(-60), closes_on: day(-5), translations: [] });
 
+  // HR's approved screening criteria for the analyst role (CVs are scored only against approved criteria).
+  await bo("PUT", `/jobs/${analyst.id}/criteria`, {
+    approve: true,
+    criteria: [
+      { criterion: "بكالوريوس في الإحصاء أو علوم البيانات", weight: 25, must: true },
+      { criterion: "3 سنوات على الأقل من الخبرة في تحليل البيانات", weight: 30, must: true },
+      { criterion: "إتقان SQL و Power BI", weight: 25, must: false },
+      { criterion: "خبرة في المؤشرات الاقتصادية أو العمل الحكومي", weight: 20, must: false },
+    ],
+  });
+
   // Applicants through the portal API
   const jobCode = analyst.code;
   const detail = await portal("GET", `job?lang=ar&name=${jobCode}`);

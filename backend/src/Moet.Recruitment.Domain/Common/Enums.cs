@@ -24,7 +24,7 @@ public enum RequirementRule { MustBe, AtLeast, AtMost }
 
 public enum SendWhen { OnApply, Manual }
 
-public enum CvAnalysisStatus { Pending, Processing, Scored, Failed, Skipped }
+public enum CvAnalysisStatus { Pending, Processing, Scored, Failed, Skipped, Waiting }
 
 public enum NoteKind { Note, Correction, System }
 

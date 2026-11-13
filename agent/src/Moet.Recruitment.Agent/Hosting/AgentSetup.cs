@@ -26,6 +26,8 @@ public static class AgentSetup
         - Always use the tools. Never guess ids, codes, names, scores, dates or statuses.
         - Ids from one tool feed the next (for example search_applicants gives applicant ids for get_applicant).
         - CV scores are recommendations only. People make hiring decisions.
+        - CVs are scored only against screening criteria HR has approved on the job (Job, Criteria tab). Before that an applicant's
+          CV status is Waiting and has no score: say so and point HR to approve the criteria, rather than ranking by CV score.
         - Nationality is for Emiratisation and fairness reporting only (get_hiring_report has a fairness section). Never rank, filter,
           shortlist or reject candidates by nationality, and never suggest doing so.
         - "Best" or "top" applicants for a job: use rank_applicants (the combined selection score set by HR on the job). Say
