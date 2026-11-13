@@ -20,7 +20,8 @@ public sealed record ProposalInput(string? Action, JsonElement Arguments, string
 public sealed class AgentProposalService(
     IAppDbContext db, ICurrentActor actor, IClock clock, ContentService content, PortalMailer mailer, AgentSettingsService settings, IAuditContext audit,
     BackofficeApplicantService applicants, BackofficeInterviewService interviews, BackofficeJobService jobs, BackofficeSetupService setup,
-    BookingService bookings, TalentPoolService talent, CriteriaService criteria, BackofficeAssessmentService assessments)
+    BookingService bookings, TalentPoolService talent, CriteriaService criteria, BackofficeAssessmentService assessments,
+    ApprovalService approvals, CandidateService candidates)
 {
 
     static IReadOnlyDictionary<string, string[]> Editable => AgentActions.Editable;
@@ -226,6 +227,35 @@ public sealed class AgentProposalService(
                 await assessments.ExtraTimeAsync(invId, I(a, "percent"), ct);
                 return (ar ? "تم تحديث الوقت الإضافي للتقييم." : "The assessment's extra time was updated.", await InvitationLinkAsync(invId, ct));
             }
+            case "decide_approval":
+            {
+                var approve = B(a, "approve");
+                var r = await approvals.DecideAsync(I(a, "approval_id"), new DecisionInput(approve, Opt(a, "comment")), ct);
+                // An approved offer is sent now, as on the Approvals page.
+                if (approve && r.kind == "OfferSend") await interviews.SetOfferStatusAsync(r.record_id, "Sent", ct);
+                return (approve ? ar ? "تمت الموافقة على الطلب." : "Approved." : ar ? "تم رفض الطلب." : "Rejected.",
+                    r.job_id is { } jid ? $"/jobs/{jid}" : "/approvals");
+            }
+            case "create_requisition":
+            {
+                await approvals.SaveRequisitionAsync(null, Requisition(a), ct);
+                return (ar ? "تم إنشاء طلب الوظيفة وإرساله للموافقة." : "Requisition created and sent for approval.", "/requisitions");
+            }
+            case "candidate_access":
+            {
+                if (!actor.IsAdmin) throw DomainException.Forbidden();
+                var accountId = I(a, "account_id");
+                switch (S(a, "action"))
+                {
+                    case "resend_verification": await candidates.ResendVerificationAsync(accountId, ct); break;
+                    case "password_reset": await candidates.SendPasswordResetAsync(accountId, ct); break;
+                    case "mark_verified": await candidates.MarkVerifiedAsync(accountId, ct); break;
+                    case "disable": await candidates.SetEnabledAsync(accountId, false, ct); break;
+                    case "enable": await candidates.SetEnabledAsync(accountId, true, ct); break;
+                    default: throw DomainException.Invalid("invalid_value");
+                }
+                return (ar ? "تم تنفيذ الإجراء على حساب المرشح." : "Done on the candidate's account.", "/candidates");
+            }
             case "suggest_english":
                 await setup.SuggestEnglishAsync(S(a, "kind"), I(a, "id"), ct);
                 return (ar ? "تم طلب النسخة الإنجليزية، وستكون جاهزة للمراجعة بعد قليل." : "English suggestion requested; it will be ready for review shortly.", null);
@@ -272,6 +302,43 @@ public sealed class AgentProposalService(
                 var weights = $"{I(a, "w_tests")}/{I(a, "w_interview")}/{I(a, "w_personality")}/{I(a, "w_cv")}";
                 return ar ? $"إعدادات الاختيار لوظيفة {job.In("ar").Title}: الأوزان (اختبارات/مقابلات/شخصية/سيرة) {weights}"
                     : $"Selection settings for {job.In("en").Title}: weights (tests/interviews/personality/CV) {weights}";
+            }
+            case "decide_approval":
+            {
+                if (!actor.IsAdmin) throw DomainException.Forbidden();
+                var approvalId = I(a, "approval_id");
+                var req = await db.ApprovalRequests.Where(x => x.Id == approvalId).Select(x => new { x.Title, x.Status, x.RequestedByStaffId }).FirstOrDefaultAsync(ct)
+                    ?? throw DomainException.NotFound();
+                if (req.Status != ApprovalStatus.Pending) throw DomainException.Conflict("approval_closed");
+                var approve = B(a, "approve");
+                if (approve && req.RequestedByStaffId == actor.Id) throw DomainException.Conflict("own_request");
+                if (!approve && string.IsNullOrWhiteSpace(S(a, "comment"))) throw DomainException.Invalid("reason_required");
+                return approve ? ar ? $"الموافقة على: {req.Title}" : $"Approve: {req.Title}" : ar ? $"رفض: {req.Title} (السبب: {S(a, "comment")})" : $"Reject: {req.Title} (reason: {S(a, "comment")})";
+            }
+            case "create_requisition":
+            {
+                var r = Requisition(a);
+                if (string.IsNullOrWhiteSpace(r.Title)) throw DomainException.Invalid("title_required");
+                if (string.IsNullOrWhiteSpace(r.Justification)) throw DomainException.Invalid("justification_required");
+                if (r.Headcount is < 1 or > 500) throw DomainException.Invalid("headcount_invalid");
+                return ar ? $"طلب وظيفة جديد: {r.Headcount} × {r.Title}، للموافقة" : $"New requisition: {r.Headcount} x {(string.IsNullOrWhiteSpace(r.TitleEn) ? r.Title : r.TitleEn)}, for approval";
+            }
+            case "candidate_access":
+            {
+                if (!actor.IsAdmin) throw DomainException.Forbidden();
+                var accountId = I(a, "account_id");
+                var acct = await db.ApplicantAccounts.Where(u => u.Id == accountId && u.AnonymisedAt == null).Select(u => new { u.FullName, u.Email }).FirstOrDefaultAsync(ct)
+                    ?? throw DomainException.NotFound();
+                var what = S(a, "action") switch
+                {
+                    "resend_verification" => ar ? "إعادة إرسال رسالة تأكيد البريد إلى" : "Resend the verification email to",
+                    "password_reset" => ar ? "إرسال رابط إعادة تعيين كلمة المرور إلى" : "Send a password reset link to",
+                    "mark_verified" => ar ? "تأكيد البريد يدوياً لحساب" : "Mark the email as verified for",
+                    "disable" => ar ? "تعطيل حساب" : "Disable the account of",
+                    "enable" => ar ? "تفعيل حساب" : "Enable the account of",
+                    _ => throw DomainException.Invalid("invalid_value"),
+                };
+                return $"{what} {acct.FullName} ({acct.Email})";
             }
             case "set_job_criteria":
             {
@@ -403,6 +470,12 @@ public sealed class AgentProposalService(
             x.TryGetProperty("weight", out var w) && (w.ValueKind == JsonValueKind.Number ? w.TryGetDecimal(out var n) : decimal.TryParse(S(x, "weight"), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out n)) ? n : 0,
             B(x, "must"))).ToList();
     }
+
+    static RequisitionInput Requisition(JsonElement a) => new(
+        Opt(a, "title"), Opt(a, "title_en"), I(a, "department_id") is > 0 and var d ? d : null, I(a, "location_id") is > 0 and var l ? l : null,
+        Opt(a, "employment_type") ?? "FullTime", Opt(a, "grade"), Math.Max(1, I(a, "headcount")),
+        decimal.TryParse(S(a, "budget_monthly"), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var b) && b > 0 ? b : null,
+        Opt(a, "justification"), Opt(a, "needed_by"));
 
     async Task<string?> InvitationLinkAsync(int invitationId, CancellationToken ct) =>
         await db.Invitations.Where(x => x.Id == invitationId).Select(x => (int?)x.JobApplicationId).FirstOrDefaultAsync(ct) is { } appId ? $"/applicants/{appId}?tab=tests" : null;

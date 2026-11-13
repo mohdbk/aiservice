@@ -1417,5 +1417,12 @@
  "cand.delete_requested": "Deletion request recorded.",
  "error.already_verified": "This email is already verified.",
  "error.account_disabled": "The account is disabled.",
- "error.anonymised": "This account was anonymised."
+ "error.anonymised": "This account was anonymised.",
+ "asst.tool.list_approvals": "Reading the approvals inbox",
+ "asst.tool.propose_decide_approval": "Preparing a decision",
+ "asst.tool.list_requisitions": "Reading requisitions",
+ "asst.tool.propose_requisition": "Preparing a requisition",
+ "asst.tool.search_candidates": "Searching candidate accounts",
+ "asst.tool.get_candidate": "Reading the candidate account",
+ "asst.tool.propose_candidate_action": "Preparing an account action"
 }

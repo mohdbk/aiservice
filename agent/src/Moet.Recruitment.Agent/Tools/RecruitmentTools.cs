@@ -70,6 +70,13 @@ public sealed class RecruitmentTools(BackofficeApi api)
         AIFunctionFactory.Create(ProposeReexam, "propose_reexam"),
         AIFunctionFactory.Create(ProposeDeadline, "propose_deadline"),
         AIFunctionFactory.Create(ProposeExtraTime, "propose_extra_time"),
+        AIFunctionFactory.Create(ListApprovals, "list_approvals"),
+        AIFunctionFactory.Create(ProposeDecideApproval, "propose_decide_approval"),
+        AIFunctionFactory.Create(ListRequisitions, "list_requisitions"),
+        AIFunctionFactory.Create(ProposeRequisition, "propose_requisition"),
+        AIFunctionFactory.Create(SearchCandidates, "search_candidates"),
+        AIFunctionFactory.Create(GetCandidate, "get_candidate"),
+        AIFunctionFactory.Create(ProposeCandidateAction, "propose_candidate_action"),
     ];
 
     bool Ar => api.Lang == "ar";
@@ -619,6 +626,56 @@ public sealed class RecruitmentTools(BackofficeApi api)
             s.ChoicePicker(L("الوقت الإضافي", "Extra Time"), "/form/percent",
                 new[] { 0, 10, 25, 33, 50, 100 }.Select(n => (n.ToString(CultureInfo.InvariantCulture), n == 0 ? L("بدون", "None") : $"+{n}%")), required: true),
         ], "percent");
+
+    // ---------------- approvals, requisitions, candidate accounts ----------------
+
+    [Description("The approvals inbox: publishing jobs, sending offers and new requisitions, with who asked and when. Returns items (id, kind, title, status) and whether this user can decide.")]
+    public Task<JsonElement> ListApprovals([Description("Pending, Approved, Rejected or Cancelled; empty for all")] string? status = "Pending", int page = 1, CancellationToken ct = default) =>
+        Read("approvals?" + Q(("status", status), ("page", page.ToString(CultureInfo.InvariantCulture)), ("size", "20")), ct);
+
+    [Description("Proposes approving or rejecting an item in the approvals inbox (recruitment admins). Rejecting needs a reason. Approving publishes the job, sends the offer, or turns the requisition into a draft job. Nobody approves their own request.")]
+    public Task<JsonElement> ProposeDecideApproval(int approvalId, bool approve, [Description("Comment; required when rejecting")] string? comment = null, CancellationToken ct = default) =>
+        Propose("decide_approval", new JsonObject { ["approval_id"] = approvalId, ["approve"] = approve, ["comment"] = NoDash(comment ?? "") }, ct, (s, _) =>
+        [
+            s.CheckBox(L("موافقة (أزل التحديد للرفض)", "Approve (untick to reject)"), "/form/approve"),
+            s.TextField(L("التعليق", "Comment"), "/form/comment", "longText"),
+        ]);
+
+    [Description("Requisitions (requests for new posts): title, department, grade, headcount, budget, reason, status and the draft job once approved.")]
+    public Task<JsonElement> ListRequisitions([Description("Pending, Approved, Rejected, Filled or Cancelled; empty for all")] string? status = null, string? search = null, CancellationToken ct = default) =>
+        Read("requisitions?" + Q(("status", status), ("q", search), ("size", "20")), ct);
+
+    [Description("Proposes a requisition for a new post; it goes to the approvals inbox and, once approved, becomes a draft job. Department and location ids come from get_lookups.")]
+    public Task<JsonElement> ProposeRequisition(
+        [Description("Title in Arabic")] string title, [Description("Number of people, 1 to 500")] int headcount, [Description("Why the post is needed")] string justification,
+        [Description("Title in English")] string? titleEn = null, int? departmentId = null, int? locationId = null,
+        [Description("FullTime, PartTime, Contract, Temporary or Internship")] string employmentType = "FullTime", string? grade = null,
+        [Description("Monthly budget in AED")] decimal? budgetMonthly = null, [Description("Needed by, yyyy-MM-dd")] string? neededBy = null, CancellationToken ct = default) =>
+        Propose("create_requisition", new JsonObject
+        {
+            ["title"] = NoDash(title), ["title_en"] = NoDash(titleEn ?? ""), ["headcount"] = headcount.ToString(CultureInfo.InvariantCulture), ["justification"] = NoDash(justification),
+            ["department_id"] = departmentId?.ToString(CultureInfo.InvariantCulture) ?? "", ["location_id"] = locationId?.ToString(CultureInfo.InvariantCulture) ?? "",
+            ["employment_type"] = employmentType, ["grade"] = grade ?? "", ["budget_monthly"] = budgetMonthly?.ToString(CultureInfo.InvariantCulture) ?? "", ["needed_by"] = neededBy ?? "",
+        }, ct, (s, _) =>
+        [
+            s.Row([s.TextField(L("المسمى (عربي)", "Title (Arabic)"), "/form/title", required: true), s.TextField(L("المسمى (إنجليزي)", "Title (English)"), "/form/title_en")]),
+            s.Row([s.TextField(L("العدد", "Headcount"), "/form/headcount", "number", required: true), s.TextField(L("الدرجة", "Grade"), "/form/grade")]),
+            s.Row([s.TextField(L("الميزانية الشهرية", "Monthly Budget"), "/form/budget_monthly", "number"), s.DateTimeInput(L("مطلوب بحلول", "Needed By"), "/form/needed_by")]),
+            s.TextField(L("المبرر", "Justification"), "/form/justification", "longText", required: true),
+        ], "title", "headcount", "justification");
+
+    [Description("Candidate accounts on the careers portal (recruitment admins): name, email, verified, active, locked, talent pool, applications, joined and last sign-in.")]
+    public Task<JsonElement> SearchCandidates([Description("Name or email")] string? search = null, bool? verified = null, bool? active = null, int page = 1, CancellationToken ct = default) =>
+        Read("candidates?" + Q(("q", search), ("verified", verified?.ToString().ToLowerInvariant()), ("enabled", active?.ToString().ToLowerInvariant()),
+            ("page", page.ToString(CultureInfo.InvariantCulture)), ("size", "20")), ct);
+
+    [Description("One candidate account: status, lockout, applications, data protection requests and the last emails sent to it with whether each was delivered (for 'I never got the email').")]
+    public Task<JsonElement> GetCandidate([Description("Candidate account id (from search_candidates)")] int candidateId, CancellationToken ct = default) =>
+        Read($"candidates/{candidateId}", ct);
+
+    [Description("Proposes an action on a candidate account (recruitment admins): resend_verification, password_reset, mark_verified (only after HR confirmed the address another way), disable (signs them out, applications stay) or enable (also unlocks sign-in).")]
+    public Task<JsonElement> ProposeCandidateAction(int candidateId, [Description("resend_verification, password_reset, mark_verified, disable or enable")] string action, CancellationToken ct = default) =>
+        Propose("candidate_access", new JsonObject { ["account_id"] = candidateId, ["action"] = action }, ct, null);
 
     IEnumerable<(string, string)> OfferStatuses() =>
     [

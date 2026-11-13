@@ -27,6 +27,9 @@ public static class AgentActions
         ["allow_reexam"] = ["extra_attempts", "deadline_days", "deadline_at", "notify"],
         ["change_deadline"] = ["deadline_at", "notify"],
         ["set_extra_time"] = ["percent"],
+        ["decide_approval"] = ["approve", "comment"],
+        ["create_requisition"] = ["title", "title_en", "department_id", "location_id", "employment_type", "grade", "headcount", "budget_monthly", "justification", "needed_by"],
+        ["candidate_access"] = ["action"],
     };
 }
 

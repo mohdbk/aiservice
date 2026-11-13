@@ -175,7 +175,7 @@ public class EndToEndTests
         // Assistant settings: the model key is stored encrypted, never shown, and only the agent service can read it.
         var settings = await Read(await admin.GetAsync("/api/backoffice/agent-settings"));
         Assert.True(settings.GetProperty("is_enabled").GetBoolean());
-        Assert.Equal(51, settings.GetProperty("tools").GetArrayLength());
+        Assert.Equal(58, settings.GetProperty("tools").GetArrayLength());
         var put = new
         {
             is_enabled = true, model_base_url = "http://llm.internal/v1", model_name = "qwen3", api_key = "sk-secret-123", clear_api_key = false,
@@ -519,6 +519,16 @@ public class EndToEndTests
         {
             action = "set_job_criteria", thread_id = "t9", lang = "en", arguments = new { job_id = jobId, approve = true, criteria = Array.Empty<object>() },
         }))).StatusCode);
+        // The assistant proposes a requisition; approving the card creates it and sends it for approval.
+        var reqProposal = await Read(await admin.PostAsync("/api/backoffice/agent/proposals", JsonBody(new
+        {
+            action = "create_requisition", thread_id = "t9", lang = "en",
+            arguments = new { title = "محلل سياحي", title_en = "Tourism Analyst", headcount = "2", justification = "New tourism data unit", employment_type = "FullTime" },
+        })));
+        Assert.StartsWith("New requisition: 2 x Tourism Analyst", reqProposal.GetProperty("label").GetString());
+        Assert.True((await admin.PostAsync($"/api/backoffice/agent/proposals/{reqProposal.GetProperty("id").GetString()}/approve?lang=en", JsonBody(new { }))).IsSuccessStatusCode);
+        Assert.Contains((await Read(await admin.GetAsync("/api/backoffice/requisitions?q=Tourism"))).GetProperty("items").EnumerateArray(), r => r.GetProperty("title_en").GetString() == "Tourism Analyst");
+
         // The CV text for the assistant has personal details removed.
         var cvText = await admin.GetAsync($"/api/backoffice/applicants/{applicantId}/cv-text");
         Assert.True(cvText.StatusCode is HttpStatusCode.OK or HttpStatusCode.NotFound or HttpStatusCode.Conflict, await cvText.Content.ReadAsStringAsync());

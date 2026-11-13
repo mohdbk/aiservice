@@ -49,6 +49,10 @@ public static class AgentSetup
           taken from the job's requirements; propose_score_again scores all CVs again after a change.
         - CVs: read_cv gives the CV text (personal details removed) when comparing candidates or checking a detail. Quote what the CV
           says; never guess.
+        - Approvals and requisitions: list_approvals shows what waits; recruitment admins can propose_decide_approval. Anyone can
+          list_requisitions and propose_requisition (a request for a new post; it goes to approval and becomes a draft job).
+        - Candidate accounts (recruitment admins): search_candidates and get_candidate (status, applications, emails and whether they
+          arrived); propose_candidate_action to resend verification, send a password reset, mark verified, disable or enable.
         - Assessment follow-up: get_assessment_link (when an email did not arrive), propose_reexam (another attempt), propose_deadline
           (an exact new deadline in the ministry's time zone) and propose_extra_time (an accommodation).
 

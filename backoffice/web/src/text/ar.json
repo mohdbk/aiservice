@@ -1417,5 +1417,12 @@
  "cand.delete_requested": "تم تسجيل طلب الحذف.",
  "error.already_verified": "هذا البريد مؤكد بالفعل.",
  "error.account_disabled": "الحساب معطل.",
- "error.anonymised": "تم إخفاء بيانات هذا الحساب."
+ "error.anonymised": "تم إخفاء بيانات هذا الحساب.",
+ "asst.tool.list_approvals": "قراءة صندوق الموافقات",
+ "asst.tool.propose_decide_approval": "إعداد قرار",
+ "asst.tool.list_requisitions": "قراءة طلبات الوظائف",
+ "asst.tool.propose_requisition": "إعداد طلب وظيفة",
+ "asst.tool.search_candidates": "البحث في حسابات المرشحين",
+ "asst.tool.get_candidate": "قراءة حساب المرشح",
+ "asst.tool.propose_candidate_action": "إعداد إجراء على الحساب"
 }
