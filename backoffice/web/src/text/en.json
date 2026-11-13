@@ -1497,5 +1497,7 @@
  "asst.tool.propose_retry_email": "Preparing to resend an email",
  "asst.tool.propose_assistant_limit": "Preparing an assistant limit",
  "asst.tool.propose_health_check": "Preparing a health check",
- "asst.tool.propose_audit_comment": "Preparing an audit comment"
+ "asst.tool.propose_audit_comment": "Preparing an audit comment",
+ "jobs.col_title": "Job Title",
+ "q.edit": "Edit Question"
 }

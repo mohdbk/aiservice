@@ -267,24 +267,35 @@ function Preferences({ pairs, name, pole }: {
  */
 function Radar({ points }: { points: { label: string; value: number; text: string }[] }) {
   const { t } = useLang();
-  const size = 320, c = size / 2, r = 108;
+  // Wider than tall, so long trait names on the left and right have room; long names wrap onto two lines.
+  const w = 460, h = 330, cx = w / 2, cy = h / 2 + 6, r = 104;
   const n = points.length;
   const at = (i: number, v: number) => {
     const a = -Math.PI / 2 + (i * 2 * Math.PI) / n;
-    return [c + Math.cos(a) * r * v, c + Math.sin(a) * r * v] as const;
+    return [cx + Math.cos(a) * r * v, cy + Math.sin(a) * r * v] as const;
+  };
+  const lines = (label: string) => {
+    if (label.length <= 14) return [label];
+    const words = label.split(" ");
+    let best = 1, diff = Infinity;
+    for (let k = 1; k < words.length; k++) {
+      const d = Math.abs(words.slice(0, k).join(" ").length - words.slice(k).join(" ").length);
+      if (d < diff) { diff = d; best = k; }
+    }
+    return words.length > 1 ? [words.slice(0, best).join(" "), words.slice(best).join(" ")] : [label];
   };
   const ring = (v: number) => points.map((_, i) => at(i, v).join(",")).join(" ");
   const shape = points.map((p, i) => at(i, Math.max(0.02, Math.min(1, p.value))).join(",")).join(" ");
   return (
-    <figure className="mx-auto w-full max-w-sm">
-      <svg viewBox={`0 0 ${size} ${size}`} className="h-auto w-full" role="img"
+    <figure className="mx-auto w-full max-w-md">
+      <svg viewBox={`0 0 ${w} ${h}`} className="h-auto w-full overflow-visible" role="img"
         aria-label={`${t("pers.radar_label")}: ${points.map((p) => `${p.label} ${p.text}`).join(", ")}`}>
         {[0.2, 0.4, 0.6, 0.8, 1].map((v) => (
           <polygon key={v} points={ring(v)} fill={v === 1 ? "var(--color-whitely-50, #fafaf7)" : "none"} stroke="var(--color-aeblack-100, #e5e5e5)" strokeWidth={1} />
         ))}
         {points.map((_, i) => {
           const [x, y] = at(i, 1);
-          return <line key={i} x1={c} y1={c} x2={x} y2={y} stroke="var(--color-aeblack-100, #e5e5e5)" strokeWidth={1} />;
+          return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke="var(--color-aeblack-100, #e5e5e5)" strokeWidth={1} />;
         })}
         <polygon points={shape} fill="var(--color-primary-500, #b68a35)" fillOpacity={0.22} stroke="var(--color-primary-600, #92722a)" strokeWidth={2} strokeLinejoin="round" />
         {points.map((p, i) => {
@@ -292,11 +303,12 @@ function Radar({ points }: { points: { label: string; value: number; text: strin
           return <circle key={i} cx={x} cy={y} r={4} fill="var(--color-primary-600, #92722a)" stroke="#fff" strokeWidth={2} />;
         })}
         {points.map((p, i) => {
-          const [x, y] = at(i, 1.2);
-          const anchor = Math.abs(x - c) < 8 ? "middle" : x > c ? "start" : "end";
+          const [x, y] = at(i, 1.16);
+          const anchor = Math.abs(x - cx) < 8 ? "middle" : x > cx ? "start" : "end";
+          const ls = lines(p.label);
           return (
-            <text key={i} x={x} y={y} textAnchor={anchor} dominantBaseline="middle" className="fill-aeblack-800" style={{ fontSize: 11, fontWeight: 600 }}>
-              <tspan x={x} dy="-0.4em">{p.label}</tspan>
+            <text key={i} x={x} y={y} textAnchor={anchor} dominantBaseline="middle" className="fill-aeblack-800" style={{ fontSize: 12, fontWeight: 600 }}>
+              {ls.map((l, k) => <tspan key={k} x={x} dy={k === 0 ? `${-0.6 * ls.length + 0.2}em` : "1.15em"}>{l}</tspan>)}
               <tspan x={x} dy="1.2em" className="fill-aeblack-500" style={{ fontWeight: 400 }}>{p.text}</tspan>
             </text>
           );

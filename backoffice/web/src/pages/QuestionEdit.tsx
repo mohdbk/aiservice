@@ -58,7 +58,7 @@ export default function QuestionEdit() {
   return (
     <>
       <PageHeader back={<Link to={to("/questions")} className="mb-2 inline-block text-sm text-primary-700">{t("q.title")}</Link>}
-        title={isNew ? t("q.new") : t("q.title")} subtitle={!isNew && <EnglishBadge state={q.english_status} />}
+        title={isNew ? t("q.new") : t("q.edit")} subtitle={!isNew && <EnglishBadge state={q.english_status} />}
         actions={<Button busy={busy} onClick={save} icon={<FloppyDisk size={20} aria-hidden="true" />}>{t("common.save")}</Button>} />
       {(error || suggest.error) && <div className="mb-4"><ErrorState error={error || suggest.error || undefined} /></div>}
       <div className="grid gap-6 xl:grid-cols-3">

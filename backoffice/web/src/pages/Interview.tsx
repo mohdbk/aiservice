@@ -51,7 +51,7 @@ export default function Interview() {
     <>
       <PageHeader
         back={<Link to={to("/interviews")} className="mb-2 inline-block text-sm text-primary-700">{t("int.title")}</Link>}
-        title={<Link to={to(`/applicants/${i.applicant.id}`)}>{i.applicant.name}</Link>}
+        title={<Link to={to(`/applicants/${i.applicant.id}`)} className="text-inherit no-underline hover:text-primary-700 hover:underline">{i.applicant.name}</Link>}
         subtitle={<span className="flex flex-wrap items-center gap-2">{i.round.name} · {i.applicant.job_title} <Badge tone={intTone(i.status)}>{t(`int.status.${i.status}`)}</Badge></span>}
         actions={<>
           <Button variant="outline" size="sm" onClick={() => setEdit(true)} icon={<PencilSimple size={20} aria-hidden="true" />}>{t("common.edit")}</Button>

@@ -64,10 +64,12 @@ async function overflow(page) {
   });
 }
 
-/** Buttons, links and fields under the floating assistant button, at the top and with the page scrolled to the end. */
+/** Buttons, links and fields under a floating button, at the top and with the page scrolled to the end. */
 async function underFab(page) {
   return page.evaluate(async () => {
-    const fab = document.querySelector(".mh-assistant-fab");
+    // Any floating button fixed to the bottom of the screen (the assistant used to have one).
+    const fab = [...document.querySelectorAll("body *")].find((e) => getComputedStyle(e).position === "fixed" && e.matches("button, a")
+      && e.getBoundingClientRect().bottom > window.innerHeight - 120 && e.getBoundingClientRect().height > 0);
     if (!fab) return [];
     const hits = new Set();
     for (const y of [0, document.documentElement.scrollHeight]) {
@@ -98,7 +100,7 @@ async function shoot(ctx, name, url, after, full = false) {
     if (after) { await after(page); await page.waitForTimeout(400); }
     await page.screenshot({ path: `shots/${name}.png`, fullPage: !after || full });
     const o = await overflow(page);
-    if (!after) { const u = await underFab(page); if (u.length) note(`UNDER ${name}: under the assistant button: ${u.join(", ")}`); }
+    if (!after) { const u = await underFab(page); if (u.length) note(`UNDER ${name}: under a floating button: ${u.join(", ")}`); }
     if (o.doc > o.w + 1 || o.out.length) note(`WIDE  ${name}: page ${o.doc}px on a ${o.w}px screen\n        ${o.out.join("\n        ")}`);
     if (name.endsWith("_en_dashboard") || name.endsWith("_en_jobs") && name.startsWith("po_")) {
       const fonts = await page.evaluate(async () => {
@@ -169,7 +171,7 @@ for (const [view, opts] of Object.entries(VIEWS)) {
     }, true);
     if (view === "phone") {
       await shoot(ctx, `bo_${view}_${lang}_zz_menu`, `${BASE}/${lang}/applicants`, (p) => p.locator(`header button[aria-label="${lang === "ar" ? "القائمة" : "Menu"}"]`).click());
-      await shoot(ctx, `bo_${view}_${lang}_zz_assistant_panel`, `${BASE}/${lang}/applicants`, (p) => p.locator(".mh-assistant-fab").click());
+      await shoot(ctx, `bo_${view}_${lang}_zz_assistant_panel`, `${BASE}/${lang}/applicants`, (p) => p.locator(".mh-assistant-btn").click());
     }
   }
   const anon = await browser.newContext({ ...opts });

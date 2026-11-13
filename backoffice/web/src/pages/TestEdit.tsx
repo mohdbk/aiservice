@@ -89,7 +89,7 @@ export default function TestEdit() {
   return (
     <>
       <PageHeader back={<Link to={to("/tests")} className="mb-2 inline-block text-sm text-primary-700">{t("test.title")}</Link>}
-        title={isNew ? t("test.new") : x.title}
+        title={isNew ? t("test.new") : panel === "en" && x.title_en ? x.title_en : x.title}
         subtitle={!isNew && <span className="flex flex-wrap items-center gap-2"><EnglishBadge state={x.english_status} />
           {x.question_count !== undefined && <span className="text-sm">{t("test.question_count", { count: x.question_count })}</span>}</span>}
         actions={<Button busy={busy} onClick={() => save()} icon={<FloppyDisk size={20} aria-hidden="true" />}>{t("common.save")}</Button>} />

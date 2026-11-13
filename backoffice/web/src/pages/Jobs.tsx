@@ -30,7 +30,7 @@ export default function Jobs() {
         ]}
         columns={[
           { key: "code", label: t("common.code"), sort: "code", render: (j) => <span dir="ltr" className="whitespace-nowrap text-aeblack-500">{j.code}</span> },
-          { key: "title", label: t("jobs.title"), sort: "title", render: (j) => <>
+          { key: "title", label: t("jobs.col_title"), sort: "title", render: (j) => <>
             <Link to={to(`/jobs/${j.id}`)}>{lang === "en" && j.title_en ? j.title_en : j.title}</Link>
           </> },
           { key: "dep", label: t("jobs.department"), sort: "department", render: (j) => j.department },

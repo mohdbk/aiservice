@@ -58,7 +58,7 @@ export function SelectionCard({ s }: { s: SelectionView | null | undefined }) {
             const p = s.parts.find((x) => x.key === k);
             if (!p) return null;
             return (
-              <li key={k} className={`rounded-xl border border-aeblack-100 p-3 ${p.weight === 0 ? "opacity-60" : ""}`}>
+              <li key={k} className={`rounded-xl border border-aeblack-100 p-3 ${p.weight === 0 ? "border-dashed bg-aeblack-50" : ""}`}>
                 <p className="text-xs text-aeblack-500">{t(`sel.part.${k}`)} <span dir="ltr">({p.weight}%)</span></p>
                 <p className="mt-1 text-xl"><Score value={p.score} /></p>
               </li>

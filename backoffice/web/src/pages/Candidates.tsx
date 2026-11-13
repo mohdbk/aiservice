@@ -36,7 +36,7 @@ export default function Candidates() {
         ]}
         columns={[
           { key: "name", label: t("common.name"), sort: "name", render: (r) => (
-            <button type="button" className="text-start" onClick={() => setOpen(r.id)}>
+            <button type="button" className="flex flex-col items-start text-start" onClick={() => setOpen(r.id)}>
               <span className="block font-semibold text-primary-700">{r.full_name}</span>
               <span className="block text-xs text-aeblack-500" dir="ltr">{r.email}</span>
             </button>

@@ -1497,5 +1497,7 @@
  "asst.tool.propose_retry_email": "إعداد إعادة إرسال رسالة",
  "asst.tool.propose_assistant_limit": "إعداد حد المساعد",
  "asst.tool.propose_health_check": "إعداد فحص الحالة",
- "asst.tool.propose_audit_comment": "إعداد تعليق التدقيق"
+ "asst.tool.propose_audit_comment": "إعداد تعليق التدقيق",
+ "jobs.col_title": "المسمى الوظيفي",
+ "q.edit": "تعديل السؤال"
 }

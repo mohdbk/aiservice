@@ -132,9 +132,15 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
                 same_cv = cvHash.Length > 8 && db.StoredFiles.Any(f => f.Id == x.CvFileId && f.Sha256 == cvHash),
                 same_phone = tail.Length == 9 && x.Phone.EndsWith(tail), same_name = x.FullName == a.FullName,
             }).ToListAsync(ct);
+        // Country and nationality are stored as English names (the portal's values); shown in the backoffice's language.
+        async Task<string?> CountryName(string? name) => en || string.IsNullOrEmpty(name) ? name
+            : await db.Countries.AsNoTracking().Where(c => c.NameEn == name && c.NameAr != "").Select(c => c.NameAr).FirstOrDefaultAsync(ct) ?? name;
+        var countryName = await CountryName(a.Country);
+        var nationalityName = await CountryName(a.Nationality);
         return new
         {
-            id = a.Id, code = a.Code, reference = a.Reference, full_name = a.FullName, email = a.Email, phone = a.Phone, country = a.Country, nationality = a.Nationality,
+            id = a.Id, code = a.Code, reference = a.Reference, full_name = a.FullName, email = a.Email, phone = a.Phone,
+            country = countryName, nationality = nationalityName,
             cover_note = a.CoverNote, status = a.Status.ToString(), language = a.LanguageCode, created_at = a.CreatedAt,
             job = new
             {

@@ -101,7 +101,7 @@ export default function JobEdit() {
     <>
       <PageHeader
         back={<Link to={to("/jobs")} className="mb-2 inline-block text-sm text-primary-700">{t("jobs.title")}</Link>}
-        title={isNew ? t("jobs.new") : job.title}
+        title={isNew ? t("jobs.new") : panel === "en" && job.title_en ? job.title_en : job.title}
         subtitle={!isNew && <span className="flex flex-wrap items-center gap-2"><span dir="ltr">{job.code}</span><EnglishBadge state={job.english} /></span>}
         actions={<>
           {!isNew && <Link className="aegov-btn btn-outline" to={to(`/applicants?job=${id}`)}><Users size={20} aria-hidden="true" />{t("jobs.view_applicants")}</Link>}
