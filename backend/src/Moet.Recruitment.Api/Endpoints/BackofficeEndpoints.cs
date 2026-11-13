@@ -150,6 +150,7 @@ public static class BackofficeEndpoints
         staff.MapGet("/invitations", ([AsParameters] ListQuery lq, string? status, int? assessment, string? result, int? job, BackofficeAssessmentService s, CancellationToken ct) =>
             s.InvitationsAsync(lq, status, assessment, result, job, ct));
         staff.MapPost("/invitations/{id:int}/reexam", (int id, ReexamBody b, BackofficeAssessmentService s, CancellationToken ct) => s.ReexamAsync(id, b.ExtraAttempts, b.DeadlineDays, b.Notify, ct));
+        staff.MapGet("/invitations/{id:int}/link", (int id, BackofficeAssessmentService s, CancellationToken ct) => s.LinkAsync(id, ct));
         staff.MapPost("/invitations/{id:int}/cancel", (int id, BackofficeAssessmentService s, CancellationToken ct) => s.CancelInvitationAsync(id, ct));
         staff.MapGet("/attempts/{id:int}", (int id, BackofficeAssessmentService s, CancellationToken ct) => s.AttemptAsync(id, ct));
         staff.MapPost("/attempts/{id:int}/marks", (int id, MarksBody b, BackofficeAssessmentService s, CancellationToken ct) => s.SaveMarksAsync(id, b.Marks, ct));

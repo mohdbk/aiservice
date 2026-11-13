@@ -1276,5 +1276,20 @@
  "health.virus_required": "Uploads refused while it is down",
  "error.file_rejected": "This file could not be accepted. Upload a different file.",
  "error.scan_unavailable": "Files cannot be uploaded right now. Try again in a few minutes.",
- "rep.weeks_label": "Applications per week over {n} weeks: {total} in all, the most ({max}) in the week of {peak}."
+ "rep.weeks_label": "Applications per week over {n} weeks: {total} in all, the most ({max}) in the week of {peak}.",
+ "asmlink.button": "Copy Link",
+ "asmlink.title": "Assessment Link",
+ "asmlink.copy": "Copy Link",
+ "asmlink.copied": "Link copied.",
+ "asmlink.select": "Copy the selected link.",
+ "asmlink.intro": "Send this link to {name} another way (for example by text message or from your own email) if the invitation did not arrive.",
+ "asmlink.sign_in": "They open it after signing in to the careers portal with {email}.",
+ "asmlink.closed": "This assessment is {status} (deadline {deadline}). Allow another attempt first so the link works.",
+ "asmlink.emails": "Emails Sent to the Candidate Since the Invitation",
+ "asmlink.no_email": "No email was sent (email may not be set up, or the invitation email is switched off).",
+ "asmlink.mail.Sent": "Sent",
+ "asmlink.mail.Queued": "Waiting to Send",
+ "asmlink.mail.Failed": "Failed",
+ "asmlink.mail.Sending": "Sending",
+ "error.portal_url_missing": "The careers portal address is not set (Settings › Portal Address), so no link can be made."
 }

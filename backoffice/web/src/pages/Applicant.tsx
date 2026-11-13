@@ -1,3 +1,4 @@
+import { AssessmentLinkButton } from "../components/AssessmentLink";
 import { ArrowClockwise, CalendarDots, CalendarPlus, Plus, Trash, DownloadSimple, Envelope, Exam, FileText, Handshake, Phone } from "@phosphor-icons/react";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -191,6 +192,7 @@ export default function Applicant() {
           {a.invitations.length === 0 ? <Empty /> : a.invitations.map((inv) => (
             <Card key={inv.id} title={inv.title} actions={<>
               <Badge tone={invTone(inv.status)}>{t(`inv.status.${inv.status}`)}</Badge>
+              {inv.status !== "Cancelled" && <AssessmentLinkButton id={inv.id} />}
               <ActionMenu label={t("common.actions")} items={[
                 { label: t("app.reexam"), onClick: () => { setReexamFor(inv.id); setDialog("reexam"); } },
                 { label: t("app.cancel_invite"), onClick: () => post(`/invitations/${inv.id}/cancel`, {}, t("common.saved")), disabled: inv.status === "Cancelled" },

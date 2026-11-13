@@ -203,6 +203,9 @@ public class EndToEndTests
         var info = await Read(await admin.GetAsync("/api/backoffice/agent/info"));
         Assert.Equal(20, info.GetProperty("history_turns").GetInt32());
 
+        // An assessment link for staff to send another way: unknown invitations are not found.
+        Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync("/api/backoffice/invitations/999999/link")).StatusCode);
+
         // Assessments load with their sections (computed orderings are not mapped as navigations).
         Assert.Equal(0, (await Read(await admin.GetAsync("/api/backoffice/assessments"))).GetProperty("total").GetInt32());
 

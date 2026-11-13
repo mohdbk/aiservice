@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { DataTable, opts, useList } from "../components/DataTable";
+import { AssessmentLinkButton } from "../components/AssessmentLink";
 import { Badge, PageHeader, Score } from "../components/ui";
 import { useLang, usePageTitle } from "../core";
 import { invTone } from "./Applicant";
@@ -31,8 +32,13 @@ export default function Invitations() {
           { key: "deadline", label: t("app.deadline"), sort: "deadline", className: "whitespace-nowrap", render: (x) => date(x.deadline_at, true) },
           { key: "attempts", label: t("app.attempts"), render: (x) => <span dir="ltr">{x.attempts_used} / {x.attempts_allowed}</span> },
           { key: "score", label: t("apps.score"), sort: "score", render: (x) => <span className="inline-flex items-center gap-2"><Score value={x.score} />{x.result && <span className="text-xs">{t(`res.${x.result}`)}</span>}</span> },
-          { key: "mark", label: t("common.actions"), render: (x) => (x.to_mark || x.last_attempt) && x.status !== "InProgress"
-            ? <Link className="aegov-btn btn-outline btn-sm" to={to(`/marking/${x.to_mark || x.last_attempt}`)}>{t("app.mark")}</Link> : null },
+          { key: "mark", label: t("common.actions"), render: (x) => (
+            <div className="flex flex-wrap gap-2">
+              {(x.status === "Invited" || x.status === "InProgress") && <AssessmentLinkButton id={x.id} />}
+              {(x.to_mark || x.last_attempt) && x.status !== "InProgress"
+                ? <Link className="aegov-btn btn-outline btn-sm" to={to(`/marking/${x.to_mark || x.last_attempt}`)}>{t("app.mark")}</Link> : null}
+            </div>
+          ) },
         ]} />
     </>
   );

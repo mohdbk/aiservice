@@ -29,7 +29,7 @@ public sealed record MarkInput(int QuestionId, decimal? Points, string? Comment)
 
 /// <summary>Question bank, tests, invitations and marking for HR.</summary>
 public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor actor, IRequestLanguage language, IClock clock, IHtmlCleaner html, AssessmentWorkflow workflow, JobQueue jobs,
-    PersonalitySettingsService personality)
+    PersonalitySettingsService personality, PortalMailer mailer, ContentService content)
 {
     const string En = "en";
 
@@ -321,6 +321,27 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
             to_mark = i.Attempts.Where(t => t.Status == AttemptStatus.Submitted).Select(t => (int?)t.Id).FirstOrDefault(),
             last_attempt = i.Attempts.OrderByDescending(t => t.AttemptNo).Select(t => (int?)t.Id).FirstOrDefault(),
         }, ct);
+    }
+
+    /// <summary>
+    /// The candidate's link to the assessment (for staff to send another way when the email did not arrive), with what
+    /// happened to the emails sent to them since the invitation. The candidate signs in to the portal to open it.
+    /// </summary>
+    public async Task<object> LinkAsync(int id, CancellationToken ct = default)
+    {
+        var inv = await db.Invitations.AsNoTracking().Include(i => i.JobApplication).FirstOrDefaultAsync(i => i.Id == id, ct) ?? throw DomainException.NotFound();
+        var lang = await content.PortalLanguageAsync(inv.LanguageCode, ct);
+        var link = await mailer.LinkAsync(lang, $"/assessments/{inv.Code}", ct);
+        if (link.Length == 0) throw DomainException.Conflict("portal_url_missing");
+        var email = inv.JobApplication!.Email;
+        var since = inv.CreatedAt.AddMinutes(-1);
+        var emails = await db.EmailMessages.AsNoTracking().Where(m => m.ToAddress == email && m.CreatedAt >= since).OrderByDescending(m => m.CreatedAt).Take(5)
+            .Select(m => new { subject = m.Subject, status = m.Status.ToString(), created_at = m.CreatedAt, sent_at = m.SentAt, attempts = m.Attempts, error = m.LastError }).ToListAsync(ct);
+        return new
+        {
+            link, code = inv.Code, status = inv.Status.ToString(), deadline_at = inv.DeadlineAt, candidate = inv.JobApplication.FullName, email,
+            open = inv.Status is InvitationStatus.Invited or InvitationStatus.InProgress && inv.DeadlineAt > clock.UtcNow, emails,
+        };
     }
 
     public async Task<object> ReexamAsync(int id, int extraAttempts, int deadlineDays, bool notify, CancellationToken ct = default)
