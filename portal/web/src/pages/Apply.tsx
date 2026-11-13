@@ -149,7 +149,7 @@ export default function Apply() {
                 {config.countries.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </Field>
-            <Field id="nationality" label={t("apply.nationality")} prefix={Flag}>
+            <Field id="nationality" label={t("apply.nationality")} optional prefix={Flag}>
               <select id="nationality" value={nationality} onChange={(e) => setNationality(e.target.value)}>
                 <option value="">{t("apply.country_choose")}</option>
                 {config.countries.map((c) => <option key={c} value={c}>{c}</option>)}

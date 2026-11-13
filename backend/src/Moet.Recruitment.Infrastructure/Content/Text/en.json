@@ -351,5 +351,20 @@
  "app.tl.offer_sent": "Job offer sent",
  "app.tl.offer_accepted": "Offer accepted",
  "app.tl.offer_declined": "Offer declined",
- "app.tl.closed": "Application closed"
+ "app.tl.closed": "Application closed",
+ "alerts.title": "Job Alerts",
+ "alerts.body": "Get an email when a new job that matches what you are looking for is published.",
+ "alerts.saved": "Alert saved.",
+ "alerts.any_job": "Any job",
+ "alerts.everywhere": "Any department, any location",
+ "alerts.remove": "Remove",
+ "alerts.keywords": "Words to Look For",
+ "alerts.keywords_example": "For example: data, economics, tourism",
+ "alerts.department": "Department",
+ "alerts.location": "Location",
+ "alerts.any": "Any",
+ "alerts.add": "Add Alert",
+ "alerts.full": "You have the most alerts allowed ({n}). Remove one to add another.",
+ "error.alert_empty": "Add words to look for, or choose a department or location.",
+ "error.too_many_alerts": "You have the most alerts allowed. Remove one to add another."
 }

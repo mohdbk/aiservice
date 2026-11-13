@@ -351,5 +351,20 @@
  "app.tl.offer_sent": "تم إرسال عرض العمل",
  "app.tl.offer_accepted": "تم قبول العرض",
  "app.tl.offer_declined": "تم رفض العرض",
- "app.tl.closed": "تم إغلاق الطلب"
+ "app.tl.closed": "تم إغلاق الطلب",
+ "alerts.title": "تنبيهات الوظائف",
+ "alerts.body": "احصل على رسالة بريد عند نشر وظيفة جديدة تطابق ما تبحث عنه.",
+ "alerts.saved": "تم حفظ التنبيه.",
+ "alerts.any_job": "أي وظيفة",
+ "alerts.everywhere": "أي إدارة، أي موقع",
+ "alerts.remove": "حذف",
+ "alerts.keywords": "كلمات البحث",
+ "alerts.keywords_example": "مثال: بيانات، اقتصاد، سياحة",
+ "alerts.department": "الإدارة",
+ "alerts.location": "الموقع",
+ "alerts.any": "الكل",
+ "alerts.add": "إضافة تنبيه",
+ "alerts.full": "لديك الحد الأقصى من التنبيهات ({n}). احذف تنبيهاً لإضافة آخر.",
+ "error.alert_empty": "أضف كلمات للبحث، أو اختر إدارة أو موقعاً.",
+ "error.too_many_alerts": "لديك الحد الأقصى من التنبيهات. احذف تنبيهاً لإضافة آخر."
 }

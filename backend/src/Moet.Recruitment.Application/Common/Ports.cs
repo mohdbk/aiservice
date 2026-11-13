@@ -49,6 +49,8 @@ public interface IAppDbContext
     DbSet<DataRequest> DataRequests { get; }
     DbSet<ApprovalRequest> ApprovalRequests { get; }
     DbSet<HealthAlertSetting> HealthAlertSettings { get; }
+    DbSet<JobAlert> JobAlerts { get; }
+    DbSet<JobAlertSent> JobAlertSents { get; }
     DbSet<Requisition> Requisitions { get; }
     DbSet<InterviewBooking> InterviewBookings { get; }
     DbSet<TextSetting> TextSettings { get; }

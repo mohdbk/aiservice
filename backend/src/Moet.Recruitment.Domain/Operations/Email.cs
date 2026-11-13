@@ -100,6 +100,7 @@ public static partial class EmailTemplates
         ["not_selected"] = new("عدم الاختيار", "Not Selected", false, ["name", "job_title", "reference"]),
         ["interview_booking"] = new("اختيار موعد المقابلة", "Choose an Interview Time", false, ["name", "job_title", "round", "link"]),
         ["talent_invite"] = new("دعوة للتقديم", "Invitation to Apply", false, ["name", "job_title", "link"]),
+        ["job_alert"] = new("تنبيه وظائف", "Job Alert", false, ["name", "jobs", "link"]),
     };
 
     /// <summary>Placeholders every email can use.</summary>

@@ -279,6 +279,23 @@ export function createApp(cfg = loadConfig(), deps = {}) {
       limit(`mydata:${u.email}`, LIMITS.correction);
       return send(res, 200, await frappe.myData(u), { "Content-Disposition": 'attachment; filename="my-data.json"' });
     }
+    // Job alerts: saved searches emailed when new matching jobs are published.
+    if (m === "GET" && pathname === "/api/account/alerts") {
+      const u = requireUser(req);
+      return send(res, 200, await frappe.jobAlerts(u, langParam(url)));
+    }
+    if (m === "POST" && pathname === "/api/account/alerts") {
+      checkCsrf(req);
+      const u = requireUser(req);
+      const b = await readJson(req, 4096);
+      return send(res, 200, await frappe.saveJobAlert(u, { keywords: str(b.keywords, 300), department: Number(b.department) || 0, location: Number(b.location) || 0, lang: str(b.lang, 10) }));
+    }
+    mm = pathname.match(/^\/api\/account\/alerts\/([0-9]{1,9})$/);
+    if (m === "DELETE" && mm) {
+      checkCsrf(req);
+      const u = requireUser(req);
+      return send(res, 200, await frappe.deleteJobAlert(u, Number(mm[1])));
+    }
     if (m === "POST" && pathname === "/api/account/talent-pool") {
       checkCsrf(req);
       const u = requireUser(req);

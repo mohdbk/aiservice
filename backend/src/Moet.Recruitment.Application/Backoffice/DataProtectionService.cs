@@ -250,6 +250,7 @@ public sealed class DataProtectionService(IAppDbContext db, ICurrentActor actor,
         if (u == null || u.AnonymisedAt != null) return;
         await db.EmailMessages.Where(m => m.ToAddress == u.Email).ExecuteDeleteAsync(ct);
         await db.AccountTokens.Where(t => t.ApplicantAccountId == u.Id).ExecuteDeleteAsync(ct);
+        await db.JobAlerts.Where(a => a.ApplicantAccountId == u.Id).ExecuteDeleteAsync(ct);
         u.Email = $"anonymised-{u.Id}@invalid.local";
         u.FullName = Removed;
         u.PasswordHash = "";

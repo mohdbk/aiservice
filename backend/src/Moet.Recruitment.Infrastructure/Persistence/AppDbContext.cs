@@ -59,6 +59,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, ICurren
     public DbSet<DataRequest> DataRequests => Set<DataRequest>();
     public DbSet<ApprovalRequest> ApprovalRequests => Set<ApprovalRequest>();
     public DbSet<HealthAlertSetting> HealthAlertSettings => Set<HealthAlertSetting>();
+    public DbSet<JobAlert> JobAlerts => Set<JobAlert>();
+    public DbSet<JobAlertSent> JobAlertSents => Set<JobAlertSent>();
     public DbSet<Requisition> Requisitions => Set<Requisition>();
     public DbSet<InterviewBooking> InterviewBookings => Set<InterviewBooking>();
     public DbSet<TextSetting> TextSettings => Set<TextSetting>();

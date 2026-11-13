@@ -208,6 +208,8 @@ public sealed class JobWorker(IServiceScopeFactory scopes, ILogger<JobWorker> lo
             _nextHourly = now.AddHours(1);
             var n = await scope.ServiceProvider.GetRequiredService<AssessmentWorkflow>().ExpireInvitationsAsync(ct);
             if (n > 0) log.LogInformation("Expired {Count} assessment invitations", n);
+            var alerts = await scope.ServiceProvider.GetRequiredService<JobAlertService>().RunAsync(ct);
+            if (alerts > 0) log.LogInformation("Queued {Count} job alert emails", alerts);
         }
         if (now >= _nextDaily)
         {

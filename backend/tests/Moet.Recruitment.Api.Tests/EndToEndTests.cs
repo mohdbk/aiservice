@@ -383,6 +383,27 @@ public class EndToEndTests
         Assert.Equal("declined", (await Read(await portal.PostAsync("/api/portal/respond_offer", JsonBody(new { email = "layla@example.test", epoch, name = appCode, accept = "0", reason = "Took another role" })))).GetProperty("message").GetProperty("status").GetString());
         Assert.Equal(HttpStatusCode.Conflict, (await portal.PostAsync("/api/portal/respond_offer", JsonBody(new { email = "layla@example.test", epoch, name = appCode, accept = "1" }))).StatusCode);
 
+        // Job alerts: an alert for "auditor" gets the next matching job once, not the jobs already open.
+        Assert.Equal(HttpStatusCode.BadRequest, (await portal.PostAsync("/api/portal/save_job_alert", JsonBody(new { email = "layla@example.test", epoch, keywords = "", lang = "en" }))).StatusCode);
+        Assert.True((await portal.PostAsync("/api/portal/save_job_alert", JsonBody(new { email = "layla@example.test", epoch, keywords = "auditor, مدقق", lang = "en" }))).IsSuccessStatusCode);
+        var alertList = await Read(await portal.GetAsync($"/api/portal/job_alerts?lang=en&email=layla@example.test&epoch={epoch}"));
+        Assert.Equal(1, alertList.GetProperty("message").GetProperty("alerts").GetArrayLength());
+        var auditJob = await Read(await admin.PostAsync("/api/backoffice/jobs", JsonBody(new
+        {
+            title = "مدقق داخلي", description = "<p>Internal auditor</p>", department_id = (int?)null, location = "دبي", employment_type = "FullTime", status = "Open", is_published = true,
+            posted_on = (string?)null, closes_on = (string?)null, salary_min = (decimal?)null, salary_max = (decimal?)null, salary_currency = "AED", salary_period = "Month",
+            show_salary = false, translations = Array.Empty<object>(), screening = Array.Empty<object>(), stages = Array.Empty<object>(), row_version = (string?)null,
+        })));
+        using (var scope = app.Services.CreateScope())
+        {
+            var alertsRun = scope.ServiceProvider.GetRequiredService<Moet.Recruitment.Application.Portal.JobAlertService>();
+            await alertsRun.RunAsync();
+            await alertsRun.RunAsync();   // nothing new the second time
+            var sentRows = scope.ServiceProvider.GetRequiredService<Moet.Recruitment.Infrastructure.Persistence.AppDbContext>().JobAlertSents
+                .Count(x => x.JobOpeningId == auditJob.GetProperty("id").GetInt32());
+            Assert.Equal(1, sentRows);
+        }
+
         // Talent pool: the candidate joins from their account and appears in HR's list; texts can be set up (off by default).
         Assert.True((await Read(await portal.PostAsync("/api/portal/talent_pool", JsonBody(new { email = "layla@example.test", epoch, join = "1" })))).GetProperty("message").GetProperty("in_talent_pool").GetBoolean());
         var pool = await Read(await admin.GetAsync("/api/backoffice/talent-pool"));

@@ -3,6 +3,7 @@ import { FormEvent, useState } from "react";
 import { api, ApiError } from "../api";
 import { useAuth } from "../auth";
 import { IconBox } from "../components/Bits";
+import { JobAlerts } from "../components/JobAlerts";
 import { Alert, Skeleton } from "../components/States";
 import { usePageTitle, useSite } from "../site";
 import { useAsync } from "../useAsync";
@@ -101,6 +102,8 @@ export default function Account() {
           </div>
         )}
       </section>
+
+      <JobAlerts />
 
       <section className="mc-surface mt-6 rounded-2xl border border-aeblack-100 bg-white p-6" aria-labelledby="delete-title">
         <h2 id="delete-title" className="font-heading text-lg font-semibold text-aeblack-900">{t("account.delete_title")}</h2>

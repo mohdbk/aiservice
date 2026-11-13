@@ -49,6 +49,7 @@ public static class DependencyInjection
         s.AddScoped<TalentPoolService>();
         s.AddScoped<ApprovalService>();
         s.AddScoped<HealthAlertService>();
+        s.AddScoped<Portal.JobAlertService>();
         s.AddScoped<BookingService>();
         s.AddScoped<TextService>();
         s.AddScoped<HandOffService>();

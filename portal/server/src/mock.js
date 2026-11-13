@@ -130,6 +130,7 @@ export function createMockFrappe() {
   };
   const deletionRequests = new Set();
   const talentPool = new Set();
+  const alerts = [];
   const apps = [
     { id: "HR-APP-2026-00012", job: "HR-OPN-2026-0001", email: "layla@example.com", submitted: "2026-11-05", status: { code: "interview", tone: "success" }, ready: true },
     { id: "HR-APP-2026-00007", job: "HR-OPN-2026-0002", email: "layla@example.com", submitted: "2026-10-30", status: { code: "under_review", tone: "info" }, ready: false },
@@ -312,6 +313,27 @@ export function createMockFrappe() {
     async dataRequests(u) {
       current(u);
       return { deletion_pending: deletionRequests.has(u.email), in_talent_pool: talentPool.has(u.email) };
+    },
+    async jobAlerts(u) {
+      current(u);
+      return { alerts: alerts.filter((a) => a.email === u.email).map(({ email, ...a }) => a), max: 5,
+        departments: [{ id: 1, name: "Economic Policy" }], locations: [{ id: 1, name: "Dubai" }, { id: 2, name: "Abu Dhabi" }] };
+    },
+    async saveJobAlert(u, a) {
+      current(u);
+      if (!a.keywords && !a.department && !a.location) throw new FrappeError("alert_empty", 400);
+      if (alerts.filter((x) => x.email === u.email).length >= 5) throw new FrappeError("too_many_alerts", 409);
+      const id = alerts.length + 1;
+      alerts.push({ id, email: u.email, keywords: a.keywords, department_id: a.department || null, location_id: a.location || null,
+        department: a.department ? "Economic Policy" : "", location: a.location === 1 ? "Dubai" : a.location === 2 ? "Abu Dhabi" : "", created: new Date().toISOString().slice(0, 10) });
+      return { id };
+    },
+    async deleteJobAlert(u, id) {
+      current(u);
+      const i = alerts.findIndex((x) => x.id === id && x.email === u.email);
+      if (i < 0) throw new FrappeError("not_found", 404);
+      alerts.splice(i, 1);
+      return { ok: true };
     },
     async setTalentPool(u, join) {
       current(u);
