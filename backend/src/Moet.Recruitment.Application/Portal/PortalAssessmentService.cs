@@ -11,7 +11,7 @@ namespace Moet.Recruitment.Application.Portal;
 
 /// <summary>A candidate's tests on the career portal.</summary>
 public sealed class PortalAssessmentService(
-    IAppDbContext db, ContentService content, PortalAccountService accounts, AssessmentWorkflow workflow, IClock clock)
+    IAppDbContext db, ContentService content, PortalAccountService accounts, AssessmentWorkflow workflow, IClock clock, IVirusScanner scanner)
 {
     static readonly Dictionary<string, (string Type, byte[] Signature)> AnswerFiles = new()
     {
@@ -93,6 +93,7 @@ public sealed class PortalAssessmentService(
         if (!AnswerFiles.TryGetValue(ext, out var kind) || data.Length < kind.Signature.Length || !data.AsSpan(0, kind.Signature.Length).SequenceEqual(kind.Signature))
             throw DomainException.Invalid("file_type");
         if (data.Length > 10 * 1024 * 1024) throw DomainException.Invalid("file_too_large", new Dictionary<string, object?> { ["max_mb"] = 10 });
+        await scanner.CheckAsync(data, ct);
         var name = TextUtil.Clip(Path.GetFileName(fileName), 200);
         var file = new StoredFile
         {

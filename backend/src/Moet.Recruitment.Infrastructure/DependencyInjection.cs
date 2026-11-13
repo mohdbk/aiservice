@@ -45,6 +45,7 @@ public static class DependencyInjection
         s.AddHttpClient("webhooks", c => c.Timeout = TimeSpan.FromSeconds(30));
         s.AddSingleton<IWebhookClient, HttpWebhookClient>();
         s.AddSingleton<IPdfRenderer, PlaywrightPdfRenderer>();
+        s.AddSingleton<IVirusScanner, Files.ClamAvScanner>();
         s.AddHttpClient("backups", c => c.Timeout = TimeSpan.FromMinutes(10));
         s.AddSingleton<BackupService>();
         s.AddSingleton<IBackups>(sp => sp.GetRequiredService<BackupService>());

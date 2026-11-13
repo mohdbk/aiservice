@@ -1271,5 +1271,9 @@
  "error.code_required": "أدخل الرمز من تطبيق المصادقة.",
  "error.bad_code": "الرمز غير صحيح. تحقق من الوقت في هاتفك وجرّب أحدث رمز.",
  "error.two_step_unavailable": "لا يمكن استخدام التحقق بخطوتين حالياً. تواصل مع مدير النظام.",
- "error.two_step_not_set_up": "ابدأ الإعداد من جديد."
+ "error.two_step_not_set_up": "ابدأ الإعداد من جديد.",
+ "health.virus": "فحص الفيروسات",
+ "health.virus_required": "رفض الملفات عند تعطله",
+ "error.file_rejected": "تعذر قبول هذا الملف. ارفع ملفاً آخر.",
+ "error.scan_unavailable": "لا يمكن رفع الملفات حالياً. حاول بعد دقائق."
 }

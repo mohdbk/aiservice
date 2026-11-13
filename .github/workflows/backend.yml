@@ -39,6 +39,11 @@ jobs:
         run: dotnet build Moet.Recruitment.slnx --no-restore -c Release
       - name: Domain tests
         run: dotnet test tests/Moet.Recruitment.Domain.Tests --no-build -c Release --logger "console;verbosity=normal"
+      - name: Virus scanner (ClamAV) test
+        run: |
+          docker run -d --name clamav -p 3310:3310 clamav/clamav:1.4
+          for i in $(seq 1 60); do (printf 'zPING\0' | timeout 3 nc -q 2 localhost 3310 | grep -q PONG) && break; sleep 5; done
+          CLAMAV_HOST=localhost:3310 dotnet test tests/Moet.Recruitment.Api.Tests --no-build -c Release --filter "FullyQualifiedName~VirusScanTests" --logger "console;verbosity=normal"
       - name: Chromium for PDF letters
         run: pwsh src/Moet.Recruitment.Api/bin/Release/net10.0/playwright.ps1 install --with-deps --only-shell chromium
       - name: End-to-end tests on SQL Server

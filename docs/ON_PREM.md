@@ -21,6 +21,7 @@ Nothing in the production setup depends on Railway or OpenRouter.
 | **PaddleOCR PP-OCRv5** | OCR draft for scanned/photo CVs (own Python 3.12 environment in the image) | Yes |
 | **poppler-utils** | Renders PDF pages to images for OCR (OS package) | Yes |
 | **Chromium (Playwright headless shell)** | Prints letters as PDF (installed in the API image; offline) | Yes |
+| **ClamAV** (`clamav/clamav`) | Scans uploads for viruses (`CLAMAV_HOST`); keep its signatures updated from an internal mirror | Recommended |
 | **Outgoing email account** | Interview invites and candidate emails sent from the assistant | For those features |
 | **LLM endpoint** | Any OpenAI-compatible server (vLLM recommended) | Yes |
 

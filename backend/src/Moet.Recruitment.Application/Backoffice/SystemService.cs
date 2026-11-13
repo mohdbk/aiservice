@@ -8,7 +8,7 @@ using Moet.Recruitment.Domain.Operations;
 namespace Moet.Recruitment.Application.Backoffice;
 
 /// <summary>System administration pages: the audit log, assistant usage with per-person limits, and the health of the service.</summary>
-public sealed class SystemService(IAppDbContext db, IClock clock, MailConfig mail, ICurrentActor actor)
+public sealed class SystemService(IAppDbContext db, IClock clock, MailConfig mail, ICurrentActor actor, IVirusScanner scanner)
 {
     static readonly Sorts<AuditEntry> AuditSorts = new Sorts<AuditEntry>("when").Add("when", a => a.OccurredAt).Add("record", a => a.EntityName)
         .Add("action", a => a.Action).Add("by", a => a.ActorName);
@@ -136,6 +136,7 @@ public sealed class SystemService(IAppDbContext db, IClock clock, MailConfig mai
                 sent_day = emails.Where(e => e.Key == EmailStatus.Sent).Sum(e => e.n), failed_day = emails.Where(e => e.Key == EmailStatus.Failed).Sum(e => e.n),
             },
             cv_scoring = new { state = cvFailed > 0 ? "errors" : "ok", waiting = cvWaiting, failed = cvFailed },
+            virus_scan = new { state = await scanner.StateAsync(ct), required = scanner.Required },
             assistant,
         };
     }

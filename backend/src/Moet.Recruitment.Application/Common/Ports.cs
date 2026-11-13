@@ -170,6 +170,24 @@ public interface IMailSender
 }
 
 /// <summary>Lays a letter out as a PDF (Arabic right to left, English left to right).</summary>
+public enum ScanOutcome { Clean, Infected, Unavailable, Off }
+
+/// <summary>Virus scanning of uploaded files (ClamAV when CLAMAV_HOST is set; off otherwise).</summary>
+public interface IVirusScanner
+{
+    Task<(ScanOutcome Outcome, string Detail)> ScanAsync(byte[] data, CancellationToken ct = default);
+    /// <summary>Whether a scanner answers (for the health page): "off", "ok" or "down".</summary>
+    Task<string> StateAsync(CancellationToken ct = default);
+    /// <summary>Refuses an upload that is infected, or (when scanning is required) one that could not be scanned.</summary>
+    async Task CheckAsync(byte[] data, CancellationToken ct = default)
+    {
+        var (outcome, _) = await ScanAsync(data, ct);
+        if (outcome == ScanOutcome.Infected) throw Domain.Common.DomainException.Invalid("file_rejected");
+        if (outcome == ScanOutcome.Unavailable && Required) throw Domain.Common.DomainException.Conflict("scan_unavailable");
+    }
+    bool Required { get; }
+}
+
 /// <summary>Prints a letter's HTML (the same as its preview) as an A4 PDF, with the ministry logo at the top.</summary>
 public interface IPdfRenderer
 {

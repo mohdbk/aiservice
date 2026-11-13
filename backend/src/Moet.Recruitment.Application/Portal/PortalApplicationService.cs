@@ -25,7 +25,7 @@ public sealed record ApplicationSummaryView(string Id, string Job, string Title,
 public sealed class PortalApplicationService(
     IAppDbContext db, ContentService content, PortalAccountService accounts, PortalSiteService site, AssessmentWorkflow assessments,
     JobQueue jobs, ICodeGenerator codes, IClock clock, PortalMailer mailer, BookingService bookings, DocumentService documents,
-    BackofficeInterviewService offers)
+    BackofficeInterviewService offers, IVirusScanner scanner)
 {
     public async Task<object> ApplyAsync(ApplyInput input, CancellationToken ct = default)
     {
@@ -48,6 +48,7 @@ public sealed class PortalApplicationService(
 
         if (input.Cv == null || input.Cv.Length == 0) throw DomainException.Invalid("cv_required");
         var ext = CvFile.Validate(input.FileName ?? "", input.Cv, s.MaxCvMb);
+        await scanner.CheckAsync(input.Cv, ct);
         var now = clock.UtcNow;
         var file = new StoredFile
         {

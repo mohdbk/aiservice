@@ -13,7 +13,7 @@ public sealed record HealthAlertInput(bool IsEnabled, string? ExtraRecipients);
 /// Checks the system's health every few minutes and emails the system administrators (and any extra addresses) when
 /// something fails, again each day while it lasts, and once when all is back to normal.
 /// </summary>
-public sealed class HealthAlertService(IAppDbContext db, IClock clock, MailConfig mail)
+public sealed class HealthAlertService(IAppDbContext db, IClock clock, MailConfig mail, IVirusScanner scanner)
 {
     /// <summary>A problem: a key (stable, for comparing runs) and the text in each language.</summary>
     public sealed record Problem(string Key, string En, string Ar);
@@ -57,6 +57,7 @@ public sealed class HealthAlertService(IAppDbContext db, IClock clock, MailConfi
         if (failedEmails > 0) list.Add(new("email_failed", $"{failedEmails} emails could not be sent in the last day.", $"تعذر إرسال {failedEmails} رسائل بريد خلال آخر يوم."));
         var cvFailed = await db.CvAnalyses.AsNoTracking().CountAsync(c => c.Status == CvAnalysisStatus.Failed && c.UpdatedAt >= now.AddDays(-1), ct);
         if (cvFailed > 0) list.Add(new("cv_failed", $"{cvFailed} CVs could not be scored in the last day.", $"تعذر تقييم {cvFailed} سير ذاتية خلال آخر يوم."));
+        if (await scanner.StateAsync(ct) == "down") list.Add(new("virus_scan_down", "The virus scanner cannot be reached.", "تعذر الوصول إلى فاحص الفيروسات."));
         if (extra != null) list.AddRange(extra);
         return list.OrderBy(p => p.Key, StringComparer.Ordinal).ToList();
     }

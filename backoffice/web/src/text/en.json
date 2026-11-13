@@ -1271,5 +1271,9 @@
  "error.code_required": "Enter the code from your authenticator app.",
  "error.bad_code": "The code is not correct. Check the time on your phone and try the newest code.",
  "error.two_step_unavailable": "Two-step sign-in cannot be used right now. Ask a system administrator.",
- "error.two_step_not_set_up": "Start the setup again."
+ "error.two_step_not_set_up": "Start the setup again.",
+ "health.virus": "Virus Scanning",
+ "health.virus_required": "Uploads refused while it is down",
+ "error.file_rejected": "This file could not be accepted. Upload a different file.",
+ "error.scan_unavailable": "Files cannot be uploaded right now. Try again in a few minutes."
 }

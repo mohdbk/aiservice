@@ -109,7 +109,7 @@ public sealed class AgentConversationService(IAppDbContext db, ICurrentActor act
 /// Files attached in the assistant chat: PDF, Word, text or an image (read with OCR when set up), up to 10 MB, visible only
 /// to the person who attached them. The assistant reads their text with the read_attachment tool.
 /// </summary>
-public sealed class AgentAttachmentService(IAppDbContext db, ICurrentActor actor, IClock clock, ICvReader reader)
+public sealed class AgentAttachmentService(IAppDbContext db, ICurrentActor actor, IClock clock, ICvReader reader, IVirusScanner scanner)
 {
     const int MaxMb = 10;
 
@@ -130,6 +130,7 @@ public sealed class AgentAttachmentService(IAppDbContext db, ICurrentActor actor
             ext = Moet.Recruitment.Domain.Hiring.CvFile.Validate(name, content, MaxMb);
             type = Moet.Recruitment.Domain.Hiring.CvFile.ContentTypes[ext];
         }
+        await scanner.CheckAsync(content, ct);
         var now = clock.UtcNow;
         var file = new StoredFile
         {

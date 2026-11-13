@@ -193,6 +193,7 @@ type Health = {
   email: { state: string; configured: boolean; queued: number; sent_day: number; failed_day: number };
   cv_scoring: { state: string; waiting: number; failed: number };
   assistant: { state: string; ms: number };
+  virus_scan?: { state: string; required: boolean };
 };
 
 function State({ s }: { s: string }) {
@@ -233,6 +234,7 @@ export function HealthPage() {
           ["health.failed", h.background.failed], ["health.wait", `${h.background.wait_minutes}`]])}
         {box(t("health.email"), h.email.state, [["health.queued", h.email.queued], ["health.sent_day", h.email.sent_day], ["health.failed_day", h.email.failed_day]])}
         {box(t("health.cv"), h.cv_scoring.state, [["health.waiting", h.cv_scoring.waiting], ["health.failed", h.cv_scoring.failed]])}
+        {h.virus_scan && box(t("health.virus"), h.virus_scan.state, [["health.virus_required", h.virus_scan.required ? t("common.yes") : t("common.no")]])}
       </div>
       <HealthAlerts />
       <Backups />

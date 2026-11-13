@@ -339,5 +339,7 @@
  "offer.declined": "You declined the offer.",
  "error.offer_not_open": "This offer is no longer open.",
  "common.back": "Back",
- "apply.nationality": "Nationality"
+ "apply.nationality": "Nationality",
+ "error.file_rejected": "This file could not be accepted. Upload a different file.",
+ "error.scan_unavailable": "Files cannot be uploaded right now. Try again in a few minutes."
 }

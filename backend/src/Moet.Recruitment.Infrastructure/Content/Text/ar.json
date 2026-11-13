@@ -339,5 +339,7 @@
  "offer.declined": "لقد اعتذرت عن العرض.",
  "error.offer_not_open": "هذا العرض لم يعد متاحا.",
  "common.back": "رجوع",
- "apply.nationality": "الجنسية"
+ "apply.nationality": "الجنسية",
+ "error.file_rejected": "تعذر قبول هذا الملف. ارفع ملفاً آخر.",
+ "error.scan_unavailable": "لا يمكن رفع الملفات حالياً. حاول بعد دقائق."
 }
