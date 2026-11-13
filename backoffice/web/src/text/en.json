@@ -1317,5 +1317,7 @@
  "extra.value": "+{n}%",
  "extra.change": "Extra Time",
  "extra.running": "If the candidate is in a section now, its time is lengthened from when it started.",
- "error.extra_time_invalid": "Extra time must be between 0 and 100 percent."
+ "error.extra_time_invalid": "Extra time must be between 0 and 100 percent.",
+ "rp.jobs": "{n} jobs",
+ "error.role_profile_in_use": "Jobs use this role profile. Choose another profile on those jobs first, or make it inactive."
 }

@@ -7,6 +7,7 @@ import { api, useAsync, useAuth, useLang, usePageTitle, useToast } from "../core
 type Profile = {
   id?: number; name_ar: string; name_en: string; personality_model: string; weights: Record<string, number>; targets: Record<string, string>;
   types: string[]; strong_from: number; moderate_from: number; is_active: boolean; sort_order: number; row_version?: string;
+  jobs?: number; job_list?: { id: number; code: string; title: string; status: string }[];
 };
 
 const ROLE_MODELS = ["WorkplaceBigFive", "WorkplaceType16"];
@@ -69,7 +70,10 @@ export default function RoleProfiles() {
                     <Row key={r.id} title={en ? r.name_en : r.name_ar} onOpen={canEdit ? () => setF({ ...r }) : undefined}
                       sub={model === "WorkplaceType16" ? <span dir="ltr" className="tracking-wide">{r.types.join(" · ")}</span>
                         : Object.entries(r.weights).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${traitName(model, k).split(" (")[0]} ${v}%`).join(" · ")}
-                      aside={!r.is_active && <Badge>{t("common.inactive")}</Badge>} />
+                      aside={<span className="flex flex-wrap items-center justify-end gap-2">
+                        {!!r.jobs && <Badge tone="gold" >{t("rp.jobs", { n: r.jobs })}</Badge>}
+                        {!r.is_active && <Badge>{t("common.inactive")}</Badge>}
+                      </span>} />
                   ))}
                 </RowList>
               )}

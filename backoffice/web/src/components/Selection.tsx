@@ -19,19 +19,13 @@ const fitTone = (l?: string | null) => (l === "Strong" ? "green" : l === "Modera
 export function SelectionSettings({ roleProfileId, weights, onChange }: {
   roleProfileId: number | null; weights: Weights; onChange: (roleProfileId: number | null, weights: Weights) => void;
 }) {
-  const { t, lang } = useLang();
-  const profiles = useAsync(() => api<{ items: { id: number; name_ar: string; name_en: string; personality_model: string; is_active: boolean }[] }>("/role-profiles"), []);
+  const { t } = useLang();
   const total = PARTS.reduce((s, k) => s + (Number(weights[k]) || 0), 0);
-  // One entry per job family: the Big Five profile (its 16-type sibling with the same name is used for that questionnaire).
-  const families = (profiles.data?.items || []).filter((p) => p.is_active && p.personality_model !== "WorkplaceType16");
-  const typeOnly = (profiles.data?.items || []).filter((p) => p.is_active && p.personality_model === "WorkplaceType16" && !families.some((f) => f.name_en === p.name_en));
   return (
     <Card title={t("sel.settings")}>
       <div className="mb-4"><Note>{t("sel.settings_hint")}</Note></div>
       <div className="grid gap-6 lg:grid-cols-2">
-        <SelectInput label={t("sel.role_profile")} hint={t("sel.role_profile_hint")} value={roleProfileId ?? ""}
-          onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null, weights)}
-          options={[{ value: "", label: t("common.none") }, ...[...families, ...typeOnly].map((p) => ({ value: p.id, label: lang === "en" ? p.name_en : p.name_ar }))]} />
+        <RoleProfileSelect value={roleProfileId} onChange={(rp) => onChange(rp, weights)} />
         <div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {PARTS.map((k) => (
@@ -116,5 +110,19 @@ export function JobRanking({ jobId }: { jobId: number | string }) {
           { key: "status", label: t("common.status"), sort: "status", render: (r) => <Badge>{t(`app.status.${r.status}`)}</Badge> },
         ]} />
     </>
+  );
+}
+
+/** The job's role profile (the job family whose personality fit is part of the selection score). */
+export function RoleProfileSelect({ value, onChange }: { value: number | null; onChange: (id: number | null) => void }) {
+  const { t, lang } = useLang();
+  const profiles = useAsync(() => api<{ items: { id: number; name_ar: string; name_en: string; personality_model: string; is_active: boolean }[] }>("/role-profiles"), []);
+  // One entry per job family: the Big Five profile (its 16-type sibling with the same name is used for that questionnaire).
+  const families = (profiles.data?.items || []).filter((p) => p.is_active && p.personality_model !== "WorkplaceType16");
+  const typeOnly = (profiles.data?.items || []).filter((p) => p.is_active && p.personality_model === "WorkplaceType16" && !families.some((f) => f.name_en === p.name_en));
+  return (
+    <SelectInput label={t("sel.role_profile")} hint={t("sel.role_profile_hint")} value={value ?? ""}
+      onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
+      options={[{ value: "", label: t("common.none") }, ...[...families, ...typeOnly].map((p) => ({ value: p.id, label: lang === "en" ? p.name_en : p.name_ar }))]} />
   );
 }

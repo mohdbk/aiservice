@@ -19,7 +19,22 @@ public sealed class RoleProfileService(IAppDbContext db, ICurrentActor actor, IC
         var q = db.RoleProfiles.AsNoTracking().AsQueryable();
         if (Enum.TryParse<PersonalityModel>(model, out var m)) q = q.Where(r => r.PersonalityModel == m);
         var rows = await q.OrderBy(r => r.PersonalityModel).ThenBy(r => r.SortOrder).ThenBy(r => r.NameEn).ToListAsync(ct);
-        return new { items = rows.Select(Full) };
+        // The jobs each profile is linked to (a 16-type profile counts the jobs of its Big Five sibling with the same name).
+        var links = await db.JobOpenings.AsNoTracking().Where(j => j.RoleProfileId != null)
+            .Select(j => new { j.Id, j.Code, j.Title, j.Status, ProfileId = j.RoleProfileId!.Value }).ToListAsync(ct);
+        var names = await db.RoleProfiles.AsNoTracking().ToDictionaryAsync(r => r.Id, r => r.NameEn, ct);
+        return new
+        {
+            items = rows.Select(r =>
+            {
+                var jobs = links.Where(l => l.ProfileId == r.Id || (names.TryGetValue(l.ProfileId, out var n) && n == r.NameEn)).ToList();
+                return new
+                {
+                    profile = Full(r), jobs = jobs.Count,
+                    job_list = jobs.OrderByDescending(j => j.Id).Take(10).Select(j => new { id = j.Id, code = j.Code, title = j.Title, status = j.Status.ToString() }),
+                };
+            }).Select(x => Merge(x.profile, x.jobs, x.job_list)),
+        };
     }
 
     public async Task<object> GetAsync(int id, CancellationToken ct = default) =>
@@ -60,9 +75,19 @@ public sealed class RoleProfileService(IAppDbContext db, ICurrentActor actor, IC
     public async Task<object> DeleteAsync(int id, CancellationToken ct = default)
     {
         var r = await db.RoleProfiles.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound();
+        if (await db.JobOpenings.AnyAsync(j => j.RoleProfileId == id, ct)) throw DomainException.Conflict("role_profile_in_use");
         db.RoleProfiles.Remove(r);
         await db.SaveChangesAsync(ct);
         return new { ok = true };
+    }
+
+    /// <summary>A profile's fields with the jobs linked to it.</summary>
+    static Dictionary<string, object?> Merge(object profile, int jobs, object jobList)
+    {
+        var d = profile.GetType().GetProperties().ToDictionary(p => p.Name, p => p.GetValue(profile));
+        d["jobs"] = jobs;
+        d["job_list"] = jobList;
+        return d;
     }
 
     static object Full(RoleProfile r) => new

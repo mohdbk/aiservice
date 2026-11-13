@@ -321,6 +321,10 @@ public class EndToEndTests
         var ranking = await Read(await admin.GetAsync($"/api/backoffice/jobs/{jobId}/ranking?all=true"));
         Assert.Equal(50, ranking.GetProperty("weights").GetProperty("interview").GetInt32());
         Assert.Equal(pmId, ranking.GetProperty("role_profile_id").GetInt32());
+        // The role profile shows the jobs linked to it, and cannot be deleted while a job uses it.
+        var linked = (await Read(await admin.GetAsync("/api/backoffice/role-profiles?model=WorkplaceBigFive"))).GetProperty("items").EnumerateArray().First(r => r.GetProperty("id").GetInt32() == pmId);
+        Assert.True(linked.GetProperty("jobs").GetInt32() >= 1);
+        Assert.Equal(HttpStatusCode.Conflict, (await admin.DeleteAsync($"/api/backoffice/role-profiles/{pmId}")).StatusCode);
         Assert.True(ranking.GetProperty("total").GetInt32() >= 1);
         Assert.Equal(1, ranking.GetProperty("items")[0].GetProperty("rank").GetInt32());
         var withSelection = await Read(await admin.GetAsync($"/api/backoffice/applicants/{ranking.GetProperty("items")[0].GetProperty("id").GetInt32()}"));

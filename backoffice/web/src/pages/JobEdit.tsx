@@ -5,7 +5,7 @@ import {
   Bilingual, Button, Card, EnglishBadge, ErrorState, LangTabs, Loading, Note, PageHeader, RichText, SectionTabs, SelectInput, TextInput, Toggle, Tick, useSaving,
 } from "../components/ui";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
-import { DEFAULT_WEIGHTS, JobRanking, SelectionSettings, type Weights } from "../components/Selection";
+import { DEFAULT_WEIGHTS, JobRanking, RoleProfileSelect, SelectionSettings, type Weights } from "../components/Selection";
 
 export type Lookups = {
   departments: { id: number; name: string; name_en: string }[];
@@ -143,6 +143,7 @@ export default function JobEdit() {
                 options={[{ value: "", label: job.location && !job.location_id ? job.location : t("common.none") }, ...(lk?.locations || []).map((l) => ({ value: l.id, label: l.name }))]} />
               <SelectInput label={t("jobs.department")} value={job.department_id ?? ""} onChange={(e) => set("department_id", e.target.value ? Number(e.target.value) : null)}
                 options={[{ value: "", label: t("common.none") }, ...(lk?.departments || []).map((d) => ({ value: d.id, label: d.name }))]} />
+              <RoleProfileSelect value={job.role_profile_id} onChange={(rp) => setJob((j) => ({ ...j, role_profile_id: rp }))} />
               <SelectInput required label={t("jobs.employment_type")} value={job.employment_type} onChange={(e) => set("employment_type", e.target.value)}
                 options={["FullTime", "PartTime", "Contract", "Temporary", "Internship"].map((s) => ({ value: s, label: t(`emp.${s}`) }))} />
               <div className="grid grid-cols-2 gap-3">
