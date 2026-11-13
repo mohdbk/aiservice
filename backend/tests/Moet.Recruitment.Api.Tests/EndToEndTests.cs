@@ -307,7 +307,7 @@ public class EndToEndTests
         var withSelection = await Read(await admin.GetAsync($"/api/backoffice/applicants/{ranking.GetProperty("items")[0].GetProperty("id").GetInt32()}"));
         Assert.Equal(4, withSelection.GetProperty("selection").GetProperty("parts").GetArrayLength());
 
-        // Email templates: the ten events exist; the sign-in emails cannot be switched off.
+        // Email templates: the eleven events exist; the sign-in emails cannot be switched off.
         var emailTemplates = await Read(await admin.GetAsync("/api/backoffice/email-templates"));
         Assert.Equal(10, emailTemplates.GetProperty("items").EnumerateArray().Count(t => t.GetProperty("event").ValueKind == JsonValueKind.String));
         var verifyId = emailTemplates.GetProperty("items").EnumerateArray().First(t => t.GetProperty("event").GetString() == "verify").GetProperty("id").GetInt32();
