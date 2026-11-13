@@ -20,6 +20,7 @@ Nothing in the production setup depends on Railway or OpenRouter.
 | **Socket.IO (websocket)** | Streams the assistant's replies and status to the browser | Yes (replies still arrive without it, just not live) |
 | **PaddleOCR PP-OCRv5** | OCR draft for scanned/photo CVs (own Python 3.12 environment in the image) | Yes |
 | **poppler-utils** | Renders PDF pages to images for OCR (OS package) | Yes |
+| **Chromium (Playwright headless shell)** | Prints letters as PDF (installed in the API image; offline) | Yes |
 | **Outgoing email account** | Interview invites and candidate emails sent from the assistant | For those features |
 | **LLM endpoint** | Any OpenAI-compatible server (vLLM recommended) | Yes |
 

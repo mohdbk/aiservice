@@ -40,6 +40,8 @@ jobs:
           dotnet build backend/src/Moet.Recruitment.Api -c Release
           dotnet build agent/src/Moet.Recruitment.Agent -c Release
           cd backoffice/web && npm install --no-audit --no-fund && npm run build
+      - name: Chromium for PDF letters
+        run: pwsh backend/src/Moet.Recruitment.Api/bin/Release/net10.0/playwright.ps1 install --with-deps --only-shell chromium
       - name: Start the stack
         run: |
           node e2e/fake-model.mjs > model.log 2>&1 &

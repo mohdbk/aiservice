@@ -39,6 +39,8 @@ jobs:
         run: dotnet build Moet.Recruitment.slnx --no-restore -c Release
       - name: Domain tests
         run: dotnet test tests/Moet.Recruitment.Domain.Tests --no-build -c Release --logger "console;verbosity=normal"
+      - name: Chromium for PDF letters
+        run: pwsh src/Moet.Recruitment.Api/bin/Release/net10.0/playwright.ps1 install --with-deps --only-shell chromium
       - name: End-to-end tests on SQL Server
         env:
           TEST_DB_CONNECTION: "Server=localhost,1433;Database=MoetRecruitmentCi;User Id=sa;Password=Ci-Strong-Password-123;TrustServerCertificate=True;Encrypt=False"
@@ -64,12 +66,17 @@ jobs:
           API=http://localhost:5080 PORTAL_KEY=ci-portal-key:ci-portal-secret-0123456789 node ../backoffice/scripts/seed-demo.mjs || (tail -80 api.log; exit 1)
       - name: Container image builds
         run: docker build -t moet-recruitment-api .
-      - name: Letters in the image use the Arabic font
+      - name: Letters print in the image (Chromium, Arabic font, readable Arabic text)
         run: |
+          sudo apt-get install -y -qq poppler-utils > /dev/null
           mkdir -p pdf-check && chmod 777 pdf-check
-          docker run --rm -v "$PWD/pdf-check:/out" moet-recruitment-api --pdf-check /out/letter.pdf | tee pdf-check/fonts.txt
+          docker run --rm -v "$PWD/pdf-check:/out" moet-recruitment-api --pdf-check /out/letter.pdf
+          pdffonts pdf-check/letter.pdf | tee pdf-check/fonts.txt
           grep -q "NotoKufiArabic" pdf-check/fonts.txt
-          grep -aq "Arabic" pdf-check/letter.pdf
+          pdftotext pdf-check/letter.pdf - | tee pdf-check/text.txt
+          grep -q "وزارة الاقتصاد والسياحة" pdf-check/text.txt
+          grep -q "AED 25,000" pdf-check/text.txt
+          pdftoppm -r 40 -png -f 1 -l 1 pdf-check/letter.pdf pdf-check/page
       - uses: actions/upload-artifact@v4
         if: always()
         with:

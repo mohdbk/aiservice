@@ -44,7 +44,7 @@ public static class DependencyInjection
         s.AddSingleton<ITextSender, HttpTextSender>();
         s.AddHttpClient("webhooks", c => c.Timeout = TimeSpan.FromSeconds(30));
         s.AddSingleton<IWebhookClient, HttpWebhookClient>();
-        s.AddSingleton<IPdfRenderer, QuestPdfRenderer>();
+        s.AddSingleton<IPdfRenderer, PlaywrightPdfRenderer>();
         s.AddHttpClient("backups", c => c.Timeout = TimeSpan.FromMinutes(10));
         s.AddSingleton<BackupService>();
         s.AddSingleton<IBackups>(sp => sp.GetRequiredService<BackupService>());

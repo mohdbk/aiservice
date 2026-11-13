@@ -170,9 +170,10 @@ public interface IMailSender
 }
 
 /// <summary>Lays a letter out as a PDF (Arabic right to left, English left to right).</summary>
+/// <summary>Prints a letter's HTML (the same as its preview) as an A4 PDF, with the ministry logo at the top.</summary>
 public interface IPdfRenderer
 {
-    byte[] Letter(string title, string text, bool rtl, byte[]? logo);
+    Task<byte[]> LetterAsync(string title, string html, bool rtl, byte[]? logo, CancellationToken ct = default);
 }
 
 /// <summary>An OpenAI-compatible chat model, on-prem or hosted.</summary>

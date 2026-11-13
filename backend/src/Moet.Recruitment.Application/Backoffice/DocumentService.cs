@@ -188,7 +188,7 @@ public sealed class DocumentService(IAppDbContext db, ICurrentActor actor, ICloc
         if (d == null) return null;
         var settings = await content.SettingsAsync(ct);
         var logo = settings.LogoFileId is { } lid ? await db.StoredFiles.AsNoTracking().Where(f => f.Id == lid && f.ContentType != "image/svg+xml").Select(f => f.Content).FirstOrDefaultAsync(ct) : null;
-        var bytes = pdf.Letter(d.TemplateName, d.Text, d.Lang == "ar", logo);
+        var bytes = await pdf.LetterAsync(d.TemplateName, d.Html, d.Lang == "ar", logo, ct);
         var name = new string(d.TemplateName.Select(c => char.IsLetterOrDigit(c) ? c : '-').ToArray()).Trim('-');
         return (bytes, $"{(name.Length == 0 ? "letter" : name)}-{recordId}.pdf");
     }
@@ -205,9 +205,22 @@ public sealed class DocumentService(IAppDbContext db, ICurrentActor actor, ICloc
             .Select(t => l == "ar" ? t.BodyHtmlAr : t.BodyHtmlEn).FirstAsync(ct)).Length > 0;
         // The letter also goes as a PDF file when the email settings say so.
         MailAttachment? file = null;
-        if (letter != null && await db.EmailSettings.AsNoTracking().Select(s => (bool?)s.AttachOfferPdf).FirstOrDefaultAsync(ct) != false
-            && await PdfAsync(DocumentKinds.OfferLetter, offerId, null, l, ct) is { } p)
-            file = new MailAttachment(p.FileName, "application/pdf", p.Content);
+        string? pdfError = null;
+        if (letter != null && await db.EmailSettings.AsNoTracking().Select(s => (bool?)s.AttachOfferPdf).FirstOrDefaultAsync(ct) != false)
+        {
+            // A PDF that cannot be printed (the browser missing or failing) does not stop the offer email: it goes without the file.
+            try
+            {
+                if (await PdfAsync(DocumentKinds.OfferLetter, offerId, null, l, ct) is { } p) file = new MailAttachment(p.FileName, "application/pdf", p.Content);
+            }
+            catch (Exception e) when (e is not OperationCanceledException and not DomainException) { pdfError = e.Message; }
+        }
+        if (pdfError != null)
+            db.ApplicationNotes.Add(new ApplicationNote
+            {
+                JobApplicationId = app.Id, Kind = NoteKind.System, CreatedAt = clock.UtcNow,
+                Text = TextUtil.Clip($"The offer letter PDF could not be made, so the email went without it: {pdfError}", 2000),
+            });
         return await mailer.QueueAsync(app.Email, app.FullName, lang, "offer_sent", "", new Dictionary<string, string>
         {
             ["job_title"] = app.JobOpening!.In(l).Title, ["position_title"] = o.PositionTitle,
