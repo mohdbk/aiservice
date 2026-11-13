@@ -367,5 +367,16 @@
  "alerts.full": "You have the most alerts allowed ({n}). Remove one to add another.",
  "error.alert_empty": "Add words to look for, or choose a department or location.",
  "error.too_many_alerts": "You have the most alerts allowed. Remove one to add another.",
- "asm.auto_next": "Move to the Next Question Automatically"
+ "asm.auto_next": "Move to the Next Question Automatically",
+ "asm.answered_count": "{answered} of {count} Answered",
+ "asm.review": "Review Questions",
+ "asm.flag": "Mark for Review",
+ "asm.flagged": "Marked for Review",
+ "asm.flagged_list": "Marked for Review: {count}",
+ "asm.legend_current": "Current",
+ "asm.legend_answered": "Answered",
+ "asm.legend_unanswered": "Not Answered",
+ "asm.five_minutes": "5 minutes left in this section.",
+ "asm.one_minute": "1 minute left in this section.",
+ "asm.close": "Close"
 }

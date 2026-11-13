@@ -367,5 +367,16 @@
  "alerts.full": "لديك الحد الأقصى من التنبيهات ({n}). احذف تنبيهاً لإضافة آخر.",
  "error.alert_empty": "أضف كلمات للبحث، أو اختر إدارة أو موقعاً.",
  "error.too_many_alerts": "لديك الحد الأقصى من التنبيهات. احذف تنبيهاً لإضافة آخر.",
- "asm.auto_next": "الانتقال إلى السؤال التالي تلقائياً"
+ "asm.auto_next": "الانتقال إلى السؤال التالي تلقائياً",
+ "asm.answered_count": "تمت الإجابة على {answered} من {count}",
+ "asm.review": "مراجعة الأسئلة",
+ "asm.flag": "تمييز للمراجعة",
+ "asm.flagged": "مميز للمراجعة",
+ "asm.flagged_list": "مميزة للمراجعة: {count}",
+ "asm.legend_current": "الحالي",
+ "asm.legend_answered": "تمت الإجابة",
+ "asm.legend_unanswered": "لم تتم الإجابة",
+ "asm.five_minutes": "بقيت 5 دقائق في هذا القسم.",
+ "asm.one_minute": "بقيت دقيقة واحدة في هذا القسم.",
+ "asm.close": "إغلاق"
 }
