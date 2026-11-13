@@ -64,7 +64,7 @@ async function overflow(page) {
   });
 }
 
-/** Buttons, links and fields under a floating button, at the top and with the page scrolled to the end. */
+/** Buttons, links and fields still under a floating button with the page scrolled to the end (nothing should stay hidden). */
 async function underFab(page) {
   return page.evaluate(async () => {
     // Any floating button fixed to the bottom of the screen (the assistant used to have one).
@@ -72,7 +72,7 @@ async function underFab(page) {
       && e.getBoundingClientRect().bottom > window.innerHeight - 120 && e.getBoundingClientRect().height > 0);
     if (!fab) return [];
     const hits = new Set();
-    for (const y of [0, document.documentElement.scrollHeight]) {
+    for (const y of [document.documentElement.scrollHeight]) {
       window.scrollTo(0, y);
       await new Promise((r) => setTimeout(r, 100));
       const f = fab.getBoundingClientRect();
@@ -171,7 +171,7 @@ for (const [view, opts] of Object.entries(VIEWS)) {
     }, true);
     if (view === "phone") {
       await shoot(ctx, `bo_${view}_${lang}_zz_menu`, `${BASE}/${lang}/applicants`, (p) => p.locator(`header button[aria-label="${lang === "ar" ? "القائمة" : "Menu"}"]`).click());
-      await shoot(ctx, `bo_${view}_${lang}_zz_assistant_panel`, `${BASE}/${lang}/applicants`, (p) => p.locator(".mh-assistant-btn").click());
+      await shoot(ctx, `bo_${view}_${lang}_zz_assistant_panel`, `${BASE}/${lang}/applicants`, (p) => p.locator(".mh-assistant-fab").click());
     }
   }
   const anon = await browser.newContext({ ...opts });

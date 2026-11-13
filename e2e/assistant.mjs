@@ -29,7 +29,7 @@ for (const [lang, device] of [["ar", "Pixel 7"], ["en", "iPhone 13"], ["ar", "iP
   if (!menuOk) { failed = true; console.error(`FAIL ${lang}: menu button not at the ${lang === "ar" ? "right" : "left"} edge`); }
   if (!(logo && group && logo.x + logo.width <= group.x + 1)) { failed = true; console.error(`FAIL ${lang}: header items overlap the logo`); }
   else console.log(`ok   ${lang}: header (logo left, menu ${lang === "ar" ? "right" : "left"}, no overlap)`);
-  await page.locator(".mh-assistant-btn").click();
+  await page.locator(".mh-assistant-fab").click();
   const box = page.locator(".mh-chat-drawer textarea");
   await box.fill(lang === "ar" ? "ما الوظائف المفتوحة؟" : "Which jobs are open?");
   await box.press("Enter");
