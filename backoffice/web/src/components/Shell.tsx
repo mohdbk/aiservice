@@ -237,7 +237,8 @@ export function Shell({ children }: { children: ReactNode }) {
           </div>
           <div dir={dir} className="flex shrink-0 items-center gap-0.5 sm:gap-1">
             {dir === "rtl" && menu}
-                  <LanguageSwitch />
+            {!/\/assistant$/.test(loc.pathname) && <AssistantPanel />}
+            <LanguageSwitch />
             <UserMenu />
           </div>
         </div>
@@ -248,7 +249,6 @@ export function Shell({ children }: { children: ReactNode }) {
         </aside>
         <main id="main" className="min-w-0 flex-1 px-4 py-6 sm:px-8 sm:py-8"><ErrorBoundary key={loc.pathname}>{children}</ErrorBoundary></main>
       </div>
-      {!/\/assistant$/.test(loc.pathname) && <AssistantPanel />}
     </div>
   );
 }
