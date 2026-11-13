@@ -7,7 +7,13 @@ import { useLookups } from "./JobEdit";
 
 type Row = { id: number; text: string; question_type: string; category: string; job_family: string; difficulty: string; points: number; is_active: boolean; english: string | null };
 
-export const plain = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+/** Text from stored HTML: tags removed and entities such as &#39; turned back into characters (a textarea never runs markup). */
+export const plain = (html: string) => {
+  const text = html.replace(/<[^>]+>/g, " ");
+  const box = document.createElement("textarea");
+  box.innerHTML = text;
+  return box.value.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+};
 
 export default function Questions() {
   const { t, to } = useLang();

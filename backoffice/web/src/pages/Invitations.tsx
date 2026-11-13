@@ -18,10 +18,10 @@ export default function Invitations() {
   const list = useList<Row>("/invitations", ["status", "assessment", "result"]);
   return (
     <>
-      <PageHeader title={t("inv.title")} />
+      <PageHeader title={t("inv.title")} subtitle={t("inv.subtitle")} />
+      <StatusTabs counts={(list.data as unknown as { counts?: Record<string, number> })?.counts} value={list.get("status")} onChange={(v) => list.set({ status: v || null, page: null })} />
       <DataTable list={list} rowKey={(x) => x.id}
         filters={[
-          { key: "status", label: t("common.status"), options: opts(t, "inv.status.", ["Invited", "InProgress", "Submitted", "Marked", "Expired", "Cancelled"]) },
           { key: "assessment", label: t("app.test"), options: (lk.data?.assessments || []).map((a) => ({ value: String(a.id), label: a.title })) },
           { key: "result", label: t("app.result"), options: opts(t, "res.", ["Pass", "Fail", "AwaitingMarking"]) },
         ]}
@@ -41,5 +41,26 @@ export default function Invitations() {
           ) },
         ]} />
     </>
+  );
+}
+
+const TABS = ["Submitted", "Invited", "InProgress", "Marked", "Expired"];
+
+/** Tabs for what needs attention first: to mark, not started, in progress, completed, expired (with counts). */
+function StatusTabs({ counts, value, onChange }: { counts?: Record<string, number>; value: string; onChange: (v: string) => void }) {
+  const { t } = useLang();
+  const total = Object.values(counts || {}).reduce((a, b) => a + b, 0);
+  const tab = (key: string, label: string, n: number | undefined, urgent = false) => (
+    <button key={key} type="button" role="tab" aria-selected={value === key} onClick={() => onChange(key)}
+      className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition ${value === key ? "bg-primary-600 text-white" : "bg-white text-aeblack-700 ring-1 ring-aeblack-100 hover:bg-primary-50"}`}>
+      {label}
+      {n !== undefined && <span className={`rounded-full px-2 text-xs tabular-nums ${value === key ? "bg-white/25" : urgent && n > 0 ? "bg-camel-100 text-camel-900" : "bg-aeblack-50 text-aeblack-600"}`}>{n}</span>}
+    </button>
+  );
+  return (
+    <div role="tablist" aria-label={t("common.status")} className="mb-4 flex flex-wrap gap-2">
+      {tab("", t("inv.tab.all"), counts ? total : undefined)}
+      {TABS.map((k) => tab(k, t(`inv.tab.${k}`), counts ? counts[k] ?? 0 : undefined, k === "Submitted"))}
+    </div>
   );
 }

@@ -25,6 +25,7 @@ function useNav(): { group?: string; items: Item[] }[] {
         { to: "/offers", label: t("nav.offers"), icon: i(Handshake) },
         { to: "/talent-pool", label: t("nav.talent_pool"), icon: i(UsersFour) },
         { to: "/candidates", label: t("nav.candidates"), icon: i(IdentificationCard), admin: true },
+        { to: "/screening", label: t("nav.screening"), icon: i(ListChecks) },
         { to: "/requisitions", label: t("nav.requisitions"), icon: i(ClipboardText) },
         { to: "/approvals", label: t("nav.approvals"), icon: i(Stamp) },
       ],
@@ -33,9 +34,8 @@ function useNav(): { group?: string; items: Item[] }[] {
       group: t("nav.group.assessment"),
       items: [
         { to: "/tests", label: t("nav.assessments"), icon: i(Exam) },
-        { to: "/questions", label: t("nav.questions"), icon: i(ClipboardText) },
         { to: "/invitations", label: t("nav.invitations"), icon: i(FileText) },
-        { to: "/screening", label: t("nav.screening"), icon: i(ListChecks) },
+        { to: "/questions", label: t("nav.questions"), icon: i(ClipboardText) },
         { to: "/role-profiles", label: t("nav.role_profiles"), icon: i(Target) },
         { to: "/personality-settings", label: t("nav.personality_settings"), icon: i(Brain) },
       ],

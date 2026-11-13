@@ -207,6 +207,8 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
                 items = s.Items.OrderBy(i => i.SortOrder).Select(i => new
                 {
                     question_id = i.QuestionId, question = i.QuestionId == null ? "" : TextUtil.Summary(bank.FirstOrDefault(q => q.Id == i.QuestionId)?.Text, 120),
+                    question_type = i.QuestionId == null ? null : bank.FirstOrDefault(q => q.Id == i.QuestionId)?.QuestionType.ToString(),
+                    points = i.QuestionId == null ? null : (decimal?)bank.FirstOrDefault(q => q.Id == i.QuestionId)?.Points,
                     draw_category = i.DrawCategory, draw_difficulty = i.DrawDifficulty, draw_job_family = i.DrawJobFamily, draw_count = i.DrawCount,
                     points_override = i.PointsOverride,
                 }).ToList(),
@@ -306,13 +308,16 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
     public async Task<object> InvitationsAsync(ListQuery lq, string? status, int? assessmentId, string? result, int? jobId, CancellationToken ct = default)
     {
         var q = db.Invitations.AsNoTracking().AsQueryable();
-        if (Enum.TryParse<InvitationStatus>(status, out var st)) q = q.Where(i => i.Status == st);
         if (assessmentId != null) q = q.Where(i => i.AssessmentId == assessmentId);
         if (Enum.TryParse<InvitationResult>(result, out var r)) q = q.Where(i => i.Result == r);
         if (jobId != null) q = q.Where(i => i.JobApplication!.JobOpeningId == jobId);
         if (lq.Term.Length > 0) q = q.Where(i => i.JobApplication!.FullName.Contains(lq.Term) || i.Code.Contains(lq.Term));
+        var countsQuery = q;
+        if (Enum.TryParse<InvitationStatus>(status, out var st)) q = q.Where(i => i.Status == st);
         var en = language.English;
-        return await q.PageAsync(lq, InvitationSorts, i => new
+        // Counts per status for the tabs (with the same filters except the status itself).
+        var counts = await countsQuery.GroupBy(i => i.Status).Select(g => new { g.Key, n = g.Count() }).ToListAsync(ct);
+        var page = await q.PageAsync(lq, InvitationSorts, i => new
         {
             id = i.Id, code = i.Code, status = i.Status, deadline_at = i.DeadlineAt, score = i.Score, result = i.Result,
             attempts_used = (int)i.AttemptsUsed, attempts_allowed = (int)i.AttemptsAllowed, extra_time_percent = (int)i.ExtraTimePercent,
@@ -321,6 +326,11 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
             to_mark = i.Attempts.Where(t => t.Status == AttemptStatus.Submitted).Select(t => (int?)t.Id).FirstOrDefault(),
             last_attempt = i.Attempts.OrderByDescending(t => t.AttemptNo).Select(t => (int?)t.Id).FirstOrDefault(),
         }, ct);
+        return new
+        {
+            page.Items, page.Total, page.Page, page.Size, page.Pages, page.Sort, page.Dir,
+            counts = counts.ToDictionary(c => c.Key.ToString(), c => c.n),
+        };
     }
 
     /// <summary>

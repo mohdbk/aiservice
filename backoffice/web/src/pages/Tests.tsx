@@ -27,7 +27,7 @@ export default function Tests() {
   };
   return (
     <>
-      <PageHeader title={t("test.title")} actions={<>
+      <PageHeader title={t("test.title")} subtitle={t("test.subtitle")} actions={<>
         {(templates.data || []).length > 0 && (
           <ActionMenu label={t("pers.ready_made")} icon={<Brain size={20} aria-hidden="true" />}
             items={(templates.data || []).map((tp) => ({ label: lang === "en" ? tp.title_en : tp.title, onClick: () => addTemplate(tp), disabled: adding.busy }))} />
