@@ -320,7 +320,7 @@ function ReexamDialog({ open, onClose, onSave, busy }: { open: boolean; onClose:
 }
 
 export function InterviewDialog({ open, onClose, lookups, onSave, busy, initial }: {
-  open: boolean; onClose: () => void; lookups?: { rounds: { id: number; name: string }[]; staff: { id: number; name: string }[] }; onSave: (b: any) => void; busy: boolean;
+  open: boolean; onClose: () => void; lookups?: { rounds: { id: number; name: string }[]; staff: { id: number; name: string; email?: string }[] }; onSave: (b: any) => void; busy: boolean;
   initial?: { round_id: number; date: string; from: string; to: string; location: string; notes: string; panelists: number[] };
 }) {
   const { t } = useLang();
@@ -416,7 +416,7 @@ function Bookings({ applicantId, onChange }: { applicantId: number; onChange: ()
 
 /** Offer the candidate several interview times to choose from (in the portal); the round, place and panel are set here. */
 function BookingDialog({ onClose, lookups, onSave, busy }: {
-  onClose: () => void; lookups?: { rounds: { id: number; name: string }[]; staff: { id: number; name: string }[] }; onSave: (b: any) => void; busy: boolean;
+  onClose: () => void; lookups?: { rounds: { id: number; name: string }[]; staff: { id: number; name: string; email?: string }[] }; onSave: (b: any) => void; busy: boolean;
 }) {
   const { t } = useLang();
   const [f, setF] = useState({ round_id: 0, location: "", panelists: [] as number[], slots: [{ date: "", from: "10:00", to: "11:00" }] });
