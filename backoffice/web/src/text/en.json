@@ -1368,5 +1368,6 @@
  "asst.tool.propose_deadline": "Preparing a new deadline",
  "asst.tool.propose_extra_time": "Preparing extra time",
  "error.criteria_invalid": "Give 1 to 10 criteria, each with wording and a weight from 1 to 100.",
- "error.cv_unreadable": "The CV could not be read."
+ "error.cv_unreadable": "The CV could not be read.",
+ "error.from_address_invalid": "Enter a valid sender address (From Address), for example the same address as the user name."
 }

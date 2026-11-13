@@ -51,8 +51,12 @@ public sealed class BackofficeEmailService(IAppDbContext db, ICurrentActor actor
         s.UseTls = input.UseTls;
         s.UserName = TextUtil.Clip(input.UserName?.Trim(), 200);
         if (input.ClearPassword) s.PasswordProtected = "";
-        else if (!string.IsNullOrEmpty(input.Password)) s.PasswordProtected = secrets.Protect(input.Password);
+        // Gmail shows app passwords in groups of four ("abcd efgh ijkl mnop"); the spaces are not part of it.
+        else if (!string.IsNullOrEmpty(input.Password))
+            s.PasswordProtected = secrets.Protect(s.Host.EndsWith("gmail.com", StringComparison.OrdinalIgnoreCase) ? input.Password.Replace(" ", "") : input.Password);
         s.FromAddress = TextUtil.Clip(input.FromAddress?.Trim(), 254);
+        // With no sender address, the sign-in address is used when it is an email address (as Gmail and Office 365 require).
+        if (s.FromAddress.Length == 0 && EmailTemplates.IsEmail(s.UserName)) s.FromAddress = s.UserName;
         s.FromName = TextUtil.NoEmDash(TextUtil.Clip(input.FromName?.Trim(), 200));
         s.SignatureAr = TextUtil.NoEmDash(TextUtil.Clip(input.SignatureAr?.Trim(), 1000));
         s.SignatureEn = TextUtil.NoEmDash(TextUtil.Clip(input.SignatureEn?.Trim(), 1000));

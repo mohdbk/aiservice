@@ -30,7 +30,7 @@ public class EmailSetting
         Host = Host.Trim();
         if (Host.Length == 0) return;
         if (Port is < 1 or > 65535) throw DomainException.Invalid("smtp_port_invalid");
-        if (!EmailTemplates.IsEmail(FromAddress)) throw DomainException.Invalid("email_invalid", new Dictionary<string, object?> { ["field"] = "from_address" });
+        if (!EmailTemplates.IsEmail(FromAddress)) throw DomainException.Invalid("from_address_invalid", new Dictionary<string, object?> { ["field"] = "from_address" });
     }
 }
 

@@ -1368,5 +1368,6 @@
  "asst.tool.propose_deadline": "إعداد موعد نهائي جديد",
  "asst.tool.propose_extra_time": "إعداد وقت إضافي",
  "error.criteria_invalid": "أدخل من 1 إلى 10 معايير، لكل منها صياغة ووزن من 1 إلى 100.",
- "error.cv_unreadable": "تعذرت قراءة السيرة الذاتية."
+ "error.cv_unreadable": "تعذرت قراءة السيرة الذاتية.",
+ "error.from_address_invalid": "أدخل عنوان مرسل صحيحاً (عنوان المرسل)، مثل نفس عنوان اسم المستخدم."
 }
