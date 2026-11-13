@@ -186,6 +186,80 @@ for (const [view, opts] of Object.entries(VIEWS)) {
   await ctx.close();
 }
 
+// ---------------- showcase: the latest design changes, at twice the resolution ----------------
+{
+  const hd = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
+  await hd.request.post(`${BASE}/api/backoffice/sign-in`, { headers: { "X-Backoffice": "1" }, data: { email: "admin@moet.test", password: "Admin-Password-123" } });
+  const get = async (p) => (await hd.request.get(`${BASE}/api/backoffice${p}`)).json();
+  let attemptId = null;
+  for (const a of (await get("/applicants?size=10")).items) {
+    const d = await get(`/applicants/${a.id}`);
+    const at = d.invitations?.find((i) => i.attempts?.length)?.attempts[0];
+    if (at) { attemptId = at.id; break; }
+  }
+  const snap = async (name, url, prepare) => {
+    const page = await hd.newPage();
+    try {
+      await page.goto(url, { waitUntil: "networkidle", timeout: 45000 });
+      await page.waitForTimeout(400);
+      if (prepare) { await prepare(page); await page.waitForTimeout(700); }
+      await page.screenshot({ path: `shots/showcase_${name}.png` });
+    } catch (e) { note(`FAIL  showcase ${name}: ${e.message.split("\n")[0]}`); }
+    await page.close();
+  };
+  const fresh = async (p) => {
+    await p.evaluate(() => { Object.keys(localStorage).filter((k) => k.startsWith("mh-agent-")).forEach((k) => localStorage.removeItem(k)); localStorage.removeItem("mh-nav-collapsed"); });
+    await p.reload({ waitUntil: "networkidle" });
+  };
+  for (const lang of ["en", "ar"]) {
+    const L = (en, ar) => (lang === "ar" ? ar : en);
+    await snap(`${lang}_1_assistant_full_screen`, `${BASE}/${lang}/assistant`, async (p) => { await fresh(p); await p.locator(`button[aria-label="${L("Full Screen", "ملء الشاشة")}"]`).click(); });
+    await snap(`${lang}_2_assistant_conversation`, `${BASE}/${lang}/assistant`, async (p) => {
+      await fresh(p);
+      const ask = async (text, marker) => {
+        await p.locator("#asst-q").fill(text);
+        await p.locator("#asst-q").press("Enter");
+        await p.getByText(marker).last().waitFor({ timeout: 40000 });
+        await p.waitForTimeout(600);
+      };
+      await ask(L("Show applicant cards", "اعرض بطاقات المتقدمين"), "Cards ready.");
+      await ask(L("Add a note", "أضف ملاحظة"), "Proposal ready.");
+    });
+    await snap(`${lang}_3_assistant_side_panel`, `${BASE}/${lang}/applicants`, async (p) => { await fresh(p); await p.locator(".mh-assistant-fab").click(); });
+    await snap(`${lang}_4_menu_and_account`, `${BASE}/${lang}/jobs`, async (p) => { await fresh(p); await p.locator(".mh-user").click(); });
+    await snap(`${lang}_5_menu_collapsed`, `${BASE}/${lang}/interviews`, async (p) => {
+      await p.evaluate(() => localStorage.setItem("mh-nav-collapsed", "1"));
+      await p.reload({ waitUntil: "networkidle" });
+    });
+    if (attemptId) await snap(`${lang}_6_personality_radar`, `${BASE}/${lang}/marking/${attemptId}`, async (p) => {
+      await p.evaluate(() => localStorage.removeItem("mh-nav-collapsed"));
+      await p.reload({ waitUntil: "networkidle" });
+      await p.locator("figure svg").first().scrollIntoViewIfNeeded();
+      await p.evaluate(() => window.scrollBy(0, -120));
+    });
+  }
+  // Phone, at the device's own resolution (three times).
+  const phone = await browser.newContext({ ...devices["iPhone 13"], deviceScaleFactor: 3 });
+  await phone.request.post(`${BASE}/api/backoffice/sign-in`, { headers: { "X-Backoffice": "1" }, data: { email: "admin@moet.test", password: "Admin-Password-123" } });
+  for (const lang of ["ar", "en"]) {
+    const page = await phone.newPage();
+    try {
+      await page.goto(`${BASE}/${lang}/applicants`, { waitUntil: "networkidle" });
+      await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith("mh-agent-")).forEach((k) => localStorage.removeItem(k)));
+      await page.reload({ waitUntil: "networkidle" });
+      await page.locator(".mh-assistant-fab").click();
+      await page.waitForTimeout(700);
+      await page.screenshot({ path: `shots/showcase_${lang}_7_phone_assistant.png` });
+      await page.goto(`${BASE}/${lang}/setup/data-protection`, { waitUntil: "networkidle" });
+      await page.waitForTimeout(400);
+      await page.screenshot({ path: `shots/showcase_${lang}_8_phone_tabs.png` });
+    } catch (e) { note(`FAIL  showcase phone ${lang}: ${e.message.split("\n")[0]}`); }
+    await page.close();
+  }
+  await phone.close();
+  await hd.close();
+}
+
 // ---------------- portal ----------------
 if (PORTAL) {
   for (const [view, opts] of Object.entries(VIEWS)) {
