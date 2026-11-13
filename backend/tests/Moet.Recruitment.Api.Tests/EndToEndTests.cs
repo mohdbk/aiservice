@@ -203,6 +203,17 @@ public class EndToEndTests
         var info = await Read(await admin.GetAsync("/api/backoffice/agent/info"));
         Assert.Equal(20, info.GetProperty("history_turns").GetInt32());
 
+        // Candidate accounts: listed and searchable; disabling signs the candidate out, enabling restores access.
+        var layla = await Read(await admin.GetAsync("/api/backoffice/candidates?q=layla"));
+        var laylaDetail = await Read(await admin.GetAsync($"/api/backoffice/candidates/{layla.GetProperty("items")[0].GetProperty("id").GetInt32()}"));
+        Assert.True(laylaDetail.GetProperty("applications").GetArrayLength() >= 1);
+        Assert.True((await portal.PostAsync("/api/portal/signup", JsonBody(new { full_name = "Omar Account", email = "omar.account@example.test", password = "a-good-pass-123", lang = "en" }))).IsSuccessStatusCode);
+        var cands = await Read(await admin.GetAsync("/api/backoffice/candidates?q=omar.account"));
+        var candId = cands.GetProperty("items")[0].GetProperty("id").GetInt32();
+        Assert.True((await admin.PostAsync($"/api/backoffice/candidates/{candId}/enabled", JsonBody(new { enabled = false }))).IsSuccessStatusCode);
+        Assert.False((await Read(await admin.GetAsync($"/api/backoffice/candidates/{candId}"))).GetProperty("enabled").GetBoolean());
+        Assert.True((await admin.PostAsync($"/api/backoffice/candidates/{candId}/enabled", JsonBody(new { enabled = true }))).IsSuccessStatusCode);
+
         // Countries: HR's list, with a name per language; the portal offers it in the page's language, the English name is stored.
         var countries = await Read(await admin.GetAsync("/api/backoffice/countries?q=AE"));
         var uaeRow = countries.GetProperty("items").EnumerateArray().First(c => c.GetProperty("code").GetString() == "AE");

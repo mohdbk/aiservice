@@ -207,6 +207,13 @@ public static class BackofficeEndpoints
         var setup = api.MapGroup("").RequireAuthorization(StaffPolicies.Admin);
         setup.MapGet("/approval-settings", (ApprovalService s, CancellationToken ct) => s.SettingsAsync(ct));
         setup.MapPut("/approval-settings", (ApprovalSettingsInput b, ApprovalService s, CancellationToken ct) => s.SaveSettingsAsync(b, ct));
+        setup.MapGet("/candidates", ([AsParameters] ListQuery lq, bool? verified, bool? enabled, bool? pool, CandidateService s, CancellationToken ct) => s.ListAsync(lq, verified, enabled, pool, ct));
+        setup.MapGet("/candidates/{id:int}", (int id, CandidateService s, CancellationToken ct) => s.GetAsync(id, ct));
+        setup.MapPost("/candidates/{id:int}/resend-verification", (int id, CandidateService s, CancellationToken ct) => s.ResendVerificationAsync(id, ct));
+        setup.MapPost("/candidates/{id:int}/password-reset", (int id, CandidateService s, CancellationToken ct) => s.SendPasswordResetAsync(id, ct));
+        setup.MapPost("/candidates/{id:int}/verify", (int id, CandidateService s, CancellationToken ct) => s.MarkVerifiedAsync(id, ct));
+        setup.MapPost("/candidates/{id:int}/enabled", (int id, EnabledBody b, CandidateService s, CancellationToken ct) => s.SetEnabledAsync(id, b.Enabled, ct));
+        setup.MapPost("/candidates/{id:int}/deletion-request", (int id, ReasonBody b, CandidateService s, CancellationToken ct) => s.RequestDeletionAsync(id, b.Reason, ct));
         setup.MapGet("/countries", ([AsParameters] ListQuery lq, bool? active, BackofficeSetupService s, CancellationToken ct) => s.CountriesAsync(lq, active, ct));
         setup.MapPost("/countries", (CountryInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveCountryAsync(null, b, ct));
         setup.MapPut("/countries/{id:int}", (int id, CountryInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveCountryAsync(id, b, ct));

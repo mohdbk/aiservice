@@ -26,6 +26,7 @@ import { AssistantUsage, AuditLog, DataProtection, HandOffSettings, HealthPage, 
 import TalentPool from "./pages/TalentPool";
 import Approvals from "./pages/Approvals";
 import TwoStep from "./pages/TwoStep";
+import Candidates from "./pages/Candidates";
 import Requisitions from "./pages/Requisitions";
 import PersonalitySettings from "./pages/PersonalitySettings";
 import Screening from "./pages/Screening";
@@ -90,6 +91,7 @@ function Guarded() {
         <Route path="setup/texts" element={<TextMessages />} />
         <Route path="setup/handoff" element={<HandOffSettings />} />
         <Route path="talent-pool" element={<TalentPool />} />
+        <Route path="candidates" element={<Candidates />} />
         <Route path="approvals" element={<Approvals />} />
         <Route path="requisitions" element={<Requisitions />} />
         <Route path="setup/components/:id" element={<ComponentEdit />} />
