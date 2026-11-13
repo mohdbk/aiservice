@@ -405,6 +405,10 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
                 await personality.ReportsAsync(ct)), submitted_at = a.SubmittedAt, tab_switches = a.TabSwitches, pastes = a.Pastes,
             invitation = new { id = inv.Id, code = inv.Code, assessment = inv.Assessment!.In(language.English ? "en" : "ar").Title, pass_mark = inv.Assessment.PassMark },
             applicant = new { id = inv.JobApplicationId, name = inv.JobApplication!.FullName },
+            job_role_profile = await (from j in db.JobOpenings.AsNoTracking()
+                                      join r in db.RoleProfiles.AsNoTracking() on j.RoleProfileId equals r.Id
+                                      where j.Id == inv.JobApplication!.JobOpeningId
+                                      select new { id = r.Id, name_ar = r.NameAr, name_en = r.NameEn }).FirstOrDefaultAsync(ct),
             sections = a.SectionScores().Select(s => new { s.SectionNo, s.Title, s.Earned, s.Total, s.Percent, s.Passed }).ToList(),
             questions = a.AllQuestions.Select(q => new
             {

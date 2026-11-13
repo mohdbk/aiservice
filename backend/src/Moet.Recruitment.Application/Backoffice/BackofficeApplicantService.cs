@@ -113,7 +113,14 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
         {
             id = a.Id, code = a.Code, reference = a.Reference, full_name = a.FullName, email = a.Email, phone = a.Phone, country = a.Country, nationality = a.Nationality,
             cover_note = a.CoverNote, status = a.Status.ToString(), language = a.LanguageCode, created_at = a.CreatedAt,
-            job = new { id = a.JobOpeningId, code = a.JobOpening!.Code, title = a.JobOpening.In(en ? "en" : "ar").Title },
+            job = new
+            {
+                id = a.JobOpeningId, code = a.JobOpening!.Code, title = a.JobOpening.In(en ? "en" : "ar").Title,
+                // The job family the personality results are judged against (also used in the combined score).
+                role_profile = a.JobOpening.RoleProfileId is { } rp
+                    ? await db.RoleProfiles.AsNoTracking().Where(r => r.Id == rp).Select(r => new { id = r.Id, name_ar = r.NameAr, name_en = r.NameEn }).FirstOrDefaultAsync(ct)
+                    : null,
+            },
             cv = cv == null ? null : new { file_name = cv.FileName, content_type = cv.ContentType, size = cv.SizeBytes, url = $"/api/backoffice/applicants/{a.Id}/cv" },
             screening = new
             {

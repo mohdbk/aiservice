@@ -1319,5 +1319,11 @@
  "extra.running": "If the candidate is in a section now, its time is lengthened from when it started.",
  "error.extra_time_invalid": "Extra time must be between 0 and 100 percent.",
  "rp.jobs": "{n} jobs",
- "error.role_profile_in_use": "Jobs use this role profile. Choose another profile on those jobs first, or make it inactive."
+ "error.role_profile_in_use": "Jobs use this role profile. Choose another profile on those jobs first, or make it inactive.",
+ "pers.job_fit": "Fit With This Job's Role Profile",
+ "pers.job_fit_hint": "This is the fit used in the combined selection score for the job. It is one input alongside tests and interviews.",
+ "pers.job_fit_missing": "The job's role profile ({name}) has no profile for this questionnaire, so no fit is shown for it.",
+ "pers.no_job_profile": "The job has no role profile, so fit with every job family is shown. Choose one on the job to use it in the combined score.",
+ "pers.show_others": "Fit With Other Job Families ({n})",
+ "pers.hide_others": "Hide Other Job Families"
 }

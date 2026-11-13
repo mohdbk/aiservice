@@ -16,7 +16,7 @@ import { useLookups } from "./JobEdit";
 
 type Detail = {
   id: number; code: string; reference: string; full_name: string; email: string; phone: string; country: string; nationality?: string; cover_note: string; status: string;
-  language: string; created_at: string; job: { id: number; code: string; title: string };
+  language: string; created_at: string; job: { id: number; code: string; title: string; role_profile?: { id: number; name_ar: string; name_en: string } | null };
   cv: { file_name: string; content_type: string; size: number; url: string } | null;
   screening: { outcome: string; answers: { question: string; answer: string; meets: boolean | null }[] };
   analysis: null | {
@@ -212,7 +212,7 @@ export default function Applicant() {
               </dl>
               {inv.personality_model !== "None" && (() => {
                 const last = [...inv.attempts].reverse().find((at) => at.trait_profile);
-                return last ? <div className="mb-4"><TraitProfile profile={parseProfile(last.trait_profile)} summary={a.personality?.[String(inv.id)]} /></div> : null;
+                return last ? <div className="mb-4"><TraitProfile profile={parseProfile(last.trait_profile)} summary={a.personality?.[String(inv.id)]} jobProfile={a.job.role_profile} /></div> : null;
               })()}
               {inv.attempts.length > 0 && (
                 <ul className="space-y-2">

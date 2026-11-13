@@ -12,7 +12,7 @@ type Q = {
 };
 type Attempt = {
   id: number; attempt_no: number; status: string; percent: number; earned: number; total: number; passed: boolean | null; tab_switches: number; pastes: number;
-  invitation: { id: number; code: string; assessment: string; pass_mark: number }; applicant: { id: number; name: string };
+  invitation: { id: number; code: string; assessment: string; pass_mark: number }; applicant: { id: number; name: string }; job_role_profile?: { id: number; name_ar: string; name_en: string } | null;
   sections: { section_no: number; title: string; earned: number; total: number; percent: number; passed: boolean | null }[]; questions: Q[];
   personality_model: string; trait_profile: unknown; personality?: PersonalitySummary | null;
 };
@@ -54,7 +54,7 @@ export default function Marking() {
           <Button busy={save.busy} onClick={submit}>{t("mark.save")}</Button>
         </>} />
       {(save.error || suggest.error) && <div className="mb-4"><ErrorState error={save.error || suggest.error || undefined} /></div>}
-      {personality && <Card className="mb-6" title={t("pers.profile")}><TraitProfile profile={parseProfile(a.trait_profile)} summary={a.personality} /></Card>}
+      {personality && <Card className="mb-6" title={t("pers.profile")}><TraitProfile profile={parseProfile(a.trait_profile)} summary={a.personality} jobProfile={a.job_role_profile} /></Card>}
       {!personality && <Card className="mb-6" title={t("mark.overall")}>
         <div className="flex flex-wrap items-center gap-6">
           <p className="text-4xl font-bold tabular-nums" dir="ltr">{a.percent}%</p>

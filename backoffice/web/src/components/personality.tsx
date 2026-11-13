@@ -1,4 +1,5 @@
-import { Badge } from "./ui";
+import { useState } from "react";
+import { Badge, Note } from "./ui";
 import { useLang } from "../core";
 
 /** Trait codes of the two personality models (names in Arabic and English, as the backend scores them). */
@@ -77,10 +78,12 @@ const BAND_TONE: Record<string, string> = { VeryHigh: "green", High: "green", Mo
  * A trait profile: one bar per trait. Workplace questionnaires show the sum (for example 22/25) with five bands; the sten
  * models show the sten (1 to 10), the band and, when norms exist, the percentile. Type questionnaires show the letters.
  */
-export function TraitProfile({ profile, summary }: { profile: TraitScore[]; summary?: PersonalitySummary | null }) {
+export type JobProfile = { id: number; name_ar: string; name_en: string } | null | undefined;
+
+export function TraitProfile({ profile, summary, jobProfile }: { profile: TraitScore[]; summary?: PersonalitySummary | null; jobProfile?: JobProfile }) {
   const { t, lang } = useLang();
   if (profile.length === 0) return <p className="text-sm text-aeblack-500">{t("pers.no_profile")}</p>;
-  if (summary?.pairs) return <TypeProfile profile={profile} summary={summary} />;
+  if (summary?.pairs) return <TypeProfile profile={profile} summary={summary} jobProfile={jobProfile} />;
   const sums = profile.some((p) => p.sum != null);
   return (
     <div className="space-y-3">
@@ -100,7 +103,7 @@ export function TraitProfile({ profile, summary }: { profile: TraitScore[]; summ
           </li>
         ))}
       </ul>
-      {summary && <RoleFits summary={summary} />}
+      {summary && <RoleFits summary={summary} jobProfile={jobProfile} />}
       <p className="text-xs text-aeblack-500">{t(sums ? "pers.note_sums" : profile.some((p) => p.percentile != null) ? "pers.note_norms" : "pers.note_scale")}</p>
     </div>
   );
@@ -116,7 +119,7 @@ function Bar({ value, label }: { value: number; label: string }) {
 }
 
 /** The 16-type result: the letters, each pair as two opposing scores, the workplace notes and the role fits. */
-function TypeProfile({ profile, summary }: { profile: TraitScore[]; summary: PersonalitySummary }) {
+function TypeProfile({ profile, summary, jobProfile }: { profile: TraitScore[]; summary: PersonalitySummary; jobProfile?: JobProfile }) {
   const { t, lang } = useLang();
   const en = lang === "en";
   const pole = (code: string) => profile.find((p) => p.code === code);
@@ -154,22 +157,54 @@ function TypeProfile({ profile, summary }: { profile: TraitScore[]; summary: Per
             <ul className="list-disc space-y-1 ps-5 text-sm">{(en ? r.risks_en : r.risks_ar).map((x) => <li key={x}>{x}</li>)}</ul></div>
         </div>
       )}
-      <RoleFits summary={summary} />
+      <RoleFits summary={summary} jobProfile={jobProfile} />
       <p className="text-xs text-aeblack-500">{t("pers.note_type")}</p>
     </div>
   );
 }
 
-/** Fit with each of HR's role profiles for this questionnaire. */
-export function RoleFits({ summary }: { summary: PersonalitySummary }) {
+/**
+ * Fit with HR's role profiles for this questionnaire. The job's own role profile (or its sibling with the same name for the
+ * other questionnaire) comes first and stands out, since it is the one in the combined score; the other job families follow.
+ */
+export function RoleFits({ summary, jobProfile }: { summary: PersonalitySummary; jobProfile?: JobProfile }) {
   const { t, lang } = useLang();
+  const [others, setOthers] = useState(false);
   if (!summary.fits?.length) return null;
+  const isJob = (f: { profile_id: number; name_en: string }) => !!jobProfile && (f.profile_id === jobProfile.id || f.name_en === jobProfile.name_en);
   const sorted = [...summary.fits].sort((a, b) => b.percent - a.percent);
+  const mine = sorted.find(isJob);
+  const rest = sorted.filter((f) => !isJob(f));
+  const shown = !jobProfile ? sorted : others ? rest : [];
   return (
-    <div>
-      <p className="mb-2 text-sm font-semibold">{t("pers.role_fit")}</p>
+    <div className="space-y-3">
+      {jobProfile && (
+        mine ? (
+          <div className="rounded-xl border-2 border-primary-300 bg-primary-50 p-3">
+            <p className="text-xs font-semibold text-primary-800">{t("pers.job_fit")}</p>
+            <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+              <span className="font-semibold">{lang === "en" ? mine.name_en : mine.name_ar}</span>
+              <span className="flex items-center gap-2">
+                {!summary.pairs && <span className="tabular-nums text-lg font-bold" dir="ltr">{mine.percent}%</span>}
+                <Badge tone={mine.level === "Strong" ? "green" : mine.level === "Moderate" ? "gold" : "gray"}>{t(`pers.fit.${mine.level}`)}</Badge>
+              </span>
+            </div>
+            {mine.below_target.length > 0 && <p className="mt-1 text-xs text-aeblack-600">{t("pers.below_target", { traits: mine.below_target.join(", ") })}</p>}
+            <p className="mt-2 text-xs text-aeblack-600">{t("pers.job_fit_hint")}</p>
+          </div>
+        ) : <Note>{t("pers.job_fit_missing", { name: lang === "en" ? jobProfile.name_en : jobProfile.name_ar })}</Note>
+      )}
+      {!jobProfile && <Note>{t("pers.no_job_profile")}</Note>}
+      {jobProfile && rest.length > 0 && (
+        <button type="button" onClick={() => setOthers((o) => !o)} className="text-sm font-semibold text-primary-700 hover:underline" aria-expanded={others}>
+          {others ? t("pers.hide_others") : t("pers.show_others", { n: rest.length })}
+        </button>
+      )}
+      {shown.length > 0 && (
+      <div>
+      {!jobProfile && <p className="mb-2 text-sm font-semibold">{t("pers.role_fit")}</p>}
       <ul className="divide-y divide-aeblack-100 rounded-xl border border-aeblack-100">
-        {sorted.map((f) => (
+        {shown.map((f) => (
           <li key={f.profile_id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
             <span>
               <span className="font-semibold">{lang === "en" ? f.name_en : f.name_ar}</span>
@@ -182,6 +217,8 @@ export function RoleFits({ summary }: { summary: PersonalitySummary }) {
           </li>
         ))}
       </ul>
+      </div>
+      )}
     </div>
   );
 }
