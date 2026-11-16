@@ -19,17 +19,62 @@ export function Button({ variant = "primary", size = "md", busy, icon, children,
   );
 }
 
-export function PageHeader({ title, subtitle, actions, back }: { title: ReactNode; subtitle?: ReactNode; actions?: ReactNode; back?: ReactNode }) {
+/**
+ * The page title, subtitle and actions. With sticky, it stays under the site header while the page scrolls, so the
+ * title and the Save button are always in reach on long forms; with dirty, it says there are unsaved changes.
+ */
+export function PageHeader({ title, subtitle, actions, back, sticky = false, dirty = false }: {
+  title: ReactNode; subtitle?: ReactNode; actions?: ReactNode; back?: ReactNode; sticky?: boolean; dirty?: boolean;
+}) {
+  const { t } = useLang();
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <div className={`mb-6 flex flex-wrap items-end justify-between gap-4 ${sticky
+      ? "mh-sticky-head sticky top-16 z-20 -mx-4 border-b border-aeblack-100 bg-white/95 px-4 py-3 backdrop-blur sm:top-20 sm:-mx-8 sm:px-8" : ""}`}>
       <div className="min-w-0">
         {back}
         <h1 className="text-2xl font-bold text-aeblack-900 sm:text-3xl">{title}</h1>
         {subtitle && <div className="mt-1 text-aeblack-600">{subtitle}</div>}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+      {(actions || dirty) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {dirty && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-camel-50 px-3 py-1 text-xs font-semibold text-camel-900" role="status">
+              <span className="h-2 w-2 rounded-full bg-camel-500" aria-hidden="true" />{t("common.unsaved")}
+            </span>
+          )}
+          {actions}
+        </div>
+      )}
     </div>
   );
+}
+
+/**
+ * Notices edits on a form (typing, choosing, ticking or switching anything inside the element given bind) and, while
+ * there are unsaved changes, asks before leaving the page or closing the tab. Call clean() after saving.
+ */
+export function useEditGuard() {
+  const { t } = useLang();
+  const [dirty, setDirty] = useState(false);
+  useEffect(() => {
+    if (!dirty) return;
+    const before = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    const click = (e: MouseEvent) => {
+      const a = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+      if (!a || a.target === "_blank" || a.origin !== location.origin || a.pathname === location.pathname || a.hasAttribute("download")) return;
+      if (!window.confirm(t("common.unsaved_leave"))) { e.preventDefault(); e.stopPropagation(); }
+    };
+    window.addEventListener("beforeunload", before);
+    document.addEventListener("click", click, true);
+    return () => { window.removeEventListener("beforeunload", before); document.removeEventListener("click", click, true); };
+  }, [dirty, t]);
+  const bind = {
+    onInput: () => setDirty(true),
+    onClick: (e: React.MouseEvent) => {
+      if ((e.target as Element).closest('[role="switch"], [role="checkbox"], [role="radio"], [role="option"]')) setDirty(true);
+    },
+  };
+  return { dirty, clean: () => setDirty(false), bind };
 }
 
 export function Card({ title, actions, children, className = "" }: { title?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string }) {

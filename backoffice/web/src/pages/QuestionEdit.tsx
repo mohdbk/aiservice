@@ -2,7 +2,7 @@ import { FloppyDisk, Plus, Trash } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
-  Bilingual, Button, Card, EnglishBadge, ErrorState, LangTabs, Loading, PageHeader, RichText, SelectInput, TextArea, TextInput, Tick, Toggle, useSaving,
+  Bilingual, Button, Card, EnglishBadge, ErrorState, LangTabs, Loading, PageHeader, RichText, SelectInput, TextArea, TextInput, Tick, Toggle, useEditGuard, useSaving,
 } from "../components/ui";
 import { MODELS } from "../components/personality";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
@@ -32,6 +32,7 @@ export default function QuestionEdit() {
   const [lang, setLang] = useState<Bilingual>(panel === "en" ? "en" : "ar");
   const { busy, error, run } = useSaving();
   const suggest = useSaving();
+  const guard = useEditGuard();
   usePageTitle(isNew ? t("q.new") : t("q.title"));
   useEffect(() => { if (loaded.data) setQ({ ...EMPTY, ...loaded.data }); }, [loaded.data]);
   if (loaded.loading) return <Loading />;
@@ -48,6 +49,7 @@ export default function QuestionEdit() {
     }));
     if (!r) return;
     toast(t("common.saved"));
+    guard.clean();
     if (isNew) nav(to(`/questions/${r.id}`), { replace: true });
     else loaded.reload();
   };
@@ -57,9 +59,10 @@ export default function QuestionEdit() {
 
   return (
     <>
-      <PageHeader back={<Link to={to("/questions")} className="mb-2 inline-block text-sm text-primary-700">{t("q.title")}</Link>}
+      <PageHeader sticky dirty={guard.dirty} back={<Link to={to("/questions")} className="mb-2 inline-block text-sm text-primary-700">{t("q.title")}</Link>}
         title={isNew ? t("q.new") : t("q.edit")} subtitle={!isNew && <EnglishBadge state={q.english_status} />}
         actions={<Button busy={busy} onClick={save} icon={<FloppyDisk size={20} aria-hidden="true" />}>{t("common.save")}</Button>} />
+      <div {...guard.bind}>
       {(error || suggest.error) && <div className="mb-4"><ErrorState error={error || suggest.error || undefined} /></div>}
       <div className="grid gap-6 xl:grid-cols-3">
         <Card className="xl:col-span-2">
@@ -124,6 +127,7 @@ export default function QuestionEdit() {
             <Toggle label={t("common.active")} checked={q.is_active} onChange={(v) => set("is_active", v)} />
           </div>
         </Card>
+      </div>
       </div>
     </>
   );

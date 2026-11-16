@@ -2,7 +2,7 @@ import { ArrowDown, ArrowUp, CheckCircle, Circle, FloppyDisk, Plus, RocketLaunch
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
-  Bilingual, Button, Card, Empty, EnglishBadge, ErrorState, FlagLabel, LangTabs, Loading, Modal, Note, PageHeader, Pager, RichText, SectionTabs, SelectInput, TextArea, TextInput, Toggle, useSaving,
+  Bilingual, Button, Card, Empty, EnglishBadge, ErrorState, FlagLabel, LangTabs, Loading, Modal, Note, PageHeader, Pager, RichText, SectionTabs, SelectInput, TextArea, TextInput, Toggle, useEditGuard, useSaving,
 } from "../components/ui";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
 import { BIG_FIVE, MODEL_KEYS, NORMED, MODELS } from "../components/personality";
@@ -40,6 +40,7 @@ export default function TestEdit() {
   const [lang, setLang] = useState<Bilingual>(panel === "en" ? "en" : "ar");
   const { busy, error, run } = useSaving();
   const suggest = useSaving();
+  const guard = useEditGuard();
   usePageTitle(isNew ? t("test.new") : x.title || t("test.title"));
   useEffect(() => { if (loaded.data) setX({ ...EMPTY, ...loaded.data }); }, [loaded.data]);
   if (loaded.loading) return <Loading />;
@@ -53,6 +54,7 @@ export default function TestEdit() {
     const r = await run(() => api<{ id: number }>(isNew ? "/assessments" : `/assessments/${id}`, { method: isNew ? "POST" : "PUT", body }));
     if (!r) return;
     toast(t("common.saved"));
+    guard.clean();
     if (isNew) nav(to(`/tests/${r.id}`), { replace: true });
     else loaded.reload();
   };
@@ -88,11 +90,12 @@ export default function TestEdit() {
 
   return (
     <>
-      <PageHeader back={<Link to={to("/tests")} className="mb-2 inline-block text-sm text-primary-700">{t("test.title")}</Link>}
+      <PageHeader sticky dirty={guard.dirty} back={<Link to={to("/tests")} className="mb-2 inline-block text-sm text-primary-700">{t("test.title")}</Link>}
         title={isNew ? t("test.new") : panel === "en" && x.title_en ? x.title_en : x.title}
         subtitle={!isNew && <span className="flex flex-wrap items-center gap-2"><EnglishBadge state={x.english_status} />
           {x.question_count !== undefined && <span className="text-sm">{t("test.question_count", { count: x.question_count })}</span>}</span>}
         actions={<Button busy={busy} onClick={() => save()} icon={<FloppyDisk size={20} aria-hidden="true" />}>{t("common.save")}</Button>} />
+      <div {...guard.bind}>
       {(error || suggest.error) && <div className="mb-4"><ErrorState error={error || suggest.error || undefined} /></div>}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-aeblack-100 bg-white p-4">
         <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
@@ -264,6 +267,7 @@ export default function TestEdit() {
             setPicking(null);
           }} />
       )}
+      </div>
     </>
   );
 }

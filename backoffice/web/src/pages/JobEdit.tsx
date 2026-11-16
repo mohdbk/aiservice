@@ -2,7 +2,7 @@ import { ArrowDown, ArrowUp, FloppyDisk, Trash, Users } from "@phosphor-icons/re
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
-  Bilingual, Button, Card, EnglishBadge, ErrorState, LangTabs, Loading, Note, PageHeader, RichText, SectionTabs, SelectInput, TextInput, Toggle, Tick, useSaving,
+  Bilingual, Button, Card, EnglishBadge, ErrorState, LangTabs, Loading, Note, PageHeader, RichText, SectionTabs, SelectInput, TextInput, Toggle, Tick, useEditGuard, useSaving,
 } from "../components/ui";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
 import { JobCriteria } from "../components/JobCriteria";
@@ -67,6 +67,7 @@ export default function JobEdit() {
   const [tab, setTab] = useState("details");
   const { busy, error, run } = useSaving();
   const suggest = useSaving();
+  const guard = useEditGuard();
   usePageTitle(isNew ? t("jobs.new") : job.title || t("jobs.edit"));
   useEffect(() => { if (loaded.data) setJob(loaded.data); }, [loaded.data]);
   const set = <K extends keyof Job>(k: K, v: Job[K]) => setJob((j) => ({ ...j, [k]: v }));
@@ -87,6 +88,7 @@ export default function JobEdit() {
     const r = await run(() => api<{ id: number; approval_pending?: boolean }>(isNew ? "/jobs" : `/jobs/${id}`, { method: isNew ? "POST" : "PUT", body }));
     if (!r) return;
     toast(r.approval_pending ? t("approvals.sent_for_approval") : t("jobs.saved"), r.approval_pending ? "info" : "success");
+    guard.clean();
     if (isNew) nav(to(`/jobs/${r.id}`), { replace: true });
     else loaded.reload();
   };
@@ -99,7 +101,7 @@ export default function JobEdit() {
 
   return (
     <>
-      <PageHeader
+      <PageHeader sticky dirty={guard.dirty}
         back={<Link to={to("/jobs")} className="mb-2 inline-block text-sm text-primary-700">{t("jobs.title")}</Link>}
         title={isNew ? t("jobs.new") : panel === "en" && job.title_en ? job.title_en : job.title}
         subtitle={!isNew && <span className="flex flex-wrap items-center gap-2"><span dir="ltr">{job.code}</span><EnglishBadge state={job.english} /></span>}
@@ -108,6 +110,7 @@ export default function JobEdit() {
           <Button busy={busy} onClick={save} icon={<FloppyDisk size={20} aria-hidden="true" />}>{t("common.save")}</Button>
         </>}
       />
+      <div {...guard.bind}>
       {error && <div className="mb-4"><ErrorState error={error} /></div>}
       {suggest.error && <div className="mb-4"><ErrorState error={suggest.error} /></div>}
       <SectionTabs value={tab} onChange={setTab} tabs={[
@@ -232,9 +235,7 @@ export default function JobEdit() {
       {tab === "ranking" && id && <JobRanking jobId={id} />}
 
       {tab === "criteria" && job.id && <JobCriteria jobId={job.id} />}
-      {tab !== "ranking" && tab !== "criteria" && <div className="mt-6 flex justify-end">
-        <Button busy={busy} onClick={save} icon={<FloppyDisk size={20} aria-hidden="true" />}>{t("common.save")}</Button>
-      </div>}
+      </div>
     </>
   );
 }

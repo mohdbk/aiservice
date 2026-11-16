@@ -2,7 +2,7 @@ import { FloppyDisk, Plus } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { DataTable, useList } from "../components/DataTable";
-import { Badge, Button, Card, ErrorState, FlagLabel, Loading, Modal, PageHeader, SectionTabs, SelectInput, TextArea, TextInput, Toggle, useSaving } from "../components/ui";
+import { Badge, Button, Card, ErrorState, FlagLabel, Loading, Modal, PageHeader, SectionTabs, SelectInput, TextArea, TextInput, Toggle, useSaving, useEditGuard } from "../components/ui";
 import { api, useAsync, useAuth, useLang, usePageTitle, useToast } from "../core";
 
 // ---------------- departments ----------------
@@ -198,6 +198,7 @@ export function Settings() {
   const loaded = useAsync(() => api<SettingsData>("/settings"), []);
   const [s, setS] = useState<SettingsData | null>(null);
   const { busy, error, run } = useSaving();
+  const guard = useEditGuard();
   useEffect(() => { if (loaded.data) setS(loaded.data); }, [loaded.data]);
   if (loaded.loading || !s) return loaded.error ? <ErrorState error={loaded.error} retry={loaded.reload} /> : <Loading />;
   const set = <K extends keyof SettingsData>(k: K, v: SettingsData[K]) => setS({ ...s, [k]: v });
@@ -206,6 +207,7 @@ export function Settings() {
     void languages; void time_zones; void time_zone;
     if (await run(() => api("/settings", { method: "PUT", body: { ...rest, time_zone: time_zone_setting } })) !== undefined) {
       toast(t("common.saved"));
+      guard.clean();
       // Times on every page follow the new zone at once.
       setMe(me ? { ...me, time_zone: time_zone_setting || "Asia/Dubai" } : null);
       loaded.reload();
@@ -213,7 +215,8 @@ export function Settings() {
   };
   return (
     <>
-      <PageHeader title={t("setup.settings")} actions={<Button busy={busy} onClick={save} icon={<FloppyDisk size={20} aria-hidden="true" />}>{t("common.save")}</Button>} />
+      <PageHeader sticky dirty={guard.dirty} title={t("setup.settings")} actions={<Button busy={busy} onClick={save} icon={<FloppyDisk size={20} aria-hidden="true" />}>{t("common.save")}</Button>} />
+      <div {...guard.bind}>
       {error && <div className="mb-4"><ErrorState error={error} /></div>}
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
@@ -235,6 +238,7 @@ export function Settings() {
             <Toggle label={t("setup.auto_score")} checked={s.auto_score_applications} onChange={(v) => set("auto_score_applications", v)} />
           </div>
         </Card>
+      </div>
       </div>
     </>
   );

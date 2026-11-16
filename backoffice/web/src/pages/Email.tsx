@@ -3,8 +3,7 @@ import { useEffect, useState } from "react";
 import { DataTable, useList } from "../components/DataTable";
 import {
   ActionMenu, Badge, Bilingual, Button, Card, Empty, ErrorState, FlagLabel, LangSwitch, Loading, Modal, Note, PageHeader, Row, RowList, SectionTabs,
-  TemplateBody, TextArea, TextInput, Toggle, textToHtml, useSaving,
-} from "../components/ui";
+  TemplateBody, TextArea, TextInput, Toggle, textToHtml, useSaving, useEditGuard } from "../components/ui";
 import { api, useAsync, useAuth, useLang, usePageTitle, useToast } from "../core";
 
 type TestResult = { ok: boolean; server: string; error?: string };
@@ -53,6 +52,7 @@ export function EmailServer() {
   const [clear, setClear] = useState(false);
   const [testing, setTesting] = useState(false);
   const { busy, error, run } = useSaving();
+  const guard = useEditGuard();
   useEffect(() => { if (loaded.data) setS(loaded.data); }, [loaded.data]);
   if (loaded.loading || !s) return loaded.error ? <ErrorState error={loaded.error} retry={loaded.reload} /> : <Loading />;
   const set = <K extends keyof Server>(k: K, v: Server[K]) => setS({ ...s, [k]: v });
@@ -61,6 +61,7 @@ export function EmailServer() {
       from_address: s.from_address, from_name: s.from_name, signature_ar: s.signature_ar, signature_en: s.signature_en, attach_offer_pdf: s.attach_offer_pdf };
     if (await run(() => api("/email-settings", { method: "PUT", body })) !== undefined) {
       toast(t("common.saved"));
+      guard.clean();
       setPassword("");
       setClear(false);
       loaded.reload();
@@ -68,10 +69,11 @@ export function EmailServer() {
   };
   return (
     <>
-      <PageHeader title={t("nav.email_server")} subtitle={t("mail.server_intro")} actions={<>
+      <PageHeader sticky dirty={guard.dirty} title={t("nav.email_server")} subtitle={t("mail.server_intro")} actions={<>
         <Button variant="outline" onClick={() => setTesting(true)} disabled={s.in_use === "None"} icon={<PaperPlaneTilt size={24} aria-hidden="true" />}>{t("mail.test")}</Button>
         <Button busy={busy} onClick={save} icon={<FloppyDisk size={24} aria-hidden="true" />}>{t("common.save")}</Button>
       </>} />
+      <div {...guard.bind}>
       {error && <div className="mb-4"><ErrorState error={error} /></div>}
       <div className="mb-6">
         {s.in_use === "Settings" && <Note>{t("mail.in_use_settings")}</Note>}
@@ -103,6 +105,7 @@ export function EmailServer() {
         </Card>
       </div>
       <TestEmail path="/email-settings/test" open={testing} onClose={() => setTesting(false)} />
+      </div>
     </>
   );
 }

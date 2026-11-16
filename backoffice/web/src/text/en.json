@@ -1525,5 +1525,7 @@
  "dash.overview": "Overview",
  "dash.per_week": "Applications per Week",
  "dash.open_report": "Open Hiring Report",
- "dash.funnel": "Hiring Funnel (8 Weeks)"
+ "dash.funnel": "Hiring Funnel (8 Weeks)",
+ "common.unsaved": "Unsaved Changes",
+ "common.unsaved_leave": "You have unsaved changes. Leave this page without saving?"
 }

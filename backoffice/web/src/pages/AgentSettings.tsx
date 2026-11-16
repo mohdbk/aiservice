@@ -1,6 +1,6 @@
 import { FloppyDisk } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
-import { Badge, Button, Card, ErrorState, FlagLabel, Loading, Note, PageHeader, Stat, TextArea, TextInput, Tick, Toggle, useSaving } from "../components/ui";
+import { Badge, Button, Card, ErrorState, FlagLabel, Loading, Note, PageHeader, Stat, TextArea, TextInput, Tick, Toggle, useSaving, useEditGuard } from "../components/ui";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
 
 type Settings = {
@@ -25,6 +25,7 @@ export default function AgentSettings() {
   const [apiKey, setApiKey] = useState("");
   const [clearKey, setClearKey] = useState(false);
   const { busy, error, run } = useSaving();
+  const guard = useEditGuard();
   useEffect(() => { if (loaded.data) setS(loaded.data); }, [loaded.data]);
   if (loaded.loading || !s) return loaded.error ? <ErrorState error={loaded.error} retry={loaded.reload} /> : <Loading />;
   const set = <K extends keyof Settings>(k: K, v: Settings[K]) => setS({ ...s, [k]: v });
@@ -38,6 +39,7 @@ export default function AgentSettings() {
     };
     if (await run(() => api("/agent-settings", { method: "PUT", body })) !== undefined) {
       toast(t("common.saved"));
+      guard.clean();
       setApiKey("");
       setClearKey(false);
       loaded.reload();
@@ -48,8 +50,9 @@ export default function AgentSettings() {
 
   return (
     <>
-      <PageHeader title={t("nav.agent_settings")} subtitle={t("ags.intro")}
+      <PageHeader sticky dirty={guard.dirty} title={t("nav.agent_settings")} subtitle={t("ags.intro")}
         actions={<Button busy={busy} onClick={save} icon={<FloppyDisk size={20} aria-hidden="true" />}>{t("common.save")}</Button>} />
+      <div {...guard.bind}>
       {error && <div className="mb-4"><ErrorState error={error} /></div>}
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         {(["runs_today", "people_today", "approved_today"] as const).map((k) => (
@@ -117,6 +120,7 @@ export default function AgentSettings() {
             ))}
           </div>
         </Card>
+      </div>
       </div>
     </>
   );
