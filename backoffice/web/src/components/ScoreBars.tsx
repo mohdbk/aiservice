@@ -1,3 +1,4 @@
+// Scores against pass marks for scored tests (knowledge, language, situational judgement, aptitude, work samples).
 import { useLang } from "../core";
 
 export type ScoreRow = { label: string; percent: number; passMark?: number | null; passed?: boolean | null; strong?: boolean };
