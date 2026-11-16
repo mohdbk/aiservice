@@ -2,6 +2,7 @@ import { CheckCircle, FileArrowDown, MagicWand, XCircle } from "@phosphor-icons/
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { TraitProfile, parseProfile, type PersonalitySummary } from "../components/personality";
+import { ScoreBars } from "../components/ScoreBars";
 import { Badge, Button, Card, ErrorState, Loading, Note, PageHeader, TextInput, useSaving } from "../components/ui";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
 
@@ -13,7 +14,7 @@ type Q = {
 type Attempt = {
   id: number; attempt_no: number; status: string; percent: number; earned: number; total: number; passed: boolean | null; tab_switches: number; pastes: number;
   invitation: { id: number; code: string; assessment: string; pass_mark: number }; applicant: { id: number; name: string }; job_role_profile?: { id: number; name_ar: string; name_en: string } | null;
-  sections: { section_no: number; title: string; earned: number; total: number; percent: number; passed: boolean | null }[]; questions: Q[];
+  sections: { section_no: number; title: string; earned: number; total: number; percent: number; passed: boolean | null; pass_mark?: number }[]; questions: Q[];
   personality_model: string; trait_profile: unknown; personality?: PersonalitySummary | null;
 };
 
@@ -61,15 +62,12 @@ export default function Marking() {
           <p className="text-sm text-aeblack-600" dir="ltr">{a.earned} / {a.total}</p>
           {a.passed !== null && <Badge tone={a.passed ? "green" : "red"}>{a.passed ? t("res.Pass") : t("res.Fail")}</Badge>}
         </div>
-        {a.sections.length > 1 && (
-          <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-            {a.sections.map((s) => (
-              <li key={s.section_no} className="flex items-center justify-between rounded-lg bg-whitely-100 p-3 text-sm">
-                <span>{s.title}</span><span className="tabular-nums font-semibold" dir="ltr">{s.percent}%</span>
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className="mt-5">
+          <ScoreBars rows={[
+            { label: t("mark.overall"), percent: a.percent, passMark: a.invitation.pass_mark, passed: a.passed, strong: true },
+            ...(a.sections.length > 1 ? a.sections.map((s) => ({ label: s.title, percent: s.percent, passMark: s.pass_mark, passed: s.passed })) : []),
+          ]} />
+        </div>
       </Card>}
       <ol className="space-y-4">
         {a.questions.map((q, i) => (

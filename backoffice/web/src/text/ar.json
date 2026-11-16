@@ -1512,5 +1512,8 @@
  "asst.approval_hint": "أي تغيير ينتظر موافقتك دائماً",
  "asst.try": "جرّب أن تسأل",
  "app.collapse_menu": "طي القائمة",
- "app.expand_menu": "توسيع القائمة"
+ "app.expand_menu": "توسيع القائمة",
+ "score.pass_mark": "درجة النجاح {n}%",
+ "score.marker": "درجة النجاح",
+ "score.attempt": "المحاولة {n}"
 }

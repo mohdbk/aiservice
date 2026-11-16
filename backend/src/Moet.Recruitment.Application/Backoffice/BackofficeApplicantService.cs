@@ -97,7 +97,7 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
             .OrderByDescending(i => i.CreatedAt).Select(i => new
             {
                 id = i.Id, code = i.Code, assessment_id = i.AssessmentId, title = (en ? i.Assessment!.Translations.Where(t => t.LanguageCode == "en" && t.Title != "").Select(t => t.Title).FirstOrDefault() ?? i.Assessment!.Title : i.Assessment!.Title), status = i.Status,
-                personality_model = i.Assessment.PersonalityModel,
+                personality_model = i.Assessment.PersonalityModel, pass_mark = i.Assessment.PassMark,
                 deadline_at = i.DeadlineAt, attempts_used = (int)i.AttemptsUsed, attempts_allowed = (int)i.AttemptsAllowed, extra_time_percent = (int)i.ExtraTimePercent,
                 score = i.Score, result = i.Result,
                 attempts = i.Attempts.OrderBy(t => t.AttemptNo).Select(t => new

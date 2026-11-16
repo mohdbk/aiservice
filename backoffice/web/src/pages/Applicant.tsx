@@ -10,6 +10,7 @@ import {
 import { DocumentDialog } from "../components/DocumentDialog";
 import { SelectionCard, type SelectionView } from "../components/Selection";
 import { TraitProfile, parseProfile, type PersonalitySummary } from "../components/personality";
+import { ScoreBars } from "../components/ScoreBars";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
 import { appTone, screenTone } from "./Applicants";
 import { useLookups } from "./JobEdit";
@@ -31,7 +32,7 @@ type Detail = {
   duplicates?: { id: number; code: string; full_name: string; email: string; created_at: string; same_cv: boolean; same_phone: boolean; same_name: boolean }[];
   invitations: {
     id: number; code: string; assessment_id: number; title: string; status: string; deadline_at: string; attempts_used: number; attempts_allowed: number; extra_time_percent?: number;
-    score: number | null; result: string | null; personality_model: string;
+    score: number | null; result: string | null; personality_model: string; pass_mark?: number;
     attempts: {
       id: number; attempt_no: number; status: string; percent: number; passed: boolean | null; tab_switches: number; pastes: number; submitted_at: string | null;
       trait_profile: string | null;
@@ -214,6 +215,13 @@ export default function Applicant() {
                 const last = [...inv.attempts].reverse().find((at) => at.trait_profile);
                 return last ? <div className="mb-4"><TraitProfile profile={parseProfile(last.trait_profile)} summary={a.personality?.[String(inv.id)]} jobProfile={a.job.role_profile} /></div> : null;
               })()}
+              {inv.personality_model === "None" && inv.attempts.some((at) => at.status === "Marked") && (
+                <div className="mb-4">
+                  <ScoreBars rows={inv.attempts.filter((at) => at.status === "Marked").map((at) => ({
+                    label: t("score.attempt", { n: at.attempt_no }), percent: at.percent, passMark: inv.pass_mark, passed: at.passed,
+                  }))} />
+                </div>
+              )}
               {inv.attempts.length > 0 && (
                 <ul className="space-y-2">
                   {inv.attempts.map((at) => (

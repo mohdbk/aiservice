@@ -419,7 +419,7 @@ public sealed class BackofficeAssessmentService(IAppDbContext db, ICurrentActor 
                                       join r in db.RoleProfiles.AsNoTracking() on j.RoleProfileId equals r.Id
                                       where j.Id == inv.JobApplication!.JobOpeningId
                                       select new { id = r.Id, name_ar = r.NameAr, name_en = r.NameEn }).FirstOrDefaultAsync(ct),
-            sections = a.SectionScores().Select(s => new { s.SectionNo, s.Title, s.Earned, s.Total, s.Percent, s.Passed }).ToList(),
+            sections = a.SectionScores().Select(s => new { s.SectionNo, s.Title, s.Earned, s.Total, s.Percent, s.Passed, PassMark = a.Sections.Where(x => x.SectionNo == s.SectionNo).Select(x => x.PassMark).FirstOrDefault() }).ToList(),
             questions = a.AllQuestions.Select(q => new
             {
                 id = q.Id, key = q.QuestionKey, question_type = q.QuestionType.ToString(), text = q.Text, points = q.Points,
