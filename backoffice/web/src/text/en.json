@@ -1515,5 +1515,15 @@
  "app.expand_menu": "Expand Menu",
  "score.pass_mark": "Pass Mark {n}%",
  "score.marker": "Pass Mark",
- "score.attempt": "Attempt {n}"
+ "score.attempt": "Attempt {n}",
+ "dash.today": "Today",
+ "dash.all_clear": "Nothing waits for you today.",
+ "dash.interviews_today": "Interviews Today",
+ "dash.feedback_due": "Your Interview Feedback Due",
+ "dash.approvals_waiting": "Approvals Waiting",
+ "dash.cv_waiting": "CVs Waiting for Criteria",
+ "dash.overview": "Overview",
+ "dash.per_week": "Applications per Week",
+ "dash.open_report": "Open Hiring Report",
+ "dash.funnel": "Hiring Funnel (8 Weeks)"
 }

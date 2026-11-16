@@ -151,6 +151,14 @@ public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor
             to_mark = await db.Attempts.CountAsync(a => a.Status == AttemptStatus.Submitted, ct),
             offers_out = await db.JobOffers.CountAsync(o => o.Status == OfferStatus.Sent, ct),
             english_to_review = await db.JobOpeningTranslations.CountAsync(t => t.ReviewStatus == ReviewStatus.Suggested, ct),
+            // Today's work: interviews today (the ministry's day), this person's feedback still due, approvals waiting
+            // (for those who decide them) and CVs waiting for a job's criteria to be approved.
+            interviews_today = (await db.Interviews.AsNoTracking().Where(i => i.Status == InterviewStatus.Scheduled && i.StartsAt >= now.AddDays(-1) && i.StartsAt <= now.AddDays(2))
+                .Select(i => i.StartsAt).ToListAsync(ct)).Count(x => DateOnly.FromDateTime(clock.Local(x)) == today),
+            feedback_due = actor.Id is { } me ? await db.Interviews.CountAsync(i => i.StartsAt < now && i.Status != InterviewStatus.Cancelled
+                && i.Panelists.Any(p => p.StaffUserId == me) && !i.Feedback.Any(f => f.StaffUserId == me), ct) : 0,
+            approvals_waiting = actor.IsAdmin ? await db.ApprovalRequests.CountAsync(r => r.Status == ApprovalStatus.Pending, ct) : 0,
+            cv_waiting = await db.CvAnalyses.CountAsync(c => c.Status == CvAnalysisStatus.Waiting, ct),
             recent = await db.JobApplications.AsNoTracking().OrderByDescending(a => a.CreatedAt).Take(8).Select(a => new
             {
                 id = a.Id, full_name = a.FullName,

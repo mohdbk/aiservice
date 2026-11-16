@@ -2,7 +2,7 @@ import { useSearchParams } from "react-router-dom";
 import { Card, Empty, ErrorState, Loading, Note, PageHeader, SelectInput, Stat, TextInput } from "../components/ui";
 import { api, useAsync, useLang, usePageTitle } from "../core";
 
-type Report = {
+export type Report = {
   from: string; to: string; truncated: boolean;
   funnel: { stage: string; count: number }[];
   time: { to_interview_days: number | null; to_offer_days: number | null; to_hire_days: number | null; hires: number };
@@ -20,7 +20,7 @@ type Report = {
 const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 100) : 0);
 
 /** One horizontal bar per row (single series, so one hue); the value is written next to it, not only drawn. */
-function Bars({ rows }: { rows: { label: string; value: number; note?: string }[] }) {
+export function Bars({ rows }: { rows: { label: string; value: number; note?: string }[] }) {
   const max = Math.max(1, ...rows.map((r) => r.value));
   return (
     <ul className="space-y-3">
@@ -38,7 +38,7 @@ function Bars({ rows }: { rows: { label: string; value: number; note?: string }[
 }
 
 /** Applications per week as columns, with the count on hover and the busiest week labelled. */
-function Weeks({ weeks }: { weeks: Report["weeks"] }) {
+export function Weeks({ weeks }: { weeks: Report["weeks"] }) {
   const { t, date } = useLang();
   const max = Math.max(1, ...weeks.map((w) => w.applied));
   const peak = weeks.reduce((p, w) => (w.applied > p.applied ? w : p), weeks[0]);

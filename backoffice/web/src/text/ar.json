@@ -1515,5 +1515,15 @@
  "app.expand_menu": "توسيع القائمة",
  "score.pass_mark": "درجة النجاح {n}%",
  "score.marker": "درجة النجاح",
- "score.attempt": "المحاولة {n}"
+ "score.attempt": "المحاولة {n}",
+ "dash.today": "اليوم",
+ "dash.all_clear": "لا يوجد ما ينتظرك اليوم.",
+ "dash.interviews_today": "مقابلات اليوم",
+ "dash.feedback_due": "تقييمات مقابلات مطلوبة منك",
+ "dash.approvals_waiting": "موافقات بالانتظار",
+ "dash.cv_waiting": "سير ذاتية بانتظار المعايير",
+ "dash.overview": "نظرة عامة",
+ "dash.per_week": "الطلبات أسبوعياً",
+ "dash.open_report": "فتح تقرير التوظيف",
+ "dash.funnel": "مراحل التوظيف (8 أسابيع)"
 }
