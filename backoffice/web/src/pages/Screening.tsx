@@ -41,7 +41,7 @@ export default function Screening() {
   return (
     <>
       <PageHeader title={t("sq.title")} actions={<Button onClick={() => open()} icon={<Plus size={20} aria-hidden="true" />}>{t("sq.new")}</Button>} />
-      <DataTable list={list} rowKey={(x) => x.id}
+      <DataTable list={list} rowKey={(x) => x.id} emptyHint={t("empty.screening")} emptyAction={<Button onClick={() => open()} icon={<Plus size={20} aria-hidden="true" />}>{t("sq.new")}</Button>}
         filters={[
           { key: "type", label: t("sq.answer_type"), options: opts(t, "at.", TYPES) },
           { key: "active", label: t("q.active_filter"), options: [{ value: "true", label: t("common.active") }, { value: "false", label: t("common.inactive") }] },

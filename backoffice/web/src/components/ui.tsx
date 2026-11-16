@@ -1,6 +1,6 @@
 import { Checkbox, Dialog, Menu, Switch, Tabs } from "@base-ui/react";
 import {
-  ArrowClockwise, CaretDown, Check, CircleNotch, Info, ListBullets, ListNumbers, MagicWand, Paragraph, TextB, TextH, TextItalic, Warning, X,
+  ArrowClockwise, CaretDown, Check, CircleNotch, Info, Tray, ListBullets, ListNumbers, MagicWand, Paragraph, TextB, TextH, TextItalic, Warning, X,
 } from "@phosphor-icons/react";
 import { ReactNode, forwardRef, useEffect, useId, useRef, useState } from "react";
 import { ApiError, useLang } from "../core";
@@ -128,9 +128,21 @@ export function ErrorState({ error, retry }: { error?: ApiError; retry?: () => v
   );
 }
 
-export function Empty({ children }: { children?: ReactNode }) {
+/**
+ * Nothing to show. With a hint or an action it explains what will appear here and offers the next step; on its own it is
+ * the plain "Nothing here yet."
+ */
+export function Empty({ children, hint, action, icon }: { children?: ReactNode; hint?: ReactNode; action?: ReactNode; icon?: ReactNode }) {
   const { t } = useLang();
-  return <p className="rounded-xl border border-dashed border-aeblack-200 p-8 text-center text-aeblack-500">{children || t("common.empty")}</p>;
+  if (!hint && !action && !icon) return <p className="rounded-xl border border-dashed border-aeblack-200 p-8 text-center text-aeblack-500">{children || t("common.empty")}</p>;
+  return (
+    <div className="flex flex-col items-center rounded-2xl border border-dashed border-aeblack-200 bg-white px-6 py-10 text-center">
+      <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary-50 text-primary-700" aria-hidden="true">{icon || <Tray size={26} />}</span>
+      <p className="m-0 font-semibold text-aeblack-900">{children || t("common.empty")}</p>
+      {hint && <p className="m-0 mt-1 max-w-md text-sm text-aeblack-600">{hint}</p>}
+      {action && <div className="mt-4 flex flex-wrap justify-center gap-2">{action}</div>}
+    </div>
+  );
 }
 
 export function Note({ children, tone = "info" }: { children: ReactNode; tone?: "info" | "warning" }) {

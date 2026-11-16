@@ -20,7 +20,7 @@ export default function Invitations() {
     <>
       <PageHeader title={t("inv.title")} subtitle={t("inv.subtitle")} />
       <StatusTabs counts={(list.data as unknown as { counts?: Record<string, number> })?.counts} value={list.get("status")} onChange={(v) => list.set({ status: v || null, page: null })} />
-      <DataTable list={list} rowKey={(x) => x.id}
+      <DataTable list={list} rowKey={(x) => x.id} emptyHint={t("empty.invitations")}
         filters={[
           { key: "assessment", label: t("app.test"), options: (lk.data?.assessments || []).map((a) => ({ value: String(a.id), label: a.title })) },
           { key: "result", label: t("app.result"), options: opts(t, "res.", ["Pass", "Fail", "AwaitingMarking"]) },

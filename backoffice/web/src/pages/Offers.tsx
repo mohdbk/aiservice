@@ -46,7 +46,7 @@ export default function Offers() {
       <SectionTabs value={status} onChange={(v) => list.set({ status: v || null })}
         tabs={[{ value: "", label: t("common.all") }, ...["Draft", "Sent", "Accepted", "Declined", "Withdrawn"].map((s) => ({ value: s, label: t(`offer.status.${s}`) }))]} />
       {act.error && <div className="mb-4"><ErrorState error={act.error} /></div>}
-      <DataTable list={list} rowKey={(o) => o.id} columns={[
+      <DataTable list={list} rowKey={(o) => o.id} emptyHint={t("empty.offers")} columns={[
         { key: "code", label: t("common.code"), sort: "code", render: (o) => <span dir="ltr">{o.status === "Draft" ? <button type="button" className="font-semibold text-primary-700" onClick={() => open(o.id)}>{o.code}</button> : o.code}</span> },
         { key: "applicant", label: t("int.applicant"), sort: "applicant", render: (o) => <><Link to={to(`/applicants/${o.applicant_id}`)}>{o.applicant}</Link><p className="text-xs text-aeblack-500">{o.job_title}</p></> },
         { key: "position", label: t("offer.position"), render: (o) => o.position_title },

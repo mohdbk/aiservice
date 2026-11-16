@@ -35,7 +35,7 @@ export default function Tests() {
         <Button onClick={() => go("/tests/new")} icon={<Plus size={20} aria-hidden="true" />}>{t("test.new")}</Button>
       </>} />
       {adding.error && <div className="mb-4"><ErrorState error={adding.error} /></div>}
-      <DataTable list={list} rowKey={(x) => x.id}
+      <DataTable list={list} rowKey={(x) => x.id} emptyHint={t("empty.tests")} emptyAction={<Button onClick={() => go("/tests/new")} icon={<Plus size={20} aria-hidden="true" />}>{t("test.new")}</Button>}
         filters={[
           { key: "status", label: t("common.status"), options: opts(t, "status.", ["Draft", "Published", "Archived"]) },
           { key: "type", label: t("test.type"), options: opts(t, "type.", TYPES) },

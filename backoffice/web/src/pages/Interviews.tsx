@@ -22,7 +22,7 @@ export default function Interviews() {
       <PageHeader title={t("int.title")} />
       <SectionTabs value={scope} onChange={(v) => list.set({ scope: v === "upcoming" ? null : v, sort: null, dir: null })}
         tabs={["upcoming", "mine", "review", "past"].map((s) => ({ value: s, label: t(`int.scope.${s}`) }))} />
-      <DataTable list={list} rowKey={(i) => i.id}
+      <DataTable list={list} rowKey={(i) => i.id} emptyHint={t("empty.interviews")}
         filters={[
           { key: "status", label: t("common.status"), options: opts(t, "int.status.", ["Scheduled", "UnderReview", "Cleared", "Rejected", "Cancelled"]) },
           { key: "round", label: t("int.round"), options: (lk.data?.rounds || []).map((r) => ({ value: String(r.id), label: r.name })) },

@@ -18,7 +18,7 @@ export default function Components() {
     <>
       <PageHeader title={t("nav.components")} subtitle={t("comp.intro")}
         actions={<Button onClick={() => go("/setup/components/new")} icon={<Plus size={20} aria-hidden="true" />}>{t("comp.new")}</Button>} />
-      <DataTable list={list} rowKey={(x) => x.id}
+      <DataTable list={list} rowKey={(x) => x.id} emptyHint={t("empty.components")} emptyAction={<Button onClick={() => go("/setup/components/new")} icon={<Plus size={20} aria-hidden="true" />}>{t("comp.new")}</Button>}
         filters={[
           { key: "kind", label: t("comp.kind"), options: [{ value: "Ask", label: t("comp.kind.Ask") }, { value: "Approval", label: t("comp.kind.Approval") }] },
           { key: "action", label: t("comp.action"), options: ACTIONS.map((a) => ({ value: a, label: t(`comp.action.${a}`) })) },

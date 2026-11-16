@@ -19,7 +19,7 @@ export default function Applicants() {
   return (
     <>
       <PageHeader title={t("apps.title")} subtitle={list.data && t("apps.total", { count: list.data.total })} />
-      <DataTable list={list} rowKey={(a) => a.id} searchLabel={t("apps.search_hint")}
+      <DataTable list={list} rowKey={(a) => a.id} emptyHint={t("empty.applicants")} searchLabel={t("apps.search_hint")}
         filters={[
           { key: "job", label: t("apps.job"), options: (jobs.data?.items || []).map((j) => ({ value: String(j.id), label: lang === "en" && j.title_en ? j.title_en : j.title })) },
           { key: "status", label: t("common.status"), options: opts(t, "app.status.", ["Open", "Replied", "Hold", "Accepted", "Rejected"]) },

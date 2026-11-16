@@ -60,7 +60,7 @@ export default function Requisitions() {
     <>
       <PageHeader title={t("nav.requisitions")} subtitle={t("req.subtitle")}
         actions={<Button onClick={() => setD({ ...EMPTY })} icon={<Plus size={20} aria-hidden="true" />}>{t("req.new")}</Button>} />
-      <DataTable list={list} rowKey={(r) => r.id} searchLabel={t("common.search")} empty={t("req.empty")}
+      <DataTable list={list} rowKey={(r) => r.id} emptyHint={t("empty.requisitions")} emptyAction={<Button onClick={() => setD({ ...EMPTY })} icon={<Plus size={20} aria-hidden="true" />}>{t("req.new")}</Button>} searchLabel={t("common.search")} empty={t("req.empty")}
         filters={[{ key: "status", label: t("common.status"), options: ["Pending", "Approved", "Rejected", "Filled", "Cancelled"].map((s) => ({ value: s, label: t(`req.status.${s}`) })) }]}
         columns={[
           { key: "title", label: t("req.post"), sort: "title", render: (r) => (

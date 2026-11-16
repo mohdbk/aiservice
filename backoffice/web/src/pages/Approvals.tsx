@@ -42,7 +42,7 @@ export default function Approvals() {
     <>
       <PageHeader title={t("nav.approvals")} subtitle={t("approvals.subtitle")} />
       {admin && <ApprovalSettings />}
-      <DataTable list={list} rowKey={(r) => r.id} searchLabel={t("common.search")}
+      <DataTable list={list} rowKey={(r) => r.id} emptyHint={t("empty.approvals")} searchLabel={t("common.search")}
         filters={[{ key: "status", label: t("common.status"), options: ["Pending", "Approved", "Rejected", "Cancelled"].map((s) => ({ value: s, label: t(`approvals.status.${s}`) })) }]}
         empty={t("approvals.empty")}
         columns={[

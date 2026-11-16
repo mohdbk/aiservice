@@ -24,7 +24,7 @@ export default function Questions() {
   return (
     <>
       <PageHeader title={t("q.title")} actions={<Button onClick={() => go("/questions/new")} icon={<Plus size={20} aria-hidden="true" />}>{t("q.new")}</Button>} />
-      <DataTable list={list} rowKey={(x) => x.id}
+      <DataTable list={list} rowKey={(x) => x.id} emptyHint={t("empty.questions")} emptyAction={<Button onClick={() => go("/questions/new")} icon={<Plus size={20} aria-hidden="true" />}>{t("q.new")}</Button>}
         filters={[
           { key: "type", label: t("q.type"), options: opts(t, "qt.", ["SingleChoice", "MultipleChoice", "TrueFalse", "ShortAnswer", "Number", "Essay", "FileUpload"]) },
           { key: "category", label: t("q.category"), options: (lk.data?.categories || []).map((c) => ({ value: c, label: c })) },

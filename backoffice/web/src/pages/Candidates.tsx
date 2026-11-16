@@ -28,7 +28,7 @@ export default function Candidates() {
   return (
     <>
       <PageHeader title={t("nav.candidates")} subtitle={list.data ? t("cand.subtitle", { n: list.data.total }) : undefined} />
-      <DataTable list={list} rowKey={(r) => r.id} searchLabel={t("cand.search")}
+      <DataTable list={list} rowKey={(r) => r.id} emptyHint={t("empty.candidates")} searchLabel={t("cand.search")}
         filters={[
           { key: "verified", label: t("cand.verified"), options: opts },
           { key: "enabled", label: t("cand.enabled"), options: opts },

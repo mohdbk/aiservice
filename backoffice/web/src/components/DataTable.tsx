@@ -40,8 +40,9 @@ export function useList<T>(path: string, filterKeys: string[], fixed: Record<str
 
 type ListState<T> = ReturnType<typeof useList<T>>;
 
-export function DataTable<T>({ list, columns, rowKey, filters = [], searchLabel, empty, toolbar }: {
-  list: ListState<T>; columns: Column<T>[]; rowKey: (row: T) => string | number; filters?: FilterDef[]; searchLabel?: string; empty?: ReactNode; toolbar?: ReactNode;
+export function DataTable<T>({ list, columns, rowKey, filters = [], searchLabel, empty, emptyHint, emptyAction, toolbar }: {
+  list: ListState<T>; columns: Column<T>[]; rowKey: (row: T) => string | number; filters?: FilterDef[]; searchLabel?: string; empty?: ReactNode;
+  emptyHint?: ReactNode; emptyAction?: ReactNode; toolbar?: ReactNode;
 }) {
   const { t } = useLang();
   const [q, setQ] = useState(list.get("q"));
@@ -58,6 +59,7 @@ export function DataTable<T>({ list, columns, rowKey, filters = [], searchLabel,
     list.set({ sort: key, dir: current === "asc" ? "desc" : "asc" });
   };
   const filtersOn = filters.filter((f) => list.get(f.key)).length;
+  const clearAll = () => { setQ(""); list.set(Object.fromEntries(["q", ...filters.map((f) => f.key)].map((k) => [k, null]))); };
   const header = (c: Column<T>) => {
     const sorted = c.sort && data?.sort === c.sort ? data.dir : null;
     return c.sort ? (
@@ -98,14 +100,18 @@ export function DataTable<T>({ list, columns, rowKey, filters = [], searchLabel,
                 options={[{ value: "", label: t("common.all") }, ...f.options]} />
             ))}
             {active && (
-              <Button variant="link" onClick={() => { setQ(""); list.set(Object.fromEntries(["q", ...filters.map((f) => f.key)].map((k) => [k, null]))); }}
+              <Button variant="link" onClick={clearAll}
                 icon={<X size={20} aria-hidden="true" />}>{t("list.clear")}</Button>
             )}
             {toolbar}
           </div>
         )}
       </form>
-      {list.loading && !data ? <Loading /> : list.error ? <ErrorState error={list.error as ApiError} retry={list.reload} /> : !data || data.items.length === 0 ? <Empty>{empty}</Empty> : (
+      {list.loading && !data ? <Loading /> : list.error ? <ErrorState error={list.error as ApiError} retry={list.reload} /> : !data || data.items.length === 0 ? (active
+        // Nothing matches the search or filters: say so and offer to clear them (not "nothing here yet").
+        ? <Empty icon={<MagnifyingGlass size={26} />} hint={t("list.no_match_hint")}
+            action={<Button variant="outline" onClick={clearAll} icon={<X size={20} aria-hidden="true" />}>{t("list.clear")}</Button>}>{t("list.no_match")}</Empty>
+        : <Empty hint={emptyHint} action={emptyAction}>{empty}</Empty>) : (
         <>
           {/* Wide screens: a table. */}
           <div className={`hidden overflow-x-auto rounded-2xl border border-aeblack-100 bg-white transition md:block ${list.loading ? "opacity-60" : ""}`}>

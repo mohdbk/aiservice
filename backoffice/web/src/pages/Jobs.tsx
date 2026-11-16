@@ -21,7 +21,7 @@ export default function Jobs() {
   return (
     <>
       <PageHeader title={t("jobs.title")} actions={<Button onClick={() => go("/jobs/new")} icon={<Plus size={20} aria-hidden="true" />}>{t("jobs.new")}</Button>} />
-      <DataTable list={list} rowKey={(j) => j.id}
+      <DataTable list={list} rowKey={(j) => j.id} emptyHint={t("empty.jobs")} emptyAction={<Button onClick={() => go("/jobs/new")} icon={<Plus size={20} aria-hidden="true" />}>{t("jobs.new")}</Button>}
         filters={[
           { key: "status", label: t("jobs.status"), options: opts(t, "status.", ["Open", "Draft", "Closed"]) },
           { key: "published", label: t("jobs.published"), options: [{ value: "true", label: t("common.yes") }, { value: "false", label: t("common.no") }] },

@@ -28,7 +28,7 @@ export default function TalentPool() {
   return (
     <>
       <PageHeader title={t("nav.talent_pool")} subtitle={list.data ? t("pool.subtitle", { n: list.data.total }) : undefined} />
-      <DataTable list={list} rowKey={(r) => r.id} searchLabel={t("pool.search")}
+      <DataTable list={list} rowKey={(r) => r.id} emptyHint={t("empty.talent_pool")} searchLabel={t("pool.search")}
         filters={[{ key: "job", label: t("pool.not_applied_to"), options: (jobs.data?.items || []).map((j) => ({ value: String(j.id), label: lang === "en" && j.title_en ? j.title_en : j.title })) }]}
         toolbar={<form className="flex items-end gap-2" onSubmit={(e) => { e.preventDefault(); list.set({ cv: cv.trim() || null }); }}>
           <TextInput label={t("pool.cv_text")} value={cv} onChange={(e) => setCv(e.target.value)} wrapClass="min-w-48" />

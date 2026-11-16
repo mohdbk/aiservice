@@ -1527,5 +1527,20 @@
  "dash.open_report": "Open Hiring Report",
  "dash.funnel": "Hiring Funnel (8 Weeks)",
  "common.unsaved": "Unsaved Changes",
- "common.unsaved_leave": "You have unsaved changes. Leave this page without saving?"
+ "common.unsaved_leave": "You have unsaved changes. Leave this page without saving?",
+ "list.no_match": "Nothing matches your search or filters",
+ "list.no_match_hint": "Try other words, or clear the filters to see everything.",
+ "empty.jobs": "Create a job, or approve a requisition to turn it into a draft job.",
+ "empty.questions": "Add questions here, then use them in tests. Ready-made personality questionnaires are on the Tests page.",
+ "empty.tests": "Build a test from the question bank, or add a ready-made personality questionnaire.",
+ "empty.components": "Design forms and approval cards the assistant shows in the chat.",
+ "empty.screening": "Questions candidates answer when they apply, such as years of experience or a licence.",
+ "empty.requisitions": "Request a new post. Once approved, it becomes a draft job.",
+ "empty.applicants": "Applications appear here when candidates apply to a published job.",
+ "empty.interviews": "Schedule an interview, or offer interview times, from an applicant's page.",
+ "empty.offers": "Make an offer from an applicant's page once they have cleared their interviews.",
+ "empty.invitations": "Invite applicants to a test from their page, or add a test to a job so it is sent when they apply.",
+ "empty.talent_pool": "Candidates who agree to be considered for other jobs appear here.",
+ "empty.candidates": "Accounts appear here when people sign up on the careers portal.",
+ "empty.approvals": "Jobs to publish, offers to send and new posts appear here when approval is switched on."
 }
