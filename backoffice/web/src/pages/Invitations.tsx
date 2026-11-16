@@ -54,7 +54,7 @@ function StatusTabs({ counts, value, onChange }: { counts?: Record<string, numbe
     <button key={key} type="button" role="tab" aria-selected={value === key} onClick={() => onChange(key)}
       className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition ${value === key ? "bg-primary-600 text-white" : "bg-white text-aeblack-700 ring-1 ring-aeblack-100 hover:bg-primary-50"}`}>
       {label}
-      {n !== undefined && <span className={`rounded-full px-2 text-xs tabular-nums ${value === key ? "bg-white/25" : urgent && n > 0 ? "bg-camel-100 text-camel-900" : "bg-aeblack-50 text-aeblack-600"}`}>{n}</span>}
+      {n !== undefined && <span className={`rounded-full px-2 text-xs tabular-nums ${value === key ? "bg-white text-primary-800" : urgent && n > 0 ? "bg-camel-100 text-camel-900" : "bg-aeblack-50 text-aeblack-600"}`}>{n}</span>}
     </button>
   );
   return (

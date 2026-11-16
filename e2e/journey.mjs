@@ -44,10 +44,12 @@ try {
   await page.fill("#password", PASSWORD);
   await page.getByRole("button", { name: /Create Account/i }).click();
   await page.waitForLoadState("networkidle");
-  if (/check-email/.test(page.url())) {
-    // HR marks the address verified (the e2e stack sends no email), then the candidate signs in.
-    const cand = (await bo("GET", `/candidates?q=${encodeURIComponent(EMAIL)}`)).items[0];
-    await bo("POST", `/candidates/${cand.id}/verify`, {});
+  if (/check-email|sign-in/.test(page.url())) {
+    // Not signed in yet: HR marks the address verified if needed (the stack sends no email), then the candidate signs in.
+    if (/check-email/.test(page.url())) {
+      const cand = (await bo("GET", `/candidates?q=${encodeURIComponent(EMAIL)}`)).items[0];
+      await bo("POST", `/candidates/${cand.id}/verify`, {});
+    }
     await page.goto(`${PORTAL}/en/sign-in`, { waitUntil: "networkidle" });
     await page.fill("#email", EMAIL);
     await page.fill("#password", PASSWORD);
