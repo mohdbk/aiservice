@@ -203,20 +203,20 @@ async function topUp() {
   const dat = tests.find((x) => x.title === "اختبار تحليل البيانات");
   for (const [email, pass] of [["aisha.khan@example.test", true], ["daniel.smith@example.test", false]]) {
     const app = byEmail[email];
-    if (!app || !dat) continue;
+    if (!app || !dat) { console.log(`skip test for ${email}: ${!dat ? "no Data Analysis Test" : "no application"}`); continue; }
     let inv = (await bo("GET", `/applicants/${app.id}`)).invitations.find((i) => i.assessment_id === dat.id);
     if (!inv) {
       await bo("POST", `/applicants/${app.id}/invite`, { assessment_id: dat.id, deadline_days: 7 });
       inv = (await bo("GET", `/applicants/${app.id}`)).invitations.find((i) => i.assessment_id === dat.id);
     }
-    if (inv.attempts.some((a) => a.status === "Marked")) continue;
+    if (inv.attempts.some((a) => a.status === "Marked")) { console.log(`skip test for ${email}: already marked`); continue; }
     if (inv.attempts.length === 0) {
       await takeAssessment(email, inv.code, (q) => (q.options?.length ? (q.type === "Multiple Choice" ? [q.options[0].key] : q.options[0].key)
         : q.type === "Number" ? "5" : "Ministry of Economy and Tourism. I would set clear indicators, a baseline and compare against similar firms."));
       inv = (await bo("GET", `/applicants/${app.id}`)).invitations.find((i) => i.assessment_id === dat.id);
     }
     const attempt = inv.attempts[inv.attempts.length - 1];
-    if (!attempt || attempt.status === "InProgress") continue;
+    if (!attempt || attempt.status === "InProgress") { console.log(`skip test for ${email}: attempt ${attempt ? "still in progress" : "missing"} (invitation ${inv.status})`); continue; }
     const detail = await bo("GET", `/attempts/${attempt.id}`);
     const marks = detail.questions.map((q, i) => ({
       question_id: q.id,
@@ -233,7 +233,7 @@ async function topUp() {
     const iv = await bo("GET", `/interviews/${row.id}`);
     const onPanel = (iv.panel || iv.panelists || []).some((p) => (p.id ?? p.staff_id) === me.id);
     const given = (iv.feedback || []).some((f) => (f.staff_id ?? f.by_id) === me.id || f.by === me.full_name);
-    if (!onPanel || given) continue;
+    if (!onPanel || given) { console.log(`skip feedback on interview ${row.id}: ${!onPanel ? "not on the panel" : "already given"}`); continue; }
     const skills = iv.round?.skills || iv.skills || [];
     await bo("POST", `/interviews/${row.id}/feedback`, {
       recommendation: "Cleared", comments: "إجابات واضحة ومنظمة، وخبرة عملية جيدة في لوحات المعلومات.",
