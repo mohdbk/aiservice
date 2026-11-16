@@ -69,6 +69,9 @@ jobs:
           dotnet src/Moet.Recruitment.Api/bin/Release/net10.0/Moet.Recruitment.Api.dll --urls http://localhost:5080 > api.log 2>&1 &
           for i in $(seq 1 60); do curl -sf http://localhost:5080/healthz && break; sleep 2; done
           API=http://localhost:5080 PORTAL_KEY=ci-portal-key:ci-portal-secret-0123456789 node ../backoffice/scripts/seed-demo.mjs || (tail -80 api.log; exit 1)
+          # A second run (as on the live demo) adds nothing and fails on nothing.
+          API=http://localhost:5080 PORTAL_KEY=ci-portal-key:ci-portal-secret-0123456789 node ../backoffice/scripts/seed-demo.mjs | tee seed2.log || (tail -80 api.log; exit 1)
+          grep -q "Nothing missing." seed2.log || (echo "second seed run changed something"; tail -80 api.log; exit 1)
       - name: Container image builds
         run: docker build -t moet-recruitment-api .
       - name: Letters print in the image (Chromium, Arabic font, readable Arabic text)

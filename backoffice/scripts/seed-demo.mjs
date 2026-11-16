@@ -29,7 +29,8 @@ async function main() {
   await bo("POST", "/sign-in", { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
   const existing = await bo("GET", "/jobs?size=10");
   if (existing.total > 0) {
-    console.log("Demo content already present; nothing to do.");
+    console.log("Demo content already present; adding anything missing.");
+    await topUp();
     return;
   }
 
@@ -164,6 +165,119 @@ async function main() {
   }
 
   console.log(`Demo content created: ${apps.length} applicants for ${jobCode}, two Big Five profiles.`);
+  await topUp();
+}
+
+/** A portal session for a demo applicant (all share one password). */
+async function epochOf(email) {
+  const s = await portal("POST", "authenticate", { email, password: "Demo-Applicant-2026" });
+  return String(s.message.epoch ?? 0);
+}
+
+/** Takes an assessment from start to finish through the portal, answering each question with answer(question, i). */
+async function takeAssessment(email, code, answer) {
+  const who = { email, epoch: await epochOf(email), name: code };
+  let state = (await portal("POST", "start_assessment", { ...who, lang: "ar" })).message;
+  for (let guard = 0; guard < 10 && state && !state.finished && state.section; guard++) {
+    for (const [i, q] of state.section.questions.entries())
+      await portal("POST", "save_assessment_answer", { ...who, key: q.key, section: state.section_index, answer: JSON.stringify(answer(q, i)) });
+    state = (await portal("POST", "next_assessment_section", { ...who, section: state.section_index, lang: "ar" })).message;
+  }
+}
+
+/**
+ * Demo content added after the first version, so an existing demo gets it too. Each part checks first, so running it
+ * again changes nothing: a marked knowledge test (one pass, one not), interview feedback, a 16-type profile,
+ * a workplace Big Five profile and an accepted offer.
+ */
+async function topUp() {
+  const jobs = (await bo("GET", "/jobs?size=50")).items;
+  const analyst = jobs.find((j) => j.title === "محلل بيانات أول");
+  if (!analyst) return;
+  const apps = (await bo("GET", `/applicants?size=50&job=${analyst.id}&sort=name&dir=asc`)).items;
+  const byEmail = Object.fromEntries(apps.map((a) => [a.email, a]));
+  const added = [];
+
+  // 1. The Data Analysis Test: Aisha passes it, Daniel does not. Written answers are marked by HR.
+  const tests = (await bo("GET", "/assessments?size=50")).items;
+  const dat = tests.find((x) => x.title === "اختبار تحليل البيانات");
+  for (const [email, pass] of [["aisha.khan@example.test", true], ["daniel.smith@example.test", false]]) {
+    const app = byEmail[email];
+    if (!app || !dat) continue;
+    let inv = (await bo("GET", `/applicants/${app.id}`)).invitations.find((i) => i.assessment_id === dat.id);
+    if (!inv) {
+      await bo("POST", `/applicants/${app.id}/invite`, { assessment_id: dat.id, deadline_days: 7 });
+      inv = (await bo("GET", `/applicants/${app.id}`)).invitations.find((i) => i.assessment_id === dat.id);
+    }
+    if (inv.attempts.some((a) => a.status === "Marked")) continue;
+    if (inv.attempts.length === 0) {
+      await takeAssessment(email, inv.code, (q) => (q.options?.length ? (q.type === "Multiple Choice" ? [q.options[0].key] : q.options[0].key)
+        : q.type === "Number" ? "5" : "Ministry of Economy and Tourism. I would set clear indicators, a baseline and compare against similar firms."));
+      inv = (await bo("GET", `/applicants/${app.id}`)).invitations.find((i) => i.assessment_id === dat.id);
+    }
+    const attempt = inv.attempts[inv.attempts.length - 1];
+    if (!attempt || attempt.status === "InProgress") continue;
+    const detail = await bo("GET", `/attempts/${attempt.id}`);
+    const marks = detail.questions.map((q, i) => ({
+      question_id: q.id,
+      points: pass ? q.points : i === 0 ? q.points : q.question_type === "Essay" ? Math.round(q.points * 0.2) : 0,
+      comment: q.question_type === "Essay" ? (pass ? "Clear indicators, data sources and a baseline." : "Too brief; no indicators or baseline.") : "",
+    }));
+    await bo("POST", `/attempts/${attempt.id}/marks`, { marks });
+    added.push(`${pass ? "passed" : "not passed"} test for ${email}`);
+  }
+
+  // 2. Interview feedback from the administrator on the interviews they sit on.
+  const me = await bo("GET", "/me");
+  for (const row of (await bo("GET", "/interviews?scope=all&size=20")).items) {
+    const iv = await bo("GET", `/interviews/${row.id}`);
+    const onPanel = (iv.panel || iv.panelists || []).some((p) => (p.id ?? p.staff_id) === me.id);
+    const given = (iv.feedback || []).some((f) => (f.staff_id ?? f.by_id) === me.id || f.by === me.full_name);
+    if (!onPanel || given) continue;
+    const skills = iv.round?.skills || iv.skills || [];
+    await bo("POST", `/interviews/${row.id}/feedback`, {
+      recommendation: "Cleared", comments: "إجابات واضحة ومنظمة، وخبرة عملية جيدة في لوحات المعلومات.",
+      ratings: skills.map((sk, k) => ({ skill: typeof sk === "string" ? sk : sk.name, rating: [4, 5, 3][k % 3] })),
+    });
+    added.push(`interview feedback on ${row.id}`);
+  }
+
+  // 3. Personality questionnaires: a 16-type profile and a workplace Big Five profile.
+  for (const [key, people, pattern] of [
+    ["workplace-type-16-32", ["omar.hassan@example.test", "noura.salem@example.test"], (i, k) => String(k === 0 ? (i % 4 === 0 ? 2 : 5) : (i % 3 === 0 ? 4 : 2))],
+    ["workplace-big-five-25", ["layla.ahmed@example.test"], (i) => String([4, 5, 3, 4, 2][i % 5])],
+  ]) {
+    const title = (await bo("GET", "/assessment-templates")).find((x) => x.key === key)?.title;
+    let asm = (await bo("GET", "/assessments?size=50")).items.find((x) => x.title === title);
+    if (!asm) {
+      const created = await bo("POST", `/assessment-templates/${key}`, {});
+      const full = await bo("GET", `/assessments/${created.id}`);
+      await bo("PUT", `/assessments/${created.id}`, { ...full, status: "Published" });
+      asm = { id: created.id };
+    }
+    for (const [k, email] of people.entries()) {
+      const app = byEmail[email];
+      if (!app) continue;
+      let inv = (await bo("GET", `/applicants/${app.id}`)).invitations.find((i) => i.assessment_id === asm.id);
+      if (inv?.attempts.some((a) => a.trait_profile)) continue;
+      if (!inv) {
+        await bo("POST", `/applicants/${app.id}/invite`, { assessment_id: asm.id, deadline_days: 7 });
+        inv = (await bo("GET", `/applicants/${app.id}`)).invitations.find((i) => i.assessment_id === asm.id);
+      }
+      if (inv.attempts.length === 0) await takeAssessment(email, inv.code, (q, i) => pattern(i, k));
+      added.push(`${key} for ${email}`);
+    }
+  }
+
+  // 4. The candidate accepts the offer sent to them (from the careers portal).
+  for (const o of (await bo("GET", "/offers?size=20&status=Sent")).items) {
+    const app = apps.find((a) => a.id === o.applicant_id);
+    if (!app) continue;
+    await portal("POST", "respond_offer", { email: app.email, epoch: await epochOf(app.email), name: app.code, accept: "1", reason: "" });
+    added.push(`offer accepted by ${app.email}`);
+  }
+
+  console.log(added.length ? `Added: ${added.join("; ")}.` : "Nothing missing.");
 }
 
 main().catch((e) => {
