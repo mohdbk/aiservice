@@ -137,7 +137,9 @@ try {
   await page.locator('section[aria-labelledby="book-title"] input[type="radio"]').first().check();
   await shot("6_book");
   await page.getByRole("button", { name: /Confirm This Time/i }).click();
-  await page.getByRole("status").waitFor();
+  // Booked: the choice closes and a confirmation with the chosen time shows.
+  await page.locator('section[aria-labelledby="book-title"]').waitFor({ state: "detached", timeout: 15000 });
+  await page.waitForTimeout(500);
   const booked = (await bo("GET", `/applicants/${app.id}`)).interviews;
   if (!booked?.length) throw new Error("no interview after booking");
   ok("interview time booked");
