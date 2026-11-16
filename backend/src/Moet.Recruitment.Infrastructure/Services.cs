@@ -99,23 +99,37 @@ public sealed class Pbkdf2PasswordHasher : IPasswordHasher
     }
 }
 
+/// <summary>
+/// Record codes from database sequences (JOB-2026-0001, APP-2026-00001, ASM-00001 and so on). A sequence can fall behind
+/// the codes already used (for example after the server was stopped abruptly or a database was restored); when the next
+/// code is taken, the sequence moves past the highest code in use, so a duplicate code is never handed out.
+/// </summary>
 public sealed class SqlCodeGenerator(AppDbContext db, IClock clock) : ICodeGenerator
 {
     public async Task<string> NextAsync(CodeKind kind, CancellationToken ct = default)
     {
-        var (seq, prefix, width, yearly) = kind switch
+        var (seq, table, prefix, width, yearly) = kind switch
         {
-            CodeKind.JobOpening => ("hiring.JobOpeningCode", "JOB", 4, true),
-            CodeKind.JobApplication => ("hiring.JobApplicationCode", "APP", 5, true),
-            CodeKind.Interview => ("hiring.InterviewCode", "INT", 5, true),
-            CodeKind.JobOffer => ("hiring.JobOfferCode", "OFR", 4, true),
-            CodeKind.Requisition => ("hiring.RequisitionCode", "REQ", 4, true),
-            _ => ("assessment.InvitationCode", "ASM", 5, false),
+            CodeKind.JobOpening => ("hiring.JobOpeningCode", "hiring.JobOpening", "JOB", 4, true),
+            CodeKind.JobApplication => ("hiring.JobApplicationCode", "hiring.JobApplication", "APP", 5, true),
+            CodeKind.Interview => ("hiring.InterviewCode", "hiring.Interview", "INT", 5, true),
+            CodeKind.JobOffer => ("hiring.JobOfferCode", "hiring.JobOffer", "OFR", 4, true),
+            CodeKind.Requisition => ("hiring.RequisitionCode", "hiring.Requisition", "REQ", 4, true),
+            _ => ("assessment.InvitationCode", "assessment.Invitation", "ASM", 5, false),
         };
-        // Not composed (SingleAsync would wrap it in a subquery, where NEXT VALUE FOR is not allowed).
-        var n = (await db.Database.SqlQueryRaw<int>($"SELECT NEXT VALUE FOR {seq} AS [Value]").ToListAsync(ct))[0];
-        var num = n.ToString().PadLeft(width, '0');
-        return yearly ? $"{prefix}-{clock.Local(clock.UtcNow).Year}-{num}" : $"{prefix}-{num}";
+        var head = yearly ? $"{prefix}-{clock.Local(clock.UtcNow).Year}-" : $"{prefix}-";
+        for (var attempt = 0; ; attempt++)
+        {
+            // Not composed (SingleAsync would wrap it in a subquery, where NEXT VALUE FOR is not allowed).
+            var n = (await db.Database.SqlQueryRaw<int>($"SELECT NEXT VALUE FOR {seq} AS [Value]").ToListAsync(ct))[0];
+            var code = head + n.ToString().PadLeft(width, '0');
+            var taken = (await db.Database.SqlQueryRaw<int>($"SELECT COUNT(*) AS [Value] FROM {table} WHERE Code = {{0}}", code).ToListAsync(ct))[0] > 0;
+            if (!taken || attempt >= 2) return code;
+            // Behind: restart the sequence after the highest number used with this prefix, then take the next one.
+            var max = (await db.Database.SqlQueryRaw<int>(
+                $"SELECT ISNULL(MAX(TRY_CAST(SUBSTRING(Code, {head.Length + 1}, 20) AS int)), 0) AS [Value] FROM {table} WHERE Code LIKE {{0}}", head + "%").ToListAsync(ct))[0];
+            await db.Database.ExecuteSqlRawAsync($"ALTER SEQUENCE {seq} RESTART WITH {max + 1}", ct);
+        }
     }
 }
 

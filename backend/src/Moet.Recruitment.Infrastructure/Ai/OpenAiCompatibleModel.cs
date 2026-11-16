@@ -74,9 +74,15 @@ public sealed partial class OpenAiCompatibleModel(HttpClient http, IConfiguratio
             usage?["prompt_tokens"]?.GetValue<int>() ?? 0, usage?["completion_tokens"]?.GetValue<int>() ?? 0);
     }
 
+    /// <summary>
+    /// The longest answer asked for (LLM_MAX_TOKENS, default 8000). Without it some services reserve credit for the
+    /// model's whole output limit (over 100,000 tokens) on every call and refuse the call when credit is low.
+    /// </summary>
+    static readonly int MaxTokens = int.TryParse(Environment.GetEnvironmentVariable("LLM_MAX_TOKENS"), out var m) && m > 0 ? m : 8000;
+
     JsonObject Body(JsonNode[] messages, double temperature)
     {
-        var body = new JsonObject { ["model"] = ModelName, ["messages"] = new JsonArray(messages), ["temperature"] = temperature };
+        var body = new JsonObject { ["model"] = ModelName, ["messages"] = new JsonArray(messages), ["temperature"] = temperature, ["max_tokens"] = MaxTokens };
         if (IsOpenRouter)
         {
             body["provider"] = new JsonObject { ["require_parameters"] = true, ["data_collection"] = "deny" };

@@ -89,6 +89,9 @@ public sealed class SettingsChatClient(IChatClient fallback, AgentSettingsProvid
 
         var o = options?.Clone() ?? new ChatOptions();
         if (s.Temperature is { } temperature) o.Temperature = temperature;
+        // A ceiling on each reply (AGENT_MAX_OUTPUT_TOKENS, default 4000), so the model service does not reserve credit for
+        // its whole output limit on every step.
+        o.MaxOutputTokens ??= int.TryParse(Environment.GetEnvironmentVariable("AGENT_MAX_OUTPUT_TOKENS"), out var mo) && mo > 0 ? mo : 4000;
         if (o.Tools is { Count: > 0 } tools && s.DisabledTools.Count > 0)
             o.Tools = tools.Where(t => !s.DisabledTools.Contains(t.Name)).ToList();
         // System administrators' tools are offered to system administrators only (the API refuses them to others anyway).

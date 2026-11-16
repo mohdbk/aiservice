@@ -30,6 +30,7 @@ Candidate browser  ->  Portal (Node)  --service key-->  API /api/portal
   - Assistant: `AGENT_URL`, `AGENT_KEY`.
   - Email: `SMTP_*`.
   - Model for CV scoring and drafts: `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`.
+  - Longest model answer: `LLM_MAX_TOKENS` (default 8000) for the API and `AGENT_MAX_OUTPUT_TOKENS` (default 4000) for the assistant. Hosted services such as OpenRouter otherwise reserve credit for the model's whole output limit on every call.
   - Other: `OCR_URL`, `TIME_ZONE`, `COOKIE_SECURE`, `TRUST_PROXY`, `RUN_WORKERS`.
   - Monitoring: `OTEL_EXPORTER_OTLP_ENDPOINT` (and optionally `OTEL_EXPORTER_OTLP_HEADERS`, `OTEL_SERVICE_NAME`) sends traces, metrics and logs over OpenTelemetry. The API and the agent support it; the API adds counters for emails, texts, background jobs and backups. The System Health page in the backoffice shows the same checks.
   - Backups: `BACKUP_S3_ENDPOINT`, `BACKUP_S3_BUCKET`, `BACKUP_S3_REGION`, `BACKUP_S3_ACCESS_KEY`, `BACKUP_S3_SECRET_KEY` (any S3-compatible store, such as MinIO on-prem; `BACKUP_S3_PATH_STYLE=1` for path-style), `BACKUP_INTERVAL_HOURS` (6), `BACKUP_KEEP` (28) and `BACKUP_RESTORE_ON_EMPTY` (on). On-prem, also keep SQL Server's own full and log backups.
