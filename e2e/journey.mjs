@@ -58,8 +58,15 @@ try {
 
   // 2. Apply for the Senior Data Analyst job.
   begin("apply");
-  const job = (await bo("GET", "/jobs?size=50")).items.find((j) => j.title === "محلل بيانات أول");
-  await page.goto(`${PORTAL}/en/jobs/${job.code}/apply`, { waitUntil: "networkidle" });
+  const listed = await (await page.request.get(`${PORTAL}/api/jobs?lang=en`)).json();
+  const jobs = listed.jobs || listed.items || listed.message?.jobs || listed;
+  const job = jobs.find((j) => /Senior Data Analyst/.test(j.title || j.job_title || ""));
+  if (!job) throw new Error(`job not listed on the portal: ${JSON.stringify(jobs).slice(0, 300)}`);
+  const jobId = job.id || job.name || job.code;
+  await page.goto(`${PORTAL}/en/jobs/${encodeURIComponent(jobId)}`, { waitUntil: "networkidle" });
+  await page.getByRole("link", { name: /^Apply|Apply Now|Apply for/i }).first().click({ timeout: 5000 }).catch(() => page.goto(`${PORTAL}/en/jobs/${encodeURIComponent(jobId)}/apply`));
+  await page.waitForLoadState("networkidle");
+  await page.locator("#phone").waitFor({ timeout: 15000 });
   await page.fill("#phone", "+971501112233");
   await page.selectOption("#country", { index: 1 });
   fs.writeFileSync("cv.pdf", "%PDF-1.4\n% journey CV\n1 0 obj << >> endobj\ntrailer << >>\n%%EOF\n");
@@ -153,6 +160,8 @@ try {
   console.log("\nThe whole candidate journey works.");
 } catch (e) {
   console.error(`FAIL at "${step}": ${e.message.split("\n")[0]}`);
+  console.error(`  page: ${page.url()}`);
+  console.error(`  shows: ${(await page.locator("main").innerText().catch(() => "")).replace(/\s+/g, " ").slice(0, 600)}`);
   await shot("FAILED").catch(() => {});
   await browser.close();
   process.exit(1);
