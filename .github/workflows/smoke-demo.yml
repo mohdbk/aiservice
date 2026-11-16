@@ -8,7 +8,7 @@ on:
 
 jobs:
   smoke:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       BASE_URL: https://recruitment-backoffice-production.up.railway.app
       PORTAL_URL: https://careers-portal-production-bd6b.up.railway.app
