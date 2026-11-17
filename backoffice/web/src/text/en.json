@@ -1542,5 +1542,13 @@
  "empty.invitations": "Invite applicants to a test from their page, or add a test to a job so it is sent when they apply.",
  "empty.talent_pool": "Candidates who agree to be considered for other jobs appear here.",
  "empty.candidates": "Accounts appear here when people sign up on the careers portal.",
- "empty.approvals": "Jobs to publish, offers to send and new posts appear here when approval is switched on."
+ "empty.approvals": "Jobs to publish, offers to send and new posts appear here when approval is switched on.",
+ "cmd.open": "Search Everything",
+ "cmd.search": "Search",
+ "cmd.placeholder": "Search applicants, jobs, tests or pages",
+ "cmd.actions": "Actions",
+ "cmd.pages": "Pages",
+ "cmd.ask": "Ask the assistant: {q}",
+ "cmd.none": "Nothing found.",
+ "cmd.help": "Arrow keys to move, Enter to open, Esc to close. Open from anywhere with Ctrl K."
 }

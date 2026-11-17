@@ -8,6 +8,7 @@ import { api, useAuth, useLang } from "../core";
 // The assistant's code loads the first time the panel opens.
 const AgentChat = lazy(() => import("../agent/AgentChat").then((m) => ({ default: m.AgentChat })));
 import { ErrorBoundary } from "./ErrorBoundary";
+import { CommandPalette } from "./CommandPalette";
 import { LangFlag } from "./flags";
 
 type Item = { to: string; label: string; icon: ReactNode; admin?: boolean; sys?: boolean };
@@ -230,6 +231,7 @@ export function Shell({ children }: { children: ReactNode }) {
   }, [lang, dir]);
   useEffect(() => setOpen(false), [loc.pathname]);
   const [collapsed, toggleCollapsed] = useCollapsed();
+  const pages = useNav().flatMap((g) => g.items);
   const menu = (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger className="rounded-lg p-2 text-aeblack-700 hover:bg-aeblack-100 lg:hidden" aria-label={t("app.menu")}><List size={24} /></Dialog.Trigger>
@@ -258,6 +260,7 @@ export function Shell({ children }: { children: ReactNode }) {
           </div>
           <div dir={dir} className="flex shrink-0 items-center gap-0.5 sm:gap-1">
             {dir === "rtl" && menu}
+            <CommandPalette pages={pages} />
             <LanguageSwitch />
             {/* On wide screens the account sits at the bottom of the side menu. */}
             <div className="lg:hidden"><UserMenu /></div>

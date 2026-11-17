@@ -173,6 +173,33 @@ public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor
         };
     }
 
+    /// <summary>The quick search (Ctrl+K): applicants, jobs and tests whose name, title, email or code contain the words.</summary>
+    public async Task<object> SearchAsync(string? q, CancellationToken ct = default)
+    {
+        var term = (q ?? "").Trim();
+        if (term.Length < 2) return new { applicants = Array.Empty<object>(), jobs = Array.Empty<object>(), tests = Array.Empty<object>() };
+        var en = language.English;
+        return new
+        {
+            applicants = await db.JobApplications.AsNoTracking().Where(a => a.AnonymisedAt == null
+                    && (a.FullName.Contains(term) || a.Email.Contains(term) || a.Code.Contains(term) || a.Phone.Contains(term)))
+                .OrderByDescending(a => a.CreatedAt).Take(6)
+                .Select(a => new { id = a.Id, name = a.FullName, code = a.Code, status = a.Status,
+                    job = en ? a.JobOpening!.Translations.Where(t => t.LanguageCode == En && t.Title != "").Select(t => t.Title).FirstOrDefault() ?? a.JobOpening.Title : a.JobOpening!.Title })
+                .ToListAsync(ct),
+            jobs = await db.JobOpenings.AsNoTracking().Where(j => j.Title.Contains(term) || j.Code.Contains(term) || j.Translations.Any(t => t.Title.Contains(term)))
+                .OrderByDescending(j => j.CreatedAt).Take(5)
+                .Select(j => new { id = j.Id, code = j.Code, status = j.Status,
+                    title = en ? j.Translations.Where(t => t.LanguageCode == En && t.Title != "").Select(t => t.Title).FirstOrDefault() ?? j.Title : j.Title })
+                .ToListAsync(ct),
+            tests = await db.Assessments.AsNoTracking().Where(a => a.Title.Contains(term) || a.Translations.Any(t => t.Title.Contains(term)))
+                .OrderByDescending(a => a.UpdatedAt).Take(4)
+                .Select(a => new { id = a.Id, status = a.Status,
+                    title = en ? a.Translations.Where(t => t.LanguageCode == En && t.Title != "").Select(t => t.Title).FirstOrDefault() ?? a.Title : a.Title })
+                .ToListAsync(ct),
+        };
+    }
+
     public async Task<object> LookupsAsync(CancellationToken ct = default)
     {
         var en = language.English;
