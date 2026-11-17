@@ -113,7 +113,7 @@ public static partial class CvScoring
                 if (status == "Met" && found == false) status = "Unclear";
                 if (status == "Unclear") review.Add($"Essential requirement unclear: {c.Text}");
             }
-            return new CriterionResult(c.Describe(), c.Weight, c.MustHave, score, m.Evidence, c.Category, status, quote, found, years,
+            return new CriterionResult(c.Text, c.Weight, c.MustHave, score, m.Evidence, c.Category, status, quote, found, years,
                 score >= 10 ? "" : (m.WhyNotHigher ?? "").Trim());
         }).ToList();
         var gaps = rows.Where(r => r.MustHave && (r.Status == "NotMet" || (r.Status == "" && r.Score < 5))).Select(r => r.Text).ToList();

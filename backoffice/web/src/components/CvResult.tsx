@@ -6,7 +6,7 @@ import { Badge, Button, ErrorState, Note, Score } from "./ui";
 export type CriterionRow = {
   sort_order: number; criterion: string; weight: number; is_must_have: boolean; score: number; evidence: string; category: string; status: string;
   quote: string; quote_found: boolean | null; relevant_years: number | null; why_not_higher: string; override_score: number | null;
-  override_reason: string; override_at: string | null; override_by: string | null; effective: number;
+  override_reason: string; override_at: string | null; override_by: string | null; effective: number; min_years?: number | null; level?: string;
 };
 export type Analysis = {
   status: string; score: number | null; summary: string; summary_ar: string; gaps: string; years: number | null; cv_language: string; read_method: string;
@@ -87,7 +87,12 @@ function Item({ appId, r, onChanged }: { appId: number; r: CriterionRow; onChang
     <li className="rounded-xl border border-aeblack-100 p-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-semibold" dir="auto">{r.criterion}</p>
+          <p className="font-semibold">
+            <span className="me-2 rounded-md bg-whitely-100 px-1.5 py-0.5 text-xs font-semibold text-aeblack-600">{t(`crit.cat.${r.category || "Other"}`)}</span>
+            <span dir="auto">{r.criterion}</span>
+            {r.category === "Experience" && r.min_years ? <span className="ms-1 text-sm font-normal text-aeblack-600">({t("cvr.min_years", { n: r.min_years })})</span> : null}
+            {r.category === "Language" && r.level ? <span className="ms-1 text-sm font-normal text-aeblack-600">({t(`crit.lvl.${r.level}`)})</span> : null}
+          </p>
           {r.relevant_years != null && <p className="text-xs text-aeblack-600">{t("cvr.relevant_years", { n: r.relevant_years })}</p>}
         </div>
         <div className="flex items-center gap-2">

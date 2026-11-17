@@ -127,6 +127,9 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
             var position = scores.Count(x => x > mine) + 1;
             rank = new { position, of = scores.Count, top_percent = scores.Count == 0 ? 100 : (int)Math.Ceiling(position * 100m / scores.Count) };
         }
+        // The job's requirements, for the minimum years and language level shown next to each result.
+        var jobReqs = await db.JobOpenings.AsNoTracking().Where(j => j.Id == a.JobOpeningId).SelectMany(j => j.Criteria)
+            .Select(x => new { x.Criterion, x.MinYears, x.Level }).ToListAsync(ct);
         var overriderIds = (c?.CriterionScores ?? []).Where(x => x.OverrideByStaffId != null).Select(x => x.OverrideByStaffId!.Value).Distinct().ToList();
         var overriders = await db.StaffUsers.AsNoTracking().Where(u => overriderIds.Contains(u.Id)).Select(u => new { u.Id, u.FullName }).ToListAsync(ct);
         var combined = await selection.ForApplicantAsync(a.Id, ct);
@@ -182,6 +185,7 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
                     s.SortOrder, s.Criterion, s.Weight, s.IsMustHave, s.Score, s.Evidence, s.Category, s.Status, s.Quote, s.QuoteFound, s.RelevantYears,
                     s.WhyNotHigher, s.OverrideScore, s.OverrideReason, s.OverrideAt, effective = (int)s.Effective,
                     override_by = overriders.FirstOrDefault(u => u.Id == s.OverrideByStaffId)?.FullName,
+                    min_years = jobReqs.FirstOrDefault(x => x.Criterion == s.Criterion)?.MinYears, level = jobReqs.FirstOrDefault(x => x.Criterion == s.Criterion)?.Level ?? "",
                 }).ToList(),
             },
             notes = a.Notes.OrderByDescending(n => n.CreatedAt).Select(n => new

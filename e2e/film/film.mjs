@@ -120,7 +120,7 @@ await step("requirements suggest", async () => {
   await shot(boPage, "Screening Requirements: empty until HR asks for a draft", "متطلبات الفرز: فارغة حتى يطلب الفريق مسودة");
   boPage.once("dialog", (d) => d.accept());
   await boPage.getByRole("button", { name: T["crit.suggest"] }).click();
-  await boPage.getByText(T["crit.cat.Experience"]).first().waitFor({ timeout: 20000 });
+  await boPage.locator("#req-e ~ * li, section[aria-labelledby='req-e'] li").first().waitFor({ timeout: 20000 });
   await boPage.waitForTimeout(600);
   await shot(boPage, "Drafted from the description: Essential and Desirable, with type, years, level and importance",
     "صيغت من الوصف: أساسية ومرغوبة، مع النوع والسنوات والمستوى والأهمية", "#req-e");
@@ -139,12 +139,12 @@ await step("requirements approve", async () => {
 
 // Two other applicants (through the portal API) so the candidate has someone to be ranked against.
 await step("other applicants", async () => {
-  for (const [name, email, file] of [["خالد المري", `khalid.${stamp}@example.test`, "khalid.docx"], ["Peter Novak", `peter.${stamp}@example.test`, "peter.docx"]]) {
+  for (const [name, email, file, phone] of [["خالد المري", `khalid.${stamp}@example.test`, "khalid.docx", "+971 55 318 2207"], ["Peter Novak", `peter.${stamp}@example.test`, "peter.docx", "+971 52 640 1185"]]) {
     const s = await portalApi("signup", { full_name: name, email, password: "Film-Password-2026", lang: "ar" });
     const cand = (await bo("GET", `/candidates?q=${encodeURIComponent(email)}`)).items[0];
     if (cand && !cand.verified) await bo("POST", `/candidates/${cand.id}/verify`, {});
     await portalApi("apply", null, {
-      email, epoch: String(s.epoch ?? 0), job: job.code, phone: "+971 50 765 4321", country: "United Arab Emirates", declaration: "1", lang: "ar", screening: "{}",
+      email, epoch: String(s.epoch ?? 0), job: job.code, phone, country: "United Arab Emirates", declaration: "1", lang: "ar", screening: "{}",
       cv: { name: file, mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", buffer: fs.readFileSync(path.join(CVS, file)) },
     });
   }
@@ -189,7 +189,7 @@ await step("portal sign up", async () => {
 await step("portal apply", async () => {
   await pp.goto(`${PORTAL}/ar/jobs/${encodeURIComponent(job.code)}/apply`, { waitUntil: "networkidle" });
   await pp.locator("#phone").waitFor({ timeout: 15000 });
-  await pp.fill("#phone", "50 123 4567");
+  await pp.fill("#phone", "50 482 9136");
   await pp.selectOption("#country", { index: 1 }).catch(() => {});
   await pp.setInputFiles("#cv", path.join(CVS, "salma.docx"));
   await pp.check("#declaration");
@@ -235,6 +235,7 @@ await step("big five", async () => {
     await pp.waitForTimeout(800);
     if (!(await pp.locator("#question-title").count())) break;
   }
+  await scrollTo(pp, "#result-title", 260).catch(() => {});
   await shot(pp, "Submitted: a clear results screen and what happens next", "تم التسليم: شاشة نتيجة واضحة والخطوات التالية", "#result-title");
 });
 
@@ -282,8 +283,6 @@ await step("offer times", async () => {
   await dlg.locator('input[type="date"]').first().fill(day(4));
   await dlg.getByRole("button", { name: T["book.add_time"] }).click();
   await dlg.locator('input[type="date"]').nth(1).fill(day(5));
-  await dlg.locator('input[type="time"]').nth(2).fill("13:00");
-  await dlg.locator('input[type="time"]').nth(3).fill("14:00");
   await dlg.getByLabel(T["int.location"]).fill("مقر الوزارة، دبي");
   await shot(boPage, "HR offers interview times", "يعرض الفريق مواعيد للمقابلة", '[role="dialog"]');
   await dlg.getByRole("button", { name: T["book.send"] }).click();
