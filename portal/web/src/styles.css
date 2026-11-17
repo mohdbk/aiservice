@@ -110,3 +110,6 @@ input[type="radio"]:checked {
 input[type="checkbox"]:checked:disabled, input[type="radio"]:checked:disabled { opacity: .5; }
 input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { outline: 2px solid var(--color-primary-600); outline-offset: 2px; }
 html.mc-contrast input[type="checkbox"]:checked, html.mc-contrast input[type="radio"]:checked { background-color: #ffeb3b; border-color: #ffeb3b; }
+
+/* A closed state with no judgement (a withdrawn application). */
+.aegov-badge.badge-neutral { background-color: var(--color-aeblack-50, #f3f4f6); color: var(--color-aeblack-700, #374151); }

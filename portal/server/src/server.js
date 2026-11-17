@@ -226,15 +226,16 @@ export function createApp(cfg = loadConfig(), deps = {}) {
       limit(`apply:${ip}`, LIMITS.apply);
       const b = await readJson(req, cfg.maxBodyMb * 1024 * 1024);
       const cv = b.cv && typeof b.cv === "object" ? b.cv : null;
+      const reuse = !cv && b.reuse_cv === true;
       const name = str(cv?.name, 200).replace(/[\\/\r\n"]/g, "_");
-      if (!cv || !name || typeof cv.data !== "string") throw new HttpError(400, "cv_required");
-      if (!CV_EXT.test(name)) throw new HttpError(400, "cv_type");
-      const data = Buffer.from(cv.data, "base64");
-      if (!data.length) throw new HttpError(400, "cv_empty");
+      if (!reuse && (!cv || !name || typeof cv.data !== "string")) throw new HttpError(400, "cv_required");
+      if (!reuse && !CV_EXT.test(name)) throw new HttpError(400, "cv_type");
+      const data = reuse ? null : Buffer.from(cv.data, "base64");
+      if (!reuse && !data.length) throw new HttpError(400, "cv_empty");
       const result = await frappe.apply({ email: u.email, epoch: u.epoch || 0, job: str(b.job, 140), phone: str(b.phone, 30), country: str(b.country, 140), nationality: str(b.nationality, 140),
         cover_note: str(b.cover_note, 4000), declaration: b.declaration ? "1" : "0", talent_pool: b.talent_pool === true ? "1" : "0", lang: str(b.lang, 10),
-        screening: JSON.stringify(b.screening && typeof b.screening === "object" && !Array.isArray(b.screening) ? b.screening : {}).slice(0, 20000) },
-      { name, data, type: str(cv.type, 100) });
+        screening: JSON.stringify(b.screening && typeof b.screening === "object" && !Array.isArray(b.screening) ? b.screening : {}).slice(0, 20000), reuse_cv: reuse ? "1" : "0" },
+      reuse ? null : { name, data, type: str(cv.type, 100) });
       return send(res, 200, result);
     }
     // Assessments (candidate side). The server times every section; answers are saved one by one.
@@ -308,7 +309,16 @@ export function createApp(cfg = loadConfig(), deps = {}) {
       const u = requireUser(req);
       limit(`offer:${ip}`, LIMITS.correction);
       const b = await readJson(req, 8192);
-      return send(res, 200, await frappe.respondOffer(u, mm[1], b.accept === true, str(b.reason, 1000)));
+      return send(res, 200, await frappe.respondOffer(u, mm[1], b.accept === true, str(b.reason, 1000), str(b.signature, 200)));
+    }
+    mm = pathname.match(/^\/api\/applications\/([A-Za-z0-9._-]{1,140})\/(withdraw|reschedule)$/);
+    if (m === "POST" && mm) {
+      checkCsrf(req);
+      const u = requireUser(req);
+      limit(`selfservice:${ip}`, LIMITS.correction);
+      const b = await readJson(req, 8192);
+      const reason = str(b.reason, 1000);
+      return send(res, 200, mm[2] === "withdraw" ? await frappe.withdraw(u, mm[1], reason) : await frappe.reschedule(u, mm[1], reason));
     }
     mm = pathname.match(/^\/api\/applications\/([A-Za-z0-9._-]{1,140})\/book$/);
     if (m === "POST" && mm) {

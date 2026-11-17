@@ -16,7 +16,7 @@ type Row = {
 export const appTone = (s: string) => (s === "Open" ? "blue" : s === "Accepted" ? "green" : s === "Rejected" ? "red" : s === "Hold" ? "amber" : "gray");
 export const screenTone = (s: string) => (s === "Meets" ? "green" : s === "DoesNotMeet" ? "red" : "gray");
 
-const STATUSES = ["Open", "Replied", "Hold", "Accepted", "Rejected"];
+const STATUSES = ["Open", "Replied", "Hold", "Accepted", "Rejected", "Withdrawn"];
 const WAIT = 6000;
 
 /**
@@ -187,7 +187,7 @@ export default function Applicants() {
         </>}
         filters={[
           { key: "job", label: t("apps.job"), options: (jobs.data?.items || []).map((j) => ({ value: String(j.id), label: lang === "en" && j.title_en ? j.title_en : j.title })) },
-          { key: "status", label: t("common.status"), options: opts(t, "app.status.", ["Open", "Replied", "Hold", "Accepted", "Rejected"]) },
+          { key: "status", label: t("common.status"), options: opts(t, "app.status.", STATUSES) },
           { key: "screening", label: t("apps.screening"), options: opts(t, "screen.", ["Meets", "DoesNotMeet", "NoRequirements", "NoQuestions"]) },
           { key: "ai", label: t("apps.ai"), options: opts(t, "ai.", ["Scored", "Waiting", "Pending", "Processing", "Failed", "Skipped"]) },
           { key: "minScore", label: t("apps.min_score"), options: ["50", "60", "70", "80", "90"].map((v) => ({ value: v, label: `${v}+` })) },

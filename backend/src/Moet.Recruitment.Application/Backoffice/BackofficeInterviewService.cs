@@ -206,7 +206,7 @@ public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator 
         return await q.PageAsync(lq, OfferSorts, o => new
         {
             id = o.Id, code = o.Code, position_title = o.PositionTitle, status = o.Status, offer_date = o.OfferDate,
-            start_date = o.StartDate, monthly_salary = o.MonthlySalary, currency = o.Currency,
+            start_date = o.StartDate, monthly_salary = o.MonthlySalary, currency = o.Currency, signed_name = o.SignedName, signed_at = o.SignedAt,
             applicant_id = o.JobApplicationId, applicant = o.JobApplication!.FullName, job_title = (en ? o.JobApplication.JobOpening!.Translations.Where(t => t.LanguageCode == "en" && t.Title != "").Select(t => t.Title).FirstOrDefault() ?? o.JobApplication.JobOpening!.Title : o.JobApplication.JobOpening!.Title),
         }, ct);
     }

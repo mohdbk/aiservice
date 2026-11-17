@@ -153,11 +153,17 @@ try {
   await page.reload({ waitUntil: "networkidle" });
   await shot("7_offer");
   await page.getByRole("button", { name: /Accept the Offer/i }).click();
+  // Accepting is signed by typing the full name.
+  await page.fill("#signature", "Journey Candidate");
+  await shot("7b_offer_sign");
+  await page.getByRole("button", { name: /Sign and Accept/i }).click();
   await page.waitForLoadState("networkidle");
   await page.waitForTimeout(800);
   await shot("8_offer_accepted");
   const final = await bo("GET", `/offers/${offer.id}`);
   if (final.status !== "Accepted") throw new Error(`offer is ${final.status}`);
+  const signed = (await bo("GET", "/offers?status=Accepted&size=100")).items.find((o) => o.id === offer.id);
+  if (signed?.signed_name !== "Journey Candidate") throw new Error(`offer not signed: ${JSON.stringify(signed)}`);
   ok("offer accepted");
 
   if (errors.length) throw new Error(`page errors: ${errors.slice(0, 3).join(" | ")}`);

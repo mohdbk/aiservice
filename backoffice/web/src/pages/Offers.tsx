@@ -7,7 +7,7 @@ import { api, useLang, usePageTitle, useToast } from "../core";
 import { OfferDialog } from "./Applicant";
 
 type Row = {
-  id: number; code: string; position_title: string; status: string; offer_date: string; start_date: string | null; monthly_salary: number | null;
+  id: number; code: string; position_title: string; status: string; offer_date: string; start_date: string | null; monthly_salary: number | null; signed_name?: string; signed_at?: string | null;
   currency: string; applicant_id: number; applicant: string; job_title: string;
 };
 
@@ -52,7 +52,10 @@ export default function Offers() {
         { key: "position", label: t("offer.position"), render: (o) => o.position_title },
         { key: "date", label: t("offer.date"), sort: "offer_date", className: "whitespace-nowrap", render: (o) => date(o.offer_date) },
         { key: "salary", label: t("offer.salary"), sort: "salary", render: (o) => <span className="tabular-nums" dir="ltr">{o.monthly_salary != null ? `${o.monthly_salary.toLocaleString()} ${o.currency}` : "-"}</span> },
-        { key: "status", label: t("common.status"), sort: "status", render: (o) => <Badge tone={tone(o.status)}>{t(`offer.status.${o.status}`)}</Badge> },
+        { key: "status", label: t("common.status"), sort: "status", render: (o) => <>
+          <Badge tone={tone(o.status)}>{t(`offer.status.${o.status}`)}</Badge>
+          {o.signed_name && <p className="mt-1 text-xs text-aeblack-600" title={o.signed_at ? date(o.signed_at, true) : undefined}>{t("offer.signed_by", { name: o.signed_name })}</p>}
+        </> },
         { key: "act", label: t("common.actions"), render: (o) => <ActionMenu label={t("common.actions")} items={[
           { label: t("offer.view_letter"), onClick: () => setLetter(o.id) },
           ...NEXT[o.status].map((s) => ({ label: t(LABEL[s]), onClick: () => change(o.id, s) })),

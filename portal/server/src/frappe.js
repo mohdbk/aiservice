@@ -68,7 +68,8 @@ export function createFrappe(cfg, fetchImpl = globalThis.fetch) {
     apply: (fields, file) => {
       const form = new FormData();
       for (const [k, v] of Object.entries(fields)) form.append(k, String(v ?? ""));
-      form.append("cv", new Blob([file.data], { type: file.type || "application/octet-stream" }), file.name);
+      // No file: the back end uses the CV from the candidate's latest application (reuse_cv).
+      if (file) form.append("cv", new Blob([file.data], { type: file.type || "application/octet-stream" }), file.name);
       return call("apply", { form, timeoutMs: 120_000 });
     },
     assessments: (u, lang) => call("assessments", { query: { email: u.email, epoch: u.epoch || 0, lang } }),
@@ -92,7 +93,9 @@ export function createFrappe(cfg, fetchImpl = globalThis.fetch) {
     saveJobAlert: (u, a) => call("save_job_alert", { json: { email: u.email, epoch: u.epoch || 0, keywords: a.keywords, department: a.department, location: a.location, lang: a.lang } }),
     deleteJobAlert: (u, id) => call("delete_job_alert", { json: { email: u.email, epoch: u.epoch || 0, id } }),
     setTalentPool: (u, join) => call("talent_pool", { json: { email: u.email, epoch: u.epoch || 0, join: join ? "1" : "0" } }),
-    respondOffer: (u, name, accept, reason) => call("respond_offer", { json: { email: u.email, epoch: u.epoch || 0, name, accept: accept ? "1" : "0", reason } }),
+    respondOffer: (u, name, accept, reason, signature) => call("respond_offer", { json: { email: u.email, epoch: u.epoch || 0, name, accept: accept ? "1" : "0", reason, ...(signature ? { signature } : {}) } }),
+    withdraw: (u, name, reason) => call("withdraw_application", { json: { email: u.email, epoch: u.epoch || 0, name, reason } }),
+    reschedule: (u, name, reason) => call("reschedule_interview", { json: { email: u.email, epoch: u.epoch || 0, name, reason } }),
     bookInterview: (u, name, slot) => call("book_interview", { json: { email: u.email, epoch: u.epoch || 0, name, slot } }),
     requestDeletion: (u, reason) => call("request_deletion", { json: { email: u.email, epoch: u.epoch || 0, reason } }),
     logo: (dark) => call("logo", { query: { dark: dark ? 1 : 0 }, raw: true }),

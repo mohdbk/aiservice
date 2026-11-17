@@ -15,7 +15,7 @@ namespace Moet.Recruitment.Application.Portal;
 
 public sealed record ApplyInput(
     string? Email, string? Epoch, string? Job, string? Phone, string? Country, string? CoverNote, string? Declaration,
-    string? Lang, string? Screening, string? FileName, byte[]? Cv, string? TalentPool = null, string? Nationality = null);
+    string? Lang, string? Screening, string? FileName, byte[]? Cv, string? TalentPool = null, string? Nationality = null, string? ReuseCv = null);
 
 public sealed record StatusView(string Code, string Tone);
 
@@ -46,6 +46,12 @@ public sealed class PortalApplicationService(
         if (evaluation.Missing.Count > 0)
             throw DomainException.Invalid("screening_required", new Dictionary<string, object?> { ["questions"] = evaluation.Missing });
 
+        // The candidate may use the CV from their latest application instead of uploading one again.
+        if ((input.Cv == null || input.Cv.Length == 0) && input.ReuseCv is "1" or "true")
+        {
+            var last = await LastCvAsync(user.Id, ct);
+            if (last != null) input = input with { Cv = last.Content, FileName = last.FileName };
+        }
         if (input.Cv == null || input.Cv.Length == 0) throw DomainException.Invalid("cv_required");
         var ext = CvFile.Validate(input.FileName ?? "", input.Cv, s.MaxCvMb);
         await scanner.CheckAsync(input.Cv, ct);
@@ -165,7 +171,98 @@ public sealed class PortalApplicationService(
         var apps = await db.JobApplications.AsNoTracking().Include(a => a.JobOpening!).ThenInclude(j => j.Translations)
             .Where(a => a.ApplicantAccountId == user.Id).OrderByDescending(a => a.CreatedAt).Take(100).ToListAsync(ct);
         var interviews = await ActiveInterviewsAsync(apps.Select(a => a.Id), ct);
-        return new { applications = apps.Select(a => Summary(a, lang, interviews[a.Id])).ToList() };
+        var lastCv = apps.FirstOrDefault(a => a.CvFileId != Guid.Empty);
+        return new
+        {
+            applications = apps.Select(a => Summary(a, lang, interviews[a.Id])).ToList(),
+            last_cv = lastCv == null ? null : new { submitted = clock.LocalDate(lastCv.CreatedAt), job = lastCv.JobOpening!.In(lang).Title },
+        };
+    }
+
+    async Task<StoredFile?> LastCvAsync(int userId, CancellationToken ct)
+    {
+        var id = await db.JobApplications.AsNoTracking().Where(a => a.ApplicantAccountId == userId && a.CvFileId != Guid.Empty)
+            .OrderByDescending(a => a.CreatedAt).Select(a => (Guid?)a.CvFileId).FirstOrDefaultAsync(ct);
+        return id == null ? null : await db.StoredFiles.AsNoTracking().FirstOrDefaultAsync(f => f.Id == id && f.SizeBytes > 0, ct);
+    }
+
+    /// <summary>The next interview, which the candidate may ask to move (up to a day before it).</summary>
+    async Task<object?> NextInterviewAsync(int appId, CancellationToken ct)
+    {
+        var now = clock.UtcNow;
+        var i = await db.Interviews.AsNoTracking().Where(x => x.JobApplicationId == appId && x.Status == InterviewStatus.Scheduled && x.StartsAt > now)
+            .OrderBy(x => x.StartsAt).FirstOrDefaultAsync(ct);
+        if (i == null) return null;
+        var asked = await db.ApplicationNotes.AnyAsync(n => n.JobApplicationId == appId && n.Kind == NoteKind.System && n.Text.StartsWith($"Reschedule requested for {i.Code}"), ct);
+        return new
+        {
+            date = clock.Local(i.StartsAt).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), from = clock.Local(i.StartsAt).ToString("HH:mm", CultureInfo.InvariantCulture),
+            to = clock.Local(i.EndsAt).ToString("HH:mm", CultureInfo.InvariantCulture), location = i.Location,
+            can_reschedule = !asked && i.StartsAt > now.AddDays(1), reschedule_requested = asked,
+        };
+    }
+
+    static bool Withdrawable(ApplicationStatus s) => s is ApplicationStatus.Open or ApplicationStatus.Replied or ApplicationStatus.Hold;
+
+    /// <summary>The candidate withdraws their application: it closes, upcoming interviews are cancelled and HR sees a note.</summary>
+    public async Task<object> WithdrawAsync(string? email, string? epoch, string? code, string? reason, CancellationToken ct = default)
+    {
+        var user = await accounts.RequireAsync(email, epoch, ct);
+        var a = await OwnAsync(user, code, ct);
+        if (!Withdrawable(a.Status)) throw DomainException.Conflict("cannot_withdraw");
+        var now = clock.UtcNow;
+        a.Status = ApplicationStatus.Withdrawn;
+        a.UpdatedAt = now;
+        var upcoming = await db.Interviews.Where(i => i.JobApplicationId == a.Id && i.Status == InterviewStatus.Scheduled && i.StartsAt > now).ToListAsync(ct);
+        foreach (var i in upcoming) { i.Status = InterviewStatus.Cancelled; i.UpdatedAt = now; }
+        var open = await db.InterviewBookings.Where(b => b.JobApplicationId == a.Id && b.Status == BookingStatus.Open).ToListAsync(ct);
+        foreach (var b in open) { b.Status = BookingStatus.Cancelled; b.UpdatedAt = now; }
+        db.ApplicationNotes.Add(new ApplicationNote
+        {
+            JobApplicationId = a.Id, Kind = NoteKind.System, AuthorApplicantId = user.Id, CreatedAt = now,
+            Text = TextUtil.Clip("Application withdrawn by the candidate in the career portal." + (string.IsNullOrWhiteSpace(reason) ? "" : $" Reason: {reason.Trim()}"), 4000),
+        });
+        await db.SaveChangesAsync(ct);
+        return new { status = "withdrawn" };
+    }
+
+    /// <summary>
+    /// The candidate asks to move their next interview. When it was booked from times HR offered and other future times
+    /// remain, the interview is cancelled and the times reopen for the candidate to pick again; otherwise HR gets a note.
+    /// </summary>
+    public async Task<object> RescheduleAsync(string? email, string? epoch, string? code, string? reason, CancellationToken ct = default)
+    {
+        var user = await accounts.RequireAsync(email, epoch, ct);
+        var a = await OwnAsync(user, code, ct);
+        var now = clock.UtcNow;
+        var i = await db.Interviews.Where(x => x.JobApplicationId == a.Id && x.Status == InterviewStatus.Scheduled && x.StartsAt > now)
+            .OrderBy(x => x.StartsAt).FirstOrDefaultAsync(ct) ?? throw DomainException.Conflict("no_interview");
+        if (i.StartsAt <= now.AddDays(1)) throw DomainException.Conflict("reschedule_too_late");
+        var booking = await db.InterviewBookings.Include(b => b.Slots).FirstOrDefaultAsync(b => b.InterviewId == i.Id, ct);
+        var others = booking?.Slots.Where(s => s.StartsAt > now.AddHours(2) && s.StartsAt != i.StartsAt).ToList() ?? [];
+        var why = string.IsNullOrWhiteSpace(reason) ? "" : $" Reason: {reason.Trim()}";
+        if (booking != null && others.Count > 0)
+        {
+            i.Status = InterviewStatus.Cancelled;
+            i.UpdatedAt = now;
+            booking.Status = BookingStatus.Open;
+            booking.InterviewId = null;
+            booking.UpdatedAt = now;
+            db.ApplicationNotes.Add(new ApplicationNote
+            {
+                JobApplicationId = a.Id, Kind = NoteKind.System, AuthorApplicantId = user.Id, CreatedAt = now,
+                Text = TextUtil.Clip($"Reschedule requested for {i.Code}: the interview was cancelled and the offered times reopened for the candidate.{why}", 4000),
+            });
+            await db.SaveChangesAsync(ct);
+            return new { reopened = true };
+        }
+        db.ApplicationNotes.Add(new ApplicationNote
+        {
+            JobApplicationId = a.Id, Kind = NoteKind.System, AuthorApplicantId = user.Id, CreatedAt = now,
+            Text = TextUtil.Clip($"Reschedule requested for {i.Code} by the candidate in the career portal.{why}", 4000),
+        });
+        await db.SaveChangesAsync(ct);
+        return new { reopened = false };
     }
 
     ApplicationSummaryView Summary(JobApplication a, string lang, bool interview)
@@ -195,6 +292,8 @@ public sealed class PortalApplicationService(
             id = sum.Id, job = sum.Job, title = sum.Title, submitted = sum.Submitted, reference = sum.Reference, status = sum.Status,
             details_state = state, details = Details(cv?.ProfileJson, cv?.YearsOfExperience),
             booking = await bookings.OpenForCandidateAsync(a.Id, lang, ct),
+            interview = await NextInterviewAsync(a.Id, ct),
+            can_withdraw = Withdrawable(a.Status),
             offer = await OfferAsync(a.Id, lang, ct),
             timeline = await TimelineAsync(a, ct),
         };
@@ -228,6 +327,7 @@ public sealed class PortalApplicationService(
             if (offer.Status == OfferStatus.Declined) steps.Add((offer.UpdatedAt, "offer_declined", "done"));
         }
         if (a.Status == ApplicationStatus.Rejected) steps.Add((a.UpdatedAt, "closed", "done"));
+        if (a.Status == ApplicationStatus.Withdrawn) steps.Add((a.UpdatedAt, "withdrawn", "done"));
         return steps.OrderBy(x => x.At).Select(x => (object)new { key = x.Key, date = D(x.At), state = x.State }).ToList();
     }
 
@@ -246,18 +346,27 @@ public sealed class PortalApplicationService(
     }
 
     /// <summary>The candidate accepts or declines the offer sent to them (as HR would record it, with a note on the application).</summary>
-    public async Task<object> RespondOfferAsync(string? email, string? epoch, string? code, bool accept, string? reason, CancellationToken ct = default)
+    public async Task<object> RespondOfferAsync(string? email, string? epoch, string? code, bool accept, string? reason, CancellationToken ct = default, string? signature = null)
     {
         var user = await accounts.RequireAsync(email, epoch, ct);
         var a = await OwnAsync(user, code, ct);
         var o = await db.JobOffers.AsNoTracking().Where(x => x.JobApplicationId == a.Id && x.Status == OfferStatus.Sent).OrderByDescending(x => x.CreatedAt).FirstOrDefaultAsync(ct)
             ?? throw DomainException.Conflict("offer_not_open");
+        // Accepting is signed by typing the full name (when the portal sends one).
+        var signed = (signature ?? "").Trim();
+        if (accept && signature != null && signed.Length < 3) throw DomainException.Invalid("signature_required");
         await offers.SetOfferStatusAsync(o.Id, accept ? nameof(OfferStatus.Accepted) : nameof(OfferStatus.Declined), ct);
         db.ApplicationNotes.Add(new ApplicationNote
         {
             JobApplicationId = a.Id, Kind = NoteKind.System, AuthorApplicantId = user.Id, CreatedAt = clock.UtcNow,
             Text = TextUtil.Clip($"Offer {o.Code} {(accept ? "accepted" : "declined")} by the candidate in the career portal." + (string.IsNullOrWhiteSpace(reason) ? "" : $" Reason: {reason.Trim()}"), 4000),
         });
+        if (accept && signed.Length > 0)
+        {
+            var row = await db.JobOffers.FirstAsync(x => x.Id == o.Id, ct);
+            row.SignedName = TextUtil.Clip(signed, 200);
+            row.SignedAt = clock.UtcNow;
+        }
         await db.SaveChangesAsync(ct);
         return new { status = accept ? "accepted" : "declined" };
     }

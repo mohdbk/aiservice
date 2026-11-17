@@ -1,6 +1,6 @@
-import { ArrowDown, ArrowUp, FloppyDisk, Trash, Users } from "@phosphor-icons/react";
+import { ArrowDown, ArrowUp, Copy, FloppyDisk, Trash, Users } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   Bilingual, Button, Card, EnglishBadge, ErrorState, LangTabs, Loading, Note, PageHeader, RichText, SectionTabs, SelectInput, TextInput, Toggle, Tick, useEditGuard, useSaving,
 } from "../components/ui";
@@ -54,14 +54,17 @@ export default function JobEdit() {
   const toast = useToast();
   const nav = useNavigate();
   const isNew = !id;
+  // A new job can start as a copy of an existing one (a template): same content, screening, tests and selection, as a fresh draft.
+  const from = useSearchParams()[0].get("from");
   const lookups = useLookups();
   const loaded = useAsync(async () => {
-    if (isNew) return EMPTY;
-    const j = await api<any>(`/jobs/${id}`);
+    if (isNew && !from) return EMPTY;
+    const j = await api<any>(`/jobs/${isNew ? from : id}`);
     const en = (j.translations || []).find((x: any) => x.lang === "en");
-    return { ...EMPTY, ...j, posted_on: j.posted_on || "", closes_on: j.closes_on || "", title_en: en?.title || "", description_en: en?.description || "", location_en: en?.location || "",
+    const full = { ...EMPTY, ...j, posted_on: j.posted_on || "", closes_on: j.closes_on || "", title_en: en?.title || "", description_en: en?.description || "", location_en: en?.location || "",
       english: en?.review_status || "Missing", english_approved: !!en?.approved } as Job;
-  }, [id]);
+    return isNew ? { ...full, id: undefined, code: undefined, status: "Draft", is_published: false, posted_on: "", closes_on: "", row_version: null, criteria: [], criteria_current: false } as Job : full;
+  }, [id, from]);
   const [job, setJob] = useState<Job>(EMPTY);
   const [lang, setLang] = useState<Bilingual>(panel === "en" ? "en" : "ar");
   const [tab, setTab] = useState("details");
@@ -107,6 +110,7 @@ export default function JobEdit() {
         subtitle={!isNew && <span className="flex flex-wrap items-center gap-2"><span dir="ltr">{job.code}</span><EnglishBadge state={job.english} /></span>}
         actions={<>
           {!isNew && <Link className="aegov-btn btn-outline" to={to(`/applicants?job=${id}`)}><Users size={20} aria-hidden="true" />{t("jobs.view_applicants")}</Link>}
+          {!isNew && <Link className="aegov-btn btn-outline" to={to(`/jobs/new?from=${id}`)}><Copy size={20} aria-hidden="true" />{t("jobs.duplicate")}</Link>}
           <Button busy={busy} onClick={save} icon={<FloppyDisk size={20} aria-hidden="true" />}>{t("common.save")}</Button>
         </>}
       />

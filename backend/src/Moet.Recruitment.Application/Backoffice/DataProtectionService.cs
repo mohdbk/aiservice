@@ -209,7 +209,7 @@ public sealed class DataProtectionService(IAppDbContext db, ICurrentActor actor,
         var appCutoff = now.AddMonths(-s.UnsuccessfulMonths);
         var accCutoff = now.AddMonths(-s.InactiveAccountMonths);
         var apps = await db.JobApplications.Where(a => a.AnonymisedAt == null && a.UpdatedAt < appCutoff
-                && (a.Status == ApplicationStatus.Rejected || a.JobOpening!.Status == JobStatus.Closed)
+                && (a.Status == ApplicationStatus.Rejected || a.Status == ApplicationStatus.Withdrawn || a.JobOpening!.Status == JobStatus.Closed)
                 && !db.JobOffers.Any(o => o.JobApplicationId == a.Id && o.Status == OfferStatus.Accepted))
             .Select(a => a.Id).Take(500).ToListAsync(ct);
         var accounts = await db.ApplicantAccounts.Where(u => u.AnonymisedAt == null && (u.LastSignInAt ?? u.CreatedAt) < accCutoff

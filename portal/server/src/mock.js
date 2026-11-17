@@ -228,14 +228,16 @@ export function createMockFrappe() {
     async applications(u, l) {
       lang(l);
       current(u);
-      return { applications: apps.filter((a) => a.email === u.email).map((a) => ({ id: a.id, job: a.job, title: titleOf(a.job, l),
-        submitted: a.submitted, reference: reference(a.id), status: a.status })) };
+      const mine = apps.filter((a) => a.email === u.email);
+      return { applications: mine.map((a) => ({ id: a.id, job: a.job, title: titleOf(a.job, l),
+        submitted: a.submitted, reference: reference(a.id), status: a.status })),
+        last_cv: mine.length ? { submitted: mine[0].submitted, job: titleOf(mine[0].job, l) } : null };
     },
     async application(u, id, l) {
       lang(l);
       const a = own(u, id);
       return { id: a.id, job: a.job, title: titleOf(a.job, l), submitted: a.submitted, reference: reference(a.id), status: a.status,
-        details_state: a.ready ? "ready" : "preparing",
+        details_state: a.ready ? "ready" : "preparing", can_withdraw: ["under_review", "contacted", "interview"].includes(a.status.code), interview: null,
         details: a.ready ? { years: 7, work: [{ position: "Senior AI Engineer", employer: "Emirates Digital", start: "2021-03", end: "" },
           { position: "Software Engineer", employer: "Gulf Tech", start: "2018-01", end: "2021-02" }],
           education: [{ degree: "MSc Computer Science", institution: "Khalifa University", end: "2017" }],
@@ -340,6 +342,16 @@ export function createMockFrappe() {
       current(u);
       if (join) talentPool.add(u.email); else talentPool.delete(u.email);
       return { in_talent_pool: talentPool.has(u.email) };
+    },
+    async withdraw(u, id) {
+      const a = own(u, id);
+      if (!["under_review", "contacted", "interview"].includes(a.status.code)) throw new FrappeError("cannot_withdraw", 409);
+      a.status = { code: "withdrawn", tone: "neutral" };
+      return { status: "withdrawn" };
+    },
+    async reschedule(u, id) {
+      own(u, id);
+      throw new FrappeError("no_interview", 409);
     },
     async respondOffer(u) {
       current(u);

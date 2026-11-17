@@ -273,7 +273,7 @@ async function topUp() {
   for (const o of (await bo("GET", "/offers?size=20&status=Sent")).items) {
     const app = apps.find((a) => a.id === o.applicant_id);
     if (!app) continue;
-    await portal("POST", "respond_offer", { email: app.email, epoch: await epochOf(app.email), name: app.code, accept: "1", reason: "" });
+    await portal("POST", "respond_offer", { email: app.email, epoch: await epochOf(app.email), name: app.code, accept: "1", reason: "", signature: app.full_name });
     added.push(`offer accepted by ${app.email}`);
   }
 

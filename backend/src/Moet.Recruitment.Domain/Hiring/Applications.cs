@@ -102,6 +102,7 @@ public static class CandidateStatus
                 ApplicationStatus.Replied => ("contacted", "warning"),
                 ApplicationStatus.Accepted => ("successful", "success"),
                 ApplicationStatus.Rejected => ("not_selected", "error"),
+                ApplicationStatus.Withdrawn => ("withdrawn", "neutral"),
                 _ => ("under_review", "info"),
             };
 }

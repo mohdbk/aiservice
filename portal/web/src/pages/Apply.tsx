@@ -70,7 +70,7 @@ function ScreeningField({ q, value, invalid, onChange }: { q: ScreeningQuestion;
 
 export default function Apply() {
   const { id = "" } = useParams();
-  const { t, lang, path, config, errorText } = useSite();
+  const { t, lang, path, config, errorText, formatDate } = useSite();
   const { user, clear } = useAuth();
   const navigate = useNavigate();
   usePageTitle(t("apply.title"));
@@ -82,6 +82,11 @@ export default function Apply() {
   const countries = (config.countries || []).map((c: { value: string; label: string } | string) => (typeof c === "string" ? { value: c, label: c } : c));
   const [note, setNote] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  // A CV from an earlier application can be used again instead of uploading one.
+  const { data: mine } = useAsync((signal) => api<{ last_cv?: { submitted: string; job: string } | null }>(`/api/applications?lang=${lang}`, { signal }).catch(() => ({ last_cv: null })), [lang]);
+  const lastCv = mine?.last_cv || null;
+  const [reuse, setReuse] = useState(true);
+  const reusing = !!lastCv && reuse && !file;
   const [declared, setDeclared] = useState(false);
   const [talentPool, setTalentPool] = useState(false);
   const [screening, setScreening] = useState<Record<string, unknown>>({});
@@ -98,18 +103,18 @@ export default function Apply() {
     e.preventDefault();
     setError(null);
     if (!/^\+?[0-9][0-9 ()-]{6,19}$/.test(phone.trim())) return setError(new ApiError("phone_invalid", 400));
-    if (!file) return setError(new ApiError("cv_required", 400));
-    if (!CV_RE.test(file.name)) return setError(new ApiError("cv_type", 400));
-    if (file.size > config.max_cv_mb * 1024 * 1024) return setError(new ApiError("cv_too_large", 400, { max_mb: config.max_cv_mb }));
+    if (!file && !reusing) return setError(new ApiError("cv_required", 400));
+    if (file && !CV_RE.test(file.name)) return setError(new ApiError("cv_type", 400));
+    if (file && file.size > config.max_cv_mb * 1024 * 1024) return setError(new ApiError("cv_too_large", 400, { max_mb: config.max_cv_mb }));
     const missing = (job.screening || []).filter((q) => q.required && empty(screening[q.key])).map((q) => q.key);
     setBadQuestions(missing);
     if (missing.length) return setError(new ApiError("screening_required", 400));
     if (!declared) return setError(new ApiError("declaration_required", 400));
     setBusy(true);
     try {
-      const data = await fileToBase64(file);
+      const cv = file ? { name: file.name, type: file.type, data: await fileToBase64(file) } : undefined;
       const r = await api<{ application: string }>("/api/applications", {
-        body: { job: job.id, phone: phone.trim(), country, nationality, cover_note: note, declaration: true, talent_pool: talentPool, lang, screening, cv: { name: file.name, type: file.type, data } },
+        body: { job: job.id, phone: phone.trim(), country, nationality, cover_note: note, declaration: true, talent_pool: talentPool, lang, screening, ...(cv ? { cv } : { reuse_cv: true }) },
       });
       navigate(`${path(`/applications/${encodeURIComponent(r.application)}`)}?new=1`);
     } catch (err) {
@@ -161,6 +166,19 @@ export default function Apply() {
 
           <div>
             <p className="mb-1 block text-sm font-medium leading-6 text-aeblack-800" id="cv-label">{t("apply.cv")}<RequiredMark /></p>
+            {lastCv && !file && (
+              <div className="mb-3 space-y-2" role="radiogroup" aria-labelledby="cv-label">
+                <label className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 ${reuse ? "border-primary-600 bg-primary-50" : "border-aeblack-200"}`}>
+                  <input type="radio" name="cv-source" className="mt-1 h-5 w-5 accent-primary-600" checked={reuse} onChange={() => setReuse(true)} />
+                  <span><span className="block font-medium">{t("apply.cv_reuse")}</span><span className="text-sm text-aeblack-600"><bdi>{t("apply.cv_reuse_from", { job: lastCv.job, date: formatDate(lastCv.submitted) })}</bdi></span></span>
+                </label>
+                <label className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 ${!reuse ? "border-primary-600 bg-primary-50" : "border-aeblack-200"}`}>
+                  <input type="radio" name="cv-source" className="h-5 w-5 accent-primary-600" checked={!reuse} onChange={() => setReuse(false)} />
+                  <span className="font-medium">{t("apply.cv_new")}</span>
+                </label>
+              </div>
+            )}
+            {!reusing && <>
             <input id="cv" type="file" className="peer sr-only" accept=".pdf,.docx,.jpg,.jpeg,.png" aria-labelledby="cv-label cv-choose" aria-describedby="cv-hint"
               onChange={(e) => setFile(e.target.files?.[0] || null)} />
             <label htmlFor="cv" className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-8 text-center transition peer-focus-visible:ring-2 peer-focus-visible:ring-primary-600 ${file ? "border-aegreen-500 bg-aegreen-50" : "border-primary-300 bg-whitely-50 hover:border-primary-500 hover:bg-primary-50"}`}>
@@ -170,6 +188,7 @@ export default function Apply() {
               <span id="cv-choose" className="font-semibold text-primary-800"><bdi>{file ? t("apply.cv_selected", { name: file.name }) : t("apply.cv_choose")}</bdi></span>
               <span className="text-sm text-aeblack-600" id="cv-hint">{t("apply.cv_hint", { max: config.max_cv_mb })}</span>
             </label>
+            </>}
           </div>
 
           {job.screening && job.screening.length > 0 && (

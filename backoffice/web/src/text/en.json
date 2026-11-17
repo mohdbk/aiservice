@@ -1634,5 +1634,8 @@
  "guide.again": "Prepare Again",
  "guide.print": "Print",
  "guide.listen": "A strong answer covers",
- "guide.no_ai": "The language model is not set up, so a guide cannot be prepared."
+ "guide.no_ai": "The language model is not set up, so a guide cannot be prepared.",
+ "app.status.Withdrawn": "Withdrawn",
+ "offer.signed_by": "Signed by {name}",
+ "jobs.duplicate": "Use as Template"
 }

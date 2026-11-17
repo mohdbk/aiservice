@@ -84,7 +84,7 @@ export type Job = {
 export type ScreeningQuestion = { key: string; type: string; required: boolean; text: string; options: { value: string; label: string }[] };
 export type JobList = { jobs: Job[]; total: number; page: number; pages: number; filters: { departments: string[]; locations: string[] } };
 export type User = { email: string; full_name: string };
-export type Status = { code: string; tone: "info" | "warning" | "success" | "error" };
+export type Status = { code: string; tone: "info" | "warning" | "success" | "error" | "neutral" };
 export type ApplicationSummary = { id: string; job: string; title: string; submitted: string; reference: string; status: Status };
 export type Details = {
   years: number | null;
@@ -101,6 +101,9 @@ export type Offer = { code: string; status: "sent" | "accepted" | "declined"; po
 export type TimelineStep = { key: string; date: string; state: "done" | "current" };
 export type ApplicationDetail = ApplicationSummary & {
   details_state: "ready" | "preparing" | "unavailable"; details: Details | null; booking?: Booking | null; offer?: Offer | null; timeline?: TimelineStep[];
+  /** The next interview, which the candidate may ask to move; and whether the application can still be withdrawn. */
+  interview?: { date: string; from: string; to: string; location: string; can_reschedule: boolean; reschedule_requested: boolean } | null;
+  can_withdraw?: boolean;
 };
 
 // ---------- assessments ----------

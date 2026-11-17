@@ -96,7 +96,7 @@ public sealed class SelectionService(IAppDbContext db, IRequestLanguage language
     {
         var job = await db.JobOpenings.AsNoTracking().FirstOrDefaultAsync(j => j.Id == jobId, ct) ?? throw DomainException.NotFound();
         var q = db.JobApplications.AsNoTracking().Where(a => a.JobOpeningId == jobId);
-        if (!all) q = q.Where(a => a.Status != ApplicationStatus.Rejected);
+        if (!all) q = q.Where(a => a.Status != ApplicationStatus.Rejected && a.Status != ApplicationStatus.Withdrawn);
         if (lq.Term.Length > 0) q = q.Where(a => a.FullName.Contains(lq.Term) || a.Code.Contains(lq.Term) || a.Email.Contains(lq.Term));
         // The whole job is ranked (a combined score cannot be sorted in SQL): every applicant counts, however many there are.
         var rows = await q.AsNoTracking()

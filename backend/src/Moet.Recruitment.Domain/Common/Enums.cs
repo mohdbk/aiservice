@@ -14,7 +14,7 @@ public enum EmploymentType { FullTime, PartTime, Contract, Temporary, Internship
 
 public enum SalaryPeriod { Month, Year }
 
-public enum ApplicationStatus { Open, Replied, Hold, Accepted, Rejected }
+public enum ApplicationStatus { Open, Replied, Hold, Accepted, Rejected, Withdrawn }
 
 public enum ScreeningOutcome { NoQuestions, NoRequirements, Meets, DoesNotMeet }
 

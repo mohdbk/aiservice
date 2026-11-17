@@ -120,6 +120,9 @@ public class JobOffer
     public DateTime? HandedOffAt { get; set; }
     public string HandOffError { get; set; } = "";
     public OfferStatus Status { get; set; } = OfferStatus.Draft;
+    /// <summary>The full name the candidate typed to accept the offer in the portal, and when.</summary>
+    public string SignedName { get; set; } = "";
+    public DateTime? SignedAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public int? CreatedByStaffId { get; set; }
     public DateTime UpdatedAt { get; set; }

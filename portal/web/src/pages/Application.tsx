@@ -1,7 +1,8 @@
-import { Briefcase, CalendarCheck, Certificate, ChatText, Check, GraduationCap, Hourglass, Icon, PaperPlaneTilt, Toolbox, Translate } from "@phosphor-icons/react";
+import { Briefcase, CalendarCheck, CalendarX, Certificate, ChatText, Check, GraduationCap, Hourglass, Icon, PaperPlaneTilt, PenNib, SignOut, Toolbox, Translate } from "@phosphor-icons/react";
 import { FormEvent, ReactNode, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { api, ApiError, ApplicationDetail, Booking, Details, Offer, TimelineStep } from "../api";
+import { useAuth } from "../auth";
 import { IconBox, StatusBadge, Steps } from "../components/Bits";
 import { Breadcrumb } from "../components/Breadcrumb";
 import { Alert, Skeleton, Spinner } from "../components/States";
@@ -11,7 +12,7 @@ import NotFound from "./NotFound";
 
 function Progress({ code }: { code: string }) {
   const { t } = useSite();
-  const reached = code === "under_review" || code === "contacted" ? 2 : code === "interview" ? 3 : code === "successful" || code === "not_selected" ? 4 : 1;
+  const reached = code === "under_review" || code === "contacted" ? 2 : code === "interview" ? 3 : code === "successful" || code === "not_selected" || code === "withdrawn" ? 4 : 1;
   const stages = [t("app.stage_submitted"), t("app.stage_review"), t("app.stage_interview"), t("app.stage_outcome")];
   return (
     <ol className="mt-4 grid grid-cols-4 gap-2" aria-label={t("app.progress")}>
@@ -120,16 +121,20 @@ function ChooseTime({ booking, appId, onBooked }: { booking: Booking; appId: str
 /** The job offer: the letter, then accept or decline (a reason is optional when declining). */
 function OfferCard({ offer, appId, onDone }: { offer: Offer; appId: string; onDone: () => void }) {
   const { t, formatDate, errorText } = useSite();
+  const { user } = useAuth();
+  const [signing, setSigning] = useState(false);
+  const [signature, setSignature] = useState("");
+  const same = (a: string, b: string) => a.trim().replace(/\s+/g, " ").toLowerCase() === b.trim().replace(/\s+/g, " ").toLowerCase();
+  const signedOk = signature.trim().length >= 3 && (!user?.full_name || same(signature, user.full_name));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [declining, setDeclining] = useState(false);
   const [reason, setReason] = useState("");
   const answer = async (accept: boolean) => {
-    if (accept && !window.confirm(t("offer.confirm_accept"))) return;
     setBusy(true);
     setError(null);
     try {
-      await api(`/api/applications/${encodeURIComponent(appId)}/offer`, { body: { accept, reason } });
+      await api(`/api/applications/${encodeURIComponent(appId)}/offer`, { body: accept ? { accept, signature: signature.trim() } : { accept, reason } });
       onDone();
     } catch (e) {
       setError(e);
@@ -156,12 +161,98 @@ function OfferCard({ offer, appId, onDone }: { offer: Offer; appId: string; onDo
             <button type="button" className="aegov-btn btn-link" onClick={() => setDeclining(false)}>{t("common.back")}</button>
           </div>
         </div>
+      ) : signing ? (
+        <form className="mt-4 space-y-3 rounded-xl border border-primary-200 bg-primary-50 p-4" onSubmit={(e) => { e.preventDefault(); if (signedOk) answer(true); }}>
+          <p className="flex items-center gap-2 font-semibold text-aeblack-900"><PenNib size={22} className="text-primary-600" aria-hidden="true" />{t("offer.sign_title")}</p>
+          <p className="text-sm text-aeblack-700">{t("offer.sign_intro")}</p>
+          <div className="aegov-form-control">
+            <label htmlFor="signature">{t("offer.sign_label")}</label>
+            <div className="form-control-input"><input id="signature" value={signature} maxLength={200} autoComplete="name" onChange={(e) => setSignature(e.target.value)}
+              aria-describedby="signature-hint" className="font-heading text-lg italic" /></div>
+            <p id="signature-hint" className="mt-1 text-sm text-aeblack-600">{t("offer.sign_hint", { name: user?.full_name || "" })}</p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button type="submit" className="aegov-btn" disabled={busy || !signedOk}>{t("offer.sign_accept")}</button>
+            <button type="button" className="aegov-btn btn-link" onClick={() => setSigning(false)}>{t("common.back")}</button>
+          </div>
+        </form>
       ) : (
         <div className="mt-4 flex flex-wrap gap-3">
-          <button type="button" className="aegov-btn" disabled={busy} onClick={() => answer(true)}>{t("offer.accept")}</button>
+          <button type="button" className="aegov-btn" disabled={busy} onClick={() => setSigning(true)}>{t("offer.accept")}</button>
           <button type="button" className="aegov-btn btn-outline" disabled={busy} onClick={() => setDeclining(true)}>{t("offer.decline")}</button>
         </div>
       )}
+    </section>
+  );
+}
+
+/** The candidate's next interview, with a request to move it (up to a day before). */
+function NextInterview({ i, appId, onDone }: { i: NonNullable<ApplicationDetail["interview"]>; appId: string; onDone: (msg: string) => void }) {
+  const { t, formatDate, errorText } = useSite();
+  const [asking, setAsking] = useState(false);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const send = async () => {
+    setBusy(true); setError(null);
+    try {
+      const r = await api<{ reopened: boolean }>(`/api/applications/${encodeURIComponent(appId)}/reschedule`, { body: { reason: reason.trim() } });
+      onDone(t(r.reopened ? "resched.reopened" : "resched.requested"));
+    } catch (e) { setError(e); setBusy(false); }
+  };
+  return (
+    <section className="mc-surface mt-6 rounded-2xl border border-aeblack-100 bg-white p-6" aria-labelledby="next-title">
+      <h2 id="next-title" className="flex items-center gap-3 font-heading text-lg font-semibold text-aeblack-900"><IconBox icon={CalendarCheck} />{t("resched.title")}</h2>
+      <p className="mt-2 text-aeblack-800"><span className="font-semibold">{formatDate(i.date)}</span> · <span dir="ltr">{i.from} - {i.to}</span></p>
+      {i.location && <p className="mt-1 text-sm text-aeblack-600">{t("book.location", { location: i.location })}</p>}
+      {i.reschedule_requested ? <p className="mt-3 text-sm text-aeblack-700">{t("resched.requested")}</p>
+        : !i.can_reschedule ? <p className="mt-3 text-sm text-aeblack-600">{t("resched.too_late")}</p>
+        : asking ? (
+          <div className="mt-4 space-y-3">
+            <div className="aegov-form-control">
+              <label htmlFor="resched-reason">{t("resched.reason")} <span className="text-sm font-normal text-aeblack-500">({t("common.optional")})</span></label>
+              <div className="form-control-input"><textarea id="resched-reason" rows={2} maxLength={1000} value={reason} onChange={(e) => setReason(e.target.value)} /></div>
+            </div>
+            {error ? <Alert tone="error" title={errorText(error)} /> : null}
+            <div className="flex flex-wrap gap-3">
+              <button type="button" className="aegov-btn btn-outline" disabled={busy} onClick={send}>{t("resched.send")}</button>
+              <button type="button" className="aegov-btn btn-link" onClick={() => setAsking(false)}>{t("common.back")}</button>
+            </div>
+          </div>
+        ) : <button type="button" className="aegov-btn btn-outline btn-sm mt-4" onClick={() => setAsking(true)}><CalendarX size={20} aria-hidden="true" />{t("resched.ask")}</button>}
+    </section>
+  );
+}
+
+/** Withdrawing the application, with an optional reason and a confirmation step. */
+function Withdraw({ appId, onDone }: { appId: string; onDone: () => void }) {
+  const { t, errorText } = useSite();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const go = async () => {
+    setBusy(true); setError(null);
+    try { await api(`/api/applications/${encodeURIComponent(appId)}/withdraw`, { body: { reason: reason.trim() } }); onDone(); }
+    catch (e) { setError(e); setBusy(false); }
+  };
+  return (
+    <section className="mt-6 rounded-2xl border border-aeblack-100 bg-white p-6" aria-labelledby="withdraw-title">
+      <h2 id="withdraw-title" className="font-heading text-base font-semibold text-aeblack-900">{t("withdraw.title")}</h2>
+      <p className="mt-1 text-sm text-aeblack-600">{t("withdraw.intro")}</p>
+      {open ? (
+        <div className="mt-4 space-y-3">
+          <div className="aegov-form-control">
+            <label htmlFor="withdraw-reason">{t("withdraw.reason")} <span className="text-sm font-normal text-aeblack-500">({t("common.optional")})</span></label>
+            <div className="form-control-input"><textarea id="withdraw-reason" rows={2} maxLength={1000} value={reason} onChange={(e) => setReason(e.target.value)} /></div>
+          </div>
+          {error ? <Alert tone="error" title={errorText(error)} /> : null}
+          <div className="flex flex-wrap gap-3">
+            <button type="button" className="aegov-btn btn-outline border-aered-600 text-aered-700" disabled={busy} onClick={go}>{t("withdraw.confirm")}</button>
+            <button type="button" className="aegov-btn btn-link" onClick={() => setOpen(false)}>{t("common.back")}</button>
+          </div>
+        </div>
+      ) : <button type="button" className="aegov-btn btn-link btn-sm mt-3 px-0 text-aered-700" onClick={() => setOpen(true)}><SignOut size={20} className="rtl:-scale-x-100" aria-hidden="true" />{t("withdraw.open")}</button>}
     </section>
   );
 }
@@ -213,6 +304,7 @@ export default function Application() {
       {booked && <div className="mt-6" role="status"><Alert tone="success" title={booked} /></div>}
       {data.offer && <OfferCard offer={data.offer} appId={id} onDone={reload} />}
       {data.booking && !booked && <ChooseTime booking={data.booking} appId={id} onBooked={(m) => { setBooked(m); reload(); }} />}
+      {data.interview && !data.booking && <NextInterview i={data.interview} appId={id} onDone={(m) => { setBooked(m); reload(); }} />}
 
       <section className="mc-surface mt-6 rounded-2xl border border-aeblack-100 bg-white p-6" aria-labelledby="status-title">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -245,6 +337,7 @@ export default function Application() {
           {sent && <p className="text-aegreen-700" role="status">{t("app.correction_sent")}</p>}
         </form>
       </section>
+      {data.can_withdraw && <Withdraw appId={id} onDone={reload} />}
     </div>
   );
 }
