@@ -125,6 +125,8 @@ public static class BackofficeEndpoints
         staff.MapGet("/interviews/{id:int}", (int id, BackofficeInterviewService s, CancellationToken ct) => s.GetAsync(id, ct));
         staff.MapPost("/interviews", (InterviewInput b, BackofficeInterviewService s, CancellationToken ct) => s.ScheduleAsync(null, b, ct));
         staff.MapPut("/interviews/{id:int}", (int id, InterviewInput b, BackofficeInterviewService s, CancellationToken ct) => s.ScheduleAsync(id, b, ct));
+        staff.MapGet("/interviews/{id:int}/calendar", async (int id, BackofficeInterviewService s, CancellationToken ct) =>
+            Results.File(System.Text.Encoding.UTF8.GetBytes(await s.CalendarAsync(id, ct)), "text/calendar; charset=utf-8", $"interview-{id}.ics"));
         staff.MapPost("/interviews/{id:int}/status", (int id, StatusBody b, BackofficeInterviewService s, CancellationToken ct) => s.SetStatusAsync(id, b.Status, ct));
         staff.MapPost("/interviews/{id:int}/feedback", (int id, FeedbackInput b, BackofficeInterviewService s, CancellationToken ct) => s.FeedbackAsync(id, b, ct));
         staff.MapGet("/offers", ([AsParameters] ListQuery lq, string? status, BackofficeInterviewService s, CancellationToken ct) => s.OffersAsync(lq, status, ct));

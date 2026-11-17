@@ -134,7 +134,8 @@ public sealed class BookingService(IAppDbContext db, ICodeGenerator codes, ICurr
             ["job_title"] = app.JobOpening!.In(lang).Title, ["round"] = lang == "ar" || round.NameEn.Length == 0 ? round.Name : round.NameEn,
             ["date"] = clock.Local(slot.StartsAt).ToString("yyyy-MM-dd", Inv),
             ["time"] = $"{clock.Local(slot.StartsAt):HH\\:mm} - {clock.Local(slot.EndsAt):HH\\:mm}", ["location"] = b.Location,
-        }, ct);
+        }, ct, CalendarInvite.Invite($"{i.Code}@moet-recruitment", $"{(lang == "ar" || round.NameEn.Length == 0 ? round.Name : round.NameEn)}: {app.JobOpening!.In(lang).Title}",
+            slot.StartsAt, slot.EndsAt, b.Location, app.Reference));
         await db.SaveChangesAsync(ct);
         return new
         {

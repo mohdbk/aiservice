@@ -1,4 +1,4 @@
-import { CalendarBlank, FileText, MapPin, PencilSimple, Star } from "@phosphor-icons/react";
+import { CalendarBlank, CalendarPlus, FileText, MapPin, PencilSimple, Star } from "@phosphor-icons/react";
 import { DocumentDialog } from "../components/DocumentDialog";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -56,6 +56,9 @@ export default function Interview() {
         actions={<>
           <Button variant="outline" size="sm" onClick={() => setEdit(true)} icon={<PencilSimple size={20} aria-hidden="true" />}>{t("common.edit")}</Button>
           <Button variant="outline" size="sm" onClick={() => setLetter(true)} icon={<FileText size={20} aria-hidden="true" />}>{t("int.letter")}</Button>
+          <a className="aegov-btn btn-outline btn-sm" href={`/api/backoffice/interviews/${i.id}/calendar`} download>
+            <CalendarPlus size={20} aria-hidden="true" />{t("int.add_calendar")}
+          </a>
           <ActionMenu label={t("common.status")} items={["Scheduled", "UnderReview", "Cleared", "Rejected", "Cancelled"].filter((s) => s !== i.status)
             .map((s) => ({ label: t(`int.status.${s}`), onClick: () => save(`/interviews/${i.id}/status`, { status: s }) }))} />
         </>}

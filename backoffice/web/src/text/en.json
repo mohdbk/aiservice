@@ -1564,5 +1564,6 @@
  "bulk.invited": "Invited {ok} of {count}.",
  "bulk.export": "Export CSV",
  "list.compact": "Compact Rows",
- "list.comfortable": "Comfortable Rows"
+ "list.comfortable": "Comfortable Rows",
+ "int.add_calendar": "Add to Calendar"
 }

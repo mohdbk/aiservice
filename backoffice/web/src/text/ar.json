@@ -1564,5 +1564,6 @@
  "bulk.invited": "تمت دعوة {ok} من {count}.",
  "bulk.export": "تصدير CSV",
  "list.compact": "صفوف مضغوطة",
- "list.comfortable": "صفوف مريحة"
+ "list.comfortable": "صفوف مريحة",
+ "int.add_calendar": "إضافة إلى التقويم"
 }

@@ -123,13 +123,25 @@ public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator 
         var app = await db.JobApplications.AsNoTracking().Include(a => a.JobOpening!).ThenInclude(j => j.Translations).FirstAsync(a => a.Id == i.JobApplicationId, ct);
         var round = await db.InterviewRounds.AsNoTracking().Where(r => r.Id == i.InterviewRoundId).Select(r => r.Name).FirstAsync(ct);
         var lang = await content.PortalLanguageAsync(app.LanguageCode, ct);
+        var title = app.JobOpening!.In(lang).Title;
+        var invite = CalendarInvite.Invite($"{i.Code}@moet-recruitment", $"{round}: {title}", i.StartsAt, i.EndsAt, i.Location, app.Reference);
         var sent = await mailer.QueueAsync(app.Email, app.FullName, lang, "interview_scheduled", "", new Dictionary<string, string>
         {
-            ["job_title"] = app.JobOpening!.In(lang).Title, ["round"] = round, ["date"] = input.Date, ["time"] = $"{input.From} - {input.To}",
+            ["job_title"] = title, ["round"] = round, ["date"] = input.Date, ["time"] = $"{input.From} - {input.To}",
             ["location"] = i.Location,
-        }, ct);
+        }, ct, invite);
         if (sent) await db.SaveChangesAsync(ct);
         return sent;
+    }
+
+    /// <summary>The interview as a calendar invitation, for a panelist to add to their own calendar.</summary>
+    public async Task<string> CalendarAsync(int id, CancellationToken ct = default)
+    {
+        var i = await db.Interviews.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound();
+        var app = await db.JobApplications.AsNoTracking().Include(a => a.JobOpening!).ThenInclude(j => j.Translations).FirstAsync(a => a.Id == i.JobApplicationId, ct);
+        var round = await db.InterviewRounds.AsNoTracking().Where(r => r.Id == i.InterviewRoundId).Select(r => r.Name).FirstAsync(ct);
+        return CalendarInvite.Ics($"{i.Code}@moet-recruitment", $"{round}: {app.FullName} ({app.JobOpening!.In("ar").Title})", i.StartsAt, i.EndsAt, i.Location,
+            $"{app.Reference}\n{i.Notes}", stampUtc: clock.UtcNow);
     }
 
     public async Task<object> SetStatusAsync(int id, string? status, CancellationToken ct = default)
