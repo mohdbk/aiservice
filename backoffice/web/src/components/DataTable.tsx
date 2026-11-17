@@ -1,8 +1,9 @@
-import { CaretDown, CaretUp, CaretUpDown, FunnelSimple, MagnifyingGlass, Rows, SquareSplitVertical, X } from "@phosphor-icons/react";
+import { CaretDown, CaretUp, CaretUpDown, BookmarkSimple, FunnelSimple, Trash, MagnifyingGlass, Rows, SquareSplitVertical, X } from "@phosphor-icons/react";
+import { Menu } from "@base-ui/react";
 import { FormEvent, ReactNode, useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { api, ApiError, useAsync, useLang } from "../core";
-import { Button, Empty, ErrorState, Loading, SelectInput } from "./ui";
+import { Button, Empty, ErrorState, Loading, Modal, SelectInput, TextInput } from "./ui";
 
 export type Page<T> = { items: T[]; total: number; page: number; size: number; pages: number; sort: string; dir: "asc" | "desc" };
 
@@ -35,10 +36,56 @@ export function useList<T>(path: string, filterKeys: string[], fixed: Record<str
     if (!("page" in changes)) p.delete("page");
     setParams(p, { replace: true });
   };
-  return { ...result, params, get: (k: string) => params.get(k) || "", set };
+  const replace = (q: string) => setParams(new URLSearchParams(q), { replace: true });
+  return { ...result, params, get: (k: string) => params.get(k) || "", set, replace };
 }
 
 type ListState<T> = ReturnType<typeof useList<T>>;
+
+type View = { name: string; q: string };
+
+/** Named filter and sort combinations for one list, kept in this browser, so a common view is one click away. */
+function SavedViews({ current, apply }: { current: string; apply: (q: string) => void }) {
+  const { t } = useLang();
+  const where = useLocation().pathname.replace(/^\/(ar|en)/, "");
+  const key = `mh-views:${where}`;
+  const read = (): View[] => { try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch { return []; } };
+  const [views, setViews] = useState<View[]>(read);
+  const [naming, setNaming] = useState(false);
+  const [name, setName] = useState("");
+  const store = (v: View[]) => { setViews(v); try { localStorage.setItem(key, JSON.stringify(v)); } catch { /* private window */ } };
+  const clean = (q: string) => { const p = new URLSearchParams(q); p.delete("page"); p.sort(); return p.toString(); };
+  const now = clean(current);
+  const save = () => { const n = name.trim(); if (!n) return; store([...views.filter((v) => v.name !== n), { name: n, q: now }].slice(-12)); setNaming(false); setName(""); };
+  return (
+    <>
+      <Menu.Root>
+        <Menu.Trigger className="aegov-btn btn-outline btn-sm"><BookmarkSimple size={18} aria-hidden="true" />{t("views.title")}{views.length > 0 && <span className="text-aeblack-500" dir="ltr">({views.length})</span>}</Menu.Trigger>
+        <Menu.Portal>
+          <Menu.Positioner sideOffset={6} align="start" className="z-[80]">
+            <Menu.Popup className="mh-popup min-w-56">
+              {views.map((v) => (
+                <div key={v.name} className="flex items-center">
+                  <Menu.Item className={`mh-item flex-1 ${clean(v.q) === now ? "font-bold text-primary-800" : ""}`} onClick={() => apply(v.q)}>{v.name}</Menu.Item>
+                  <Menu.Item className="mh-item px-2 text-aeblack-500" aria-label={t("views.delete", { name: v.name })} onClick={() => store(views.filter((x) => x.name !== v.name))}><Trash size={16} aria-hidden="true" /></Menu.Item>
+                </div>
+              ))}
+              {views.length === 0 && <p className="px-3 py-2 text-xs text-aeblack-500">{t("views.none")}</p>}
+              <Menu.Item className="mh-item border-t border-aeblack-100 font-semibold text-primary-700" disabled={!now} onClick={() => setNaming(true)}>{t("views.save")}</Menu.Item>
+            </Menu.Popup>
+          </Menu.Positioner>
+        </Menu.Portal>
+      </Menu.Root>
+      <Modal open={naming} onClose={() => setNaming(false)} title={t("views.save")} footer={<>
+        <Button variant="outline" onClick={() => setNaming(false)}>{t("common.cancel")}</Button>
+        <Button disabled={!name.trim()} onClick={save}>{t("common.save")}</Button>
+      </>}>
+        <TextInput label={t("views.name")} hint={t("views.hint")} value={name} maxLength={60} autoFocus onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); save(); } }} />
+      </Modal>
+    </>
+  );
+}
 
 export type Selection = { selected: (string | number)[]; onChange: (keys: (string | number)[]) => void; label: (row: unknown) => string };
 
@@ -50,11 +97,13 @@ function useDensity() {
   return { compact, toggle };
 }
 
-export function DataTable<T>({ list, columns, rowKey, filters = [], searchLabel, empty, emptyHint, emptyAction, toolbar, selection, bulk }: {
+export function DataTable<T>({ list, columns, rowKey, filters = [], searchLabel, empty, emptyHint, emptyAction, toolbar, selection, bulk, body }: {
   list: ListState<T>; columns: Column<T>[]; rowKey: (row: T) => string | number; filters?: FilterDef[]; searchLabel?: string; empty?: ReactNode;
   emptyHint?: ReactNode; emptyAction?: ReactNode; toolbar?: ReactNode;
   /** Rows can be ticked; the bar of actions for the ticked rows shows above the list. */
   selection?: Selection; bulk?: ReactNode;
+  /** Shown in place of the table when there are rows (another view of the same list, such as a board). */
+  body?: ReactNode;
 }) {
   const { t } = useLang();
   const density = useDensity();
@@ -118,6 +167,7 @@ export function DataTable<T>({ list, columns, rowKey, filters = [], searchLabel,
               <SelectInput key={f.key} wrapClass="sm:min-w-40" label={f.label} value={list.get(f.key)} onChange={(e) => list.set({ [f.key]: e.target.value || null })}
                 options={[{ value: "", label: t("common.all") }, ...f.options]} />
             ))}
+            {filters.length > 0 && <SavedViews current={list.params.toString()} apply={list.replace} />}
             {active && (
               <Button variant="link" onClick={clearAll}
                 icon={<X size={20} aria-hidden="true" />}>{t("list.clear")}</Button>
@@ -130,10 +180,10 @@ export function DataTable<T>({ list, columns, rowKey, filters = [], searchLabel,
         // Nothing matches the search or filters: say so and offer to clear them (not "nothing here yet").
         ? <Empty icon={<MagnifyingGlass size={26} />} hint={t("list.no_match_hint")}
             action={<Button variant="outline" onClick={clearAll} icon={<X size={20} aria-hidden="true" />}>{t("list.clear")}</Button>}>{t("list.no_match")}</Empty>
-        : <Empty hint={emptyHint} action={emptyAction}>{empty}</Empty>) : (
+        : <Empty hint={emptyHint} action={emptyAction}>{empty}</Empty>) : body ? <>{body}</> : (
         <>
           {selection && selection.selected.length > 0 && (
-            <div role="region" aria-label={t("bulk.region")} className="sticky top-16 z-[5] mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-primary-200 bg-primary-50 px-4 py-2.5 shadow-sm">
+            <div role="region" aria-label={t("bulk.region")} className="sticky top-16 z-[5] mb-3 sm:top-20 flex flex-wrap items-center gap-2 rounded-2xl border border-primary-200 bg-primary-50 px-4 py-2.5 shadow-sm">
               <span className="me-2 text-sm font-bold text-primary-900">{t("bulk.selected", { count: selection.selected.length })}</span>
               {bulk}
               <Button variant="link" size="sm" className="ms-auto" onClick={() => selection.onChange([])} icon={<X size={18} aria-hidden="true" />}>{t("bulk.clear")}</Button>

@@ -23,7 +23,7 @@ export default function Questions() {
   const list = useList<Row>("/questions", ["type", "category", "difficulty", "family", "active", "english"]);
   return (
     <>
-      <PageHeader title={t("q.title")} actions={<Button onClick={() => go("/questions/new")} icon={<Plus size={20} aria-hidden="true" />}>{t("q.new")}</Button>} />
+      <PageHeader title={t("q.title")} actions={<Button data-shortcut="new" onClick={() => go("/questions/new")} icon={<Plus size={20} aria-hidden="true" />}>{t("q.new")}</Button>} />
       <DataTable list={list} rowKey={(x) => x.id} emptyHint={t("empty.questions")} emptyAction={<Button onClick={() => go("/questions/new")} icon={<Plus size={20} aria-hidden="true" />}>{t("q.new")}</Button>}
         filters={[
           { key: "type", label: t("q.type"), options: opts(t, "qt.", ["SingleChoice", "MultipleChoice", "TrueFalse", "ShortAnswer", "Number", "Essay", "FileUpload"]) },

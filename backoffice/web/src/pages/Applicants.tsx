@@ -1,9 +1,9 @@
 import { Menu } from "@base-ui/react";
-import { CaretDown, DownloadSimple, Exam } from "@phosphor-icons/react";
+import { CaretDown, DownloadSimple, Exam, Kanban, ListBullets } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { DataTable, opts, useList } from "../components/DataTable";
-import { ActionMenu, Badge, Button, PageHeader, Score, TextInput } from "../components/ui";
+import { ActionMenu, Badge, Button, PageHeader, Score, Segmented, TextInput } from "../components/ui";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
 import { InviteDialog } from "./Applicant";
 import { useLookups } from "./JobEdit";
@@ -88,6 +88,50 @@ function StatusPick({ value, name, onPick }: { value: string; name: string; onPi
   );
 }
 
+/**
+ * The pipeline as a board: one column per status, cards dragged between columns (or moved with the status menu on
+ * each card, for the keyboard). Shows the list's current filters.
+ */
+function Board({ rows, statusOf, onMove }: { rows: Row[]; statusOf: (a: Row) => string; onMove: (a: Row, s: string) => void }) {
+  const { t, to } = useLang();
+  const [over, setOver] = useState("");
+  return (
+    <div className="mh-board -mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-3">
+      {STATUSES.map((s) => {
+        const items = rows.filter((a) => statusOf(a) === s);
+        return (
+          <section key={s} aria-labelledby={`col-${s}`}
+            onDragOver={(e) => { e.preventDefault(); setOver(s); }} onDragLeave={() => setOver("")}
+            onDrop={(e) => { e.preventDefault(); setOver(""); const a = rows.find((r) => String(r.id) === e.dataTransfer.getData("text/plain")); if (a && statusOf(a) !== s) onMove(a, s); }}
+            className={`flex w-72 flex-none snap-start flex-col rounded-2xl border p-2 transition ${over === s ? "border-primary-400 bg-primary-50" : "border-aeblack-100 bg-whitely-50"}`}>
+            <h2 id={`col-${s}`} className="flex items-center justify-between px-2 py-1.5 text-sm font-bold">
+              <Badge tone={appTone(s)}>{t(`app.status.${s}`)}</Badge>
+              <span className="text-aeblack-500" dir="ltr">{items.length}</span>
+            </h2>
+            <ul className="mt-1 min-h-24 space-y-2">
+              {items.map((a) => (
+                <li key={a.id} draggable onDragStart={(e) => { e.dataTransfer.setData("text/plain", String(a.id)); e.dataTransfer.effectAllowed = "move"; }}
+                  className="cursor-grab rounded-xl border border-aeblack-100 bg-white p-3 shadow-sm active:cursor-grabbing">
+                  <div className="flex items-start justify-between gap-2">
+                    <Link to={to(`/applicants/${a.id}`)} className="min-w-0 font-semibold text-primary-800">{a.full_name}</Link>
+                    {a.score != null && <Score value={a.score} />}
+                  </div>
+                  <p className="mt-1 line-clamp-1 text-xs text-aeblack-500">{a.job_title}</p>
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <Badge tone={screenTone(a.screening)}>{t(`screen.${a.screening}`)}</Badge>
+                    <StatusPick value={statusOf(a)} name={a.full_name} onPick={(next) => onMove(a, next)} />
+                  </div>
+                </li>
+              ))}
+              {items.length === 0 && <li className="rounded-xl border border-dashed border-aeblack-200 px-3 py-6 text-center text-xs text-aeblack-500">{t("board.drop")}</li>}
+            </ul>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
 const csvCell = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
 
 export default function Applicants() {
@@ -99,7 +143,8 @@ export default function Applicants() {
   const [inviting, setInviting] = useState(false);
   const [busy, setBusy] = useState(false);
   const jobs = useAsync(() => api<{ items: { id: number; title: string; title_en: string }[] }>("/jobs?size=100&sort=created&dir=desc"), []);
-  const list = useList<Row>("/applicants", ["job", "status", "screening", "ai", "minScore", "from", "to"]);
+  const list = useList<Row>("/applicants", ["job", "status", "screening", "ai", "minScore", "from", "to", "view"]);
+  const board = list.get("view") === "board";
   const status = useDeferredStatus(list.reload);
   const rows = list.data?.items || [];
   const statusOf = (a: Row) => status.shown[a.id] || a.status;
@@ -126,9 +171,15 @@ export default function Applicants() {
   };
   return (
     <>
-      <PageHeader title={t("apps.title")} subtitle={list.data && t("apps.total", { count: list.data.total })} />
+      <PageHeader title={t("apps.title")} subtitle={list.data && t("apps.total", { count: list.data.total })}
+        actions={<Segmented label={t("board.view")} value={board ? "board" : "list"} onChange={(v) => list.set({ view: v === "board" ? "board" : null, size: v === "board" ? "100" : null })}
+          options={[{ value: "list", label: <><ListBullets size={18} aria-hidden="true" />{t("board.list")}</> }, { value: "board", label: <><Kanban size={18} aria-hidden="true" />{t("board.board")}</> }]} />} />
       <DataTable list={list} rowKey={(a) => a.id} emptyHint={t("empty.applicants")} searchLabel={t("apps.search_hint")}
-        selection={{ selected: picked, onChange: setPicked, label: (a) => (a as Row).full_name }}
+        body={board && list.data ? <>
+          {list.data.total > list.data.items.length && <p className="mb-3 text-sm text-aeblack-600">{t("board.partial", { shown: list.data.items.length, total: list.data.total })}</p>}
+          <Board rows={rows} statusOf={statusOf} onMove={(a, s) => setStatus([a], s)} />
+        </> : undefined}
+        selection={board ? undefined : { selected: picked, onChange: setPicked, label: (a) => (a as Row).full_name }}
         bulk={<>
           <ActionMenu label={t("app.change_status")} items={STATUSES.map((s) => ({ label: t(`app.status.${s}`), onClick: () => setStatus(chosen, s) }))} />
           <Button variant="outline" size="sm" onClick={() => setInviting(true)} icon={<Exam size={20} aria-hidden="true" />}>{t("app.invite")}</Button>

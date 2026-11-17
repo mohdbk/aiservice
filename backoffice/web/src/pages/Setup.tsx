@@ -27,7 +27,7 @@ export function Departments() {
   };
   return (
     <>
-      <PageHeader title={t("setup.departments")} actions={<Button onClick={() => setF({ is_active: true })} icon={<Plus size={20} aria-hidden="true" />}>{t("common.add")}</Button>} />
+      <PageHeader title={t("setup.departments")} actions={<Button data-shortcut="new" onClick={() => setF({ is_active: true })} icon={<Plus size={20} aria-hidden="true" />}>{t("common.add")}</Button>} />
       <DataTable list={list} rowKey={(d) => d.id} columns={[
         { key: "name", label: t("common.name"), sort: "name", render: (d) => <button type="button" className="text-start font-semibold text-primary-700" onClick={() => setF(d)}>{en && d.name_en ? d.name_en : d.name}</button> },
         { key: "active", label: t("common.status"), sort: "active", render: (d) => <Badge tone={d.is_active ? "green" : "gray"}>{d.is_active ? t("common.active") : t("common.inactive")}</Badge> },
@@ -162,7 +162,7 @@ export function Rounds() {
   };
   return (
     <>
-      <PageHeader title={t("setup.rounds")} actions={<Button onClick={() => setF({ is_active: true, skillsText: "" })} icon={<Plus size={20} aria-hidden="true" />}>{t("common.add")}</Button>} />
+      <PageHeader title={t("setup.rounds")} actions={<Button data-shortcut="new" onClick={() => setF({ is_active: true, skillsText: "" })} icon={<Plus size={20} aria-hidden="true" />}>{t("common.add")}</Button>} />
       <DataTable list={list} rowKey={(r) => r.id} columns={[
         { key: "name", label: t("common.name"), sort: "name", render: (r) => <button type="button" className="font-semibold text-primary-700" onClick={() => setF({ ...r, skillsText: r.skills.join("\n") })}>{en && r.name_en ? r.name_en : r.name}</button> },
         { key: "skills", label: t("setup.skills"), render: (r) => <span className="text-sm">{r.skills.join(" · ")}</span> },
@@ -315,7 +315,7 @@ export function Staff() {
   const roles = ["Recruiter", "RecruitmentAdmin", "Administrator"].map((r) => ({ value: r, label: t(`role.${r}`) }));
   return (
     <>
-      <PageHeader title={t("setup.staff")} actions={<Button onClick={() => setF({ role: "Recruiter", is_enabled: true })} icon={<Plus size={20} aria-hidden="true" />}>{t("common.add")}</Button>} />
+      <PageHeader title={t("setup.staff")} actions={<Button data-shortcut="new" onClick={() => setF({ role: "Recruiter", is_enabled: true })} icon={<Plus size={20} aria-hidden="true" />}>{t("common.add")}</Button>} />
       <DataTable list={list} rowKey={(u) => u.id}
         filters={[
           { key: "role", label: t("setup.role"), options: roles },

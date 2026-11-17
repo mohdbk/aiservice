@@ -59,5 +59,5 @@ public static class CalendarInvite
         return b.ToString();
     }
 
-    static string Escape(string s) => s.Replace("\\", "\\\\").Replace(";", "\;").Replace(",", "\\,").Replace("\r", "").Replace("\n", "\\n");
+    static string Escape(string s) => s.Replace("\\", "\\\\").Replace(";", "\\;").Replace(",", "\\,").Replace("\r", "").Replace("\n", "\\n");
 }

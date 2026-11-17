@@ -9,6 +9,7 @@ import { api, useAuth, useLang } from "../core";
 const AgentChat = lazy(() => import("../agent/AgentChat").then((m) => ({ default: m.AgentChat })));
 import { ErrorBoundary } from "./ErrorBoundary";
 import { CommandPalette } from "./CommandPalette";
+import { Shortcuts } from "./Shortcuts";
 import { LangFlag } from "./flags";
 
 type Item = { to: string; label: string; icon: ReactNode; admin?: boolean; sys?: boolean };
@@ -268,6 +269,7 @@ export function Shell({ children }: { children: ReactNode }) {
         </div>
       </header>
       {!/\/assistant$/.test(loc.pathname) && <AssistantPanel />}
+      <Shortcuts />
       <div className="flex">
         <aside className={`sticky top-20 hidden h-[calc(100vh-5rem)] flex-none flex-col border-e border-aeblack-100 bg-white transition-[width] duration-200 lg:flex ${collapsed ? "w-[4.5rem]" : "w-64"}`}>
           <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden"><NavList collapsed={collapsed} /></div>

@@ -149,6 +149,7 @@ export function AgentChat({ panel = false, onClose }: { panel?: boolean; onClose
   const [params, setParams] = useSearchParams();
   const [sharedBy, setSharedBy] = useState("");
   const [history, setHistory] = useState(false);
+  const route = useLocation();
   const suggestions = useAsync(() => api<Suggestion[]>("/agent/suggestions").catch(() => [] as Suggestion[]), []);
   // The conversation is also kept on the server (after each reply), so it follows the person to other devices and can be shared.
   const title = state.turns.find((x) => x.role === "user" && !x.hidden)?.text.slice(0, 120) || "";
@@ -319,6 +320,7 @@ export function AgentChat({ panel = false, onClose }: { panel?: boolean; onClose
     }
   };
 
+  const here = pageChips(route.pathname, t);
   const examples = ((lang === "en" ? info.data?.examples_en : info.data?.examples_ar) || t("asst.examples_default")).split("\n").map((x) => x.trim()).filter(Boolean).slice(0, 6);
   if (info.data && !info.data.is_enabled) return <Note tone="warning">{t("error.assistant_off")}</Note>;
   // An assistant turn shows once something arrives (a step, text or a card); until then the working line stands in for it.
@@ -377,6 +379,12 @@ export function AgentChat({ panel = false, onClose }: { panel?: boolean; onClose
                       </button>
                     </li>
                   ))}</ul>
+                </section>
+              )}
+              {here.length > 0 && (
+                <section aria-labelledby="asst-here">
+                  <h2 id="asst-here" className="mb-2 text-sm font-semibold text-aeblack-700">{t("asst.here")}</h2>
+                  <Chips items={here} onPick={(x) => ask(x)} />
                 </section>
               )}
               {examples.length > 0 && (
@@ -477,6 +485,24 @@ function IconButton({ label, onClick, disabled, children }: { label: string; onC
 }
 
 /** Choice chips that wrap from the reading start, all the same height. Each chip keeps the page's direction; only its text follows its own language. */
+/** Questions that fit the page open behind the assistant, so it can be asked about "this" record in one tap. */
+function pageChips(path: string, t: (k: string) => string): string[] {
+  const p = path.replace(/^\/(ar|en)/, "");
+  const keys =
+    /^\/applicants\/\d+/.test(p) ? ["applicant_summary", "applicant_questions", "applicant_compare"]
+    : /^\/applicants/.test(p) ? ["applicants_best", "applicants_waiting"]
+    : /^\/jobs\/\d+/.test(p) ? ["job_pipeline", "job_shortlist", "job_english"]
+    : /^\/jobs/.test(p) ? ["jobs_attention"]
+    : /^\/interviews\/\d+/.test(p) ? ["interview_guide", "interview_feedback"]
+    : /^\/interviews/.test(p) ? ["interviews_feedback_due", "interviews_week"]
+    : /^\/tests\/\d+/.test(p) ? ["test_results", "test_hard"]
+    : /^\/marking/.test(p) ? ["marking_suggest"]
+    : /^\/offers/.test(p) ? ["offers_waiting"]
+    : p === "/" || p === "" ? ["dash_today", "dash_week"]
+    : [];
+  return keys.map((k) => t(`asst.here.${k}`));
+}
+
 function Chips({ items, onPick, arrow = false }: { items: string[]; onPick: (x: string) => void; arrow?: boolean }) {
   return (
     <ul className="flex flex-wrap justify-start gap-2">

@@ -40,7 +40,7 @@ export default function Screening() {
   const hasOptions = form && (form.answer_type === "SingleChoice" || form.answer_type === "MultipleChoice");
   return (
     <>
-      <PageHeader title={t("sq.title")} actions={<Button onClick={() => open()} icon={<Plus size={20} aria-hidden="true" />}>{t("sq.new")}</Button>} />
+      <PageHeader title={t("sq.title")} actions={<Button data-shortcut="new" onClick={() => open()} icon={<Plus size={20} aria-hidden="true" />}>{t("sq.new")}</Button>} />
       <DataTable list={list} rowKey={(x) => x.id} emptyHint={t("empty.screening")} emptyAction={<Button onClick={() => open()} icon={<Plus size={20} aria-hidden="true" />}>{t("sq.new")}</Button>}
         filters={[
           { key: "type", label: t("sq.answer_type"), options: opts(t, "at.", TYPES) },

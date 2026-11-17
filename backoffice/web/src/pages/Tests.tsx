@@ -32,7 +32,7 @@ export default function Tests() {
           <ActionMenu label={t("pers.ready_made")} icon={<Brain size={20} aria-hidden="true" />}
             items={(templates.data || []).map((tp) => ({ label: lang === "en" ? tp.title_en : tp.title, onClick: () => addTemplate(tp), disabled: adding.busy }))} />
         )}
-        <Button onClick={() => go("/tests/new")} icon={<Plus size={20} aria-hidden="true" />}>{t("test.new")}</Button>
+        <Button data-shortcut="new" onClick={() => go("/tests/new")} icon={<Plus size={20} aria-hidden="true" />}>{t("test.new")}</Button>
       </>} />
       {adding.error && <div className="mb-4"><ErrorState error={adding.error} /></div>}
       <DataTable list={list} rowKey={(x) => x.id} emptyHint={t("empty.tests")} emptyAction={<Button onClick={() => go("/tests/new")} icon={<Plus size={20} aria-hidden="true" />}>{t("test.new")}</Button>}

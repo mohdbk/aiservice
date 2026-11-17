@@ -648,7 +648,7 @@ public class CalendarInviteTests
         Assert.EndsWith("END:VCALENDAR\r\n", ics);
         Assert.Contains("DTSTART:20261120T050000Z\r\n", ics);
         Assert.Contains("DTEND:20261120T054500Z\r\n", ics);
-        Assert.Contains("LOCATION:Microsoft Teams\; Room 4\r\n", ics);
+        Assert.Contains("LOCATION:Microsoft Teams\\; Room 4\r\n", ics);
         Assert.Contains("DESCRIPTION:Line one\\nLine two\r\n", ics);
         // Every physical line is at most 75 bytes; continuation lines start with a space.
         foreach (var line in ics.Split("\r\n")) Assert.True(System.Text.Encoding.UTF8.GetByteCount(line) <= 75, line);
