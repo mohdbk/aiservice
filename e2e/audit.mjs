@@ -238,6 +238,27 @@ for (const [view, opts] of Object.entries(VIEWS)) {
       await p.evaluate(() => window.scrollBy(0, -120));
     });
   }
+  // The newest screens: the pipeline board, rows picked for bulk actions, the notifications bell, the hiring report,
+  // model use and cost, possible duplicates, and dark mode.
+  for (const lang of ["en", "ar"]) {
+    await snap(`${lang}_9_board`, `${BASE}/${lang}/applicants?view=board&size=100`);
+    await snap(`${lang}_10_bulk`, `${BASE}/${lang}/applicants`, async (p) => {
+      for (const box of (await p.locator("table .mh-check").all()).slice(1, 4)) await box.check();
+    });
+    await snap(`${lang}_11_bell`, `${BASE}/${lang}/`, async (p) => { await p.locator('header button[aria-label^="Notifications"], header button[aria-label^="الإشعارات"]').first().click(); });
+    await snap(`${lang}_12_report`, `${BASE}/${lang}/reports`, async (p) => { await p.locator("h2", { hasText: lang === "ar" ? "الاختبارات" : "Tests" }).first().scrollIntoViewIfNeeded().catch(() => {}); });
+    await snap(`${lang}_13_model_use`, `${BASE}/${lang}/setup/assistant-usage`);
+    await snap(`${lang}_14_dark`, `${BASE}/${lang}/`, async (p) => {
+      await p.evaluate(() => localStorage.setItem("mh-theme", "dark"));
+      await p.reload({ waitUntil: "networkidle" });
+    });
+    await snap(`${lang}_15_dark_applicants`, `${BASE}/${lang}/applicants`);
+    await snap(`${lang}_16_light_again`, `${BASE}/${lang}/candidates`, async (p) => {
+      await p.evaluate(() => localStorage.removeItem("mh-theme"));
+      await p.reload({ waitUntil: "networkidle" });
+      await p.getByRole("button", { name: lang === "ar" ? "حسابات مكررة محتملة" : "Possible Duplicates" }).click();
+    });
+  }
   // Phone, at the device's own resolution (three times).
   const phone = await browser.newContext({ ...devices["iPhone 13"], deviceScaleFactor: 3 });
   await phone.request.post(`${BASE}/api/backoffice/sign-in`, { headers: { "X-Backoffice": "1" }, data: { email: "admin@moet.test", password: "Admin-Password-123" } });

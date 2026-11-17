@@ -1673,5 +1673,12 @@
  "dup.merged": "تم الدمج. نقل {n} طلبات.",
  "error.merge_same_job": "تقدم الحسابان إلى الوظيفة نفسها، لذا لا يمكن دمجهما.",
  "error.merge_same_account": "اختر حسابين مختلفين.",
- "error.merge_anonymised": "لا يمكن دمج حساب تمت إزالة بياناته."
+ "error.merge_anonymised": "لا يمكن دمج حساب تمت إزالة بياناته.",
+ "rep.legend_passed": "ناجح",
+ "rep.legend_failed": "لم ينجح",
+ "rep.legend_open": "لم يكمل",
+ "rep.time_applied": "التقديم",
+ "rep.hire_rate": "نسبة التعيين",
+ "theme.dark": "الوضع الداكن",
+ "theme.light": "الوضع الفاتح"
 }

@@ -10,6 +10,9 @@ import App from "./App";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { AuthProvider, ToastProvider } from "./core";
 import "./styles.css";
+import { applyTheme } from "./theme";
+
+applyTheme();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

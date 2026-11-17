@@ -405,5 +405,11 @@
  "error.no_interview": "There is no upcoming interview to change.",
  "error.reschedule_too_late": "The interview is less than a day away, so the time cannot be changed online.",
  "error.signature_required": "Type your full name to sign.",
- "apply.phone_code": "Country Code"
+ "apply.phone_code": "Country Code",
+ "asm.done_sections": "Sections Completed",
+ "asm.next_title": "What Happens Next",
+ "asm.next_1": "Your answers are kept with your application.",
+ "asm.next_2": "You can follow your application's progress at any time.",
+ "asm.next_3": "If you move forward, we will invite you to the next step by email.",
+ "asm.view_applications": "View My Applications"
 }

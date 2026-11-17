@@ -1,13 +1,14 @@
 import { Dialog, Menu } from "@base-ui/react";
 import {
   Briefcase, CalendarCheck, CaretDown, ChatCircleDots, ClipboardText, Exam, FileText, Gear, Handshake, Key, List, ListChecks,
-  Cube, EnvelopeSimple, HardDrives, Robot, Scroll, SignOut, SquaresFour, Target, Tray, Translate, TreeStructure, UserCircle, Users, UsersThree, X, Brain, ChartBar, ClockCounterClockwise, Pulse, ChartLine, ShieldCheck, ChatText, UsersFour, ArrowsLeftRight, MapPin, Stamp, DeviceMobile, GlobeHemisphereEast, IdentificationCard, CaretUpDown, SidebarSimple } from "@phosphor-icons/react";
+  Cube, EnvelopeSimple, HardDrives, Robot, Scroll, SignOut, SquaresFour, Target, Tray, Translate, TreeStructure, UserCircle, Users, UsersThree, X, Brain, ChartBar, ClockCounterClockwise, Pulse, ChartLine, ShieldCheck, ChatText, UsersFour, ArrowsLeftRight, MapPin, Stamp, DeviceMobile, GlobeHemisphereEast, IdentificationCard, CaretUpDown, SidebarSimple, Moon, Sun } from "@phosphor-icons/react";
 import { lazy, ReactNode, Suspense, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { api, useAuth, useLang } from "../core";
 // The assistant's code loads the first time the panel opens.
 const AgentChat = lazy(() => import("../agent/AgentChat").then((m) => ({ default: m.AgentChat })));
 import { ErrorBoundary } from "./ErrorBoundary";
+import { currentTheme, setTheme } from "../theme";
 import { CommandPalette } from "./CommandPalette";
 import { Shortcuts } from "./Shortcuts";
 import { NotificationBell } from "./NotificationBell";
@@ -195,6 +196,10 @@ function UserMenu({ placement = "header", collapsed = false }: { placement?: "he
             <Menu.Separator className="my-1 h-px bg-aeblack-100" />
             <Menu.Item className="mh-item" onClick={() => nav(to("/password"))}><Key size={20} aria-hidden="true" />{t("auth.change_password")}</Menu.Item>
             <Menu.Item className="mh-item" onClick={() => nav(to("/two-step"))}><DeviceMobile size={20} aria-hidden="true" />{t("twostep.title")}</Menu.Item>
+            <Menu.Item className="mh-item" onClick={() => setTheme(currentTheme() === "dark" ? "light" : "dark")}>
+              {currentTheme() === "dark" ? <Sun size={20} aria-hidden="true" /> : <Moon size={20} aria-hidden="true" />}{currentTheme() === "dark" ? t("theme.light") : t("theme.dark")}
+            </Menu.Item>
+            <Menu.Separator className="my-1 h-px bg-aeblack-100" />
             <Menu.Item className="mh-item" onClick={signOut}><SignOut size={20} aria-hidden="true" />{t("auth.sign_out")}</Menu.Item>
           </Menu.Popup>
         </Menu.Positioner>

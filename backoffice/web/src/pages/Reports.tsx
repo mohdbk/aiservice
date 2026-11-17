@@ -60,6 +60,62 @@ export function Weeks({ weeks }: { weeks: Report["weeks"] }) {
   );
 }
 
+/** Each test as one stacked bar: passed, did not pass and not completed, with a legend and the pass rate written out. */
+function TestBars({ tests }: { tests: Report["tests"] }) {
+  const { t } = useLang();
+  const seg = (n: number, of: number) => `${of > 0 ? (n / of) * 100 : 0}%`;
+  return (
+    <div className="mb-5">
+      <ul className="space-y-3">
+        {tests.map((x) => {
+          const open = Math.max(0, x.invited - x.passed - x.failed);
+          return (
+            <li key={x.assessment_id} className="text-sm">
+              <div className="mb-1 flex justify-between gap-3"><span className="truncate text-aeblack-800">{x.title}</span>
+                <span className="shrink-0 tabular-nums text-aeblack-600" dir="ltr">{x.passed + x.failed > 0 ? `${pct(x.passed, x.passed + x.failed)}%` : "-"}</span></div>
+              <div className="flex h-4 gap-[2px] overflow-hidden rounded-md bg-aeblack-50" dir="ltr" title={`${t("rep.legend_passed")} ${x.passed}, ${t("rep.legend_failed")} ${x.failed}, ${t("rep.legend_open")} ${open}`}>
+                {x.passed > 0 && <span className="bg-aegreen-500" style={{ width: seg(x.passed, x.invited) }} />}
+                {x.failed > 0 && <span className="bg-aered-400" style={{ width: seg(x.failed, x.invited) }} />}
+                {open > 0 && <span className="bg-aeblack-200" style={{ width: seg(open, x.invited) }} />}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <ul className="mt-3 flex flex-wrap gap-4 text-xs text-aeblack-700">
+        <li className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-aegreen-500" aria-hidden="true" />{t("rep.legend_passed")}</li>
+        <li className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-aered-400" aria-hidden="true" />{t("rep.legend_failed")}</li>
+        <li className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-aeblack-200" aria-hidden="true" />{t("rep.legend_open")}</li>
+      </ul>
+    </div>
+  );
+}
+
+/** Average days from applying to interview, offer and hire, placed along one line to scale. */
+function TimeLine({ time }: { time: Report["time"] }) {
+  const { t } = useLang();
+  const steps = ([["to_interview_days", "rep.time_to_interview"], ["to_offer_days", "rep.time_to_offer"], ["to_hire_days", "rep.time_to_hire"]] as const)
+    .filter(([k]) => time[k] != null).map(([k, l]) => ({ label: t(l), days: time[k] as number }));
+  if (steps.length === 0) return null;
+  const max = Math.max(1, ...steps.map((s) => s.days));
+  return (
+    <div className="mb-4 px-2 pt-6 pb-10" role="img" aria-label={steps.map((s) => `${s.label}: ${s.days}`).join(", ")}>
+      <div className="relative h-1 rounded-full bg-primary-100">
+        <span className="absolute -top-1.5 start-0 size-4 rounded-full border-2 border-white bg-primary-700 shadow" />
+        <span className="absolute top-3 start-0 -translate-x-1/2 text-[11px] text-aeblack-500 rtl:translate-x-1/2">{t("rep.time_applied")}</span>
+        {steps.map((s) => (
+          <span key={s.label} className="absolute -top-1.5" style={{ insetInlineStart: `calc(${(s.days / max) * 100}% - 8px)` }}>
+            <span className="block size-4 rounded-full border-2 border-white bg-primary-500 shadow" />
+            <span className="absolute top-5 start-1/2 w-24 -translate-x-1/2 text-center text-[11px] leading-tight text-aeblack-600 rtl:translate-x-1/2">
+              <strong className="block tabular-nums text-aeblack-900">{Math.round(s.days)}</strong>{s.label}
+            </span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Reports() {
   const { t, lang } = useLang();
   usePageTitle(t("nav.reports"));
@@ -110,6 +166,7 @@ export default function Reports() {
                   <Bars rows={Object.entries(r.drop_off).map(([k, v]) => ({ label: t(`rep.drop.${k}`), value: v }))} />
                 </Card>
                 <Card title={t("rep.time")}>
+                  <TimeLine time={r.time} />
                   <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     {([["to_interview_days", "rep.time_to_interview"], ["to_offer_days", "rep.time_to_offer"], ["to_hire_days", "rep.time_to_hire"]] as const).map(([k, l]) => (
                       <div key={k} className="rounded-xl border border-aeblack-100 p-3">
@@ -122,7 +179,8 @@ export default function Reports() {
                 </Card>
               </div>
               <Card title={t("rep.tests")}>
-                {r.tests.length === 0 ? <Empty /> : (
+                {r.tests.length === 0 ? <Empty /> : (<>
+                  <TestBars tests={r.tests} />
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[36rem] text-sm">
                       <thead><tr className="border-b border-aeblack-100 text-start text-aeblack-500">
@@ -141,13 +199,13 @@ export default function Reports() {
                       </tbody>
                     </table>
                   </div>
-                )}
+                </>)}
               </Card>
               <Card title={t("rep.departments")}>
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[32rem] text-sm">
                     <thead><tr className="border-b border-aeblack-100 text-aeblack-500">
-                      {["jobs.department", "rep.stage.applied", "rep.stage.interviewed", "rep.stage.offered", "rep.stage.hired"].map((k) => <th key={k} className="py-2 text-start font-semibold">{t(k)}</th>)}
+                      {["jobs.department", "rep.stage.applied", "rep.stage.interviewed", "rep.stage.offered", "rep.stage.hired", "rep.hire_rate"].map((k) => <th key={k} className="py-2 text-start font-semibold">{t(k)}</th>)}
                     </tr></thead>
                     <tbody>
                       {r.departments.map((d) => (
@@ -155,6 +213,9 @@ export default function Reports() {
                           <td className="py-2">{d.name || t("rep.no_department")}</td>
                           <td className="tabular-nums">{d.applied}</td><td className="tabular-nums">{d.interviewed}</td>
                           <td className="tabular-nums">{d.offered}</td><td className="tabular-nums">{d.hired}</td>
+                          <td className="w-40"><span className="flex items-center gap-2"><span className="h-2 flex-1 rounded-full bg-aeblack-50" dir="ltr">
+                            <span className="block h-full rounded-full bg-primary-500" style={{ width: `${pct(d.hired, d.applied)}%` }} /></span>
+                            <span className="w-9 text-end text-xs tabular-nums" dir="ltr">{pct(d.hired, d.applied)}%</span></span></td>
                         </tr>
                       ))}
                     </tbody>

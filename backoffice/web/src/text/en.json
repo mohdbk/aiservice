@@ -1673,5 +1673,12 @@
  "dup.merged": "Merged. {n} applications moved.",
  "error.merge_same_job": "Both accounts applied to the same job, so they cannot be merged.",
  "error.merge_same_account": "Choose two different accounts.",
- "error.merge_anonymised": "An anonymised account cannot be merged."
+ "error.merge_anonymised": "An anonymised account cannot be merged.",
+ "rep.legend_passed": "Passed",
+ "rep.legend_failed": "Did Not Pass",
+ "rep.legend_open": "Not Completed",
+ "rep.time_applied": "Applied",
+ "rep.hire_rate": "Hire Rate",
+ "theme.dark": "Dark Mode",
+ "theme.light": "Light Mode"
 }

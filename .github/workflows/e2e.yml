@@ -65,6 +65,10 @@ jobs:
       - name: Candidate journey in the careers portal
         run: |
           cd e2e/run && cp ../journey.mjs . && BASE_URL=http://127.0.0.1:4173 PORTAL_URL=http://127.0.0.1:8080 node journey.mjs
+      - name: Lighthouse (accessibility and best practices floors)
+        run: |
+          cd e2e/run && cp ../lighthouse.mjs . && export CHROME_PATH=$(node -e "console.log(require('playwright').chromium.executablePath())")
+          PORTAL_URL=http://127.0.0.1:8080 BASE_URL=http://127.0.0.1:4173 node lighthouse.mjs
       - name: Logs
         if: always()
         run: |
@@ -73,4 +77,6 @@ jobs:
         if: always()
         with:
           name: e2e-screenshots
-          path: e2e/run/shots/
+          path: |
+            e2e/run/shots/
+            e2e/run/lighthouse/

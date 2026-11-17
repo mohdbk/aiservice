@@ -1,4 +1,4 @@
-import { CalendarBlank, CheckCircle, Clock, ListNumbers, Play, Repeat } from "@phosphor-icons/react";
+import { CalendarBlank, Check, CheckCircle, Clock, Files, ListNumbers, Play, Repeat } from "@phosphor-icons/react";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, ApiError, AssessmentSummary } from "../api";
@@ -65,16 +65,41 @@ export default function AssessmentIntro() {
       </section>
 
       {done ? (
-        <section className="mt-6 space-y-4">
-          <Alert tone="success" title={t("asm.done_title")}>{t("asm.done_body")}</Alert>
-          {a.score !== null && (
-            <div className="mc-surface flex items-center gap-4 rounded-2xl border border-aeblack-100 bg-white p-6">
-              <CheckCircle size={48} weight="duotone" className="text-aegreen-600" aria-hidden="true" />
-              <div><p className="text-sm text-aeblack-600">{t("asm.score")}</p><p className="font-heading text-3xl font-bold">{a.score}%</p>
-                {a.result && <p className="font-semibold">{t(a.result === "Pass" ? "asm.result_pass" : "asm.result_fail")}</p>}</div>
+        <section className="mc-surface mt-6 overflow-hidden rounded-2xl border border-aeblack-100 bg-white" aria-labelledby="result-title">
+          {/* The results screen: a clear confirmation, the score where the Ministry shows it, and what happens next. */}
+          <div className="mc-hero flex flex-col items-center gap-3 px-6 py-8 text-center">
+            {a.score !== null ? <ScoreRing value={a.score} label={t("asm.score")} /> : (
+              <span className="flex h-20 w-20 items-center justify-center rounded-full bg-aegreen-100 text-aegreen-700" aria-hidden="true"><CheckCircle size={52} weight="duotone" /></span>
+            )}
+            <h2 id="result-title" className="font-heading text-2xl font-bold text-aeblack-950">{t("asm.done_title")}</h2>
+            {a.result && <span className={`aegov-badge ${a.result === "Pass" ? "badge-success" : "badge-info"}`}>{t(a.result === "Pass" ? "asm.result_pass" : "asm.result_fail")}</span>}
+            <p className="max-w-lg text-aeblack-700">{t("asm.done_body")}</p>
+          </div>
+          <div className="grid gap-6 border-t border-aeblack-100 p-6 md:grid-cols-2">
+            <div>
+              <h3 className="mb-3 font-heading text-base font-semibold">{t("asm.done_sections")}</h3>
+              <ul className="space-y-2">
+                {a.sections.map((sec, i) => (
+                  <li key={i} className="flex items-center gap-3 text-sm">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-600 text-white" aria-hidden="true"><Check size={14} weight="bold" /></span>
+                    <span lang={chosen} dir={contentDir}>{sec.title}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-          )}
-          <Link to={path("/assessments")} className="aegov-btn btn-outline">{t("asm.back")}</Link>
+            <div>
+              <h3 className="mb-3 font-heading text-base font-semibold">{t("asm.next_title")}</h3>
+              <ol className="space-y-2 text-sm text-aeblack-700">
+                {["asm.next_1", "asm.next_2", "asm.next_3"].map((k, i) => (
+                  <li key={k} className="flex gap-3"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-50 text-xs font-bold text-primary-700">{i + 1}</span>{t(k)}</li>
+                ))}
+              </ol>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-3 border-t border-aeblack-100 p-6">
+            <Link to={path("/applications")} className="aegov-btn"><Files size={20} aria-hidden="true" />{t("asm.view_applications")}</Link>
+            <Link to={path("/assessments")} className="aegov-btn btn-outline">{t("asm.back")}</Link>
+          </div>
         </section>
       ) : (
         <>
@@ -140,5 +165,24 @@ export default function AssessmentIntro() {
         </>
       )}
     </div>
+  );
+}
+
+/** The score as a ring, with the number in the middle. */
+function ScoreRing({ value, label }: { value: number; label: string }) {
+  const r = 42;
+  const c = 2 * Math.PI * r;
+  const v = Math.max(0, Math.min(100, value));
+  return (
+    <figure className="relative h-28 w-28" aria-label={`${label}: ${v}%`} role="img">
+      <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" aria-hidden="true">
+        <circle cx="50" cy="50" r={r} fill="none" strokeWidth="9" className="stroke-primary-100" />
+        <circle cx="50" cy="50" r={r} fill="none" strokeWidth="9" strokeLinecap="round" className="stroke-primary-600" strokeDasharray={c} strokeDashoffset={c * (1 - v / 100)} />
+      </svg>
+      <figcaption className="absolute inset-0 flex flex-col items-center justify-center" aria-hidden="true">
+        <span className="font-heading text-2xl font-bold text-aeblack-950" dir="ltr">{v}%</span>
+        <span className="text-[11px] text-aeblack-600">{label}</span>
+      </figcaption>
+    </figure>
   );
 }

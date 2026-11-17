@@ -105,12 +105,12 @@ html[lang|="ar"] [lang|="en"] { font-family: "Roboto Variable", "Roboto", "Noto 
 .mh-table a { color: var(--color-primary-700); font-weight: 600; }
 
 /* Base UI popups */
-.mh-popup { background: #fff; border: 1px solid var(--color-aeblack-100); border-radius: .75rem; box-shadow: 0 12px 32px rgb(0 0 0 / .12); padding: .25rem; min-width: 16rem; max-width: calc(100vw - 2rem); outline: none; z-index: 50; }
+.mh-popup { background: var(--mh-surface, #fff); border: 1px solid var(--color-aeblack-100); border-radius: .75rem; box-shadow: 0 12px 32px rgb(0 0 0 / .12); padding: .25rem; min-width: 16rem; max-width: calc(100vw - 2rem); outline: none; z-index: 50; }
 .mh-item { display: flex; align-items: center; gap: .5rem; padding: .625rem .75rem; border-radius: .5rem; cursor: pointer; font-size: .875rem; color: var(--color-aeblack-800); outline: none; }
 .mh-item[data-highlighted] { background: var(--color-primary-50); color: var(--color-primary-800); }
 .mh-backdrop { position: fixed; inset: 0; background: rgb(0 0 0 / .4); z-index: 61; }
-.mh-dialog { position: fixed; z-index: 62; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(40rem, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); overflow: auto; background: #fff; border-radius: 1rem; padding: 1.5rem; box-shadow: 0 24px 64px rgb(0 0 0 / .2); }
-.mh-drawer { position: fixed; z-index: 62; top: 0; bottom: 0; inset-inline-start: 0; width: min(18rem, 85vw); background: #fff; overflow: auto; box-shadow: 0 0 40px rgb(0 0 0 / .2); }
+.mh-dialog { position: fixed; z-index: 62; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(40rem, calc(100vw - 2rem)); max-height: calc(100vh - 2rem); overflow: auto; background: var(--mh-surface, #fff); border-radius: 1rem; padding: 1.5rem; box-shadow: 0 24px 64px rgb(0 0 0 / .2); }
+.mh-drawer { position: fixed; z-index: 62; top: 0; bottom: 0; inset-inline-start: 0; width: min(18rem, 85vw); background: var(--mh-surface, #fff); overflow: auto; box-shadow: 0 0 40px rgb(0 0 0 / .2); }
 
 /* Language tabs (Base UI Tabs) */
 /* The baseline is an inset shadow (not a border the tabs overlap with a negative margin): with overflow-x set, the overlap
@@ -154,7 +154,7 @@ html[lang|="ar"] [lang|="en"] { font-family: "Roboto Variable", "Roboto", "Noto 
 [dir="rtl"] .mh-switch[data-checked] .mh-switch-thumb { transform: translateX(-1.25rem); }
 
 /* Checkbox (Base UI Checkbox) */
-.mh-check { display: inline-flex; align-items: center; justify-content: center; width: 1.25rem; height: 1.25rem; border-radius: .25rem; border: 2px solid var(--color-aeblack-300); background: #fff; flex: none; }
+.mh-check { display: inline-flex; align-items: center; justify-content: center; width: 1.25rem; height: 1.25rem; border-radius: .25rem; border: 2px solid var(--color-aeblack-300); background: var(--mh-surface, #fff); flex: none; }
 .mh-check[data-checked] { background: var(--color-primary-600); border-color: var(--color-primary-600); color: #fff; }
 
 /* Rich text editor */
@@ -163,7 +163,7 @@ html[lang|="ar"] [lang|="en"] { font-family: "Roboto Variable", "Roboto", "Noto 
 
 /* Chat */
 .mh-chat-user { background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-700)); color: #fff; box-shadow: 0 2px 8px rgb(146 114 42 / .18); }
-.mh-chat-bot { background: #fff; border: 1px solid var(--color-aeblack-100); box-shadow: 0 1px 2px rgb(0 0 0 / .03); }
+.mh-chat-bot { background: var(--mh-surface, #fff); border: 1px solid var(--color-aeblack-100); box-shadow: 0 1px 2px rgb(0 0 0 / .03); }
 
 /* ---- Recruitment assistant ---- */
 /* The assistant's mark: a gold medallion; while it works, a soft ring turns around it. */
@@ -186,12 +186,12 @@ html[lang|="ar"] [lang|="en"] { font-family: "Roboto Variable", "Roboto", "Noto 
     repeating-linear-gradient(45deg, rgb(182 138 53 / .05) 0 1px, transparent 1px 14px),
     repeating-linear-gradient(-45deg, rgb(182 138 53 / .05) 0 1px, transparent 1px 14px),
     linear-gradient(180deg, #fffdf8, #fbf6ea); }
-.mh-asst-card { min-height: 3.25rem; padding: .6rem .75rem; border-radius: .9rem; background: #fff; border: 1px solid var(--color-aeblack-100); transition: border-color .15s, box-shadow .15s, transform .15s; }
+.mh-asst-card { min-height: 3.25rem; padding: .6rem .75rem; border-radius: .9rem; background: var(--mh-surface, #fff); border: 1px solid var(--color-aeblack-100); transition: border-color .15s, box-shadow .15s, transform .15s; }
 .mh-asst-card:hover { border-color: var(--color-primary-300); box-shadow: 0 4px 14px rgb(146 114 42 / .12); transform: translateY(-1px); }
 /* One line of arrow and text; long suggestions wrap inside the chip, the arrow stays beside the first line. */
 .mh-asst-chip { display: inline-flex !important; flex-direction: row !important; flex-wrap: nowrap !important; align-items: flex-start; gap: .4rem; max-width: 100%; text-align: start;
   min-height: 2.25rem; padding: .45rem .85rem; border-radius: 1.125rem; font-size: .8125rem; font-weight: 600; line-height: 1.35;
-  color: var(--color-primary-800); background: #fff; border: 1px solid var(--color-primary-200); transition: background .15s, border-color .15s; }
+  color: var(--color-primary-800); background: var(--mh-surface, #fff); border: 1px solid var(--color-primary-200); transition: background .15s, border-color .15s; }
 .mh-asst-chip:hover { background: var(--color-primary-50); border-color: var(--color-primary-400); }
 .mh-asst-steps { display: flex; flex-direction: column; gap: .35rem; padding-inline-start: .75rem; border-inline-start: 2px solid var(--color-primary-100); margin-inline-start: .5rem; }
 /* Text that shimmers gently while something is in progress. */
@@ -199,7 +199,7 @@ html[lang|="ar"] [lang|="en"] { font-family: "Roboto Variable", "Roboto", "Noto 
   background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; animation: mh-shimmer 1.8s linear infinite; }
 @keyframes mh-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 /* The composer: one rounded frame holding the attach button, the message box and the send button, aligned on one line. */
-.mh-composer { border-radius: 1.25rem; background: #fff; border: 1px solid var(--color-aeblack-200); box-shadow: 0 2px 10px rgb(0 0 0 / .04); transition: border-color .15s, box-shadow .15s; }
+.mh-composer { border-radius: 1.25rem; background: var(--mh-surface, #fff); border: 1px solid var(--color-aeblack-200); box-shadow: 0 2px 10px rgb(0 0 0 / .04); transition: border-color .15s, box-shadow .15s; }
 .mh-composer:focus-within { border-color: var(--color-primary-500); box-shadow: 0 0 0 3px rgb(182 138 53 / .18); }
 .mh-composer-input { flex: 1; min-width: 0; min-height: 2.5rem; max-height: 10.5rem; resize: none; border: 0 !important; outline: none !important; background: transparent !important; border-radius: 0;
   padding: .55rem .5rem; font-size: .9375rem; line-height: 1.4; box-shadow: none !important; }
@@ -270,3 +270,55 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { outlin
 html.mc-contrast input[type="checkbox"]:checked, html.mc-contrast input[type="radio"]:checked { background-color: #ffeb3b; border-color: #ffeb3b; }
 .mh-status-pick { border-radius: 999px; cursor: pointer; }
 .mh-status-pick:focus-visible { outline: 2px solid var(--color-primary-600); outline-offset: 2px; }
+
+/* Dark mode (chosen from the account menu, or the device's setting): darker surfaces, the grey scale turned round, and
+   tints of each colour mixed into the dark surface so text keeps its contrast. */
+html.mh-dark {
+  --mh-surface: #1a1f26;
+  --color-whitely-50: #11151a;
+  --color-whitely-100: #20262e;
+  --color-aeblack-50: #222830;
+  --color-aeblack-100: #2c333c;
+  --color-aeblack-200: #3b434e;
+  --color-aeblack-300: #555e6a;
+  --color-aeblack-400: #78818d;
+  --color-aeblack-500: #9ba3ae;
+  --color-aeblack-600: #b8bfc8;
+  --color-aeblack-700: #ced4db;
+  --color-aeblack-800: #e2e6eb;
+  --color-aeblack-900: #eef1f4;
+  --color-aeblack-950: #f7f9fb;
+  --color-primary-50: color-mix(in oklch, var(--color-primary-600) 14%, #1a1f26);
+  --color-primary-100: color-mix(in oklch, var(--color-primary-600) 24%, #1a1f26);
+  --color-primary-200: color-mix(in oklch, var(--color-primary-600) 40%, #1a1f26);
+  --color-primary-700: color-mix(in oklch, var(--color-primary-400) 80%, #ffffff);
+  --color-primary-800: color-mix(in oklch, var(--color-primary-300) 70%, #ffffff);
+  --color-primary-900: color-mix(in oklch, var(--color-primary-300) 50%, #ffffff);
+  --color-aegreen-50: color-mix(in oklch, var(--color-aegreen-600) 14%, #1a1f26);
+  --color-aegreen-100: color-mix(in oklch, var(--color-aegreen-600) 24%, #1a1f26);
+  --color-aegreen-200: color-mix(in oklch, var(--color-aegreen-600) 40%, #1a1f26);
+  --color-aegreen-700: color-mix(in oklch, var(--color-aegreen-400) 80%, #ffffff);
+  --color-aegreen-800: color-mix(in oklch, var(--color-aegreen-300) 70%, #ffffff);
+  --color-aegreen-900: color-mix(in oklch, var(--color-aegreen-300) 50%, #ffffff);
+  --color-aered-50: color-mix(in oklch, var(--color-aered-600) 14%, #1a1f26);
+  --color-aered-100: color-mix(in oklch, var(--color-aered-600) 24%, #1a1f26);
+  --color-aered-200: color-mix(in oklch, var(--color-aered-600) 40%, #1a1f26);
+  --color-aered-700: color-mix(in oklch, var(--color-aered-400) 80%, #ffffff);
+  --color-aered-800: color-mix(in oklch, var(--color-aered-300) 70%, #ffffff);
+  --color-aered-900: color-mix(in oklch, var(--color-aered-300) 50%, #ffffff);
+  --color-camel-50: color-mix(in oklch, var(--color-camel-600) 14%, #1a1f26);
+  --color-camel-100: color-mix(in oklch, var(--color-camel-600) 24%, #1a1f26);
+  --color-camel-200: color-mix(in oklch, var(--color-camel-600) 40%, #1a1f26);
+  --color-camel-700: color-mix(in oklch, var(--color-camel-400) 80%, #ffffff);
+  --color-camel-800: color-mix(in oklch, var(--color-camel-300) 70%, #ffffff);
+  --color-camel-900: color-mix(in oklch, var(--color-camel-300) 50%, #ffffff);
+}
+html.mh-dark body { background: var(--color-whitely-50); color: var(--color-aeblack-800); }
+html.mh-dark .bg-white { background-color: var(--mh-surface); }
+html.mh-dark .aegov-form-control .form-control-input, html.mh-dark select, html.mh-dark textarea, html.mh-dark input:not([type=checkbox]):not([type=radio]) {
+  background-color: var(--mh-surface); color: var(--color-aeblack-900); border-color: var(--color-aeblack-200);
+}
+html.mh-dark .aegov-btn.btn-outline { background-color: transparent; }
+/* The ministry logo stays on white, as the brand asks. */
+html.mh-dark .mh-logo { background: #fff; border-radius: .5rem; padding: .2rem .5rem; }
+html.mh-dark .mh-popup, html.mh-dark .mh-dialog { box-shadow: 0 16px 40px rgb(0 0 0 / .5); }
