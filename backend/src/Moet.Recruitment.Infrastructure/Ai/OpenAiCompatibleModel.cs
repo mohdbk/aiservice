@@ -25,16 +25,20 @@ public sealed partial class OpenAiCompatibleModel(HttpClient http, IConfiguratio
 
     public string ModelName => cfg["LLM_MODEL"] ?? "";
 
+    /// <summary>CV scoring can use a stronger model than the rest (LLM_SCORE_MODEL); reading CVs and drafts keep the main one.</summary>
+    public string ScoringModelName => cfg["LLM_SCORE_MODEL"] is { Length: > 0 } m ? m : ModelName;
+
     public async Task<JsonElement> CompleteJsonAsync(string system, string user, object schema, string schemaName, CancellationToken ct = default)
     {
-        var body = Body([new JsonObject { ["role"] = "system", ["content"] = system }, new JsonObject { ["role"] = "user", ["content"] = user }], 0.1);
+        var modelName = schemaName == "cv_score" ? ScoringModelName : ModelName;
+        var body = Body([new JsonObject { ["role"] = "system", ["content"] = system }, new JsonObject { ["role"] = "user", ["content"] = user }], 0.1, modelName);
         body["response_format"] = new JsonObject
         {
             ["type"] = "json_schema",
             ["json_schema"] = new JsonObject { ["name"] = schemaName, ["strict"] = true, ["schema"] = JsonSerializer.SerializeToNode(schema) },
         };
         var data = await PostAsync(body, ct);
-        await RecordAsync(data, schemaName);
+        await RecordAsync(data, schemaName, modelName);
         var content = data["choices"]?[0]?["message"]?["content"]?.GetValue<string>() ?? "";
         return ParseJson(content);
     }
@@ -65,7 +69,7 @@ public sealed partial class OpenAiCompatibleModel(HttpClient http, IConfiguratio
             body["tool_choice"] = "auto";
         }
         var data = await PostAsync(body, ct);
-        await RecordAsync(data, "chat");
+        await RecordAsync(data, "chat", ModelName);
         var msg = data["choices"]?[0]?["message"];
         var calls = (msg?["tool_calls"] as JsonArray ?? []).Select(c => new ToolCall(
             c?["id"]?.GetValue<string>() ?? Guid.NewGuid().ToString("N"),
@@ -76,12 +80,12 @@ public sealed partial class OpenAiCompatibleModel(HttpClient http, IConfiguratio
             usage?["prompt_tokens"]?.GetValue<int>() ?? 0, usage?["completion_tokens"]?.GetValue<int>() ?? 0);
     }
 
-    async Task RecordAsync(JsonNode data, string feature)
+    async Task RecordAsync(JsonNode data, string feature, string modelName)
     {
         if (usageLog == null) return;
         var usage = data["usage"];
         int Tokens(string k) { try { return usage?[k]?.GetValue<int>() ?? 0; } catch (Exception e) when (e is InvalidOperationException or FormatException) { return 0; } }
-        await usageLog.RecordAsync("api", feature, ModelName, Tokens("prompt_tokens"), Tokens("completion_tokens"));
+        await usageLog.RecordAsync("api", feature, modelName, Tokens("prompt_tokens"), Tokens("completion_tokens"));
     }
 
     /// <summary>
@@ -90,9 +94,9 @@ public sealed partial class OpenAiCompatibleModel(HttpClient http, IConfiguratio
     /// </summary>
     static readonly int MaxTokens = int.TryParse(Environment.GetEnvironmentVariable("LLM_MAX_TOKENS"), out var m) && m > 0 ? m : 8000;
 
-    JsonObject Body(JsonNode[] messages, double temperature)
+    JsonObject Body(JsonNode[] messages, double temperature, string? model = null)
     {
-        var body = new JsonObject { ["model"] = ModelName, ["messages"] = new JsonArray(messages), ["temperature"] = temperature, ["max_tokens"] = MaxTokens };
+        var body = new JsonObject { ["model"] = model ?? ModelName, ["messages"] = new JsonArray(messages), ["temperature"] = temperature, ["max_tokens"] = MaxTokens };
         if (IsOpenRouter)
         {
             body["provider"] = new JsonObject { ["require_parameters"] = true, ["data_collection"] = "deny" };

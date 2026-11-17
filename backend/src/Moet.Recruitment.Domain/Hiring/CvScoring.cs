@@ -11,10 +11,17 @@ public static partial class CvScoring
     [GeneratedRegex(@"[\w؀-ۿ]{3,}")] private static partial Regex NameTokenRe();
 
     const string SensitiveLabels =
-        @"nationality|citizenship|date of birth|d\.o\.b|dob|age|gender|sex|marital status|religion|passport(?: no\.?| number)?|emirates id|" +
-        "الجنسية|تاريخ الميلاد|العمر|الجنس|الحالة الاجتماعية|الديانة|رقم الجواز|رقم الهوية";
+        @"nationality|citizenship|date of birth|d\.o\.b|dob|birth ?date|place of birth|birth ?place|age|gender|sex|marital status|family status|" +
+        @"religion|sect|passport(?: no\.?| number)?|emirates id|visa(?: status)?|residency(?: status)?|dependents|number of children|children|spouse|" +
+        "الجنسية|تاريخ الميلاد|مكان الميلاد|العمر|الجنس|النوع|الحالة الاجتماعية|الحالة العائلية|الديانة|الدين|المذهب|رقم الجواز|رقم الهوية|التأشيرة|الإقامة|عدد الأطفال|الزوج|الزوجة";
 
     static readonly Regex LabelRe = new($@"(?im)^(\s*(?:{SensitiveLabels})\s*[:：\-]).*$", RegexOptions.Compiled);
+    // The same labels in the middle of a line ("Nationality: X | Gender: Y"): the value up to the next separator.
+    static readonly Regex InlineLabelRe = new($@"(?i)(?<![\p{{L}}])((?:{SensitiveLabels})\s*[:：])\s*[^\n|;,•]{{1,40}}", RegexOptions.Compiled);
+    // Short "personal details" lines that are only a gender, marital status or age.
+    static readonly Regex PersonalWordRe = new(@"(?im)^\s*(male|female|married|single|divorced|widowed|\d{2}\s*years?\s*old|ذكر|أنثى|متزوج|متزوجة|أعزب|عزباء|مطلق|مطلقة|أرمل|أرملة)\s*$", RegexOptions.Compiled);
+    static readonly Regex AgeRe = new(@"(?i)\b\d{2}\s*(?:years?|yrs?)\s*old\b|\bborn\s+(?:on|in)\s+[^\n,;|]{1,30}", RegexOptions.Compiled);
+    static readonly Regex TitleRe = new(@"(?i)\b(?:mr|mrs|ms|miss)\.?\s+|(?:السيد|السيدة|الآنسة)\s+", RegexOptions.Compiled);
 
     /// <summary>Removes the applicant's name, contacts and labelled personal attributes (nationality, age and so on).</summary>
     public static string Redact(string? text, string? applicantName)
@@ -22,28 +29,155 @@ public static partial class CvScoring
         var t = EmailRe().Replace(text ?? "", "[EMAIL]");
         t = PhoneRe().Replace(t, m => m.Value.Count(char.IsDigit) >= 9 ? "[PHONE]" : m.Value);
         foreach (var token in NameTokenRe().Matches(applicantName ?? "").Select(m => m.Value).Distinct().OrderByDescending(x => x.Length))
-            t = Regex.Replace(t, Regex.Escape(token), "[CANDIDATE]", RegexOptions.IgnoreCase);
-        return LabelRe.Replace(t, "$1 [REDACTED]");
+            t = Regex.Replace(t, $@"(?<![\p{{L}}]){Regex.Escape(token)}(?![\p{{L}}])", "[CANDIDATE]", RegexOptions.IgnoreCase);
+        t = LabelRe.Replace(t, "$1 [REDACTED]");
+        t = InlineLabelRe.Replace(t, "$1 [REDACTED]");
+        t = PersonalWordRe.Replace(t, "[REDACTED]");
+        t = AgeRe.Replace(t, "[REDACTED]");
+        return TitleRe.Replace(t, "");
     }
 
-    public sealed record Criterion(string Text, decimal Weight, bool MustHave);
+    public static readonly string[] Categories = ["Qualification", "Experience", "Skill", "Certification", "Language", "Other"];
 
-    public sealed record CriterionResult(string Text, decimal Weight, bool MustHave, int Score, string Evidence);
+    /// <summary>Weights come from Essential or Desirable and Standard or High importance, never typed by hand.</summary>
+    public static decimal WeightFor(bool essential, bool high) => essential ? (high ? 4 : 3) : (high ? 2 : 1);
+
+    public static string CategoryOf(string? c) => Categories.FirstOrDefault(x => string.Equals(x, c?.Trim(), StringComparison.OrdinalIgnoreCase)) ?? "Other";
+
+    public sealed record Criterion(string Text, decimal Weight, bool MustHave, string Category = "Other", int? MinYears = null, string Level = "", string Guide = "")
+    {
+        /// <summary>The requirement as one line for the model and the record, for example "Experience: Data analysis (at least 3 years)".</summary>
+        public string Describe() =>
+            (Category == "Other" ? "" : $"{Category}: ") + Text
+            + (Category == "Experience" && MinYears is > 0 ? $" (at least {MinYears} years)" : "")
+            + (Category == "Language" && Level.Length > 0 ? $" ({Level})" : "");
+    }
+
+    /// <summary>What the model returned for one requirement.</summary>
+    public sealed record ModelItem(int Score, string Evidence, string Quote = "", string Status = "", IReadOnlyList<int>? Roles = null, string WhyNotHigher = "");
+
+    public sealed record CriterionResult(string Text, decimal Weight, bool MustHave, int Score, string Evidence, string Category = "Other",
+        string Status = "", string Quote = "", bool? QuoteFound = null, decimal? RelevantYears = null, string WhyNotHigher = "");
+
+    public sealed record Outcome(IReadOnlyList<CriterionResult> Rows, decimal Total, IReadOnlyList<string> Gaps, IReadOnlyList<string> ReviewReasons);
 
     /// <summary>Weights come from the job's criteria (in code), never from the model. Score is 0 to 100.</summary>
     public static (IReadOnlyList<CriterionResult> Rows, decimal Total, IReadOnlyList<string> Gaps) Combine(
         IReadOnlyList<Criterion> criteria, IReadOnlyList<(int Score, string Evidence)> items)
     {
+        var o = Evaluate(criteria, items.Select(i => new ModelItem(i.Score, i.Evidence)).ToList(), [], DateOnly.MinValue, null);
+        return (o.Rows, o.Total, o.Gaps);
+    }
+
+    /// <summary>
+    /// Checks the model's answer against the CV and the rules, requirement by requirement:
+    /// a quote that is not in the CV caps the score and asks for a person to look; no quote caps it lower;
+    /// experience with a minimum is worked out from the dates of the roles the model marked relevant;
+    /// essential requirements end as Met, NotMet or Unclear (Unclear asks for a person, NotMet is a gap).
+    /// cvText null skips the quote check (older callers).
+    /// </summary>
+    public static Outcome Evaluate(IReadOnlyList<Criterion> criteria, IReadOnlyList<ModelItem> items,
+        IReadOnlyList<(string Start, string End)> roles, DateOnly today, string? cvText)
+    {
+        var review = new List<string>();
         var rows = criteria.Select((c, i) =>
         {
-            var (score, evidence) = i < items.Count ? items[i] : (0, "Not returned by the model");
-            return new CriterionResult(c.Text, c.Weight, c.MustHave, Math.Clamp(score, 0, 10), evidence);
+            var m = i < items.Count ? items[i] : new ModelItem(0, "Not returned by the model");
+            var score = Math.Clamp(m.Score, 0, 10);
+            var quote = (m.Quote ?? "").Trim();
+            bool? found = null;
+            if (cvText != null)
+            {
+                found = quote.Length > 0 && QuoteInText(quote, cvText);
+                if (quote.Length > 0 && found == false) { score = Math.Min(score, 3); review.Add($"Evidence not found in the CV: {c.Text}"); }
+                else if (quote.Length == 0) score = Math.Min(score, 2);
+            }
+            decimal? years = null;
+            var status = "";
+            if (c.Category == "Experience" && c.MinYears is > 0 && m.Roles is { Count: > 0 } picked)
+            {
+                var chosen = picked.Where(n => n >= 1 && n <= roles.Count).Distinct().Select(n => roles[n - 1]).ToList();
+                if (chosen.Count > 0)
+                {
+                    years = YearsOfExperience(chosen, today);
+                    if (years < c.MinYears) score = Math.Min(score, (int)Math.Round(6m * years.Value / c.MinYears.Value));
+                }
+            }
+            if (c.MustHave && (cvText != null || !string.IsNullOrEmpty(m.Status)))
+            {
+                var said = (m.Status ?? "").Trim().ToLowerInvariant().Replace(" ", "_");
+                status = said switch { "met" => "Met", "not_met" or "notmet" => "NotMet", _ => "Unclear" };
+                // Code has the last word on minimum years, and a quote that is not in the CV cannot make a requirement met.
+                if (c.Category == "Experience" && c.MinYears is > 0 && years != null) status = years >= c.MinYears ? "Met" : "NotMet";
+                else if (c.Category == "Experience" && c.MinYears is > 0 && status == "Met") status = "Unclear";
+                if (status == "Met" && found == false) status = "Unclear";
+                if (status == "Unclear") review.Add($"Essential requirement unclear: {c.Text}");
+            }
+            return new CriterionResult(c.Describe(), c.Weight, c.MustHave, score, m.Evidence, c.Category, status, quote, found, years,
+                score >= 10 ? "" : (m.WhyNotHigher ?? "").Trim());
         }).ToList();
-        var totalWeight = rows.Sum(r => r.Weight);
+        var gaps = rows.Where(r => r.MustHave && (r.Status == "NotMet" || (r.Status == "" && r.Score < 5))).Select(r => r.Text).ToList();
+        return new Outcome(rows, Total(rows.Select(r => (r.Weight, r.Score))), gaps, review.Distinct().ToList());
+    }
+
+    /// <summary>The overall 0 to 100 from weights and 0 to 10 scores (recruiters' overrides included by the caller).</summary>
+    public static decimal Total(IEnumerable<(decimal Weight, int Score)> rows)
+    {
+        var list = rows.ToList();
+        var totalWeight = list.Sum(r => r.Weight);
         if (totalWeight <= 0) totalWeight = 1;
-        var total = Math.Round(rows.Sum(r => r.Weight * r.Score) / (10 * totalWeight) * 100, 1);
-        var gaps = rows.Where(r => r.MustHave && r.Score < 5).Select(r => r.Text).ToList();
-        return (rows, total, gaps);
+        return Math.Round(list.Sum(r => r.Weight * r.Score) / (10 * totalWeight) * 100, 1);
+    }
+
+    [GeneratedRegex(@"[^\p{L}\p{N}]+")] private static partial Regex NonWordRe();
+
+    static string Words(string s) => NonWordRe().Replace(s.ToLowerInvariant(), " ").Trim();
+
+    /// <summary>
+    /// Whether a quote really appears in the CV, ignoring case, spacing and punctuation. A long quote also counts when
+    /// a run of eight of its words appears in order (models often trim or join lines).
+    /// </summary>
+    public static bool QuoteInText(string quote, string text)
+    {
+        var q = Words(quote);
+        if (q.Length == 0) return false;
+        var t = " " + Words(text) + " ";
+        if (t.Contains(" " + q + " ", StringComparison.Ordinal) || t.Contains(q, StringComparison.Ordinal) && q.Length >= 12) return true;
+        var w = q.Split(' ');
+        if (w.Length < 8) return false;
+        for (var i = 0; i + 8 <= w.Length; i++)
+            if (t.Contains(" " + string.Join(' ', w, i, 8) + " ", StringComparison.Ordinal)) return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Two scorings of the same CV merged: scores averaged; a requirement whose scores differ by more than 2 points asks
+    /// for a person to look. The first scoring's words (evidence, quote, status) are kept.
+    /// </summary>
+    public static (IReadOnlyList<ModelItem> Items, IReadOnlyList<string> Disagreements) Merge(IReadOnlyList<ModelItem> a, IReadOnlyList<ModelItem> b, IReadOnlyList<Criterion> criteria)
+    {
+        var notes = new List<string>();
+        var items = a.Select((x, i) =>
+        {
+            if (i >= b.Count) return x;
+            if (Math.Abs(x.Score - b[i].Score) > 2) notes.Add($"Two scorings disagree on: {(i < criteria.Count ? criteria[i].Text : $"requirement {i + 1}")} ({x.Score} and {b[i].Score})");
+            var status = x.Status == b[i].Status ? x.Status : "unclear";
+            return x with { Score = (int)Math.Round((x.Score + b[i].Score) / 2m, MidpointRounding.AwayFromZero), Status = status };
+        }).ToList();
+        return (items, notes);
+    }
+
+    /// <summary>"poor" when the text read from the CV is short or mostly not words (a weak scan); otherwise "good".</summary>
+    public static string ReadQuality(string text, string method)
+    {
+        var t = (text ?? "").Trim();
+        if (t.Length < 400) return "poor";
+        var letters = t.Count(char.IsLetter);
+        var visible = t.Count(c => !char.IsWhiteSpace(c));
+        if (visible == 0 || (decimal)letters / visible < 0.6m) return "poor";
+        var tokens = t.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        if (method == "ocr" && tokens.Length > 0 && (decimal)tokens.Count(x => x.Length == 1) / tokens.Length > 0.25m) return "poor";
+        return "good";
     }
 
     static readonly string[] PresentWords = ["present", "current", "now", "today", "حتى الآن", "الآن"];

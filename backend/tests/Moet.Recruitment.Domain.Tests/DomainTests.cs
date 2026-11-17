@@ -659,3 +659,104 @@ public class CalendarInviteTests
         Assert.StartsWith("text/calendar", file.ContentType);
     }
 }
+
+public class StructuredScoringTests
+{
+    static readonly DateOnly Today = new(2026, 11, 17);
+
+    [Fact]
+    public void Weights_come_from_essential_and_importance()
+    {
+        Assert.Equal(4, CvScoring.WeightFor(true, true));
+        Assert.Equal(3, CvScoring.WeightFor(true, false));
+        Assert.Equal(2, CvScoring.WeightFor(false, true));
+        Assert.Equal(1, CvScoring.WeightFor(false, false));
+        Assert.Equal("Experience: Data analysis (at least 3 years)", new CvScoring.Criterion("Data analysis", 3, true, "Experience", 3).Describe());
+        Assert.Equal("Language: English (Fluent)", new CvScoring.Criterion("English", 1, false, "Language", null, "Fluent").Describe());
+        Assert.Equal("Other", CvScoring.CategoryOf("nonsense"));
+        Assert.Equal("Skill", CvScoring.CategoryOf("skill"));
+    }
+
+    [Fact]
+    public void Quotes_must_be_in_the_cv()
+    {
+        const string cv = "Senior Analyst, Dubai Statistics Centre (2019 - present)\nBuilt Power BI dashboards for 12 departments; wrote SQL daily.";
+        Assert.True(CvScoring.QuoteInText("built power bi dashboards for 12 departments", cv));
+        Assert.True(CvScoring.QuoteInText("Built Power BI  dashboards, for 12 departments.", cv));
+        Assert.False(CvScoring.QuoteInText("Led a team of 20 data scientists", cv));
+        Assert.False(CvScoring.QuoteInText("", cv));
+    }
+
+    [Fact]
+    public void Evaluate_checks_quotes_years_and_essentials()
+    {
+        const string cv = "Data Analyst at Ministry X 2023-01 to present. Used SQL and Python for economic indicators. Bachelor of Statistics, UAE University.";
+        var criteria = new List<CvScoring.Criterion>
+        {
+            new("Data analysis", 3, true, "Experience", 3),
+            new("Bachelor's in Statistics", 3, true, "Qualification"),
+            new("Power BI", 1, false, "Skill"),
+            new("Arabic", 1, true, "Language", null, "Fluent"),
+        };
+        var items = new List<CvScoring.ModelItem>
+        {
+            new(9, "Data analyst role", "Data Analyst at Ministry X", "met", [1]),
+            new(9, "Has the degree", "Bachelor of Statistics, UAE University", "met"),
+            new(8, "Says Power BI", "Expert in Power BI and Tableau", "n/a"),
+            new(5, "Not stated", "", "unclear"),
+        };
+        var o = CvScoring.Evaluate(criteria, items, [("2023-01", "")], Today, cv);
+        // About 3.9 years from the dates: experience met, score kept.
+        Assert.Equal("Met", o.Rows[0].Status);
+        Assert.Equal(9, o.Rows[0].Score);
+        Assert.True(o.Rows[0].RelevantYears >= 3);
+        Assert.Equal("Met", o.Rows[1].Status);
+        // A quote that is not in the CV: capped at 3 and flagged.
+        Assert.False(o.Rows[2].QuoteFound);
+        Assert.Equal(3, o.Rows[2].Score);
+        Assert.Contains(o.ReviewReasons, r => r.Contains("Power BI"));
+        // No quote: capped at 2; essential and unclear asks for a person.
+        Assert.Equal(2, o.Rows[3].Score);
+        Assert.Equal("Unclear", o.Rows[3].Status);
+        Assert.Contains(o.ReviewReasons, r => r.StartsWith("Essential requirement unclear"));
+        Assert.Empty(o.Gaps);
+
+        // Too few years: not met, a gap, and the score capped in proportion.
+        var short1 = CvScoring.Evaluate([new("Data analysis", 3, true, "Experience", 5)], [new(9, "x", "Data Analyst at Ministry X", "met", [1])], [("2025-01", "2026-01")], Today, cv);
+        Assert.Equal("NotMet", short1.Rows[0].Status);
+        Assert.Equal(1, short1.Rows[0].Score);
+        Assert.Single(short1.Gaps);
+    }
+
+    [Fact]
+    public void Two_scorings_are_merged_and_disagreement_flagged()
+    {
+        var c = new List<CvScoring.Criterion> { new("SQL", 1, false, "Skill"), new("Python", 1, false, "Skill") };
+        var (items, notes) = CvScoring.Merge([new(8, "a"), new(6, "b")], [new(7, "a"), new(2, "b")], c);
+        Assert.Equal(8, items[0].Score);
+        Assert.Equal(4, items[1].Score);
+        Assert.Single(notes);
+        Assert.Contains("Python", notes[0]);
+    }
+
+    [Fact]
+    public void Poor_reads_are_flagged()
+    {
+        Assert.Equal("poor", CvScoring.ReadQuality("short text", "ocr"));
+        Assert.Equal("poor", CvScoring.ReadQuality(string.Concat(Enumerable.Repeat("| # 1 2 3 % ~ ", 60)), "ocr"));
+        Assert.Equal("good", CvScoring.ReadQuality(string.Concat(Enumerable.Repeat("Senior data analyst building dashboards and reports. ", 12)), "pdf-text"));
+    }
+
+    [Fact]
+    public void Redaction_removes_personal_attributes()
+    {
+        const string cv = "Mr. Ahmed Ali\nNationality: Egyptian | Gender: Male | Marital Status: Married\nDate of Birth: 1990-02-01\nMale\n34 years old\n" +
+                          "الجنسية: مصري\nالحالة الاجتماعية: متزوج\nمتزوج\nSkills: SQL, Python\nLanguage: English";
+        var r = CvScoring.Redact(cv, "Ahmed Ali");
+        foreach (var gone in new[] { "Egyptian", "Married", "1990-02-01", "34 years old", "مصري", "متزوج", "Mr.", "Ahmed" })
+            Assert.DoesNotContain(gone, r);
+        Assert.Contains("Skills: SQL, Python", r);
+        Assert.Contains("Language: English", r);
+        Assert.DoesNotContain("Male", r.Replace("[REDACTED]", ""));
+    }
+}

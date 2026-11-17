@@ -476,7 +476,7 @@ public sealed class AgentProposalService(
                 var list = CriteriaOf(a);
                 if (list.Count is 0 or > CriteriaService.Max || list.Any(c => string.IsNullOrWhiteSpace(c.criterion) || c.weight is <= 0 or > 100))
                     throw DomainException.Invalid("criteria_invalid");
-                var lines = string.Join("; ", list.Select(c => $"{c.criterion} ({c.weight:0.##}{(c.must ? (ar ? "، إلزامي" : ", must-have") : "")})"));
+                var lines = string.Join("; ", list.Select(c => $"{new CvScoring.Criterion(c.criterion!, c.weight, c.must, CvScoring.CategoryOf(c.category), c.min_years, c.level ?? "").Describe()} ({(c.must ? (ar ? "أساسي" : "Essential") : (ar ? "مرغوب" : "Desirable"))}{(c.high == true ? (ar ? "، أهمية عالية" : ", High") : "")})"));
                 return B(a, "approve")
                     ? ar ? $"اعتماد معايير الفرز لوظيفة {job.In("ar").Title}: {lines}" : $"Approve screening criteria for {job.In("en").Title}: {lines}"
                     : ar ? $"حفظ معايير الفرز كمسودة لوظيفة {job.In("ar").Title}: {lines}" : $"Save draft screening criteria for {job.In("en").Title}: {lines}";
@@ -746,10 +746,17 @@ public sealed class AgentProposalService(
     static List<CriterionInput> CriteriaOf(JsonElement a)
     {
         if (!a.TryGetProperty("criteria", out var arr) || arr.ValueKind != JsonValueKind.Array) return [];
-        return arr.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.Object).Select(x => new CriterionInput(
-            TextUtil.Clip(S(x, "criterion").Trim(), 300),
-            x.TryGetProperty("weight", out var w) && (w.ValueKind == JsonValueKind.Number ? w.TryGetDecimal(out var n) : decimal.TryParse(S(x, "weight"), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out n)) ? n : 0,
-            B(x, "must"))).ToList();
+        // Structured requirements (category, essential, high, min_years, level) get their weight from the rules; older ones carry a weight.
+        return arr.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.Object).Select(x =>
+        {
+            var structured = S(x, "category").Length > 0;
+            var must = B(x, "must") || B(x, "essential");
+            var weight = structured ? CvScoring.WeightFor(must, B(x, "high"))
+                : x.TryGetProperty("weight", out var w) && (w.ValueKind == JsonValueKind.Number ? w.TryGetDecimal(out var n) : decimal.TryParse(S(x, "weight"), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out n)) ? n : 0;
+            var text = S(x, "requirement") is { Length: > 0 } req ? req : S(x, "criterion");
+            int? years = x.TryGetProperty("min_years", out var y) && y.ValueKind == JsonValueKind.Number && y.TryGetInt32(out var yi) ? yi : null;
+            return new CriterionInput(TextUtil.Clip(text.Trim(), 300), weight, must, structured ? S(x, "category") : null, years, S(x, "level"), B(x, "high"), S(x, "guide"));
+        }).ToList();
     }
 
     static string RoleAr(StaffRole r) => r switch

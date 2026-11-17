@@ -112,7 +112,18 @@ public class JobCriterion
     public int SortOrder { get; set; }
     public string Criterion { get; set; } = "";
     public decimal Weight { get; set; }
+    /// <summary>Essential (must have); otherwise desirable (nice to have).</summary>
     public bool IsMustHave { get; set; }
+    /// <summary>Qualification, Experience, Skill, Certification, Language or Other.</summary>
+    public string Category { get; set; } = "Other";
+    /// <summary>Experience: the minimum years asked for.</summary>
+    public byte? MinYears { get; set; }
+    /// <summary>Language: the level asked for (for example Fluent).</summary>
+    public string Level { get; set; } = "";
+    /// <summary>High importance (counts more than standard).</summary>
+    public bool IsHigh { get; set; }
+    /// <summary>What a score of 0, 4, 7 and 10 looks like, one per line.</summary>
+    public string Guide { get; set; } = "";
 }
 
 public class JobScreeningQuestion

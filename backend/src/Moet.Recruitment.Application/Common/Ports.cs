@@ -214,6 +214,8 @@ public interface ILanguageModel
 {
     bool IsConfigured { get; }
     string ModelName { get; }
+    /// <summary>The model used to score CVs (LLM_SCORE_MODEL when set, otherwise the main model).</summary>
+    string ScoringModelName => ModelName;
 
     /// <summary>One completion constrained to a JSON schema; returns the parsed object.</summary>
     Task<JsonElement> CompleteJsonAsync(string system, string user, object schema, string schemaName, CancellationToken ct = default);

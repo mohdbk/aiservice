@@ -87,7 +87,7 @@ public sealed class BackofficeJobService(IAppDbContext db, ICodeGenerator codes,
             lang = t.LanguageCode, title = t.Title, description = t.Description, location = t.Location, review_status = t.ReviewStatus.ToString(),
             approved = t.ReviewStatus == ReviewStatus.Approved,
         }).ToList(),
-        criteria = j.Criteria.OrderBy(c => c.SortOrder).Select(c => new { c.Criterion, c.Weight, c.IsMustHave }).ToList(),
+        criteria = j.Criteria.OrderBy(c => c.SortOrder).Select(c => new { c.Criterion, c.Weight, c.IsMustHave, c.Category, c.MinYears, c.Level, c.IsHigh }).ToList(),
         criteria_current = j.CriteriaVersion != null && j.CriteriaVersion == j.DescriptionVersion(),
         screening = j.ScreeningQuestions.OrderBy(s => s.SortOrder).Select(s => new
         {

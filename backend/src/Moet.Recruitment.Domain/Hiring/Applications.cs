@@ -65,6 +65,10 @@ public class CvAnalysis
     public string Error { get; set; } = "";
     public DateTime? ScoredAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    public bool NeedsReview { get; set; }
+    public string ReviewReasons { get; set; } = "";
+    /// <summary>"good" or "poor" (a short or garbled read, usually a scan).</summary>
+    public string ReadQuality { get; set; } = "";
     public List<CvCriterionScore> CriterionScores { get; set; } = [];
 }
 
@@ -77,6 +81,21 @@ public class CvCriterionScore
     public bool IsMustHave { get; set; }
     public byte Score { get; set; }
     public string Evidence { get; set; } = "";
+    public string Category { get; set; } = "Other";
+    /// <summary>Essential requirements: Met, NotMet or Unclear; empty for desirable ones.</summary>
+    public string Status { get; set; } = "";
+    /// <summary>The exact words from the CV the score rests on, and whether they were found in the CV text.</summary>
+    public string Quote { get; set; } = "";
+    public bool? QuoteFound { get; set; }
+    public decimal? RelevantYears { get; set; }
+    public string WhyNotHigher { get; set; } = "";
+    /// <summary>A recruiter's score in place of the AI's, with the reason (kept when the CV is scored again).</summary>
+    public byte? OverrideScore { get; set; }
+    public string OverrideReason { get; set; } = "";
+    public int? OverrideByStaffId { get; set; }
+    public DateTime? OverrideAt { get; set; }
+
+    public byte Effective => OverrideScore ?? Score;
 }
 
 public class ApplicationNote

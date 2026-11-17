@@ -110,10 +110,13 @@ async function main() {
   await bo("PUT", `/jobs/${analyst.id}/criteria`, {
     approve: true,
     criteria: [
-      { criterion: "بكالوريوس في الإحصاء أو علوم البيانات", weight: 25, must: true },
-      { criterion: "3 سنوات على الأقل من الخبرة في تحليل البيانات", weight: 30, must: true },
-      { criterion: "إتقان SQL و Power BI", weight: 25, must: false },
-      { criterion: "خبرة في المؤشرات الاقتصادية أو العمل الحكومي", weight: 20, must: false },
+      { category: "Qualification", criterion: "بكالوريوس في الإحصاء أو علوم البيانات", must: true, high: false,
+        guide: "0: لا توجد شهادة جامعية\n4: بكالوريوس في تخصص غير ذي صلة\n7: بكالوريوس في تخصص قريب (رياضيات، اقتصاد)\n10: بكالوريوس أو أعلى في الإحصاء أو علوم البيانات" },
+      { category: "Experience", criterion: "تحليل البيانات", min_years: 3, must: true, high: true,
+        guide: "0: لا خبرة في التحليل\n4: أقل من سنتين أو مهام تحليل جانبية\n7: 3 سنوات في تحليل البيانات\n10: 5 سنوات أو أكثر مع لوحات معلومات ومؤشرات" },
+      { category: "Skill", criterion: "SQL و Power BI", must: false, high: true, guide: "" },
+      { category: "Experience", criterion: "المؤشرات الاقتصادية أو العمل الحكومي", must: false, high: false, guide: "" },
+      { category: "Language", criterion: "الإنجليزية", level: "Fluent", must: false, high: false, guide: "" },
     ],
   });
 

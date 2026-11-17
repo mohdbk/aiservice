@@ -62,25 +62,43 @@ public sealed class CvScoringHandler(IAppDbContext db, ILanguageModel model, ICv
             return;
         }
 
-        var list = string.Join("\n", criteria.Select((x, i) => $"{i + 1}. {x.Text} (weight {x.Weight.ToString("0.##", CultureInfo.InvariantCulture)}{(x.MustHave ? ", MUST-HAVE" : "")})"));
+        var quality = CvScoring.ReadQuality(cv.Text, cv.Method);
+        var list = string.Join("\n", criteria.Select((x, i) =>
+            $"{i + 1}. [{(x.MustHave ? "ESSENTIAL" : "DESIRABLE")}] {x.Describe()}" + (x.Guide.Length > 0 ? $"\n   Score guide:\n   {x.Guide.Replace("\n", "\n   ")}" : "")));
+        var corrections = await CorrectionsAsync(job.Id, ct);
         var user = $"<job>\nTitle: {job.Title}\n\n{TextUtil.Clip(TextUtil.StripHtml(job.Description), 12000)}\n</job>\n\n" +
-                   $"Score these criteria, returning them in exactly this order:\n{list}\n\n" +
+                   $"Score these requirements, returning them in exactly this order:\n{list}\n\n" +
+                   (corrections.Length > 0 ? $"<recruiter_corrections>\nRecruiters corrected earlier scores for this job. Follow the same judgement:\n{corrections}\n</recruiter_corrections>\n\n" : "") +
                    $"<structured_profile>\n{Brief(profile, years)}\n</structured_profile>\n" +
-                   "The structured profile was extracted from the CV below; use both, and trust the CV text if they differ.\n\n" +
+                   "The structured profile was extracted from the CV below; use both, and trust the CV text if they differ. Quotes must come from the CV text.\n\n" +
                    $"<cv>\n{redacted}\n</cv>";
         var result = await model.CompleteJsonAsync(Prompts.Score, user, Prompts.ScoreSchema, "cv_score", ct);
-        var items = Arr(result, "criteria").Select(e => ((int)Num(e, "score"), TextUtil.NoEmDash(Str(e, "evidence")))).ToList();
-        var (rows, total, gaps) = CvScoring.Combine(criteria, items);
-
+        var items = Items(result);
+        var review = new List<string>();
+        // Optionally score twice (CV_SCORE_TWICE=1): scores are averaged and a disagreement asks for a person to look.
+        if (Environment.GetEnvironmentVariable("CV_SCORE_TWICE") is "1" or "true")
+        {
+            var second = await model.CompleteJsonAsync(Prompts.Score, user, Prompts.ScoreSchema, "cv_score", ct);
+            var (merged, notes) = CvScoring.Merge(items, Items(second), criteria);
+            items = merged.ToList();
+            review.AddRange(notes);
+        }
+        var outcome = CvScoring.Evaluate(criteria, items, work, clock.Today(), redacted);
+        review.AddRange(outcome.ReviewReasons);
+        if (quality == "poor") review.Insert(0, "The CV text was hard to read (likely a scan): check the original CV.");
+        // A recruiter's override for the same requirement is kept when the CV is scored again.
+        var kept = c.CriterionScores.Where(x => x.OverrideScore != null).ToDictionary(x => x.Criterion, x => x);
         c.Status = CvAnalysisStatus.Scored;
-        c.Score = total;
         c.Summary = TextUtil.Clip(TextUtil.NoEmDash(Str(result, "summary")), 2000);
         c.SummaryArabic = TextUtil.Clip(TextUtil.NoEmDash(Str(result, "summary_ar")), 2000);
-        c.MustHaveGaps = TextUtil.Clip(string.Join("; ", gaps), 2000);
+        c.MustHaveGaps = TextUtil.Clip(string.Join("; ", outcome.Gaps), 2000);
         c.YearsOfExperience = years;
         c.CvLanguage = TextUtil.Clip(Str(profile, "cv_language"), 10);
         c.ReadMethod = cv.Method;
-        c.Model = TextUtil.Clip(model.ModelName, 100);
+        c.ReadQuality = quality;
+        c.NeedsReview = review.Count > 0;
+        c.ReviewReasons = TextUtil.Clip(TextUtil.NoEmDash(string.Join("\n", review.Distinct())), 1000);
+        c.Model = TextUtil.Clip(model.ScoringModelName, 100);
         c.CriteriaVersion = job.CriteriaVersion;
         c.ProfileJson = WithYears(profile, years);
         c.Error = "";
@@ -88,12 +106,23 @@ public sealed class CvScoringHandler(IAppDbContext db, ILanguageModel model, ICv
         c.UpdatedAt = clock.UtcNow;
         c.CriterionScores.Clear();
         var n = 0;
-        foreach (var r in rows)
-            c.CriterionScores.Add(new CvCriterionScore
+        foreach (var row in outcome.Rows)
+        {
+            var text = TextUtil.Clip(row.Text, 300);
+            var s = new CvCriterionScore
             {
-                SortOrder = n++, Criterion = TextUtil.Clip(r.Text, 300), Weight = r.Weight, IsMustHave = r.MustHave,
-                Score = (byte)r.Score, Evidence = TextUtil.Clip(r.Evidence, 1000),
-            });
+                SortOrder = n++, Criterion = text, Weight = row.Weight, IsMustHave = row.MustHave, Category = row.Category,
+                Score = (byte)row.Score, Evidence = TextUtil.Clip(TextUtil.NoEmDash(row.Evidence), 1000), Status = row.Status,
+                Quote = TextUtil.Clip(row.Quote, 500), QuoteFound = row.QuoteFound, RelevantYears = row.RelevantYears,
+                WhyNotHigher = TextUtil.Clip(TextUtil.NoEmDash(row.WhyNotHigher), 500),
+            };
+            if (kept.TryGetValue(text, out var o))
+            {
+                s.OverrideScore = o.OverrideScore; s.OverrideReason = o.OverrideReason; s.OverrideByStaffId = o.OverrideByStaffId; s.OverrideAt = o.OverrideAt;
+            }
+            c.CriterionScores.Add(s);
+        }
+        c.Score = CvScoring.Total(c.CriterionScores.Select(x => (x.Weight, (int)x.Effective)));
         await db.SaveChangesAsync(ct);
     }
 
@@ -114,7 +143,8 @@ public sealed class CvScoringHandler(IAppDbContext db, ILanguageModel model, ICv
     async Task<List<CvScoring.Criterion>?> ApprovedCriteriaAsync(JobOpening job, CancellationToken ct)
     {
         if (job.CriteriaApprovedAt != null && job.Criteria.Count > 0)
-            return job.Criteria.OrderBy(x => x.SortOrder).Select(x => new CvScoring.Criterion(x.Criterion, x.Weight, x.IsMustHave)).ToList();
+            return job.Criteria.OrderBy(x => x.SortOrder).Select(x => new CvScoring.Criterion(x.Criterion, x.Weight, x.IsMustHave, x.Category,
+                x.MinYears, x.Level, x.Guide)).ToList();
         if (job.Criteria.Count == 0)
         {
             try { await SuggestCriteriaAsync(model, db, job, ct); }
@@ -124,19 +154,28 @@ public sealed class CvScoringHandler(IAppDbContext db, ILanguageModel model, ICv
     }
 
     /// <summary>Replaces the job's draft criteria with a suggestion derived from the description (not approved).</summary>
-    public static async Task<List<CvScoring.Criterion>> SuggestCriteriaAsync(ILanguageModel model, IAppDbContext db, JobOpening job, CancellationToken ct)
+    public static async Task<List<JobCriterion>> SuggestCriteriaAsync(ILanguageModel model, IAppDbContext db, JobOpening job, CancellationToken ct)
     {
         var version = job.DescriptionVersion();
         var output = await model.CompleteJsonAsync(Prompts.Criteria,
             $"<job>\nTitle: {job.Title}\n\n{TextUtil.Clip(TextUtil.StripHtml(job.Description), 12000)}\n</job>", Prompts.CriteriaSchema, "job_criteria", ct);
-        var list = Arr(output, "criteria").Take(6)
-            .Select(e => new CvScoring.Criterion(TextUtil.Clip(TextUtil.NoEmDash(Str(e, "criterion")).Trim(), 300), Num(e, "weight"),
-                e.TryGetProperty("must", out var m) && m.ValueKind == JsonValueKind.True))
-            .Where(x => x.Text.Length > 0 && x.Weight > 0).ToList();
-        if (list.Count == 0) throw new InvalidOperationException("No screening criteria could be derived from the job description.");
+        var list = Arr(output, "criteria").Take(8).Select(e =>
+        {
+            var category = CvScoring.CategoryOf(Str(e, "category"));
+            var essential = e.TryGetProperty("essential", out var m) && m.ValueKind == JsonValueKind.True;
+            var high = e.TryGetProperty("high", out var h) && h.ValueKind == JsonValueKind.True;
+            var years = (int)Num(e, "min_years");
+            return new JobCriterion
+            {
+                Criterion = TextUtil.Clip(TextUtil.NoEmDash(Str(e, "requirement")).Trim(), 120), Category = category, IsMustHave = essential, IsHigh = high,
+                Weight = CvScoring.WeightFor(essential, high), MinYears = category == "Experience" && years is > 0 and < 60 ? (byte)years : null,
+                Level = category == "Language" ? TextUtil.Clip(Str(e, "level").Trim(), 40) : "", Guide = TextUtil.Clip(TextUtil.NoEmDash(Str(e, "guide")).Trim(), 2000),
+            };
+        }).Where(x => x.Criterion.Length > 0).ToList();
+        if (list.Count == 0) throw new InvalidOperationException("No screening requirements could be derived from the job description.");
         job.Criteria.Clear();
         var n = 0;
-        foreach (var x in list) job.Criteria.Add(new JobCriterion { SortOrder = n++, Criterion = x.Text, Weight = x.Weight, IsMustHave = x.MustHave });
+        foreach (var x in list) { x.SortOrder = n++; job.Criteria.Add(x); }
         job.CriteriaVersion = version;
         job.CriteriaApprovedAt = null;
         job.CriteriaApprovedByStaffId = null;
@@ -144,14 +183,32 @@ public sealed class CvScoringHandler(IAppDbContext db, ILanguageModel model, ICv
         return list;
     }
 
+    static List<CvScoring.ModelItem> Items(JsonElement result) => Arr(result, "criteria").Select(e => new CvScoring.ModelItem(
+        (int)Num(e, "score"), TextUtil.NoEmDash(Str(e, "evidence")), Str(e, "quote"), Str(e, "status"),
+        Arr(e, "relevant_roles").Where(x => x.ValueKind == JsonValueKind.Number && x.TryGetInt32(out _)).Select(x => x.GetInt32()).ToList(),
+        Str(e, "why_not_higher"))).ToList();
+
+    /// <summary>Recruiters' recent corrections on this job (up to 8), given to the model as examples of the judgement wanted.</summary>
+    async Task<string> CorrectionsAsync(int jobId, CancellationToken ct)
+    {
+        var rows = await db.CvAnalyses.AsNoTracking()
+            .Where(a => db.JobApplications.Any(x => x.Id == a.JobApplicationId && x.JobOpeningId == jobId))
+            .SelectMany(a => a.CriterionScores).Where(x => x.OverrideScore != null && x.OverrideReason != "")
+            .OrderByDescending(x => x.OverrideAt).Take(8)
+            .Select(x => new { x.Criterion, x.Score, x.OverrideScore, x.OverrideReason }).ToListAsync(ct);
+        return string.Join("\n", rows.Select(x => $"- {x.Criterion}: the AI gave {x.Score}, a recruiter set {x.OverrideScore} because \"{x.OverrideReason}\""));
+    }
+
     static string Brief(JsonElement p, decimal years)
     {
         var sb = new StringBuilder($"Total experience: {years.ToString(CultureInfo.InvariantCulture)} years\n");
+        var k = 0;
         foreach (var w in Arr(p, "work"))
         {
+            k++;
             var org = Str(w, "name") is { Length: > 0 } n ? n : Str(w, "description") is { Length: > 0 } d ? d : "unnamed employer";
             var when = Str(w, "startDate").Length > 0 ? $"{Str(w, "startDate")} to {(Str(w, "endDate") is { Length: > 0 } e ? e : "present")}" : "dates not given";
-            sb.AppendLine($"- {Str(w, "position")} at {org} ({when}): {Str(w, "summary")}");
+            sb.AppendLine($"- Role {k}: {Str(w, "position")} at {org} ({when}): {Str(w, "summary")}");
         }
         foreach (var e in Arr(p, "education"))
             sb.AppendLine($"- Education: {Str(e, "studyType")} {Str(e, "area")}, {Str(e, "institution")} ({Str(e, "endDate")})");
