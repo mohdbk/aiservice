@@ -16,7 +16,7 @@ public sealed class TextService(IAppDbContext db, ISecretProtector secrets, IClo
 {
     TextSetting? cached;
 
-    async Task<TextSetting> SettingAsync(CancellationToken ct) => cached ??= await db.TextSettings.AsNoTracking().FirstOrDefaultAsync(ct) ?? new TextSetting();
+    async Task<TextSetting> SettingAsync(CancellationToken ct) => cached ??= await db.TextSettings.AsNoTracking().OrderBy(x => x.Id).FirstOrDefaultAsync(ct) ?? new TextSetting();
 
     public async Task<TextConfig?> ConfigAsync(CancellationToken ct = default)
     {
@@ -43,7 +43,7 @@ public sealed class TextService(IAppDbContext db, ISecretProtector secrets, IClo
 
     public async Task<object> GetAsync(CancellationToken ct = default)
     {
-        var s = await db.TextSettings.AsNoTracking().FirstOrDefaultAsync(ct) ?? new TextSetting();
+        var s = await db.TextSettings.AsNoTracking().OrderBy(x => x.Id).FirstOrDefaultAsync(ct) ?? new TextSetting();
         var since = clock.UtcNow.AddDays(-1);
         return new
         {
@@ -63,7 +63,7 @@ public sealed class TextService(IAppDbContext db, ISecretProtector secrets, IClo
 
     public async Task<object> SaveAsync(TextSettingInput input, CancellationToken ct = default)
     {
-        var s = await db.TextSettings.FirstOrDefaultAsync(ct);
+        var s = await db.TextSettings.OrderBy(x => x.Id).FirstOrDefaultAsync(ct);
         if (s == null) db.TextSettings.Add(s = new TextSetting());
         s.IsEnabled = input.IsEnabled;
         s.Channel = Enum.TryParse<TextChannel>(input.Channel, out var ch) ? ch : TextChannel.Sms;

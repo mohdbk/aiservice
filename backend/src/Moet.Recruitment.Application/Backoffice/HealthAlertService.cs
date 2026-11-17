@@ -20,7 +20,7 @@ public sealed class HealthAlertService(IAppDbContext db, IClock clock, MailConfi
 
     public async Task<object> GetAsync(CancellationToken ct = default)
     {
-        var s = await db.HealthAlertSettings.AsNoTracking().FirstAsync(ct);
+        var s = await db.HealthAlertSettings.AsNoTracking().OrderBy(x => x.Id).FirstAsync(ct);
         var admins = await db.StaffUsers.AsNoTracking().Where(u => u.IsEnabled && u.Role == StaffRole.Administrator).Select(u => u.Email).ToListAsync(ct);
         return new
         {
@@ -31,7 +31,7 @@ public sealed class HealthAlertService(IAppDbContext db, IClock clock, MailConfi
 
     public async Task<object> SaveAsync(HealthAlertInput input, CancellationToken ct = default)
     {
-        var s = await db.HealthAlertSettings.FirstAsync(ct);
+        var s = await db.HealthAlertSettings.OrderBy(x => x.Id).FirstAsync(ct);
         s.IsEnabled = input.IsEnabled;
         s.ExtraRecipients = TextUtil.Clip(input.ExtraRecipients?.Trim(), 2000);
         if (s.ExtraRecipients.Split([',', ';', '\n', '\r', ' '], StringSplitOptions.RemoveEmptyEntries).Any(e => !e.Contains('@')))
@@ -65,7 +65,7 @@ public sealed class HealthAlertService(IAppDbContext db, IClock clock, MailConfi
     /// <summary>Runs one check and queues the alert or the all-clear when due. Returns true when an email was queued.</summary>
     public async Task<bool> CheckAsync(IEnumerable<Problem>? extra, CancellationToken ct = default)
     {
-        var s = await db.HealthAlertSettings.FirstAsync(ct);
+        var s = await db.HealthAlertSettings.OrderBy(x => x.Id).FirstAsync(ct);
         if (!s.IsEnabled || !await mail.IsConfiguredAsync(ct)) return false;
         var now = clock.UtcNow;
         var problems = await ProblemsAsync(extra, ct);

@@ -20,7 +20,7 @@ public sealed class BackofficeEmailService(IAppDbContext db, ICurrentActor actor
 
     async Task<EmailSetting> SettingAsync(CancellationToken ct)
     {
-        var s = await db.EmailSettings.FirstOrDefaultAsync(ct);
+        var s = await db.EmailSettings.OrderBy(x => x.Id).FirstOrDefaultAsync(ct);
         if (s == null)
         {
             s = new EmailSetting { UpdatedAt = clock.UtcNow };
@@ -32,7 +32,7 @@ public sealed class BackofficeEmailService(IAppDbContext db, ICurrentActor actor
     /// <summary>The password is never returned, only whether one is stored.</summary>
     public async Task<object> SettingsAsync(CancellationToken ct = default)
     {
-        var s = await db.EmailSettings.AsNoTracking().FirstOrDefaultAsync(ct) ?? new EmailSetting();
+        var s = await db.EmailSettings.AsNoTracking().OrderBy(x => x.Id).FirstOrDefaultAsync(ct) ?? new EmailSetting();
         var current = await mail.CurrentAsync(ct);
         return new
         {

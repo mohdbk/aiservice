@@ -22,13 +22,13 @@ public sealed class ApprovalService(IAppDbContext db, ICurrentActor actor, ICode
 {
     public async Task<object> SettingsAsync(CancellationToken ct = default)
     {
-        var s = await db.PortalSettings.AsNoTracking().FirstAsync(ct);
+        var s = await db.PortalSettings.AsNoTracking().OrderBy(x => x.Id).FirstAsync(ct);
         return new { require_job_approval = s.RequireJobApproval, require_offer_approval = s.RequireOfferApproval };
     }
 
     public async Task<object> SaveSettingsAsync(ApprovalSettingsInput input, CancellationToken ct = default)
     {
-        var s = await db.PortalSettings.FirstAsync(ct);
+        var s = await db.PortalSettings.OrderBy(x => x.Id).FirstAsync(ct);
         s.RequireJobApproval = input.RequireJobApproval;
         s.RequireOfferApproval = input.RequireOfferApproval;
         await db.SaveChangesAsync(ct);
@@ -39,7 +39,7 @@ public sealed class ApprovalService(IAppDbContext db, ICurrentActor actor, ICode
     public async Task<bool> NeededAsync(ApprovalKind kind, CancellationToken ct = default)
     {
         if (actor.IsAdmin) return false;
-        var s = await db.PortalSettings.AsNoTracking().FirstAsync(ct);
+        var s = await db.PortalSettings.AsNoTracking().OrderBy(x => x.Id).FirstAsync(ct);
         return kind switch { ApprovalKind.JobPublish => s.RequireJobApproval, ApprovalKind.OfferSend => s.RequireOfferApproval, _ => true };
     }
 

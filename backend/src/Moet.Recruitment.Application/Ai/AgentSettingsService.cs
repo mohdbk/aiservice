@@ -17,7 +17,7 @@ public sealed class AgentSettingsService(IAppDbContext db, ICurrentActor actor, 
     public async Task<AgentSetting> CurrentAsync(CancellationToken ct = default)
     {
         // The schema script creates the row; this only covers a database where it was removed by hand.
-        return await db.AgentSettings.FirstOrDefaultAsync(ct) ?? new AgentSetting { UpdatedAt = clock.UtcNow };
+        return await db.AgentSettings.OrderBy(x => x.Id).FirstOrDefaultAsync(ct) ?? new AgentSetting { UpdatedAt = clock.UtcNow };
     }
 
     /// <summary>For the settings page. The model key is never returned, only whether one is stored.</summary>

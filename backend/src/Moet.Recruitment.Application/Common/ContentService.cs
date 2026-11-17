@@ -48,7 +48,7 @@ public sealed class ContentService(IAppDbContext db, ITextCatalog catalog, IMemo
         cache.GetOrCreateAsync("content:settings", async e =>
         {
             e.AbsoluteExpirationRelativeToNow = Ttl;
-            return await db.PortalSettings.AsNoTracking().FirstAsync(ct);
+            return await db.PortalSettings.AsNoTracking().OrderBy(x => x.Id).FirstAsync(ct);
         })!;
 
     public async Task<IReadOnlyDictionary<string, string>> PortalTextAsync(string lang, CancellationToken ct = default)

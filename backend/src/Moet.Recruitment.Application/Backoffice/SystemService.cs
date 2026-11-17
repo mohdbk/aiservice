@@ -59,7 +59,7 @@ public sealed class SystemService(IAppDbContext db, IClock clock, MailConfig mai
     {
         var now = clock.UtcNow;
         var month = now.AddDays(-30);
-        var setting = await db.AgentSettings.AsNoTracking().FirstOrDefaultAsync(ct) ?? new AgentSetting();
+        var setting = await db.AgentSettings.AsNoTracking().OrderBy(x => x.Id).FirstOrDefaultAsync(ct) ?? new AgentSetting();
         var runs = await db.AgentRuns.AsNoTracking().Where(r => r.StartedAt >= month).Select(r => new { r.StaffUserId, r.StartedAt }).ToListAsync(ct);
         var staff = await db.StaffUsers.AsNoTracking().OrderBy(u => u.FullName)
             .Select(u => new { u.Id, u.FullName, u.Email, u.Role, u.IsEnabled, u.AgentDailyLimit }).ToListAsync(ct);

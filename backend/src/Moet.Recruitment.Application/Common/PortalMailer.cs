@@ -15,7 +15,7 @@ public sealed class MailConfig(IAppDbContext db, ISecretProtector secrets, IMail
     public async Task<SmtpConfig?> CurrentAsync(CancellationToken ct = default)
     {
         if (loaded) return cached;
-        var s = await db.EmailSettings.AsNoTracking().FirstOrDefaultAsync(ct);
+        var s = await db.EmailSettings.AsNoTracking().OrderBy(x => x.Id).FirstOrDefaultAsync(ct);
         cached = s is { Host.Length: > 0 }
             ? new SmtpConfig(s.Host, s.Port, s.UseTls, s.UserName, s.PasswordProtected.Length > 0 ? secrets.Unprotect(s.PasswordProtected) ?? "" : "",
                 s.FromAddress, s.FromName.Length > 0 ? s.FromName : "Ministry of Economy & Tourism", "Settings")
@@ -44,7 +44,7 @@ public sealed class PortalMailer(IAppDbContext db, ContentService content, ICloc
 
     public async Task<string> SignatureAsync(string lang, CancellationToken ct = default)
     {
-        var s = await db.EmailSettings.AsNoTracking().FirstOrDefaultAsync(ct);
+        var s = await db.EmailSettings.AsNoTracking().OrderBy(x => x.Id).FirstOrDefaultAsync(ct);
         var sig = s == null ? "" : lang == "ar" ? s.SignatureAr : s.SignatureEn;
         return sig.Length > 0 ? sig : (await content.PortalTextAsync(lang, ct))["email.signature"];
     }

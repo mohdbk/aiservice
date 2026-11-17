@@ -12,9 +12,31 @@ export class ApiError extends Error {
 
 type Opts = { method?: string; body?: unknown };
 
+/**
+ * Lists that change rarely and are asked for on many pages (departments, rounds, staff, tests, the assistant's settings
+ * summary) are kept for a minute per language, so moving between pages does not fetch them again. Any change made
+ * through the API clears them, so an edit shows at once.
+ */
+const CACHED = /^\/(lookups|agent\/info|assessment-templates|role-profiles)(\?|$)/;
+const cache = new Map<string, { at: number; value: Promise<unknown> }>();
+
 /** Calls the backoffice API. Changes carry the X-Admin header the server requires. */
 export async function api<T = any>(path: string, opts: Opts = {}): Promise<T> {
   const method = opts.method || (opts.body !== undefined ? "POST" : "GET");
+  if (method !== "GET") cache.clear();
+  else if (CACHED.test(path)) {
+    const key = `${location.pathname.startsWith("/en") ? "en" : "ar"} ${path}`;
+    const hit = cache.get(key);
+    if (hit && Date.now() - hit.at < 60_000) return hit.value as Promise<T>;
+    const value = call<T>(path, method, opts);
+    cache.set(key, { at: Date.now(), value });
+    value.catch(() => cache.delete(key));
+    return value;
+  }
+  return call<T>(path, method, opts);
+}
+
+async function call<T>(path: string, method: string, opts: Opts): Promise<T> {
   let res: Response;
   try {
     res = await fetch(`/api/backoffice${path}`, {

@@ -1,39 +1,56 @@
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { Shell } from "./components/Shell";
 import { Loading } from "./components/ui";
 import { useAuth } from "./core";
-import AgentSettings from "./pages/AgentSettings";
-import Applicant from "./pages/Applicant";
-import Applicants from "./pages/Applicants";
-import Assistant from "./pages/Assistant";
-import ComponentEdit from "./pages/ComponentEdit";
-import Components from "./pages/Components";
-import Dashboard from "./pages/Dashboard";
-import Interview from "./pages/Interview";
-import Interviews from "./pages/Interviews";
-import Invitations from "./pages/Invitations";
-import JobEdit from "./pages/JobEdit";
-import Jobs from "./pages/Jobs";
-import Marking from "./pages/Marking";
-import Offers from "./pages/Offers";
-import QuestionEdit from "./pages/QuestionEdit";
-import { EmailLog, EmailServer, EmailTemplates } from "./pages/Email";
-import DocumentTemplates from "./pages/DocumentTemplates";
-import Questions from "./pages/Questions";
-import RoleProfiles from "./pages/RoleProfiles";
-import Reports from "./pages/Reports";
-import { AssistantUsage, AuditLog, DataProtection, HandOffSettings, HealthPage, TextMessages } from "./pages/System";
-import TalentPool from "./pages/TalentPool";
-import Approvals from "./pages/Approvals";
-import TwoStep from "./pages/TwoStep";
-import Candidates from "./pages/Candidates";
-import Requisitions from "./pages/Requisitions";
-import PersonalitySettings from "./pages/PersonalitySettings";
-import Screening from "./pages/Screening";
-import { Countries, Departments, Locations, Password, PortalText, Rounds, Settings, Staff } from "./pages/Setup";
 import SignIn from "./pages/SignIn";
-import TestEdit from "./pages/TestEdit";
-import Tests from "./pages/Tests";
+
+// Each page's code loads when it is first opened, so the first visit downloads only what it shows.
+const AgentSettings = lazy(() => import("./pages/AgentSettings"));
+const Applicant = lazy(() => import("./pages/Applicant"));
+const Applicants = lazy(() => import("./pages/Applicants"));
+const Assistant = lazy(() => import("./pages/Assistant"));
+const ComponentEdit = lazy(() => import("./pages/ComponentEdit"));
+const Components = lazy(() => import("./pages/Components"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Interview = lazy(() => import("./pages/Interview"));
+const Interviews = lazy(() => import("./pages/Interviews"));
+const Invitations = lazy(() => import("./pages/Invitations"));
+const JobEdit = lazy(() => import("./pages/JobEdit"));
+const Jobs = lazy(() => import("./pages/Jobs"));
+const Marking = lazy(() => import("./pages/Marking"));
+const Offers = lazy(() => import("./pages/Offers"));
+const QuestionEdit = lazy(() => import("./pages/QuestionEdit"));
+const EmailLog = lazy(() => import("./pages/Email").then((m) => ({ default: m.EmailLog })));
+const EmailServer = lazy(() => import("./pages/Email").then((m) => ({ default: m.EmailServer })));
+const EmailTemplates = lazy(() => import("./pages/Email").then((m) => ({ default: m.EmailTemplates })));
+const DocumentTemplates = lazy(() => import("./pages/DocumentTemplates"));
+const Questions = lazy(() => import("./pages/Questions"));
+const RoleProfiles = lazy(() => import("./pages/RoleProfiles"));
+const Reports = lazy(() => import("./pages/Reports"));
+const AssistantUsage = lazy(() => import("./pages/System").then((m) => ({ default: m.AssistantUsage })));
+const AuditLog = lazy(() => import("./pages/System").then((m) => ({ default: m.AuditLog })));
+const DataProtection = lazy(() => import("./pages/System").then((m) => ({ default: m.DataProtection })));
+const HandOffSettings = lazy(() => import("./pages/System").then((m) => ({ default: m.HandOffSettings })));
+const HealthPage = lazy(() => import("./pages/System").then((m) => ({ default: m.HealthPage })));
+const TextMessages = lazy(() => import("./pages/System").then((m) => ({ default: m.TextMessages })));
+const TalentPool = lazy(() => import("./pages/TalentPool"));
+const Approvals = lazy(() => import("./pages/Approvals"));
+const TwoStep = lazy(() => import("./pages/TwoStep"));
+const Candidates = lazy(() => import("./pages/Candidates"));
+const Requisitions = lazy(() => import("./pages/Requisitions"));
+const PersonalitySettings = lazy(() => import("./pages/PersonalitySettings"));
+const Screening = lazy(() => import("./pages/Screening"));
+const Countries = lazy(() => import("./pages/Setup").then((m) => ({ default: m.Countries })));
+const Departments = lazy(() => import("./pages/Setup").then((m) => ({ default: m.Departments })));
+const Locations = lazy(() => import("./pages/Setup").then((m) => ({ default: m.Locations })));
+const Password = lazy(() => import("./pages/Setup").then((m) => ({ default: m.Password })));
+const PortalText = lazy(() => import("./pages/Setup").then((m) => ({ default: m.PortalText })));
+const Rounds = lazy(() => import("./pages/Setup").then((m) => ({ default: m.Rounds })));
+const Settings = lazy(() => import("./pages/Setup").then((m) => ({ default: m.Settings })));
+const Staff = lazy(() => import("./pages/Setup").then((m) => ({ default: m.Staff })));
+const TestEdit = lazy(() => import("./pages/TestEdit"));
+const Tests = lazy(() => import("./pages/Tests"));
 
 function Guarded() {
   const { me } = useAuth();
@@ -45,6 +62,7 @@ function Guarded() {
   return (
     <Shell>
       {/* Keyed by language: switching language reloads the page's data (lists come back in that language). */}
+      <Suspense fallback={<Loading />}>
       <Routes key={lang}>
         <Route index element={<Dashboard />} />
         <Route path="jobs" element={<Jobs />} />
@@ -97,6 +115,7 @@ function Guarded() {
         <Route path="setup/components/:id" element={<ComponentEdit />} />
         <Route path="*" element={<Navigate to={`/${lang}`} replace />} />
       </Routes>
+      </Suspense>
     </Shell>
   );
 }

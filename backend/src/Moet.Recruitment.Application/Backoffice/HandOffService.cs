@@ -24,7 +24,7 @@ public sealed class HandOffService(IAppDbContext db, ISecretProtector secrets, I
 
     public string JobType => JobTypes.HandOff;
 
-    async Task<HandOffSetting> SettingAsync(CancellationToken ct) => await db.HandOffSettings.AsNoTracking().FirstOrDefaultAsync(ct) ?? new HandOffSetting();
+    async Task<HandOffSetting> SettingAsync(CancellationToken ct) => await db.HandOffSettings.AsNoTracking().OrderBy(x => x.Id).FirstOrDefaultAsync(ct) ?? new HandOffSetting();
 
     public async Task<object> GetAsync(CancellationToken ct = default)
     {
@@ -40,7 +40,7 @@ public sealed class HandOffService(IAppDbContext db, ISecretProtector secrets, I
 
     public async Task<object> SaveAsync(HandOffInput input, CancellationToken ct = default)
     {
-        var s = await db.HandOffSettings.FirstOrDefaultAsync(ct);
+        var s = await db.HandOffSettings.OrderBy(x => x.Id).FirstOrDefaultAsync(ct);
         if (s == null) db.HandOffSettings.Add(s = new HandOffSetting());
         s.IsEnabled = input.IsEnabled;
         s.Url = TextUtil.Clip(input.Url?.Trim(), 500);

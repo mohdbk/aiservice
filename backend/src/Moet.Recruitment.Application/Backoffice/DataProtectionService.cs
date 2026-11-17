@@ -171,7 +171,7 @@ public sealed class DataProtectionService(IAppDbContext db, ICurrentActor actor,
     // ---------------- retention ----------------
 
     public async Task<RetentionSetting> RetentionAsync(CancellationToken ct = default) =>
-        await db.RetentionSettings.FirstOrDefaultAsync(ct) ?? new RetentionSetting();
+        await db.RetentionSettings.OrderBy(x => x.Id).FirstOrDefaultAsync(ct) ?? new RetentionSetting();
 
     public async Task<object> RetentionViewAsync(CancellationToken ct = default)
     {
@@ -187,7 +187,7 @@ public sealed class DataProtectionService(IAppDbContext db, ICurrentActor actor,
 
     public async Task<object> SaveRetentionAsync(RetentionInput input, CancellationToken ct = default)
     {
-        var s = await db.RetentionSettings.FirstOrDefaultAsync(ct);
+        var s = await db.RetentionSettings.OrderBy(x => x.Id).FirstOrDefaultAsync(ct);
         if (s == null) db.RetentionSettings.Add(s = new RetentionSetting());
         s.IsEnabled = input.IsEnabled;
         s.UnsuccessfulMonths = (short)Math.Clamp(input.UnsuccessfulMonths, -1, 1000);
@@ -221,7 +221,7 @@ public sealed class DataProtectionService(IAppDbContext db, ICurrentActor actor,
     /// <summary>Applies retention (daily, and on demand). Returns how many records were anonymised.</summary>
     public async Task<int> RunRetentionAsync(bool force, CancellationToken ct = default)
     {
-        var s = await db.RetentionSettings.FirstOrDefaultAsync(ct);
+        var s = await db.RetentionSettings.OrderBy(x => x.Id).FirstOrDefaultAsync(ct);
         if (s == null || (!s.IsEnabled && !force)) return 0;
         var (apps, accounts) = await DueAsync(s, ct);
         foreach (var id in apps) await AnonymiseApplicationAsync(id, ct);

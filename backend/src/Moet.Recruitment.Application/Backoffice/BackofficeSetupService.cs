@@ -339,7 +339,7 @@ public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor
 
     public async Task<object> SettingsAsync(CancellationToken ct = default)
     {
-        var s = await db.PortalSettings.AsNoTracking().FirstAsync(ct);
+        var s = await db.PortalSettings.AsNoTracking().OrderBy(x => x.Id).FirstAsync(ct);
         return new
         {
             s.MainSiteUrl, s.PortalUrl, s.DefaultLanguageCode, s.AllowSignup, s.RequireEmailVerification, max_cv_mb = (int)s.MaxCvMb,
@@ -352,7 +352,7 @@ public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor
 
     public async Task<object> SaveSettingsAsync(SettingsInput input, CancellationToken ct = default)
     {
-        var s = await db.PortalSettings.FirstAsync(ct);
+        var s = await db.PortalSettings.OrderBy(x => x.Id).FirstAsync(ct);
         if (!await db.Languages.AnyAsync(l => l.Code == input.DefaultLanguageCode && l.IsEnabled, ct)) throw DomainException.Invalid("invalid_value");
         s.MainSiteUrl = Url(input.MainSiteUrl);
         s.PortalUrl = Url(input.PortalUrl);

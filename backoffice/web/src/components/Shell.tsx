@@ -2,10 +2,11 @@ import { Dialog, Menu } from "@base-ui/react";
 import {
   Briefcase, CalendarCheck, CaretDown, ChatCircleDots, ClipboardText, Exam, FileText, Gear, Handshake, Key, List, ListChecks,
   Cube, EnvelopeSimple, HardDrives, Robot, Scroll, SignOut, SquaresFour, Target, Tray, Translate, TreeStructure, UserCircle, Users, UsersThree, X, Brain, ChartBar, ClockCounterClockwise, Pulse, ChartLine, ShieldCheck, ChatText, UsersFour, ArrowsLeftRight, MapPin, Stamp, DeviceMobile, GlobeHemisphereEast, IdentificationCard, CaretUpDown, SidebarSimple } from "@phosphor-icons/react";
-import { ReactNode, useEffect, useState } from "react";
+import { lazy, ReactNode, Suspense, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { api, useAuth, useLang } from "../core";
-import { AgentChat } from "../agent/AgentChat";
+// The assistant's code loads the first time the panel opens.
+const AgentChat = lazy(() => import("../agent/AgentChat").then((m) => ({ default: m.AgentChat })));
 import { ErrorBoundary } from "./ErrorBoundary";
 import { LangFlag } from "./flags";
 
@@ -212,7 +213,7 @@ function AssistantPanel() {
       <Dialog.Portal>
         <Dialog.Popup className="mh-chat-drawer">
           <Dialog.Title className="sr-only">{t("asst.title")}</Dialog.Title>
-          <div className="min-h-0 flex-1"><ErrorBoundary compact><AgentChat panel onClose={() => setOpen(false)} /></ErrorBoundary></div>
+          <div className="min-h-0 flex-1"><ErrorBoundary compact><Suspense fallback={null}><AgentChat panel onClose={() => setOpen(false)} /></Suspense></ErrorBoundary></div>
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>

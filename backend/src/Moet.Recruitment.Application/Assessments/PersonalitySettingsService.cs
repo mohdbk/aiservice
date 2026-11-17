@@ -53,7 +53,7 @@ public sealed class PersonalitySettingsService(IAppDbContext db, ICurrentActor a
     {
         var c = new BandCutoffs(input.Low, input.Moderate, input.High, input.VeryHigh);
         c.Validate();
-        var row = await db.PersonalitySettings.FirstOrDefaultAsync(ct);
+        var row = await db.PersonalitySettings.OrderBy(x => x.Id).FirstOrDefaultAsync(ct);
         if (row == null) db.PersonalitySettings.Add(row = new PersonalitySetting());
         row.BandCutoffs = c.ToString();
         row.UpdatedAt = clock.UtcNow;
