@@ -7,6 +7,8 @@ using Moet.Recruitment.Domain.Hiring;
 
 namespace Moet.Recruitment.Application.Backoffice;
 
+public sealed record OverrideBody(int? Score, string? Reason);
+
 public sealed record ApplicantFilter(int? JobId, string? Status, string? Screening, string? AiStatus, decimal? MinScore, string? Country, DateOnly? From, DateOnly? To, string? CvText = null);
 
 /// <summary>The applicant pipeline: lists, the applicant's full record, status changes, notes and re-scoring.</summary>
@@ -114,6 +116,17 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
         var personality = invitations.Where(i => i.personality_model != PersonalityModel.None).ToDictionary(i => i.id.ToString(System.Globalization.CultureInfo.InvariantCulture),
             i => RoleProfileService.Summary(i.personality_model, i.attempts.LastOrDefault(t => t.trait_profile != null)?.trait_profile, roles, cutoffs, reports));
         var c = a.CvAnalysis;
+        // Where this CV stands among the job's scored applicants (1 = highest).
+        object? rank = null;
+        if (c is { Status: CvAnalysisStatus.Scored, Score: { } mine })
+        {
+            var scores = await db.CvAnalyses.AsNoTracking().Where(x => x.Status == CvAnalysisStatus.Scored && x.Score != null
+                && db.JobApplications.Any(j => j.Id == x.JobApplicationId && j.JobOpeningId == a.JobOpeningId)).Select(x => x.Score!.Value).ToListAsync(ct);
+            var position = scores.Count(x => x > mine) + 1;
+            rank = new { position, of = scores.Count, top_percent = scores.Count == 0 ? 100 : (int)Math.Ceiling(position * 100m / scores.Count) };
+        }
+        var overriderIds = (c?.CriterionScores ?? []).Where(x => x.OverrideByStaffId != null).Select(x => x.OverrideByStaffId!.Value).Distinct().ToList();
+        var overriders = await db.StaffUsers.AsNoTracking().Where(u => overriderIds.Contains(u.Id)).Select(u => new { u.Id, u.FullName }).ToListAsync(ct);
         var combined = await selection.ForApplicantAsync(a.Id, ct);
         // Possible duplicates: other accounts with the same CV file, phone number or name (one person, two accounts).
         var cvHash = await db.StoredFiles.Where(f => f.Id == a.CvFileId).Select(f => f.Sha256).FirstOrDefaultAsync(ct) ?? "";
@@ -161,7 +174,13 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
                 status = c.Status.ToString(), score = c.Score, summary = c.Summary, summary_ar = c.SummaryArabic, gaps = c.MustHaveGaps,
                 years = c.YearsOfExperience, cv_language = c.CvLanguage, read_method = c.ReadMethod, model = c.Model, scored_at = c.ScoredAt,
                 error = c.Error, profile = c.ProfileJson,
-                criteria = c.CriterionScores.OrderBy(s => s.SortOrder).Select(s => new { s.Criterion, s.Weight, s.IsMustHave, s.Score, s.Evidence }).ToList(),
+                needs_review = c.NeedsReview, review_reasons = c.ReviewReasons.Split('\n', StringSplitOptions.RemoveEmptyEntries), read_quality = c.ReadQuality, rank,
+                criteria = c.CriterionScores.OrderBy(s => s.SortOrder).Select(s => new
+                {
+                    s.SortOrder, s.Criterion, s.Weight, s.IsMustHave, s.Score, s.Evidence, s.Category, s.Status, s.Quote, s.QuoteFound, s.RelevantYears,
+                    s.WhyNotHigher, s.OverrideScore, s.OverrideReason, s.OverrideAt, effective = (int)s.Effective,
+                    override_by = overriders.FirstOrDefault(u => u.Id == s.OverrideByStaffId)?.FullName,
+                }).ToList(),
             },
             notes = a.Notes.OrderByDescending(n => n.CreatedAt).Select(n => new
             {
@@ -170,6 +189,36 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
             }).ToList(),
             interviews, offers, invitations, personality, selection = combined, duplicates,
         };
+    }
+
+    /// <summary>
+    /// A recruiter's score for one requirement in place of the AI's, with the reason (required). The overall score is worked
+    /// out again, a note goes on the application, and the correction guides later scoring for the job. A null score removes it.
+    /// </summary>
+    public async Task<object> OverrideAsync(int id, int sortOrder, int? score, string? reason, CancellationToken ct = default)
+    {
+        var c = await db.CvAnalyses.Include(x => x.CriterionScores).FirstOrDefaultAsync(x => x.JobApplicationId == id, ct) ?? throw DomainException.NotFound();
+        var row = c.CriterionScores.FirstOrDefault(x => x.SortOrder == sortOrder) ?? throw DomainException.NotFound();
+        reason = TextUtil.NoEmDash((reason ?? "").Trim());
+        var now = clock.UtcNow;
+        string note;
+        if (score == null)
+        {
+            note = $"Score override removed for \"{row.Criterion}\" (back to the AI's {row.Score}/10).";
+            row.OverrideScore = null; row.OverrideReason = ""; row.OverrideByStaffId = null; row.OverrideAt = null;
+        }
+        else
+        {
+            if (score is < 0 or > 10) throw DomainException.Invalid("override_score");
+            if (reason.Length is < 3 or > 500) throw DomainException.Invalid("override_reason");
+            note = $"Score for \"{row.Criterion}\" set to {score}/10 (the AI gave {row.Score}/10). Reason: {reason}";
+            row.OverrideScore = (byte)score; row.OverrideReason = reason; row.OverrideByStaffId = actor.Id; row.OverrideAt = now;
+        }
+        c.Score = CvScoring.Total(c.CriterionScores.Select(x => (x.Weight, (int)x.Effective)));
+        c.UpdatedAt = now;
+        db.ApplicationNotes.Add(new ApplicationNote { JobApplicationId = id, Kind = NoteKind.System, Text = TextUtil.Clip(note, 4000), AuthorStaffId = actor.Id, CreatedAt = now });
+        await db.SaveChangesAsync(ct);
+        return new { score = c.Score };
     }
 
     public async Task<(byte[] Content, string ContentType, string FileName)> CvAsync(int id, CancellationToken ct = default)

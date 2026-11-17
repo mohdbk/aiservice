@@ -11,6 +11,7 @@ import { DocumentDialog } from "../components/DocumentDialog";
 import { SelectionCard, type SelectionView } from "../components/Selection";
 import { TraitProfile, parseProfile, type PersonalitySummary } from "../components/personality";
 import { ScoreBars } from "../components/ScoreBars";
+import { CvResult, type Analysis } from "../components/CvResult";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
 import { appTone, screenTone } from "./Applicants";
 import { useLookups } from "./JobEdit";
@@ -20,10 +21,7 @@ type Detail = {
   language: string; created_at: string; job: { id: number; code: string; title: string; role_profile?: { id: number; name_ar: string; name_en: string } | null };
   cv: { file_name: string; content_type: string; size: number; url: string } | null;
   screening: { outcome: string; answers: { question: string; answer: string; meets: boolean | null }[] };
-  analysis: null | {
-    status: string; score: number | null; summary: string; summary_ar: string; gaps: string; years: number | null; cv_language: string; read_method: string;
-    model: string; scored_at: string | null; error: string; criteria: { criterion: string; weight: number; is_must_have: boolean; score: number; evidence: string }[];
-  };
+  analysis: null | Analysis;
   notes: { id: number; kind: string; text: string; created_at: string; author: string }[];
   interviews: { id: number; code: string; round: string; starts_at: string; ends_at: string; status: string; feedback: number }[];
   offers: { id: number; code: string; position_title: string; status: string; offer_date: string }[];
@@ -126,27 +124,7 @@ export default function Applicant() {
             {!c || c.status !== "Scored" ? (
               <Note tone={c?.status === "Failed" ? "warning" : "info"}>{c ? `${t(`ai.${c.status}`)}${c.error ? `: ${c.error}` : ""}` : t("app.no_analysis")}</Note>
             ) : (
-              <div className="space-y-5">
-                <div className="flex flex-wrap items-center gap-6">
-                  <div className="text-5xl"><Score value={c.score} /></div>
-                  <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
-                    <dt className="text-aeblack-500">{t("app.years")}</dt><dd className="font-semibold" dir="ltr">{c.years ?? "-"}</dd>
-                    <dt className="text-aeblack-500">{t("app.read_as")}</dt><dd>{c.read_method}</dd>
-                  </dl>
-                </div>
-                <p className="leading-7">{lang === "ar" && c.summary_ar ? c.summary_ar : c.summary}</p>
-                {c.gaps && <Note tone="warning"><strong>{t("app.gaps")}:</strong> {c.gaps}</Note>}
-                <Table head={[t("app.criteria"), t("jobs.weight"), t("apps.score"), t("app.evidence")]}>
-                  {c.criteria.map((r, i) => (
-                    <tr key={i}>
-                      <td className="font-semibold">{r.criterion}{r.is_must_have && <Badge tone="gold">{t("jobs.must")}</Badge>}</td>
-                      <td className="tabular-nums">{r.weight}</td>
-                      <td className="tabular-nums font-bold" dir="ltr">{r.score}/10</td>
-                      <td className="text-sm text-aeblack-600">{r.evidence}</td>
-                    </tr>
-                  ))}
-                </Table>
-              </div>
+              <CvResult appId={a.id} c={c} onChanged={reload} />
             )}
           </Card>
           <div className="space-y-6">

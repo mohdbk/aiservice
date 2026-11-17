@@ -111,6 +111,7 @@ public static class BackofficeEndpoints
             var (content, type, name) = await s.CvAsync(id, ct);
             return download == true ? Results.File(content, type, name) : Results.File(content, type, enableRangeProcessing: true);
         });
+        staff.MapPost("/applicants/{id:int}/criteria/{n:int}/override", (int id, int n, OverrideBody b, BackofficeApplicantService s, CancellationToken ct) => s.OverrideAsync(id, n, b.Score, b.Reason, ct));
         staff.MapPost("/applicants/{id:int}/status", (int id, StatusBody b, BackofficeApplicantService s, CancellationToken ct) => s.SetStatusAsync(id, b.Status, ct));
         staff.MapPost("/applicants/{id:int}/notes", (int id, NoteBody b, BackofficeApplicantService s, CancellationToken ct) => s.AddNoteAsync(id, b.Text, ct));
         staff.MapGet("/applicants/{id:int}/cv-text", (int id, BackofficeApplicantService s, CancellationToken ct) => s.CvTextAsync(id, ct));

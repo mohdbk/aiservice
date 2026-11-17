@@ -29,7 +29,8 @@ public sealed class ReportService(IAppDbContext db, IRequestLanguage language, I
         // Bounded: a report covers at most 50,000 applications.
         var apps = await q.OrderBy(a => a.Id).Take(50000).Select(a => new
         {
-            a.Id, a.CreatedAt, a.Status, a.ScreeningOutcome, a.JobOpening!.DepartmentId, a.Nationality,
+            a.Id, a.CreatedAt, a.Status, a.ScreeningOutcome, a.JobOpening!.DepartmentId, a.Nationality, a.JobOpeningId,
+            Score = a.CvAnalysis != null && a.CvAnalysis.Status == CvAnalysisStatus.Scored ? a.CvAnalysis.Score : null,
         }).ToListAsync(ct);
         var ids = apps.Select(a => a.Id).ToList();
 
@@ -131,6 +132,26 @@ public sealed class ReportService(IAppDbContext db, IRequestLanguage language, I
             }),
         };
 
+        // How often the AI's ranking agrees with people's decisions: within each job, the top quarter by CV score against the
+        // bottom half, and how many of each went on (interview, offer or accepted). Low-scored people picked anyway are counted too.
+        var progressed = apps.Where(a => interviewed.Contains(a.Id) || offered.Contains(a.Id) || a.Status == ApplicationStatus.Accepted).Select(a => a.Id).ToHashSet();
+        var top = new List<int>();
+        var bottom = new List<int>();
+        foreach (var job in apps.Where(a => a.Score != null).GroupBy(a => a.JobOpeningId).Where(g => g.Count() >= 4))
+        {
+            var ranked = job.OrderByDescending(a => a.Score).Select(a => a.Id).ToList();
+            top.AddRange(ranked.Take((int)Math.Ceiling(ranked.Count / 4.0)));
+            bottom.AddRange(ranked.Skip(ranked.Count / 2));
+        }
+        double Pct(IReadOnlyCollection<int> set) => set.Count == 0 ? 0 : Math.Round(100.0 * set.Count(progressed.Contains) / set.Count, 1);
+        var agreement = new
+        {
+            scored = apps.Count(a => a.Score != null),
+            top_count = top.Count, top_progressed = Pct(top),
+            bottom_count = bottom.Count, bottom_progressed = Pct(bottom),
+            low_picked = bottom.Count(progressed.Contains),
+        };
+
         // Applications per week (weeks start on Monday), every week of the period present.
         var firstMonday = start.AddDays(-(((int)start.DayOfWeek + 6) % 7));
         var weeks = new List<object>();
@@ -151,7 +172,7 @@ public sealed class ReportService(IAppDbContext db, IRequestLanguage language, I
             {
                 to_interview_days = Median(toInterview), to_offer_days = Median(toOffer), to_hire_days = Median(toHire), hires = toHire.Count,
             },
-            tests, drop_off = dropOff, departments = byDepartment, weeks, fairness,
+            tests, drop_off = dropOff, departments = byDepartment, weeks, fairness, agreement,
         };
     }
 }

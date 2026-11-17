@@ -10,6 +10,7 @@ export type Report = {
   drop_off: Record<string, number>;
   departments: { department_id: number | null; name: string; applied: number; interviewed: number; offered: number; hired: number }[];
   weeks: { week: string; applied: number }[];
+  agreement?: { scored: number; top_count: number; top_progressed: number; bottom_count: number; bottom_progressed: number; low_picked: number };
   fairness: {
     given: number; emirati_share_applied: number; emirati_share_hired: number | null;
     groups: { group: string; applied: number; interviewed: number; offered: number; hired: number; interview_rate: number; offer_rate: number; hire_rate: number;
@@ -222,6 +223,7 @@ export default function Reports() {
                   </table>
                 </div>
               </Card>
+              {r.agreement && <Agreement a={r.agreement} />}
               {r.fairness && <Fairness f={r.fairness} total={r.funnel[0]?.count ?? 0} />}
             </>
           )}
@@ -264,6 +266,22 @@ function Fairness({ f, total }: { f: Report["fairness"]; total: number }) {
           </tbody>
         </table>
       </div>
+    </Card>
+  );
+}
+
+/** How often the AI's CV ranking agrees with people's decisions: the top quarter against the bottom half of each job. */
+function Agreement({ a }: { a: NonNullable<Report["agreement"]> }) {
+  const { t } = useLang();
+  if (a.top_count === 0) return <Card title={t("rep.agree")}><p className="text-sm text-aeblack-500">{t("rep.agree_none")}</p></Card>;
+  return (
+    <Card title={t("rep.agree")}>
+      <p className="mb-4 text-sm text-aeblack-600">{t("rep.agree_hint")}</p>
+      <Bars rows={[
+        { label: t("rep.agree_top", { n: a.top_count }), value: a.top_progressed, note: "%" },
+        { label: t("rep.agree_bottom", { n: a.bottom_count }), value: a.bottom_progressed, note: "%" },
+      ]} />
+      <p className="mt-4 text-sm">{a.low_picked > 0 ? t("rep.agree_low", { n: a.low_picked }) : t("rep.agree_low_none")}</p>
     </Card>
   );
 }
