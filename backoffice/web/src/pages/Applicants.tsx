@@ -117,7 +117,7 @@ function Board({ rows, statusOf, onMove }: { rows: Row[]; statusOf: (a: Row) => 
                     {a.score != null && <Score value={a.score} />}
                   </div>
                   <p className="mt-1 line-clamp-1 text-xs text-aeblack-500">{a.job_title}</p>
-                  <div className="mt-2 flex items-center justify-between gap-2">
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                     <Badge tone={screenTone(a.screening)}>{t(`screen.${a.screening}`)}</Badge>
                     <StatusPick value={statusOf(a)} name={a.full_name} onPick={(next) => onMove(a, next)} />
                   </div>
