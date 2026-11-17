@@ -21,6 +21,8 @@ const VIEW = { width: 1440, height: 810 };
 const SCALE = 4 / 3; // 1920 x 1080 frames
 
 const manifest = [];
+let chapter = { en: "", ar: "" };
+const chapterOf = (en, ar) => { chapter = { en, ar }; };
 let n = 0;
 const log = (s) => console.log(s);
 
@@ -55,7 +57,7 @@ async function shot(page, caption, captionAr, focus) {
       if (b) box = { x: Math.round(b.x * SCALE), y: Math.round(b.y * SCALE), w: Math.round(b.width * SCALE), h: Math.round(b.height * SCALE) };
     } catch { /* no camera move */ }
   }
-  manifest.push({ file, caption, caption_ar: captionAr, focus: box });
+  manifest.push({ file, caption, caption_ar: captionAr, focus: box, chapter: chapter.en, chapter_ar: chapter.ar });
   log(`shot ${file}: ${caption}`);
 }
 async function step(name, fn) {
@@ -95,6 +97,7 @@ const job = await bo("GET", `/jobs/${jobId}`);
 log(`job ${jobId} ${job.code}, Big Five ${big5.id}`);
 
 // ---------------- 1. HR opens the job ----------------
+chapterOf("The Job Opening", "الإعلان عن الوظيفة");
 const boPage = await hr.newPage();
 await step("dashboard", async () => {
   await boPage.goto(`${BASE}/ar`, { waitUntil: "networkidle" });
@@ -114,6 +117,7 @@ await step("job tests", async () => {
 });
 
 // ---------------- 2. Screening requirements from the description ----------------
+chapterOf("Screening Requirements", "متطلبات الفرز");
 await step("requirements suggest", async () => {
   await tab(boPage, T["jobs.tab.criteria"]);
   await boPage.waitForTimeout(400);
@@ -151,6 +155,7 @@ await step("other applicants", async () => {
 });
 
 // ---------------- 3. The candidate applies on the careers portal ----------------
+chapterOf("Applying", "التقديم");
 const cand = await browser.newContext(ctxOpts);
 const pp = await cand.newPage();
 pp.on("dialog", (d) => d.accept());
@@ -202,6 +207,7 @@ await step("portal apply", async () => {
 });
 
 // ---------------- 4. The Big Five questionnaire ----------------
+chapterOf("The Big Five Questionnaire", "استبيان السمات الخمس");
 const salma = async () => (await bo("GET", `/applicants?q=${encodeURIComponent(EMAIL)}`)).items[0];
 await step("big five", async () => {
   const app = await salma();
@@ -240,6 +246,7 @@ await step("big five", async () => {
 });
 
 // ---------------- 5. HR sees the results ----------------
+chapterOf("Scoring", "التقييم");
 await step("wait for scoring", async () => {
   for (let i = 0; i < 60; i++) {
     const items = (await bo("GET", `/applicants?job=${jobId}&size=10`)).items;
@@ -274,6 +281,7 @@ await step("big five profile", async () => {
 });
 
 // ---------------- 6. Interview times ----------------
+chapterOf("The Interview", "المقابلة");
 await step("offer times", async () => {
   await toTop(boPage);
   await boPage.getByRole("button", { name: T["app.interview"] }).first().click();

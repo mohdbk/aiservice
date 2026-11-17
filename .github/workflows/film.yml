@@ -63,6 +63,7 @@ jobs:
           npx playwright install --with-deps chromium >/dev/null
           python3 ../film/make-cvs.py cvs
           cp ../film/film.mjs . && BASE_URL=http://127.0.0.1:4173 PORTAL_URL=http://127.0.0.1:8080 REPO=../.. CVS=cvs node film.mjs
+          cp ../film/cards.mjs . && REPO=../.. node cards.mjs
       - name: Logs
         if: always()
         run: |
