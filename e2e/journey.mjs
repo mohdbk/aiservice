@@ -43,6 +43,7 @@ try {
   await page.fill("#email", EMAIL);
   await page.fill("#password", PASSWORD);
   await page.getByRole("button", { name: /Create Account/i }).click();
+  await page.waitForURL((u) => !/create-account/.test(u.pathname), { timeout: 20000 });
   await page.waitForLoadState("networkidle");
   if (/check-email|sign-in/.test(page.url())) {
     // Not signed in yet: HR marks the address verified if needed (the stack sends no email), then the candidate signs in.
@@ -54,6 +55,7 @@ try {
     await page.fill("#email", EMAIL);
     await page.fill("#password", PASSWORD);
     await page.getByRole("button", { name: /^Sign In$/i }).click();
+    await page.waitForURL((u) => !/sign-in/.test(u.pathname), { timeout: 20000 });
     await page.waitForLoadState("networkidle");
   }
   ok("account created and signed in");

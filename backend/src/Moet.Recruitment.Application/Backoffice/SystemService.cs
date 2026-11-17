@@ -21,8 +21,8 @@ public sealed class SystemService(IAppDbContext db, IClock clock, MailConfig mai
         if (kind == "changes") q = q.Where(a => a.Action != AuditAction.Action);
         if (kind == "actions") q = q.Where(a => a.Action == AuditAction.Action);
         // By default the log leaves out routine lines: an action line whose record changes are listed anyway (same request),
-        // and the assistant's reads. "all" shows them too, as does looking at one request.
-        if (kind is null or "" && string.IsNullOrEmpty(request))
+        // and the assistant's reads. "all" shows them too, as does narrowing to one request, record or source.
+        if (kind is null or "" && string.IsNullOrEmpty(request) && string.IsNullOrEmpty(via) && string.IsNullOrEmpty(record) && string.IsNullOrEmpty(key))
             q = q.Where(a => !(a.Action == AuditAction.Action
                 && ((a.RequestId != "" && db.AuditEntries.Any(b => b.RequestId == a.RequestId && b.Action != AuditAction.Action))
                     || (a.Via == "Assistant" && a.Description.StartsWith("GET ")))));
