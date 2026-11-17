@@ -304,7 +304,7 @@ export default function Applicant() {
   );
 }
 
-function InviteDialog({ open, onClose, tests, onSave, busy }: { open: boolean; onClose: () => void; tests: { id: number; title: string }[]; onSave: (b: unknown) => void; busy: boolean }) {
+export function InviteDialog({ open, onClose, tests, onSave, busy }: { open: boolean; onClose: () => void; tests: { id: number; title: string }[]; onSave: (b: unknown) => void; busy: boolean }) {
   const { t } = useLang();
   const [test, setTest] = useState("");
   const [deadline, setDeadline] = useState<Deadline>(DEFAULT_DEADLINE);

@@ -155,23 +155,28 @@ export function useGo() {
 }
 
 // ---------------- toasts ----------------
-type Toast = { id: number; text: string; tone: "success" | "error" | "info" };
-const ToastContext = createContext<(text: string, tone?: Toast["tone"]) => void>(() => {});
+type ToastAction = { label: string; run: () => void };
+type Toast = { id: number; text: string; tone: "success" | "error" | "info"; action?: ToastAction };
+const ToastContext = createContext<(text: string, tone?: Toast["tone"], action?: ToastAction) => void>(() => {});
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<Toast[]>([]);
-  const push = useCallback((text: string, tone: Toast["tone"] = "success") => {
+  const push = useCallback((text: string, tone: Toast["tone"] = "success", action?: ToastAction) => {
     const id = Date.now() + Math.random();
-    setItems((x) => [...x, { id, text, tone }]);
-    setTimeout(() => setItems((x) => x.filter((i) => i.id !== id)), 5000);
+    setItems((x) => [...x, { id, text, tone, action }]);
+    setTimeout(() => setItems((x) => x.filter((i) => i.id !== id)), action ? 6000 : 5000);
   }, []);
   return (
     <ToastContext.Provider value={push}>
       {children}
       <div aria-live="polite" role="status" className="pointer-events-none fixed inset-x-4 bottom-4 z-[70] flex flex-col items-center gap-2 sm:inset-x-auto sm:end-4 sm:items-end">
         {items.map((i) => (
-          <div key={i.id} className={`pointer-events-auto rounded-lg px-4 py-3 text-sm font-semibold text-white shadow-lg ${i.tone === "error" ? "bg-aered-600" : i.tone === "info" ? "bg-aeblack-700" : "bg-aegreen-600"}`}>
-            {i.text}
+          <div key={i.id} className={`pointer-events-auto flex items-center gap-4 rounded-lg px-4 py-3 text-sm font-semibold text-white shadow-lg ${i.tone === "error" ? "bg-aered-600" : i.tone === "info" ? "bg-aeblack-700" : "bg-aegreen-600"}`}>
+            <span>{i.text}</span>
+            {i.action && (
+              <button type="button" className="rounded-md px-2 py-1 font-bold underline underline-offset-2 hover:bg-white/15"
+                onClick={() => { i.action!.run(); setItems((x) => x.filter((y) => y.id !== i.id)); }}>{i.action.label}</button>
+            )}
           </div>
         ))}
       </div>

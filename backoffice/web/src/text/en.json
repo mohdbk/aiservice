@@ -1550,5 +1550,19 @@
  "cmd.pages": "Pages",
  "cmd.ask": "Ask the assistant: {q}",
  "cmd.none": "Nothing found.",
- "cmd.help": "Arrow keys to move, Enter to open, Esc to close. Open from anywhere with Ctrl K."
+ "cmd.help": "Arrow keys to move, Enter to open, Esc to close. Open from anywhere with Ctrl K.",
+ "bulk.region": "Actions for Selected Applicants",
+ "bulk.selected": "{count} Selected",
+ "bulk.clear": "Clear Selection",
+ "bulk.all": "Select All on This Page",
+ "bulk.one": "Select {name}",
+ "bulk.undo": "Undo",
+ "bulk.failed": "A status change could not be saved.",
+ "bulk.status_one": "Status changed to {status}.",
+ "bulk.status_many": "{count} applicants changed to {status}.",
+ "bulk.change_for": "Change Status for {name} (Now {status})",
+ "bulk.invited": "Invited {ok} of {count}.",
+ "bulk.export": "Export CSV",
+ "list.compact": "Compact Rows",
+ "list.comfortable": "Comfortable Rows"
 }

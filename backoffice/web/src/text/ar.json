@@ -1550,5 +1550,19 @@
  "cmd.pages": "الصفحات",
  "cmd.ask": "اسأل المساعد: {q}",
  "cmd.none": "لا توجد نتائج.",
- "cmd.help": "الأسهم للتنقل، و Enter للفتح، و Esc للإغلاق. افتح البحث من أي مكان بـ Ctrl K."
+ "cmd.help": "الأسهم للتنقل، و Enter للفتح، و Esc للإغلاق. افتح البحث من أي مكان بـ Ctrl K.",
+ "bulk.region": "إجراءات المتقدمين المحددين",
+ "bulk.selected": "تم تحديد {count}",
+ "bulk.clear": "إلغاء التحديد",
+ "bulk.all": "تحديد الكل في هذه الصفحة",
+ "bulk.one": "تحديد {name}",
+ "bulk.undo": "تراجع",
+ "bulk.failed": "تعذر حفظ تغيير الحالة.",
+ "bulk.status_one": "تم تغيير الحالة إلى {status}.",
+ "bulk.status_many": "تم تغيير حالة {count} متقدمين إلى {status}.",
+ "bulk.change_for": "تغيير حالة {name} (الحالية {status})",
+ "bulk.invited": "تمت دعوة {ok} من {count}.",
+ "bulk.export": "تصدير CSV",
+ "list.compact": "صفوف مضغوطة",
+ "list.comfortable": "صفوف مريحة"
 }

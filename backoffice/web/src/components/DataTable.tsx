@@ -1,4 +1,4 @@
-import { CaretDown, CaretUp, CaretUpDown, FunnelSimple, MagnifyingGlass, X } from "@phosphor-icons/react";
+import { CaretDown, CaretUp, CaretUpDown, FunnelSimple, MagnifyingGlass, Rows, SquareSplitVertical, X } from "@phosphor-icons/react";
 import { FormEvent, ReactNode, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, ApiError, useAsync, useLang } from "../core";
@@ -40,11 +40,30 @@ export function useList<T>(path: string, filterKeys: string[], fixed: Record<str
 
 type ListState<T> = ReturnType<typeof useList<T>>;
 
-export function DataTable<T>({ list, columns, rowKey, filters = [], searchLabel, empty, emptyHint, emptyAction, toolbar }: {
+export type Selection = { selected: (string | number)[]; onChange: (keys: (string | number)[]) => void; label: (row: unknown) => string };
+
+/** Row spacing in every list, kept per browser: comfortable (the default) or compact. */
+function useDensity() {
+  const read = () => { try { return localStorage.getItem("mh-density") === "compact"; } catch { return false; } };
+  const [compact, setCompact] = useState(read);
+  const toggle = () => setCompact((c) => { try { localStorage.setItem("mh-density", c ? "comfortable" : "compact"); } catch { /* private window */ } return !c; });
+  return { compact, toggle };
+}
+
+export function DataTable<T>({ list, columns, rowKey, filters = [], searchLabel, empty, emptyHint, emptyAction, toolbar, selection, bulk }: {
   list: ListState<T>; columns: Column<T>[]; rowKey: (row: T) => string | number; filters?: FilterDef[]; searchLabel?: string; empty?: ReactNode;
   emptyHint?: ReactNode; emptyAction?: ReactNode; toolbar?: ReactNode;
+  /** Rows can be ticked; the bar of actions for the ticked rows shows above the list. */
+  selection?: Selection; bulk?: ReactNode;
 }) {
   const { t } = useLang();
+  const density = useDensity();
+  const keysOnPage = (list.data?.items || []).map(rowKey);
+  const picked = new Set(selection?.selected || []);
+  const allPicked = keysOnPage.length > 0 && keysOnPage.every((k) => picked.has(k));
+  const somePicked = keysOnPage.some((k) => picked.has(k));
+  const pickAll = () => selection?.onChange(allPicked ? selection.selected.filter((k) => !keysOnPage.includes(k)) : [...new Set([...selection.selected, ...keysOnPage])]);
+  const pick = (k: string | number) => selection?.onChange(picked.has(k) ? selection.selected.filter((x) => x !== k) : [...selection.selected, k]);
   const [q, setQ] = useState(list.get("q"));
   const [showFilters, setShowFilters] = useState(false);
   useEffect(() => setQ(list.get("q")), [list.get("q")]);
@@ -113,12 +132,25 @@ export function DataTable<T>({ list, columns, rowKey, filters = [], searchLabel,
             action={<Button variant="outline" onClick={clearAll} icon={<X size={20} aria-hidden="true" />}>{t("list.clear")}</Button>}>{t("list.no_match")}</Empty>
         : <Empty hint={emptyHint} action={emptyAction}>{empty}</Empty>) : (
         <>
-          {/* Wide screens: a table. */}
-          <div className={`hidden overflow-x-auto rounded-2xl border border-aeblack-100 bg-white transition md:block ${list.loading ? "opacity-60" : ""}`}>
-            <table className="mh-table">
+          {selection && selection.selected.length > 0 && (
+            <div role="region" aria-label={t("bulk.region")} className="sticky top-16 z-[5] mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-primary-200 bg-primary-50 px-4 py-2.5 shadow-sm">
+              <span className="me-2 text-sm font-bold text-primary-900">{t("bulk.selected", { count: selection.selected.length })}</span>
+              {bulk}
+              <Button variant="link" size="sm" className="ms-auto" onClick={() => selection.onChange([])} icon={<X size={18} aria-hidden="true" />}>{t("bulk.clear")}</Button>
+            </div>
+          )}
+          {/* Wide screens: a table, its header kept in view while the rows scroll. */}
+          <div className={`mh-table-wrap hidden rounded-2xl border border-aeblack-100 bg-white transition md:block ${list.loading ? "opacity-60" : ""}`}>
+            <table className={`mh-table ${density.compact ? "mh-table-compact" : ""}`}>
               <caption className="sr-only">{t("list.total", { count: data.total })}</caption>
               <thead>
                 <tr>
+                  {selection && (
+                    <th scope="col" className="w-10">
+                      <input type="checkbox" className="mh-check" checked={allPicked} aria-label={t("bulk.all")}
+                        ref={(el) => { if (el) el.indeterminate = somePicked && !allPicked; }} onChange={pickAll} />
+                    </th>
+                  )}
                   {columns.map((c) => {
                     const sorted = c.sort && data.sort === c.sort ? data.dir : null;
                     return (
@@ -129,7 +161,14 @@ export function DataTable<T>({ list, columns, rowKey, filters = [], searchLabel,
               </thead>
               <tbody>
                 {data.items.map((row) => (
-                  <tr key={rowKey(row)}>{columns.map((c) => <td key={c.key} className={c.className}>{c.render(row)}</td>)}</tr>
+                  <tr key={rowKey(row)} className={picked.has(rowKey(row)) ? "mh-row-picked" : ""}>
+                    {selection && (
+                      <td className="w-10">
+                        <input type="checkbox" className="mh-check" checked={picked.has(rowKey(row))} aria-label={t("bulk.one", { name: selection.label(row) })} onChange={() => pick(rowKey(row))} />
+                      </td>
+                    )}
+                    {columns.map((c) => <td key={c.key} className={c.className}>{c.render(row)}</td>)}
+                  </tr>
                 ))}
               </tbody>
             </table>
@@ -137,8 +176,11 @@ export function DataTable<T>({ list, columns, rowKey, filters = [], searchLabel,
           {/* Phones: one card per row, the first column as its title and the others as labelled values. */}
           <ul className={`space-y-3 transition md:hidden ${list.loading ? "opacity-60" : ""}`} aria-label={t("list.total", { count: data.total })}>
             {data.items.map((row) => (
-              <li key={rowKey(row)} className="mc-surface rounded-2xl border border-aeblack-100 bg-white p-4">
-                {first && <div className="mb-3 text-base font-semibold [&_a]:font-semibold">{first.render(row)}</div>}
+              <li key={rowKey(row)} className={`mc-surface rounded-2xl border bg-white p-4 ${picked.has(rowKey(row)) ? "border-primary-300 ring-1 ring-primary-200" : "border-aeblack-100"}`}>
+                {first && <div className="mb-3 flex items-start gap-3 text-base font-semibold [&_a]:font-semibold">
+                  {selection && <input type="checkbox" className="mh-check mt-1" checked={picked.has(rowKey(row))} aria-label={t("bulk.one", { name: selection.label(row) })} onChange={() => pick(rowKey(row))} />}
+                  <div className="min-w-0 flex-1">{first.render(row)}</div>
+                </div>}
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                   {details.map((c) => (
                     <div key={c.key} className="min-w-0">
@@ -154,6 +196,10 @@ export function DataTable<T>({ list, columns, rowKey, filters = [], searchLabel,
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-aeblack-600">
             <span>{t("list.showing", { from: (data.page - 1) * data.size + 1, to: Math.min(data.page * data.size, data.total), total: data.total })}</span>
             <div className="flex flex-wrap items-center gap-3">
+              <button type="button" onClick={density.toggle} aria-pressed={density.compact} className="hidden items-center gap-1.5 rounded-lg px-2 py-1 hover:bg-whitely-100 md:inline-flex">
+                {density.compact ? <Rows size={18} aria-hidden="true" /> : <SquareSplitVertical size={18} aria-hidden="true" />}
+                {density.compact ? t("list.comfortable") : t("list.compact")}
+              </button>
               <label className="inline-flex items-center gap-2">
                 {t("list.per_page")}
                 <select className="rounded-lg border border-aeblack-200 bg-white px-2 py-1" value={data.size} onChange={(e) => list.set({ size: e.target.value })}>
