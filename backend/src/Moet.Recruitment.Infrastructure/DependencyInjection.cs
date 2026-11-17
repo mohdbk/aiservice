@@ -50,6 +50,7 @@ public static class DependencyInjection
         s.AddSingleton<BackupService>();
         s.AddSingleton<IBackups>(sp => sp.GetRequiredService<BackupService>());
         s.AddSingleton<ISecretProtector, AesSecretProtector>();
+        s.AddSingleton<IModelUsageLog, ModelUsageLog>();
         s.AddHttpClient<ILanguageModel, OpenAiCompatibleModel>(c => c.Timeout = TimeSpan.FromMinutes(5));
         s.AddHttpClient<ICvReader, CvReader>(c => c.Timeout = TimeSpan.FromMinutes(5));
         if (runWorkers)

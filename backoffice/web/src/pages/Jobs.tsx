@@ -4,6 +4,7 @@ import { DataTable, opts, useList } from "../components/DataTable";
 import { Badge, Button, EnglishBadge, PageHeader } from "../components/ui";
 import { useGo, useLang, usePageTitle } from "../core";
 import { useLookups } from "./JobEdit";
+import { SuggestAllEnglish } from "../components/SuggestAllEnglish";
 
 type JobRow = {
   id: number; code: string; title: string; title_en: string; department: string; status: string; is_published: boolean;
@@ -20,7 +21,10 @@ export default function Jobs() {
   const list = useList<JobRow>("/jobs", ["status", "published", "department", "english"]);
   return (
     <>
-      <PageHeader title={t("jobs.title")} actions={<Button data-shortcut="new" onClick={() => go("/jobs/new")} icon={<Plus size={20} aria-hidden="true" />}>{t("jobs.new")}</Button>} />
+      <PageHeader title={t("jobs.title")} actions={<>
+        <SuggestAllEnglish />
+        <Button data-shortcut="new" onClick={() => go("/jobs/new")} icon={<Plus size={20} aria-hidden="true" />}>{t("jobs.new")}</Button>
+      </>} />
       <DataTable list={list} rowKey={(j) => j.id} emptyHint={t("empty.jobs")} emptyAction={<Button onClick={() => go("/jobs/new")} icon={<Plus size={20} aria-hidden="true" />}>{t("jobs.new")}</Button>}
         filters={[
           { key: "status", label: t("jobs.status"), options: opts(t, "status.", ["Open", "Draft", "Closed"]) },

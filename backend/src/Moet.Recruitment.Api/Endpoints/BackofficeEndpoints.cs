@@ -183,6 +183,7 @@ public static class BackofficeEndpoints
         staff.MapGet("/screening-questions/{id:int}", (int id, BackofficeSetupService s, CancellationToken ct) => s.ScreeningQuestionAsync(id, ct));
         staff.MapPost("/screening-questions", (ScreeningQuestionInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveScreeningQuestionAsync(null, b, ct));
         staff.MapPut("/screening-questions/{id:int}", (int id, ScreeningQuestionInput b, BackofficeSetupService s, CancellationToken ct) => s.SaveScreeningQuestionAsync(id, b, ct));
+        staff.MapPost("/suggest-english/missing", (BackofficeSetupService s, CancellationToken ct) => s.SuggestAllMissingAsync(ct));
         staff.MapPost("/suggest-english/{kind}/{id:int}", (string kind, int id, BackofficeSetupService s, CancellationToken ct) => s.SuggestEnglishAsync(kind, id, ct));
 
         // recruitment agent: the browser talks AG-UI to the agent service through this proxy; the agent can only propose changes

@@ -144,8 +144,8 @@ function Brand() {
     <Link to={path()} className="flex min-w-0 items-center gap-2 sm:gap-3 md:gap-4" aria-label={`${t("site.portal")}, ${t("site.ministry")}`}>
       <img src={logoSrc(lang, config.logo)} alt={t("site.ministry")} className="h-auto w-auto max-h-9 max-w-[40vw] shrink-0 object-contain sm:max-h-14 sm:max-w-none md:max-h-[72px]" width={907} height={228} />
       <span className="hidden h-10 w-px shrink-0 bg-aeblack-200 sm:block md:h-12" aria-hidden="true" />
-      <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full bg-primary-600 px-2.5 py-1 text-xs font-bold text-whitely-50 shadow-sm sm:gap-2 sm:px-3 sm:py-1.5 sm:text-sm md:px-4 md:py-2 md:text-lg" dir={config.dir}>
-        <Briefcase size={24} className="hidden sm:block" aria-hidden="true" />
+      {/* The same quiet label as the backoffice: a tinted pill, not something that looks like a button. */}
+      <span className="shrink-0 whitespace-nowrap rounded-full bg-primary-100 px-2.5 py-0.5 text-xs font-bold text-primary-800 sm:px-3 sm:py-1 sm:text-sm" dir={config.dir}>
         {t("site.portal")}
       </span>
     </Link>

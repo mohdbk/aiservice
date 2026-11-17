@@ -62,6 +62,19 @@ public class AgentSetting
     }
 }
 
+/// <summary>One language model call: source ("api" features or the "assistant"), feature, model and tokens.</summary>
+public class ModelUsage
+{
+    public long Id { get; set; }
+    public DateTime At { get; set; }
+    public string Source { get; set; } = "";
+    public string Feature { get; set; } = "";
+    public string Model { get; set; } = "";
+    public int InputTokens { get; set; }
+    public int OutputTokens { get; set; }
+    public int? StaffUserId { get; set; }
+}
+
 public class AgentRun
 {
     public long Id { get; set; }

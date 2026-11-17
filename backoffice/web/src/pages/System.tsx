@@ -30,7 +30,7 @@ export function AuditLog() {
       <PageHeader title={t("nav.audit")} subtitle={t("audit.subtitle")} />
       <DataTable list={list} rowKey={(r) => r.id} searchLabel={t("audit.search")}
         filters={[
-          { key: "kind", label: t("audit.kind"), options: [{ value: "actions", label: t("audit.kind.actions") }, { value: "changes", label: t("audit.kind.changes") }] },
+          { key: "kind", label: t("audit.kind"), options: [{ value: "actions", label: t("audit.kind.actions") }, { value: "changes", label: t("audit.kind.changes") }, { value: "all", label: t("audit.kind.all") }] },
           { key: "via", label: t("audit.via"), options: [{ value: "Assistant", label: t("audit.via.Assistant") }] },
           { key: "record", label: t("audit.record"), options: records.map((r) => ({ value: r, label: r })) },
           { key: "action", label: t("audit.action"), options: opts(t, "audit.act.", ["Created", "Updated", "Deleted", "Action"]) },
@@ -111,7 +111,64 @@ export function AuditLog() {
 type Usage = {
   default_limit: number; total_month: number; days: { day: string; messages: number }[];
   people: { id: number; name: string; email: string; role: string; enabled: boolean; day: number; week: number; month: number; approved: number; limit: number | null }[];
+  model?: ModelUse;
 };
+type ModelUse = {
+  currency: string; priced: boolean; input: number; output: number; calls: number; cost: number | null;
+  days: { day: string; assistant: number; features: number }[];
+  by_feature: { feature: string; calls: number; input: number; output: number; cost: number | null }[];
+};
+
+const compact = (n: number) => new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(n);
+
+/** Language model use for 30 days: tokens per day (assistant and other features), per feature, and the estimated cost. */
+function ModelUseCard({ m }: { m: ModelUse }) {
+  const { t, date } = useLang();
+  const max = Math.max(1, ...m.days.map((d) => d.assistant + d.features));
+  const money = (n: number | null) => n == null ? "-" : `${n.toLocaleString("en", { maximumFractionDigits: 2 })} ${m.currency}`;
+  const name = (f: string) => { const k = `usage.feature.${f}`; const v = t(k); return v === k ? f : v; };
+  return (
+    <Card title={t("usage.model_title")}>
+      <dl className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[[t("usage.calls"), compact(m.calls)], [t("usage.tokens_in"), compact(m.input)], [t("usage.tokens_out"), compact(m.output)], [t("usage.cost"), m.priced ? money(m.cost) : t("usage.no_price")]].map(([k, v]) => (
+          <div key={k} className="rounded-xl bg-whitely-100 p-3"><dt className="text-xs text-aeblack-500">{k}</dt><dd className="mt-1 text-lg font-bold tabular-nums" dir="ltr">{v}</dd></div>
+        ))}
+      </dl>
+      <div className="flex h-32 items-end gap-0.5 border-b border-aeblack-200" dir="ltr" role="img" aria-label={t("usage.model_chart")}>
+        {m.days.map((d) => (
+          <div key={d.day} className="group flex h-full flex-1 flex-col justify-end gap-[2px]" title={`${date(d.day)}: ${t("usage.series_assistant")} ${compact(d.assistant)}, ${t("usage.series_features")} ${compact(d.features)}`}>
+            {d.features > 0 && <div className="w-full rounded-t-sm bg-camel-400 group-hover:bg-camel-500" style={{ height: `${(d.features / max) * 100}%`, minHeight: 2 }} />}
+            {d.assistant > 0 && <div className={`w-full bg-primary-500 group-hover:bg-primary-700 ${d.features > 0 ? "" : "rounded-t-sm"}`} style={{ height: `${(d.assistant / max) * 100}%`, minHeight: 2 }} />}
+          </div>
+        ))}
+      </div>
+      <div className="mt-1 flex justify-between text-xs text-aeblack-500" dir="ltr"><span>{date(m.days[0]?.day)}</span><span>{date(m.days[m.days.length - 1]?.day)}</span></div>
+      <ul className="mt-2 flex flex-wrap gap-4 text-xs text-aeblack-700">
+        <li className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-primary-500" aria-hidden="true" />{t("usage.series_assistant")}</li>
+        <li className="flex items-center gap-1.5"><span className="size-2.5 rounded-sm bg-camel-400" aria-hidden="true" />{t("usage.series_features")}</li>
+      </ul>
+      {m.by_feature.length > 0 && (
+        <div className="mt-5 overflow-x-auto">
+          <table className="w-full min-w-[32rem] text-sm">
+            <thead><tr className="border-b border-aeblack-100 text-aeblack-500">
+              {["usage.feature", "usage.calls", "usage.tokens_in", "usage.tokens_out", "usage.cost"].map((k) => <th key={k} className="py-2 text-start font-semibold">{t(k)}</th>)}
+            </tr></thead>
+            <tbody>{m.by_feature.map((f) => (
+              <tr key={f.feature} className="border-b border-aeblack-50">
+                <td className="py-2">{name(f.feature)}</td>
+                <td className="tabular-nums" dir="ltr">{f.calls.toLocaleString("en")}</td>
+                <td className="tabular-nums" dir="ltr">{compact(f.input)}</td>
+                <td className="tabular-nums" dir="ltr">{compact(f.output)}</td>
+                <td className="tabular-nums" dir="ltr">{m.priced ? money(f.cost) : "-"}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      )}
+      {!m.priced && <p className="mt-3 text-xs text-aeblack-500">{t("usage.price_hint")}</p>}
+    </Card>
+  );
+}
 
 /** How much each person uses the assistant, with their own daily limit. */
 export function AssistantUsage() {
@@ -148,6 +205,7 @@ export function AssistantUsage() {
           </div>
           <div className="mt-1 flex justify-between text-xs text-aeblack-500" dir="ltr"><span>{date(u.days[0]?.day)}</span><span>{date(u.days[u.days.length - 1]?.day)}</span></div>
         </Card>
+        {u.model && <ModelUseCard m={u.model} />}
         <Card title={t("usage.people")}>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[40rem] text-sm">

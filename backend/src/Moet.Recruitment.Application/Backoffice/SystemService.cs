@@ -20,6 +20,12 @@ public sealed class SystemService(IAppDbContext db, IClock clock, MailConfig mai
         if (via == "Assistant") q = q.Where(a => a.Via == "Assistant");
         if (kind == "changes") q = q.Where(a => a.Action != AuditAction.Action);
         if (kind == "actions") q = q.Where(a => a.Action == AuditAction.Action);
+        // By default the log leaves out routine lines: an action line whose record changes are listed anyway (same request),
+        // and the assistant's reads. "all" shows them too, as does looking at one request.
+        if (kind is null or "" && string.IsNullOrEmpty(request))
+            q = q.Where(a => !(a.Action == AuditAction.Action
+                && ((a.RequestId != "" && db.AuditEntries.Any(b => b.RequestId == a.RequestId && b.Action != AuditAction.Action))
+                    || (a.Via == "Assistant" && a.Description.StartsWith("GET ")))));
         if (staff != null) q = q.Where(a => a.ActorType == ActorType.Staff && a.ActorId == staff);
         if (!string.IsNullOrEmpty(request)) q = q.Where(a => a.RequestId == request);
         if (!string.IsNullOrEmpty(record)) q = q.Where(a => a.EntityName == record);
@@ -80,7 +86,34 @@ public sealed class SystemService(IAppDbContext db, IClock clock, MailConfig mai
             day = d.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
             messages = runs.Count(r => DateOnly.FromDateTime(clock.Local(r.StartedAt)) == d),
         }).ToList();
-        return new { default_limit = (int)setting.DailyRunLimit, people, days, total_month = runs.Count };
+        // Model use over the same 30 days: tokens per day and per feature, with an estimated cost when prices are set
+        // (LLM_PRICE_INPUT and LLM_PRICE_OUTPUT: the price per million tokens, in LLM_PRICE_CURRENCY, default USD).
+        var use = await db.ModelUsages.AsNoTracking().Where(u => u.At >= month)
+            .Select(u => new { u.At, u.Source, u.Feature, u.InputTokens, u.OutputTokens }).ToListAsync(ct);
+        static decimal? Price(string name) => decimal.TryParse(Environment.GetEnvironmentVariable(name), System.Globalization.NumberStyles.Number,
+            System.Globalization.CultureInfo.InvariantCulture, out var p) && p >= 0 ? p : null;
+        var pin = Price("LLM_PRICE_INPUT");
+        var pout = Price("LLM_PRICE_OUTPUT");
+        decimal? Cost(long i, long o) => pin == null && pout == null ? null : Math.Round((pin ?? 0) * i / 1_000_000m + (pout ?? 0) * o / 1_000_000m, 4);
+        var model = new
+        {
+            currency = Environment.GetEnvironmentVariable("LLM_PRICE_CURRENCY") is { Length: > 0 } c ? c : "USD",
+            priced = pin != null || pout != null,
+            input = use.Sum(u => (long)u.InputTokens), output = use.Sum(u => (long)u.OutputTokens), calls = use.Count,
+            cost = Cost(use.Sum(u => (long)u.InputTokens), use.Sum(u => (long)u.OutputTokens)),
+            days = days.Select(d => d.day).Select(d => new
+            {
+                day = d,
+                assistant = use.Where(u => u.Source == "assistant" && clock.Local(u.At).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) == d).Sum(u => (long)u.InputTokens + u.OutputTokens),
+                features = use.Where(u => u.Source != "assistant" && clock.Local(u.At).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) == d).Sum(u => (long)u.InputTokens + u.OutputTokens),
+            }).ToList(),
+            by_feature = use.GroupBy(u => u.Feature).Select(g => new
+            {
+                feature = g.Key, calls = g.Count(), input = g.Sum(u => (long)u.InputTokens), output = g.Sum(u => (long)u.OutputTokens),
+                cost = Cost(g.Sum(u => (long)u.InputTokens), g.Sum(u => (long)u.OutputTokens)),
+            }).OrderByDescending(x => x.input + x.output).ToList(),
+        };
+        return new { default_limit = (int)setting.DailyRunLimit, people, days, total_month = runs.Count, model };
     }
 
     /// <summary>A person's own daily limit; null uses the assistant's default, 0 turns the assistant off for them.</summary>

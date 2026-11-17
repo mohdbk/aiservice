@@ -129,7 +129,7 @@ public static class AgentSetup
         {
             // The environment's model is the fallback; admins can point the assistant elsewhere in the backoffice.
             var chat = new SettingsChatClient(sp.GetRequiredService<IChatClient>(), sp.GetRequiredService<AgentSettingsProvider>(),
-                sp.GetRequiredService<IHttpContextAccessor>());
+                sp.GetRequiredService<IHttpContextAccessor>(), sp.GetRequiredService<IHttpClientFactory>(), sp.GetRequiredService<IConfiguration>());
             return chat.AsAIAgent(instructions: Instructions, name: Name, tools: sp.GetRequiredService<RecruitmentTools>().All());
         });
         return services;

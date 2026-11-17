@@ -53,8 +53,26 @@ public sealed class AgentSettingsProvider(IHttpClientFactory factory, IConfigura
 /// Applies the admins' settings to every model call in a run: which model to use, temperature, the tools that are
 /// switched on, extra guidance, a step limit, today's date in the UAE, and the screen the staff member has open.
 /// </summary>
-public sealed class SettingsChatClient(IChatClient fallback, AgentSettingsProvider settings, IHttpContextAccessor http) : IChatClient
+public sealed class SettingsChatClient(IChatClient fallback, AgentSettingsProvider settings, IHttpContextAccessor http,
+    IHttpClientFactory? factory = null, IConfiguration? cfg = null) : IChatClient
 {
+    /// <summary>Reports a model call's tokens (never its text) to the API, for the use and cost report. Never fails the run.</summary>
+    async Task ReportAsync(string model, long input, long output)
+    {
+        if (factory == null || cfg == null || (input == 0 && output == 0)) return;
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Post, "../internal/agent/usage")
+            {
+                Content = JsonContent.Create(new { model, input_tokens = (int)Math.Min(input, int.MaxValue), output_tokens = (int)Math.Min(output, int.MaxValue) }),
+            };
+            req.Headers.TryAddWithoutValidation("X-Agent-Key", cfg["AGENT_KEY"] ?? "");
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            using var res = await factory.CreateClient(BackofficeApi.Client).SendAsync(req, cts.Token);
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or InvalidOperationException) { /* tracking only */ }
+    }
+
     const string StepsKey = "agent_steps";
     readonly ConcurrentDictionary<(string, string, string), IChatClient> models = new();
     static readonly TimeZoneInfo Zone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Dubai");
@@ -168,14 +186,28 @@ public sealed class SettingsChatClient(IChatClient fallback, AgentSettingsProvid
     public async Task<ChatResponse> GetResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
         var (client, m, o) = await PrepareAsync(messages, options, cancellationToken);
-        return await client.GetResponseAsync(m, o, cancellationToken);
+        var r = await client.GetResponseAsync(m, o, cancellationToken);
+        await ReportAsync(r.ModelId ?? "", r.Usage?.InputTokenCount ?? 0, r.Usage?.OutputTokenCount ?? 0);
+        return r;
     }
 
     public async IAsyncEnumerable<ChatResponseUpdate> GetStreamingResponseAsync(IEnumerable<ChatMessage> messages, ChatOptions? options = null,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var (client, m, o) = await PrepareAsync(messages, options, cancellationToken);
-        await foreach (var u in client.GetStreamingResponseAsync(m, o, cancellationToken)) yield return u;
+        long input = 0, output = 0;
+        var model = "";
+        await foreach (var u in client.GetStreamingResponseAsync(m, o, cancellationToken))
+        {
+            foreach (var usage in u.Contents.OfType<UsageContent>())
+            {
+                input += usage.Details.InputTokenCount ?? 0;
+                output += usage.Details.OutputTokenCount ?? 0;
+            }
+            if (u.ModelId is { Length: > 0 } id) model = id;
+            yield return u;
+        }
+        await ReportAsync(model, input, output);
     }
 
     public object? GetService(Type serviceType, object? serviceKey = null) => fallback.GetService(serviceType, serviceKey);

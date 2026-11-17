@@ -27,7 +27,19 @@ public static class AgentProxy
                 return Results.Json(new { error = new { code = "unauthorised" } }, statusCode: 401);
             return Results.Ok(await s.ForAgentAsync(ct));
         });
+        // The assistant's token use, reported after each model call (tokens only, never text).
+        app.MapPost("/api/internal/agent/usage", async Task<IResult> (HttpContext ctx, UsageReport b, Application.Common.IModelUsageLog usage) =>
+        {
+            var expected = System.Text.Encoding.UTF8.GetBytes(cfg["AGENT_KEY"] ?? "");
+            var given = System.Text.Encoding.UTF8.GetBytes(ctx.Request.Headers["X-Agent-Key"].ToString());
+            if (expected.Length < 16 || !System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(expected, given))
+                return Results.Json(new { error = new { code = "unauthorised" } }, statusCode: 401);
+            await usage.RecordAsync("assistant", "assistant", b.Model ?? "", Math.Clamp(b.InputTokens, 0, 10_000_000), Math.Clamp(b.OutputTokens, 0, 10_000_000));
+            return Results.Ok(new { ok = true });
+        });
     }
+
+    public sealed record UsageReport(string? Model, int InputTokens, int OutputTokens);
 
     public static async Task RunAsync(HttpContext ctx, IHttpClientFactory factory, IConfiguration cfg, AgentSettingsService settings, CancellationToken ct)
     {

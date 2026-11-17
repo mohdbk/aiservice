@@ -62,6 +62,7 @@ public interface IAppDbContext
     DbSet<PersonalitySetting> PersonalitySettings { get; }
     DbSet<AgentSetting> AgentSettings { get; }
     DbSet<AgentRun> AgentRuns { get; }
+    DbSet<ModelUsage> ModelUsages { get; }
     DbSet<AgentConversation> AgentConversations { get; }
     DbSet<AgentAttachment> AgentAttachments { get; }
 
@@ -203,6 +204,12 @@ public interface IPdfRenderer
 }
 
 /// <summary>An OpenAI-compatible chat model, on-prem or hosted.</summary>
+/// <summary>Records each language model call's tokens (never the text), for use and cost reports.</summary>
+public interface IModelUsageLog
+{
+    Task RecordAsync(string source, string feature, string model, int inputTokens, int outputTokens, int? staffId = null);
+}
+
 public interface ILanguageModel
 {
     bool IsConfigured { get; }

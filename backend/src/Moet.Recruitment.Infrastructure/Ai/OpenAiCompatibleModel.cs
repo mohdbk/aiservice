@@ -12,7 +12,7 @@ namespace Moet.Recruitment.Infrastructure.Ai;
 /// Any OpenAI-compatible chat endpoint: vLLM, Ollama or LiteLLM on-prem, or a hosted provider.
 /// Settings: LLM_BASE_URL, LLM_MODEL, LLM_API_KEY (optional for on-prem servers).
 /// </summary>
-public sealed partial class OpenAiCompatibleModel(HttpClient http, IConfiguration cfg) : ILanguageModel
+public sealed partial class OpenAiCompatibleModel(HttpClient http, IConfiguration cfg, IModelUsageLog? usageLog = null) : ILanguageModel
 {
     [GeneratedRegex(@"\{[\s\S]*\}")] private static partial Regex ObjectRe();
     [GeneratedRegex(@"<think>[\s\S]*?</think>")] private static partial Regex ThinkRe();
@@ -34,6 +34,7 @@ public sealed partial class OpenAiCompatibleModel(HttpClient http, IConfiguratio
             ["json_schema"] = new JsonObject { ["name"] = schemaName, ["strict"] = true, ["schema"] = JsonSerializer.SerializeToNode(schema) },
         };
         var data = await PostAsync(body, ct);
+        await RecordAsync(data, schemaName);
         var content = data["choices"]?[0]?["message"]?["content"]?.GetValue<string>() ?? "";
         return ParseJson(content);
     }
@@ -64,6 +65,7 @@ public sealed partial class OpenAiCompatibleModel(HttpClient http, IConfiguratio
             body["tool_choice"] = "auto";
         }
         var data = await PostAsync(body, ct);
+        await RecordAsync(data, "chat");
         var msg = data["choices"]?[0]?["message"];
         var calls = (msg?["tool_calls"] as JsonArray ?? []).Select(c => new ToolCall(
             c?["id"]?.GetValue<string>() ?? Guid.NewGuid().ToString("N"),
@@ -72,6 +74,14 @@ public sealed partial class OpenAiCompatibleModel(HttpClient http, IConfiguratio
         var usage = data["usage"];
         return new ChatTurn(Strip(msg?["content"]?.GetValue<string>()), calls,
             usage?["prompt_tokens"]?.GetValue<int>() ?? 0, usage?["completion_tokens"]?.GetValue<int>() ?? 0);
+    }
+
+    async Task RecordAsync(JsonNode data, string feature)
+    {
+        if (usageLog == null) return;
+        var usage = data["usage"];
+        int Tokens(string k) { try { return usage?[k]?.GetValue<int>() ?? 0; } catch (Exception e) when (e is InvalidOperationException or FormatException) { return 0; } }
+        await usageLog.RecordAsync("api", feature, ModelName, Tokens("prompt_tokens"), Tokens("completion_tokens"));
     }
 
     /// <summary>

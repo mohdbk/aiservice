@@ -133,6 +133,29 @@ public sealed class BackofficeSetupService(IAppDbContext db, ICurrentActor actor
         return new { queued = true };
     }
 
+    /// <summary>
+    /// Queues English drafts for everything still without English: jobs that are not closed, screening questions, test
+    /// questions and tests (up to 200 of each per run). Drafts arrive for review as usual.
+    /// </summary>
+    public async Task<object> SuggestAllMissingAsync(CancellationToken ct = default)
+    {
+        const int Cap = 200;
+        var jobsIds = await db.JobOpenings.Where(j => j.Status != JobStatus.Closed && j.SourceLanguageCode != En && !j.Translations.Any(t => t.LanguageCode == En && t.Title != ""))
+            .OrderByDescending(j => j.Id).Select(j => j.Id).Take(Cap).ToListAsync(ct);
+        var screening = await db.ScreeningQuestions.Where(q => q.SourceLanguageCode != En && !q.Translations.Any(t => t.LanguageCode == En && t.Text != ""))
+            .OrderByDescending(q => q.Id).Select(q => q.Id).Take(Cap).ToListAsync(ct);
+        var questions = await db.Questions.Where(q => q.SourceLanguageCode != En && !q.Translations.Any(t => t.LanguageCode == En && t.Text != ""))
+            .OrderByDescending(q => q.Id).Select(q => q.Id).Take(Cap).ToListAsync(ct);
+        var tests = await db.Assessments.Where(a => a.SourceLanguageCode != En && !a.Translations.Any(t => t.LanguageCode == En && t.Title != ""))
+            .OrderByDescending(a => a.Id).Select(a => a.Id).Take(Cap).ToListAsync(ct);
+        foreach (var id in jobsIds) await jobs.EnqueueAsync(JobTypes.SuggestJobTranslation, id, ct);
+        foreach (var id in screening) await jobs.EnqueueAsync(JobTypes.SuggestScreeningTranslation, id, ct);
+        foreach (var id in questions) await jobs.EnqueueAsync(JobTypes.SuggestQuestionTranslation, id, ct);
+        foreach (var id in tests) await jobs.EnqueueAsync(JobTypes.SuggestAssessmentTranslation, id, ct);
+        await db.SaveChangesAsync(ct);
+        return new { jobs = jobsIds.Count, screening = screening.Count, questions = questions.Count, tests = tests.Count, total = jobsIds.Count + screening.Count + questions.Count + tests.Count };
+    }
+
     // ---------------- dashboard and lookups ----------------
 
     public async Task<object> DashboardAsync(CancellationToken ct = default)
