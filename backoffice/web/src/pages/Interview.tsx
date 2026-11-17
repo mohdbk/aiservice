@@ -1,5 +1,6 @@
 import { CalendarBlank, CalendarPlus, FileText, MapPin, PencilSimple, Star } from "@phosphor-icons/react";
 import { DocumentDialog } from "../components/DocumentDialog";
+import { InterviewGuide } from "../components/InterviewGuide";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ActionMenu, Badge, Button, Card, Empty, ErrorState, Loading, Note, PageHeader, SelectInput, TextArea, useSaving } from "../components/ui";
@@ -67,6 +68,7 @@ export default function Interview() {
       {act.error && <div className="mb-4"><ErrorState error={act.error} /></div>}
       <div className="grid gap-6 xl:grid-cols-3">
         <div className="space-y-6 xl:col-span-2">
+          <InterviewGuide id={i.id} />
           <Card title={t("int.feedback")}>
             {i.feedback_hidden && <div className="mb-4"><Note>{t("int.feedback_hidden")}</Note></div>}
             {i.feedback.length === 0 ? <Empty /> : (

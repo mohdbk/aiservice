@@ -10,6 +10,7 @@ const AgentChat = lazy(() => import("../agent/AgentChat").then((m) => ({ default
 import { ErrorBoundary } from "./ErrorBoundary";
 import { CommandPalette } from "./CommandPalette";
 import { Shortcuts } from "./Shortcuts";
+import { NotificationBell } from "./NotificationBell";
 import { LangFlag } from "./flags";
 
 type Item = { to: string; label: string; icon: ReactNode; admin?: boolean; sys?: boolean };
@@ -262,6 +263,7 @@ export function Shell({ children }: { children: ReactNode }) {
           <div dir={dir} className="flex shrink-0 items-center gap-0.5 sm:gap-1">
             {dir === "rtl" && menu}
             <CommandPalette pages={pages} />
+            <NotificationBell />
             <LanguageSwitch />
             {/* On wide screens the account sits at the bottom of the side menu. */}
             <div className="lg:hidden"><UserMenu /></div>

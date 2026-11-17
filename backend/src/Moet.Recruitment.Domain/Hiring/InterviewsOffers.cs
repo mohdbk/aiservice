@@ -30,6 +30,8 @@ public class Interview
     public JobApplication? JobApplication { get; set; }
     public int InterviewRoundId { get; set; }
     public InterviewRound? InterviewRound { get; set; }
+    /// <summary>The panel's interview guide (questions per skill and what a good answer covers), as JSON; empty until prepared.</summary>
+    public string Guide { get; set; } = "";
     public DateTime StartsAt { get; set; }
     public DateTime EndsAt { get; set; }
     public string Location { get; set; } = "";

@@ -210,6 +210,8 @@ public sealed class JobWorker(IServiceScopeFactory scopes, ILogger<JobWorker> lo
             if (n > 0) log.LogInformation("Expired {Count} assessment invitations", n);
             var alerts = await scope.ServiceProvider.GetRequiredService<JobAlertService>().RunAsync(ct);
             if (alerts > 0) log.LogInformation("Queued {Count} job alert emails", alerts);
+            var digests = await scope.ServiceProvider.GetRequiredService<StaffNotificationService>().SendDueAsync(Environment.GetEnvironmentVariable("BACKOFFICE_URL") ?? "", ct);
+            if (digests > 0) log.LogInformation("Queued {Count} staff digest emails", digests);
         }
         if (now >= _nextDaily)
         {

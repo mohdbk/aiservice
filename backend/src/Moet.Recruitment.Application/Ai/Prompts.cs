@@ -90,6 +90,25 @@ static class Prompts
 
     public static object TranslateJobSchema => Obj(new() { ["title"] = Str, ["location"] = Str, ["description_html"] = Str });
 
+    public const string InterviewGuide = $"""
+        You prepare a structured interview guide for a panel at a UAE government ministry. You get the job, the interview
+        round with the skills it assesses, and a short summary of the candidate's CV with any gaps against the must-haves.
+        For each skill write two behavioural or situational questions, each with what a strong answer covers (2 or 3 short
+        points). Then add up to two follow-up questions about the CV gaps under the skill "CV Follow-Up". Questions must be
+        fair, job-related and the same kind any candidate would be asked: never about age, family, religion, health,
+        nationality or other personal matters. Write every question and note in formal Arabic and in clear English.
+        {WritingRule}
+        """;
+
+    public static object InterviewGuideSchema => Obj(new()
+    {
+        ["sections"] = Arr(Obj(new()
+        {
+            ["skill"] = Str,
+            ["questions"] = Arr(Obj(new() { ["ar"] = Str, ["en"] = Str, ["listen_for_ar"] = StrArr, ["listen_for_en"] = StrArr })),
+        })),
+    });
+
     public const string TranslateTest = $"""
         You translate recruitment test content for a UAE government ministry from Arabic into formal, clear English.
         Keep HTML tags, numbers, names, formulas, code and technical terms; keep the same number and order of options and sections.

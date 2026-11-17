@@ -21,6 +21,11 @@ public class StaffUser
     public string TotpPendingProtected { get; set; } = "";
     public DateTime? TotpEnabledAt { get; set; }
     public long TotpLastStep { get; set; }
+    /// <summary>Emails this person asked for: a morning digest of what needs them, and a weekly hiring summary.</summary>
+    public bool DailyDigest { get; set; }
+    public bool WeeklyReport { get; set; }
+    public DateOnly? DigestSentOn { get; set; }
+    public DateOnly? WeeklySentOn { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 

@@ -62,6 +62,8 @@ public static class BackofficeEndpoints
 
         // dashboard and lookups
         staff.MapGet("/dashboard", (BackofficeSetupService s, CancellationToken ct) => s.DashboardAsync(ct));
+        staff.MapGet("/notifications", (StaffNotificationService s, CancellationToken ct) => s.ListAsync(ct));
+        staff.MapPut("/notifications/prefs", (NotificationPrefs b, StaffNotificationService s, CancellationToken ct) => s.SavePrefsAsync(b, ct));
         staff.MapGet("/search", (string? q, BackofficeSetupService s, CancellationToken ct) => s.SearchAsync(q, ct));
         staff.MapGet("/reports/hiring", (DateOnly? from, DateOnly? to, int? job, int? department, ReportService s, CancellationToken ct) =>
             s.HiringAsync(from, to, job, department, ct));
@@ -125,6 +127,8 @@ public static class BackofficeEndpoints
         staff.MapGet("/interviews/{id:int}", (int id, BackofficeInterviewService s, CancellationToken ct) => s.GetAsync(id, ct));
         staff.MapPost("/interviews", (InterviewInput b, BackofficeInterviewService s, CancellationToken ct) => s.ScheduleAsync(null, b, ct));
         staff.MapPut("/interviews/{id:int}", (int id, InterviewInput b, BackofficeInterviewService s, CancellationToken ct) => s.ScheduleAsync(id, b, ct));
+        staff.MapGet("/interviews/{id:int}/guide", (int id, BackofficeInterviewService s, CancellationToken ct) => s.GuideAsync(id, false, ct));
+        staff.MapPost("/interviews/{id:int}/guide", (int id, BackofficeInterviewService s, CancellationToken ct) => s.GuideAsync(id, true, ct));
         staff.MapGet("/interviews/{id:int}/calendar", async (int id, BackofficeInterviewService s, CancellationToken ct) =>
             Results.File(System.Text.Encoding.UTF8.GetBytes(await s.CalendarAsync(id, ct)), "text/calendar; charset=utf-8", $"interview-{id}.ics"));
         staff.MapPost("/interviews/{id:int}/status", (int id, StatusBody b, BackofficeInterviewService s, CancellationToken ct) => s.SetStatusAsync(id, b.Status, ct));

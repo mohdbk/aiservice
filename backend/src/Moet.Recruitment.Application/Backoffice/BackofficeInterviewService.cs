@@ -17,7 +17,7 @@ public sealed record OfferInput(int ApplicationId, string PositionTitle, string 
     int? OfferTemplateId = null);
 
 public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator codes, ICurrentActor actor, IRequestLanguage language, IClock clock, DocumentService letters,
-    PortalMailer mailer, ContentService content, HandOffService handOff, ApprovalService approvals)
+    PortalMailer mailer, ContentService content, HandOffService handOff, ApprovalService approvals, ILanguageModel model)
 {
     static readonly Sorts<Interview> InterviewSorts = new Sorts<Interview>("starts", false)
         .Add("starts", i => i.StartsAt).Add("applicant", i => i.JobApplication!.FullName).Add("round", i => i.InterviewRound!.Name)
@@ -132,6 +132,33 @@ public sealed class BackofficeInterviewService(IAppDbContext db, ICodeGenerator 
         }, ct, invite);
         if (sent) await db.SaveChangesAsync(ct);
         return sent;
+    }
+
+    /// <summary>
+    /// The panel's interview guide: questions for each skill the round assesses (and follow-ups on CV gaps), with what a
+    /// strong answer covers, in Arabic and English. Prepared once by the language model and kept; refresh prepares it again.
+    /// </summary>
+    public async Task<object> GuideAsync(int id, bool refresh, CancellationToken ct = default)
+    {
+        var i = await db.Interviews.Include(x => x.InterviewRound!).ThenInclude(r => r.Skills)
+                    .Include(x => x.JobApplication!).ThenInclude(a => a.JobOpening!).ThenInclude(j => j.Translations)
+                    .AsSplitQuery().FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound();
+        if (!refresh) return new { guide = i.Guide.Length > 0 ? System.Text.Json.JsonDocument.Parse(i.Guide).RootElement : (System.Text.Json.JsonElement?)null, ai = model.IsConfigured };
+        if (!model.IsConfigured) throw DomainException.Conflict("ai_not_configured");
+        var cv = await db.CvAnalyses.AsNoTracking().Where(c => c.JobApplicationId == i.JobApplicationId).Select(c => new { c.Summary, c.MustHaveGaps }).FirstOrDefaultAsync(ct);
+        var job = i.JobApplication!.JobOpening!;
+        var input = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            job_title = job.In("en").Title, job_description = TextUtil.Clip(TextUtil.StripHtml(job.In("en").Description), 4000),
+            round = i.InterviewRound!.NameEn.Length > 0 ? i.InterviewRound.NameEn : i.InterviewRound.Name,
+            skills = i.InterviewRound.Skills.OrderBy(s => s.SortOrder).Select(s => s.Skill).ToList(),
+            cv_summary = cv?.Summary ?? "", cv_gaps = cv?.MustHaveGaps ?? "",
+        });
+        var o = await model.CompleteJsonAsync(Ai.Prompts.InterviewGuide, input, Ai.Prompts.InterviewGuideSchema, "interview_guide", ct);
+        i.Guide = TextUtil.NoEmDash(o.GetRawText());
+        i.UpdatedAt = clock.UtcNow;
+        await db.SaveChangesAsync(ct);
+        return new { guide = (System.Text.Json.JsonElement?)System.Text.Json.JsonDocument.Parse(i.Guide).RootElement, ai = true };
     }
 
     /// <summary>The interview as a calendar invitation, for a panelist to add to their own calendar.</summary>
