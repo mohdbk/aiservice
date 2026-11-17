@@ -109,15 +109,7 @@ async function main() {
   // HR's approved screening criteria for the analyst role (CVs are scored only against approved criteria).
   await bo("PUT", `/jobs/${analyst.id}/criteria`, {
     approve: true,
-    criteria: [
-      { category: "Qualification", criterion: "بكالوريوس في الإحصاء أو علوم البيانات", must: true, high: false,
-        guide: "0: لا توجد شهادة جامعية\n4: بكالوريوس في تخصص غير ذي صلة\n7: بكالوريوس في تخصص قريب (رياضيات، اقتصاد)\n10: بكالوريوس أو أعلى في الإحصاء أو علوم البيانات" },
-      { category: "Experience", criterion: "تحليل البيانات", min_years: 3, must: true, high: true,
-        guide: "0: لا خبرة في التحليل\n4: أقل من سنتين أو مهام تحليل جانبية\n7: 3 سنوات في تحليل البيانات\n10: 5 سنوات أو أكثر مع لوحات معلومات ومؤشرات" },
-      { category: "Skill", criterion: "SQL و Power BI", must: false, high: true, guide: "" },
-      { category: "Experience", criterion: "المؤشرات الاقتصادية أو العمل الحكومي", must: false, high: false, guide: "" },
-      { category: "Language", criterion: "الإنجليزية", level: "Fluent", must: false, high: false, guide: "" },
-    ],
+    criteria: ANALYST_REQUIREMENTS,
   });
 
   // Applicants through the portal API
@@ -193,6 +185,16 @@ async function takeAssessment(email, code, answer) {
  * again changes nothing: a marked knowledge test (one pass, one not), interview feedback, a 16-type profile,
  * a workplace Big Five profile and an accepted offer.
  */
+const ANALYST_REQUIREMENTS = [
+      { category: "Qualification", criterion: "بكالوريوس في الإحصاء أو علوم البيانات", must: true, high: false,
+        guide: "0: لا توجد شهادة جامعية\n4: بكالوريوس في تخصص غير ذي صلة\n7: بكالوريوس في تخصص قريب (رياضيات، اقتصاد)\n10: بكالوريوس أو أعلى في الإحصاء أو علوم البيانات" },
+      { category: "Experience", criterion: "تحليل البيانات", min_years: 3, must: true, high: true,
+        guide: "0: لا خبرة في التحليل\n4: أقل من سنتين أو مهام تحليل جانبية\n7: 3 سنوات في تحليل البيانات\n10: 5 سنوات أو أكثر مع لوحات معلومات ومؤشرات" },
+      { category: "Skill", criterion: "SQL و Power BI", must: false, high: true, guide: "" },
+      { category: "Experience", criterion: "المؤشرات الاقتصادية أو العمل الحكومي", must: false, high: false, guide: "" },
+      { category: "Language", criterion: "الإنجليزية", level: "Fluent", must: false, high: false, guide: "" },
+];
+
 async function topUp() {
   const jobs = (await bo("GET", "/jobs?size=50")).items;
   const analyst = jobs.find((j) => j.title === "محلل بيانات أول");
@@ -200,6 +202,14 @@ async function topUp() {
   const apps = (await bo("GET", `/applicants?size=50&job=${analyst.id}&sort=name&dir=asc`)).items;
   const byEmail = Object.fromEntries(apps.map((a) => [a.email, a]));
   const added = [];
+
+  // 0. Screening requirements in the structured form (Essential and Desirable, types, years, score guides).
+  const reqs = await bo("GET", `/jobs/${analyst.id}/criteria`);
+  if (reqs.criteria.every((c) => !c.category || c.category === "Other")) {
+    await bo("PUT", `/jobs/${analyst.id}/criteria`, { approve: true, criteria: ANALYST_REQUIREMENTS });
+    await bo("POST", `/jobs/${analyst.id}/score-again`, {});
+    added.push("structured screening requirements");
+  } else console.log("skip requirements: already structured");
 
   // 1. The Data Analysis Test: Aisha passes it, Daniel does not. Written answers are marked by HR.
   const tests = (await bo("GET", "/assessments?size=50")).items;

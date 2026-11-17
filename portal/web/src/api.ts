@@ -65,7 +65,9 @@ export type SiteConfig = {
   countries: ({ value: string; label: string } | string)[];
 };
 export type Salary = { currency: string; min: number; max: number; per: string } | null;
+export type Requirement = { category: string; text: string; min_years: number | null; level: string; essential: boolean };
 export type Job = {
+  requirements?: Requirement[] | null;
   id: string;
   title: string;
   content_lang: string;

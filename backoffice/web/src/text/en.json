@@ -1751,5 +1751,6 @@
  "rep.agree_low": "{n} people from the bottom half were picked anyway: worth checking their requirements or scores.",
  "rep.agree_low_none": "Nobody from the bottom half was picked.",
  "error.override_reason": "Give a reason for the change (at least 3 characters).",
- "error.override_score": "The score must be between 0 and 10."
+ "error.override_score": "The score must be between 0 and 10.",
+ "ai.Review": "Needs a Human Look"
 }

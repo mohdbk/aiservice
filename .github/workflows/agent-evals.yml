@@ -3,6 +3,12 @@ name: Agent Evals
 # Live behaviour checks against a real model (ambiguity, language, instructions hidden in CVs, writing rules). Runs weekly
 # and on demand when the AGENT_EVAL_API_KEY secret is set; the deterministic safety tests run on every push in agent.yml.
 on:
+  push:
+    paths:
+      - "backend/src/Moet.Recruitment.Application/Ai/Prompts.cs"
+      - "backend/src/Moet.Recruitment.Application/Ai/CvScoringHandler.cs"
+      - "backend/src/Moet.Recruitment.Domain/Hiring/CvScoring.cs"
+      - "backend/tests/Moet.Recruitment.Api.Tests/CvEvals/**"
   schedule:
     - cron: "17 2 * * 1"
   workflow_dispatch:
@@ -25,8 +31,12 @@ jobs:
         with:
           dotnet-version: "10.0.x"
       - name: Live evaluations
-        if: env.AGENT_EVAL_API_KEY != ''
+        if: env.AGENT_EVAL_API_KEY != '' && github.event_name != 'push'
         run: dotnet test tests/Moet.Recruitment.Agent.Tests -c Release --filter "FullyQualifiedName~LiveEvals" --logger "console;verbosity=normal"
+      - name: Live CV scoring evaluations (20 test CVs and the fairness check)
+        if: env.AGENT_EVAL_API_KEY != ''
+        working-directory: backend
+        run: dotnet test tests/Moet.Recruitment.Api.Tests -c Release --filter "FullyQualifiedName~CvLiveEvals" --logger "console;verbosity=normal"
       - name: Skipped
         if: env.AGENT_EVAL_API_KEY == ''
         run: echo "Set the AGENT_EVAL_API_KEY secret (and optionally AGENT_EVAL_BASE_URL and the AGENT_EVAL_MODEL variable) to run the live evaluations."

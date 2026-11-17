@@ -16,6 +16,9 @@
     <ProjectReference Include="..\..\src\Moet.Recruitment.Api\Moet.Recruitment.Api.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="CvEvals\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 </Project>

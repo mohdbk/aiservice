@@ -50,6 +50,8 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
         if (Enum.TryParse<ApplicationStatus>(f.Status, out var st)) q = q.Where(a => a.Status == st);
         if (Enum.TryParse<ScreeningOutcome>(f.Screening, out var so)) q = q.Where(a => a.ScreeningOutcome == so);
         if (Enum.TryParse<CvAnalysisStatus>(f.AiStatus, out var ai)) q = q.Where(a => a.CvAnalysis!.Status == ai);
+        // "Review": CV results a person should look at.
+        if (f.AiStatus == "Review") q = q.Where(a => a.CvAnalysis!.NeedsReview);
         if (f.MinScore != null) q = q.Where(a => a.CvAnalysis!.Score >= f.MinScore);
         if (!string.IsNullOrEmpty(f.Country)) q = q.Where(a => a.Country == f.Country);
         if (f.From != null) q = q.Where(a => a.CreatedAt >= f.From.Value.ToDateTime(TimeOnly.MinValue));

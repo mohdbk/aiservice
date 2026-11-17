@@ -411,5 +411,19 @@
  "asm.next_1": "Your answers are kept with your application.",
  "asm.next_2": "You can follow your application's progress at any time.",
  "asm.next_3": "If you move forward, we will invite you to the next step by email.",
- "asm.view_applications": "View My Applications"
+ "asm.view_applications": "View My Applications",
+ "job.requirements": "Requirements",
+ "job.req_essential": "Essential",
+ "job.req_desirable": "Desirable",
+ "job.req_years": "at least {n} years",
+ "job.req_cat.Qualification": "Qualification",
+ "job.req_cat.Experience": "Experience",
+ "job.req_cat.Skill": "Skill",
+ "job.req_cat.Certification": "Certification",
+ "job.req_cat.Language": "Language",
+ "job.req_cat.Other": "Requirement",
+ "job.req_lvl.Basic": "Basic",
+ "job.req_lvl.Good": "Good",
+ "job.req_lvl.Fluent": "Fluent",
+ "job.req_lvl.Native": "Native"
 }

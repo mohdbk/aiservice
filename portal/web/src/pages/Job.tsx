@@ -60,6 +60,37 @@ export default function JobPage() {
               <div className="mc-prose text-lg text-aeblack-800" lang={job.content_lang} dir={job.content_dir} dangerouslySetInnerHTML={{ __html: job.description_html }} />
             ) : <p className="text-aeblack-600">{t("job.no_description")}</p>}
           </section>
+          {job.requirements && job.requirements.length > 0 && (
+            <section className="mc-surface mt-6 rounded-2xl border border-aeblack-100 bg-white p-6 md:p-8" aria-labelledby="reqs">
+              <h2 id="reqs" className="mb-4 font-heading text-xl font-semibold text-aeblack-900">{t("job.requirements")}</h2>
+              <div className="grid gap-6 md:grid-cols-2">
+                {[true, false].map((essential) => {
+                  const list = job.requirements!.filter((r) => r.essential === essential);
+                  if (list.length === 0) return null;
+                  return (
+                    <div key={String(essential)}>
+                      <h3 className="mb-2 font-semibold text-aeblack-800">{t(essential ? "job.req_essential" : "job.req_desirable")}</h3>
+                      <ul className="space-y-2" lang={job.content_lang} dir={job.content_dir}>
+                        {list.map((r, i) => (
+                          <li key={i} className="flex gap-3">
+                            <span className={`mt-2 h-2 w-2 shrink-0 rounded-full ${essential ? "bg-primary-600" : "bg-aeblack-300"}`} aria-hidden="true" />
+                            <span>
+                              <span className="block font-medium text-aeblack-900">{r.text}</span>
+                              <span className="block text-sm text-aeblack-600">
+                                {t(`job.req_cat.${r.category}`)}
+                                {r.category === "Experience" && r.min_years ? ` · ${t("job.req_years", { n: r.min_years })}` : ""}
+                                {r.category === "Language" && r.level ? ` · ${t(`job.req_lvl.${r.level}`)}` : ""}
+                              </span>
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
         </article>
 
         <aside className="lg:sticky lg:top-36 lg:self-start">

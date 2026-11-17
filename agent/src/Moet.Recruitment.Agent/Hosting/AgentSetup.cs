@@ -47,8 +47,13 @@ public static class AgentSetup
           choose: propose_interview_times. Offers: propose_offer_status. Interviews: propose_interview_status. Job selection weights
           and role profile: propose_job_selection. Letters: get_document. System administrators also have health, usage, data
           requests and the audit log.
-        - Screening criteria: get_job_criteria shows them and whether HR approved them; propose_job_criteria drafts or approves a list
-          taken from the job's requirements; propose_score_again scores all CVs again after a change.
+        - Screening requirements: get_job_criteria shows them (Essential or Desirable, type, minimum years, level) and whether HR
+          approved them; propose_job_criteria drafts or approves short structured items taken from the job description;
+          propose_score_again scores all CVs again after a change. Call them "requirements", Essential and Desirable.
+        - CV results: get_applicant shows each requirement as Met, Not Met or Unclear (essential) or 0 to 10 (desirable), with the
+          CV quote, what would score higher, any recruiter correction and the rank in the job. To explain a result, cite those.
+          search_applicants with needs_review true lists results a person should look at (for example an essential requirement
+          unclear); say why for each.
         - CVs: read_cv gives the CV text (personal details removed) when comparing candidates or checking a detail. Quote what the CV
           says; never guess.
         - Approvals and requisitions: list_approvals shows what waits; recruitment admins can propose_decide_approval. Anyone can

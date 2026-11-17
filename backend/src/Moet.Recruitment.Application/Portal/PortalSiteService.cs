@@ -15,7 +15,11 @@ public sealed record JobView(
 {
     public string? DescriptionHtml { get; init; }
     public IReadOnlyList<ScreeningQuestionView>? Screening { get; init; }
+    /// <summary>The job's approved requirements (essential and desirable), when they are in the language shown.</summary>
+    public IReadOnlyList<RequirementView>? Requirements { get; init; }
 }
+
+public sealed record RequirementView(string Category, string Text, int? MinYears, string Level, bool Essential);
 
 public sealed record OptionView(string Value, string Label);
 
@@ -96,7 +100,11 @@ public sealed class PortalSiteService(IAppDbContext db, ContentService content, 
         var job = await LoadPublishedAsync(code, ct);
         var view = Present(job, lang, true);
         var asked = Asked(job);
-        return view with { Screening = asked.Select(a => Public(a, lang)).ToList() };
+        var requirements = job.CriteriaApprovedAt != null && view.ContentLang == job.SourceLanguageCode
+            ? job.Criteria.OrderByDescending(c => c.IsMustHave).ThenBy(c => c.SortOrder)
+                .Select(c => new RequirementView(c.Category, c.Criterion, c.MinYears, c.Level, c.IsMustHave)).ToList()
+            : null;
+        return view with { Screening = asked.Select(a => Public(a, lang)).ToList(), Requirements = requirements };
     }
 
     internal async Task<JobOpening> LoadPublishedAsync(string? code, CancellationToken ct)
@@ -106,6 +114,7 @@ public sealed class PortalSiteService(IAppDbContext db, ContentService content, 
                    .Include(j => j.Department).ThenInclude(d => d!.Translations)
             .Include(j => j.JobLocation).ThenInclude(l => l!.Translations)
                    .Include(j => j.Translations)
+                   .Include(j => j.Criteria)
                    .Include(j => j.ScreeningQuestions).ThenInclude(s => s.ScreeningQuestion!).ThenInclude(q => q.Options).ThenInclude(o => o.Translations)
                    .Include(j => j.ScreeningQuestions).ThenInclude(s => s.ScreeningQuestion!).ThenInclude(q => q.Translations)
                    .AsSplitQuery()

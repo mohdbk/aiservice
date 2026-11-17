@@ -137,15 +137,16 @@ public sealed class RecruitmentTools(BackofficeApi api)
         [Description("Name, email, phone or applicant code")] string? search = null,
         [Description("Words to find in CV summaries and profiles, for example a skill")] string? cvText = null,
         [Description("Only this job id")] int? jobId = null,
-        [Description("Open, Replied, Hold, Accepted or Rejected")] string? status = null,
+        [Description("Open, Replied, Hold, Accepted, Rejected or Withdrawn")] string? status = null,
         [Description("Meets, DoesNotMeet or NotApplicable")] string? screening = null,
+        [Description("true: only CV results a person should look at (an essential requirement unclear, evidence not found in the CV, a poor scan)")] bool needsReview = false,
         [Description("Lowest CV score, 0 to 100")] decimal? minScore = null,
         [Description("Sort by: score, created, name, status")] string sort = "score",
         [Description("asc or desc")] string dir = "desc",
         [Description("Page number, from 1")] int page = 1,
         CancellationToken ct = default) =>
         Read("applicants?" + Q(("q", search), ("cv", cvText), ("job", jobId?.ToString(CultureInfo.InvariantCulture)), ("status", status),
-            ("screening", screening), ("minScore", minScore?.ToString(CultureInfo.InvariantCulture)), ("sort", sort), ("dir", dir),
+            ("screening", screening), ("ai", needsReview ? "Review" : null), ("minScore", minScore?.ToString(CultureInfo.InvariantCulture)), ("sort", sort), ("dir", dir),
             ("page", page.ToString(CultureInfo.InvariantCulture)), ("size", "20")), ct);
 
     [Description("An applicant's full record: CV analysis and criteria scores, screening answers, notes, tests, interviews and offers.")]
@@ -597,23 +598,27 @@ public sealed class RecruitmentTools(BackofficeApi api)
 
     /// <summary>A screening criterion the assistant proposes for a job.</summary>
     public sealed record CriterionArg(
-        [property: Description("Short, checkable against a CV (experience, skills, qualifications, languages, certificates)")] string Criterion,
-        [property: Description("Relative weight, 1 to 100")] decimal Weight,
-        [property: Description("Required by the job description")] bool Must);
+        [property: Description("A short requirement, 2 to 8 words, never a sentence, without years or level (for example \"Data analysis\", \"Bachelor's in Statistics\", \"English\")")] string Criterion,
+        [property: Description("Qualification, Experience, Skill, Certification, Language or Other")] string Category,
+        [property: Description("Essential (must have, from words like required or minimum) or false for Desirable (preferred, an advantage)")] bool Must,
+        [property: Description("High importance within its group (one or two at most)")] bool High = false,
+        [property: Description("Experience only: minimum years asked for, else 0")] int MinYears = 0,
+        [property: Description("Language only: Basic, Good, Fluent or Native, else empty")] string Level = "");
 
-    [Description("A job's CV screening criteria: the list (criterion, weight, must), whether HR approved them, who and when, whether the description changed since, and how many CVs are scored or waiting for approval. CVs are scored only against approved criteria.")]
+    [Description("A job's CV screening requirements: each with its type (category), the short requirement (criterion), Essential (must) or Desirable, importance (high), minimum years, language level, score guide and share of the score; whether HR approved them, who and when, whether the description changed since, and how many CVs are scored or waiting for approval. CVs are scored only against approved requirements.")]
     public Task<JsonElement> GetJobCriteria([Description("Job id")] int jobId, CancellationToken ct = default) => Read($"jobs/{jobId}/criteria", ct);
 
-    [Description("Proposes a job's CV screening criteria (replacing the current list), as a draft or approved. Take them only from the job's requirements and duties (get_job), 4 to 6 items, at most 3 must-haves. Never use age, gender, nationality, religion, marital status or family situation. Approving scores the CVs that were waiting.")]
+    [Description("Proposes a job's CV screening requirements (replacing the current list), as a draft or approved. Take them only from the job description (get_job): 3 to 8 short items, Essential when the description says required, must or minimum, Desirable when it says preferred or an advantage, at most 4 Essential; minimum years for experience and the level for languages as written. Never use age, gender, nationality, religion, marital status or family situation. Weights follow from Essential and importance. Approving scores the CVs that were waiting.")]
     public Task<JsonElement> ProposeJobCriteria(int jobId, [Description("1 to 10 criteria, most important first")] CriterionArg[] criteria,
         [Description("Approve now (true) or save as a draft for HR to review (false)")] bool approve = false, CancellationToken ct = default)
     {
         var list = new JsonArray(criteria.Take(10).Select(c => (JsonNode)new JsonObject
         {
-            ["criterion"] = NoDash(c.Criterion ?? "").Trim(), ["weight"] = c.Weight, ["must"] = c.Must,
+            ["criterion"] = NoDash(c.Criterion ?? "").Trim(), ["category"] = string.IsNullOrWhiteSpace(c.Category) ? "Other" : c.Category.Trim(), ["must"] = c.Must,
+            ["high"] = c.High, ["min_years"] = c.MinYears, ["level"] = c.Level ?? "",
         }).ToArray());
         return Propose("set_job_criteria", new JsonObject { ["job_id"] = jobId, ["criteria"] = list, ["approve"] = approve }, ct,
-            (s, _) => [s.CheckBox(L("اعتماد المعايير الآن", "Approve the Criteria Now"), "/form/approve")]);
+            (s, _) => [s.CheckBox(L("اعتماد المتطلبات الآن", "Approve the Requirements Now"), "/form/approve")]);
     }
 
     [Description("Proposes scoring every CV of a job again against its approved criteria (after the criteria changed).")]

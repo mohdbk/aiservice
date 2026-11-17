@@ -411,5 +411,19 @@
  "asm.next_1": "تحفظ إجاباتك مع طلبك.",
  "asm.next_2": "يمكنك متابعة حالة طلبك في أي وقت.",
  "asm.next_3": "إذا انتقلت إلى المرحلة التالية، سنرسل إليك دعوة عبر البريد الإلكتروني.",
- "asm.view_applications": "عرض طلباتي"
+ "asm.view_applications": "عرض طلباتي",
+ "job.requirements": "المتطلبات",
+ "job.req_essential": "أساسية",
+ "job.req_desirable": "مرغوبة",
+ "job.req_years": "{n} سنوات على الأقل",
+ "job.req_cat.Qualification": "مؤهل علمي",
+ "job.req_cat.Experience": "خبرة",
+ "job.req_cat.Skill": "مهارة",
+ "job.req_cat.Certification": "شهادة مهنية",
+ "job.req_cat.Language": "لغة",
+ "job.req_cat.Other": "متطلب",
+ "job.req_lvl.Basic": "مبتدئ",
+ "job.req_lvl.Good": "جيد",
+ "job.req_lvl.Fluent": "بطلاقة",
+ "job.req_lvl.Native": "لغة أم"
 }

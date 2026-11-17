@@ -63,15 +63,8 @@ public sealed class CvScoringHandler(IAppDbContext db, ILanguageModel model, ICv
         }
 
         var quality = CvScoring.ReadQuality(cv.Text, cv.Method);
-        var list = string.Join("\n", criteria.Select((x, i) =>
-            $"{i + 1}. [{(x.MustHave ? "ESSENTIAL" : "DESIRABLE")}] {x.Describe()}" + (x.Guide.Length > 0 ? $"\n   Score guide:\n   {x.Guide.Replace("\n", "\n   ")}" : "")));
         var corrections = await CorrectionsAsync(job.Id, ct);
-        var user = $"<job>\nTitle: {job.Title}\n\n{TextUtil.Clip(TextUtil.StripHtml(job.Description), 12000)}\n</job>\n\n" +
-                   $"Score these requirements, returning them in exactly this order:\n{list}\n\n" +
-                   (corrections.Length > 0 ? $"<recruiter_corrections>\nRecruiters corrected earlier scores for this job. Follow the same judgement:\n{corrections}\n</recruiter_corrections>\n\n" : "") +
-                   $"<structured_profile>\n{Brief(profile, years)}\n</structured_profile>\n" +
-                   "The structured profile was extracted from the CV below; use both, and trust the CV text if they differ. Quotes must come from the CV text.\n\n" +
-                   $"<cv>\n{redacted}\n</cv>";
+        var user = ScoreInput(job.Title, job.Description, criteria, corrections, profile, years, redacted);
         var result = await model.CompleteJsonAsync(Prompts.Score, user, Prompts.ScoreSchema, "cv_score", ct);
         var items = Items(result);
         var review = new List<string>();
@@ -181,6 +174,34 @@ public sealed class CvScoringHandler(IAppDbContext db, ILanguageModel model, ICv
         job.CriteriaApprovedByStaffId = null;
         await db.SaveChangesAsync(ct);
         return list;
+    }
+
+    /// <summary>The scoring request: the job, the requirements with their guides, recruiters' corrections, the profile and the CV.</summary>
+    static string ScoreInput(string jobTitle, string jobDescription, IReadOnlyList<CvScoring.Criterion> criteria, string corrections, JsonElement profile, decimal years, string redacted)
+    {
+        var list = string.Join("\n", criteria.Select((x, i) =>
+            $"{i + 1}. [{(x.MustHave ? "ESSENTIAL" : "DESIRABLE")}] {x.Describe()}" + (x.Guide.Length > 0 ? $"\n   Score guide:\n   {x.Guide.Replace("\n", "\n   ")}" : "")));
+        return $"<job>\nTitle: {jobTitle}\n\n{TextUtil.Clip(TextUtil.StripHtml(jobDescription), 12000)}\n</job>\n\n" +
+               $"Score these requirements, returning them in exactly this order:\n{list}\n\n" +
+               (corrections.Length > 0 ? $"<recruiter_corrections>\nRecruiters corrected earlier scores for this job. Follow the same judgement:\n{corrections}\n</recruiter_corrections>\n\n" : "") +
+               $"<structured_profile>\n{Brief(profile, years)}\n</structured_profile>\n" +
+               "The structured profile was extracted from the CV below; use both, and trust the CV text if they differ. Quotes must come from the CV text.\n\n" +
+               $"<cv>\n{redacted}\n</cv>";
+    }
+
+    /// <summary>
+    /// Scores CV text against requirements with no database (the same steps as a real application: redaction, profile,
+    /// scoring and the checks in code). Used by the live evaluations of the test CVs and the fairness check.
+    /// </summary>
+    public static async Task<(CvScoring.Outcome Outcome, decimal Years)> ScoreTextAsync(ILanguageModel model, string jobTitle, string jobDescription,
+        IReadOnlyList<CvScoring.Criterion> criteria, string cvText, string applicantName, DateOnly today, CancellationToken ct = default)
+    {
+        var redacted = TextUtil.Clip(CvScoring.Redact(cvText, applicantName), 40000);
+        var profile = await model.CompleteJsonAsync(Prompts.Profile, $"<cv>\n{redacted}\n</cv>", Prompts.ProfileSchema, "cv_profile", ct);
+        var work = Arr(profile, "work").Select(w => (Str(w, "startDate"), Str(w, "endDate"))).ToList();
+        var years = CvScoring.ResolveExperience(CvScoring.YearsOfExperience(work, today), Num(profile, "stated_years_of_experience"));
+        var result = await model.CompleteJsonAsync(Prompts.Score, ScoreInput(jobTitle, jobDescription, criteria, "", profile, years, redacted), Prompts.ScoreSchema, "cv_score", ct);
+        return (CvScoring.Evaluate(criteria, Items(result), work, today, redacted), years);
     }
 
     static List<CvScoring.ModelItem> Items(JsonElement result) => Arr(result, "criteria").Select(e => new CvScoring.ModelItem(
