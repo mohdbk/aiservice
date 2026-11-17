@@ -3,6 +3,7 @@ using Moet.Recruitment.Application.Common;
 using Moet.Recruitment.Application.Portal;
 using Moet.Recruitment.Domain;
 using Moet.Recruitment.Domain.Common;
+using Moet.Recruitment.Domain.Hiring;
 using Moet.Recruitment.Domain.Identity;
 using Moet.Recruitment.Domain.Operations;
 
@@ -53,6 +54,77 @@ public sealed class CandidateService(IAppDbContext db, PortalAccountService acco
             locked_until = u.LockedUntil > clock.UtcNow ? u.LockedUntil : null, email_configured = await mailer.CanSendAsync(ct),
             applications = apps, data_requests = requests, emails,
         };
+    }
+
+    /// <summary>
+    /// Accounts that look like the same person: the same name (ignoring case and spaces) or the same phone number on
+    /// their applications. People decide whether to merge.
+    /// </summary>
+    public async Task<object> DuplicatesAsync(CancellationToken ct = default)
+    {
+        var accounts = await db.ApplicantAccounts.AsNoTracking().Where(u => u.AnonymisedAt == null)
+            .Select(u => new { u.Id, u.FullName, u.Email, u.CreatedAt, u.IsEnabled }).ToListAsync(ct);
+        var phones = await db.JobApplications.AsNoTracking().Where(a => a.Phone != "")
+            .Select(a => new { a.ApplicantAccountId, a.Phone }).Distinct().ToListAsync(ct);
+        var apps = await db.JobApplications.AsNoTracking().GroupBy(a => a.ApplicantAccountId).Select(g => new { Id = g.Key, N = g.Count() }).ToListAsync(ct);
+        static string Name(string s) => string.Join(" ", s.ToLowerInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        static string Digits(string s) { var d = new string(s.Where(char.IsDigit).ToArray()); return d.Length > 9 ? d[^9..] : d; }
+        var byName = accounts.Where(u => u.IsEnabled && Name(u.FullName).Length > 3).GroupBy(u => Name(u.FullName)).Where(g => g.Count() > 1)
+            .Select(g => (Reason: "name", Ids: g.Select(u => u.Id).ToList()));
+        var byPhone = phones.Where(p => Digits(p.Phone).Length >= 7).GroupBy(p => Digits(p.Phone))
+            .Select(g => g.Select(p => p.ApplicantAccountId).Distinct().ToList()).Where(ids => ids.Count > 1)
+            .Select(ids => (Reason: "phone", Ids: ids));
+        var seen = new HashSet<string>();
+        var groups = new List<object>();
+        foreach (var (reason, ids) in byName.Concat(byPhone))
+        {
+            var members = accounts.Where(u => ids.Contains(u.Id) && u.IsEnabled).OrderBy(u => u.CreatedAt).ToList();
+            if (members.Count < 2 || !seen.Add(string.Join(",", members.Select(m => m.Id)))) continue;
+            groups.Add(new
+            {
+                reason,
+                accounts = members.Select(m => new { id = m.Id, full_name = m.FullName, email = m.Email, joined_at = m.CreatedAt, applications = apps.FirstOrDefault(a => a.Id == m.Id)?.N ?? 0 }),
+            });
+            if (groups.Count >= 100) break;
+        }
+        return new { groups };
+    }
+
+    /// <summary>
+    /// Merges a duplicate account into the one kept: its applications, job alerts, consents and data requests move over,
+    /// a note goes on each moved application, and the duplicate is switched off (signed out, no further sign-in).
+    /// Refused when both applied to the same job, since an application belongs to one account.
+    /// </summary>
+    public async Task<object> MergeAsync(int keepId, int fromId, CancellationToken ct = default)
+    {
+        if (keepId == fromId) throw DomainException.Invalid("merge_same_account");
+        var keep = await AccountAsync(keepId, ct);
+        var from = await AccountAsync(fromId, ct);
+        if (keep.AnonymisedAt != null || from.AnonymisedAt != null) throw DomainException.Conflict("merge_anonymised");
+        var keepJobs = await db.JobApplications.Where(a => a.ApplicantAccountId == keepId).Select(a => a.JobOpeningId).ToListAsync(ct);
+        var moving = await db.JobApplications.Where(a => a.ApplicantAccountId == fromId).ToListAsync(ct);
+        if (moving.Any(a => keepJobs.Contains(a.JobOpeningId))) throw DomainException.Conflict("merge_same_job");
+        var now = clock.UtcNow;
+        foreach (var a in moving)
+        {
+            a.ApplicantAccountId = keepId;
+            a.UpdatedAt = now;
+            db.ApplicationNotes.Add(new ApplicationNote
+            {
+                JobApplicationId = a.Id, Kind = NoteKind.System, CreatedAt = now,
+                Text = TextUtil.Clip($"Moved from the duplicate account {from.Email} when it was merged into {keep.Email}.", 4000),
+            });
+        }
+        foreach (var x in await db.JobAlerts.Where(x => x.ApplicantAccountId == fromId).ToListAsync(ct)) x.ApplicantAccountId = keepId;
+        foreach (var x in await db.ConsentRecords.Where(x => x.ApplicantAccountId == fromId).ToListAsync(ct)) x.ApplicantAccountId = keepId;
+        foreach (var x in await db.DataRequests.Where(x => x.ApplicantAccountId == fromId).ToListAsync(ct)) x.ApplicantAccountId = keepId;
+        foreach (var x in await db.ApplicationNotes.Where(n => n.AuthorApplicantId == fromId).ToListAsync(ct)) x.AuthorApplicantId = keepId;
+        db.AccountTokens.RemoveRange(await db.AccountTokens.Where(t => t.ApplicantAccountId == fromId).ToListAsync(ct));
+        if (from.InTalentPool && !keep.InTalentPool) { keep.InTalentPool = true; keep.TalentPoolAt = from.TalentPoolAt ?? now; }
+        from.IsEnabled = false;
+        from.SessionVersion++;
+        await db.SaveChangesAsync(ct);
+        return new { moved = moving.Count };
     }
 
     async Task<ApplicantAccount> AccountAsync(int id, CancellationToken ct)
@@ -117,4 +189,5 @@ public sealed class CandidateService(IAppDbContext db, PortalAccountService acco
 }
 
 public sealed record EnabledBody(bool Enabled);
+public sealed record MergeBody(int KeepId);
 public sealed record ReasonBody(string? Reason);

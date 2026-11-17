@@ -216,6 +216,8 @@ public static class BackofficeEndpoints
         setup.MapGet("/approval-settings", (ApprovalService s, CancellationToken ct) => s.SettingsAsync(ct));
         setup.MapPut("/approval-settings", (ApprovalSettingsInput b, ApprovalService s, CancellationToken ct) => s.SaveSettingsAsync(b, ct));
         setup.MapGet("/candidates", ([AsParameters] ListQuery lq, bool? verified, bool? enabled, bool? pool, CandidateService s, CancellationToken ct) => s.ListAsync(lq, verified, enabled, pool, ct));
+        setup.MapGet("/candidates/duplicates", (CandidateService s, CancellationToken ct) => s.DuplicatesAsync(ct));
+        setup.MapPost("/candidates/{id:int}/merge", (int id, MergeBody b, CandidateService s, CancellationToken ct) => s.MergeAsync(b.KeepId, id, ct));
         setup.MapGet("/candidates/{id:int}", (int id, CandidateService s, CancellationToken ct) => s.GetAsync(id, ct));
         setup.MapPost("/candidates/{id:int}/resend-verification", (int id, CandidateService s, CancellationToken ct) => s.ResendVerificationAsync(id, ct));
         setup.MapPost("/candidates/{id:int}/password-reset", (int id, CandidateService s, CancellationToken ct) => s.SendPasswordResetAsync(id, ct));

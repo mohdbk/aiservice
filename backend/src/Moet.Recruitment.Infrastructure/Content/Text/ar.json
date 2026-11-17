@@ -95,7 +95,7 @@
  "apply.name": "الاسم الكامل",
  "apply.email": "البريد الإلكتروني",
  "apply.phone": "رقم الهاتف المتحرك",
- "apply.phone_hint": "أدخل رمز الدولة، مثال: ⁦+971 50 123 4567⁩",
+ "apply.phone_hint": "اختر رمز الدولة ثم اكتب رقمك، مثال 50 123 4567.",
  "apply.country": "دولة الإقامة",
  "apply.country_choose": "اختر الدولة",
  "apply.cv": "السيرة الذاتية",
@@ -404,5 +404,6 @@
  "error.cannot_withdraw": "لم يعد بالإمكان سحب هذا الطلب.",
  "error.no_interview": "لا توجد مقابلة قادمة لتغييرها.",
  "error.reschedule_too_late": "المقابلة بعد أقل من يوم، لذا لا يمكن تغيير الموعد عبر الموقع.",
- "error.signature_required": "اكتب اسمك الكامل للتوقيع."
+ "error.signature_required": "اكتب اسمك الكامل للتوقيع.",
+ "apply.phone_code": "رمز الدولة"
 }

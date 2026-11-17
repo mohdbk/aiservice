@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { DataTable, useList } from "../components/DataTable";
 import { Badge, Button, ErrorState, Loading, Modal, Note, PageHeader, TextArea, useSaving } from "../components/ui";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
+import { Duplicates } from "../components/Duplicates";
 
 type Row = {
   id: number; full_name: string; email: string; verified: boolean; enabled: boolean; talent_pool: boolean; joined_at: string;
@@ -27,7 +28,7 @@ export default function Candidates() {
   const opts = yesNo.map((o) => ({ value: o.value, label: t(`common.${o.label}`) }));
   return (
     <>
-      <PageHeader title={t("nav.candidates")} subtitle={list.data ? t("cand.subtitle", { n: list.data.total }) : undefined} />
+      <PageHeader title={t("nav.candidates")} subtitle={list.data ? t("cand.subtitle", { n: list.data.total }) : undefined} actions={<Duplicates onMerged={list.reload} />} />
       <DataTable list={list} rowKey={(r) => r.id} emptyHint={t("empty.candidates")} searchLabel={t("cand.search")}
         filters={[
           { key: "verified", label: t("cand.verified"), options: opts },

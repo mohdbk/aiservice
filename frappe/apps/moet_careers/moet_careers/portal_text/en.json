@@ -95,7 +95,7 @@
  "apply.name": "Full Name",
  "apply.email": "Email",
  "apply.phone": "Mobile Number",
- "apply.phone_hint": "Include the country code, for example +971 50 123 4567.",
+ "apply.phone_hint": "Choose the country code, then type your number, for example 50 123 4567.",
  "apply.country": "Country of Residence",
  "apply.country_choose": "Choose a Country",
  "apply.cv": "CV",
@@ -404,5 +404,6 @@
  "error.cannot_withdraw": "This application can no longer be withdrawn.",
  "error.no_interview": "There is no upcoming interview to change.",
  "error.reschedule_too_late": "The interview is less than a day away, so the time cannot be changed online.",
- "error.signature_required": "Type your full name to sign."
+ "error.signature_required": "Type your full name to sign.",
+ "apply.phone_code": "Country Code"
 }

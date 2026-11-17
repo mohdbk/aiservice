@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, ApiError, fileToBase64, Job, ScreeningQuestion } from "../api";
 import { useAuth } from "../auth";
 import { Field, IconBox, RequiredMark, Steps } from "../components/Bits";
+import { DIAL_CODES, fullPhone } from "../components/dialCodes";
 import { Alert, Skeleton, Spinner } from "../components/States";
 import { usePageTitle, useSite } from "../site";
 import { useAsync } from "../useAsync";
@@ -76,6 +77,7 @@ export default function Apply() {
   usePageTitle(t("apply.title"));
   const { data: job, error: loadError } = useAsync((signal) => api<Job>(`/api/jobs/${encodeURIComponent(id)}?lang=${lang}`, { signal }), [id, lang]);
   const [phone, setPhone] = useState("");
+  const [dial, setDial] = useState("AE");
   const [country, setCountry] = useState("");
   const [nationality, setNationality] = useState("");
   // The list comes as { value, label } (an older back end sends plain names).
@@ -102,7 +104,8 @@ export default function Apply() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!/^\+?[0-9][0-9 ()-]{6,19}$/.test(phone.trim())) return setError(new ApiError("phone_invalid", 400));
+    const number = fullPhone(DIAL_CODES.find(([iso]) => iso === dial)?.[1] || "971", phone);
+    if (!/^\+?[0-9][0-9 ()-]{6,19}$/.test(number)) return setError(new ApiError("phone_invalid", 400));
     if (!file && !reusing) return setError(new ApiError("cv_required", 400));
     if (file && !CV_RE.test(file.name)) return setError(new ApiError("cv_type", 400));
     if (file && file.size > config.max_cv_mb * 1024 * 1024) return setError(new ApiError("cv_too_large", 400, { max_mb: config.max_cv_mb }));
@@ -114,7 +117,7 @@ export default function Apply() {
     try {
       const cv = file ? { name: file.name, type: file.type, data: await fileToBase64(file) } : undefined;
       const r = await api<{ application: string }>("/api/applications", {
-        body: { job: job.id, phone: phone.trim(), country, nationality, cover_note: note, declaration: true, talent_pool: talentPool, lang, screening, ...(cv ? { cv } : { reuse_cv: true }) },
+        body: { job: job.id, phone: number, country, nationality, cover_note: note, declaration: true, talent_pool: talentPool, lang, screening, ...(cv ? { cv } : { reuse_cv: true }) },
       });
       navigate(`${path(`/applications/${encodeURIComponent(r.application)}`)}?new=1`);
     } catch (err) {
@@ -147,9 +150,22 @@ export default function Apply() {
             <div className="relative flex min-h-10 min-w-0 flex-col justify-center ps-[3.25rem]"><dt className="text-sm text-aeblack-600"><IconBox icon={Envelope} className="absolute start-0 top-1/2 -translate-y-1/2" />{t("apply.email")}</dt><dd className="truncate font-medium text-aeblack-900"><bdi>{user?.email}</bdi></dd></div>
           </dl>
           <div className="grid gap-5 md:grid-cols-2">
-            <Field id="phone" label={t("apply.phone")} hint={t("apply.phone_hint")} required prefix={Phone}>
-              <input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" required maxLength={30} dir="ltr" className="rtl:text-right" aria-describedby="phone-hint" />
-            </Field>
+            <div className="aegov-form-control">
+              <label htmlFor="phone">{t("apply.phone")}<RequiredMark /></label>
+              {/* Country code and number, left to right in both languages. */}
+              <div className="flex gap-2" dir="ltr">
+                <div className="form-control-input w-32 shrink-0">
+                  <select id="phone-code" aria-label={t("apply.phone_code")} value={dial} onChange={(e) => setDial(e.target.value)}>
+                    {DIAL_CODES.map(([iso, code]) => <option key={iso} value={iso}>{`${iso} +${code}`}</option>)}
+                  </select>
+                </div>
+                <div className="form-control-input min-w-0 flex-1">
+                  <span className="control-prefix" aria-hidden="true"><Phone size={24} /></span>
+                  <input id="phone" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel-national" required maxLength={24} aria-describedby="phone-hint" placeholder="50 123 4567" />
+                </div>
+              </div>
+              <p id="phone-hint" className="mt-1 text-sm text-aeblack-600">{t("apply.phone_hint")}</p>
+            </div>
             <Field id="country" label={t("apply.country")} optional prefix={GlobeHemisphereEast}>
               <select id="country" value={country} onChange={(e) => setCountry(e.target.value)} autoComplete="country-name">
                 <option value="">{t("apply.country_choose")}</option>
