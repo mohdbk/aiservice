@@ -185,6 +185,77 @@ async function takeAssessment(email, code, answer) {
  * again changes nothing: a marked knowledge test (one pass, one not), interview feedback, a 16-type profile,
  * a workplace Big Five profile and an accepted offer.
  */
+
+// ---------------- Word CVs (a minimal .docx, written without libraries) ----------------
+const CRC = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+const crc32 = (buf) => { let c = 0xffffffff; for (const b of buf) c = CRC[(c ^ b) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+function zip(files) {
+  const parts = [], central = [];
+  let offset = 0;
+  for (const [name, text] of files) {
+    const data = Buffer.from(text, "utf8"), fname = Buffer.from(name, "utf8"), crc = crc32(data);
+    const head = Buffer.alloc(30);
+    head.writeUInt32LE(0x04034b50, 0); head.writeUInt16LE(20, 4); head.writeUInt16LE(0x0800, 6); head.writeUInt16LE(0, 8);
+    head.writeUInt32LE(crc, 14); head.writeUInt32LE(data.length, 18); head.writeUInt32LE(data.length, 22); head.writeUInt16LE(fname.length, 26);
+    parts.push(head, fname, data);
+    const cen = Buffer.alloc(46);
+    cen.writeUInt32LE(0x02014b50, 0); cen.writeUInt16LE(20, 4); cen.writeUInt16LE(20, 6); cen.writeUInt16LE(0x0800, 8);
+    cen.writeUInt32LE(crc, 16); cen.writeUInt32LE(data.length, 20); cen.writeUInt32LE(data.length, 24); cen.writeUInt16LE(fname.length, 28); cen.writeUInt32LE(offset, 42);
+    central.push(cen, fname);
+    offset += head.length + fname.length + data.length;
+  }
+  const size = central.reduce((s, b) => s + b.length, 0);
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(files.length, 8); end.writeUInt16LE(files.length, 10); end.writeUInt32LE(size, 12); end.writeUInt32LE(offset, 16);
+  return Buffer.concat([...parts, ...central, end]);
+}
+const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+function docx(lines, rtl = true) {
+  const p = lines.map((l) => `<w:p>${rtl ? "<w:pPr><w:bidi/></w:pPr>" : ""}<w:r>${rtl ? "<w:rPr><w:rtl/></w:rPr>" : ""}<w:t xml:space="preserve">${esc(l)}</w:t></w:r></w:p>`).join("");
+  return zip([
+    ["[Content_Types].xml", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'],
+    ["_rels/.rels", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'],
+    ["word/document.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${p}</w:body></w:document>`],
+  ]);
+}
+
+// Applicants with real CVs (scored by the live model against the approved requirements): strong, partial and weak.
+const REAL_CVS = [
+  ["ريم الشامسي", "reem.alshamsi@example.test", "+971 50 482 9136", "7", 2, true, [
+    "ريم الشامسي", "محللة بيانات أولى",
+    "نبذة: محللة بيانات بخبرة في بناء المؤشرات الاقتصادية ولوحات المعلومات ودعم اتخاذ القرار في الجهات الحكومية.",
+    "الخبرة العملية",
+    "محللة بيانات أولى، مركز دبي للإحصاء، 2021-01 حتى الآن",
+    "بناء لوحات معلومات Power BI للمؤشرات الاقتصادية الشهرية",
+    "كتابة استعلامات SQL متقدمة على قواعد بيانات SQL Server",
+    "محللة بيانات، دائرة الاقتصاد والسياحة، 2018-03 إلى 2020-12",
+    "تحليل بيانات الرخص التجارية باستخدام SQL و Python",
+    "التعليم", "بكالوريوس الإحصاء، جامعة الإمارات العربية المتحدة، 2017",
+    "اللغات", "العربية (لغة أم)، الإنجليزية (بطلاقة)",
+  ]],
+  ["خالد المري", "khalid.almarri@example.test", "+971 55 318 2207", "2", 1, true, [
+    "خالد المري", "محلل تقارير", "الخبرة العملية",
+    "محلل تقارير، شركة اتصالات، 2024-06 حتى الآن",
+    "إعداد تقارير المبيعات الشهرية باستخدام Excel و SQL",
+    "متابعة مؤشرات أداء فرق المبيعات وإعداد عروض تقديمية للإدارة",
+    "منسق خدمة عملاء، شركة اتصالات، 2023-07 إلى 2024-05",
+    "الرد على استفسارات العملاء وتسجيل الطلبات في نظام إدارة العملاء",
+    "الدورات: مقدمة في تحليل البيانات (عبر الإنترنت)، 2024",
+    "التعليم", "بكالوريوس نظم المعلومات، جامعة زايد، 2023",
+    "اللغات", "العربية، الإنجليزية (جيد)",
+  ]],
+  ["Peter Novak", "peter.novak@example.test", "+971 52 640 1185", "0", 0, false, [
+    "Peter Novak", "Restaurant Supervisor", "Experience",
+    "Restaurant Supervisor, Marina Restaurant, 2016 - present",
+    "Managed a team of 12 and daily stock counts in Excel",
+    "Handled customer complaints and weekly staff rotas for the restaurant",
+    "Waiter, Beach Hotel, 2014 - 2016",
+    "Served guests and supported events and banquets in the hotel ballroom",
+    "Skills: customer service, team leadership, Microsoft Excel",
+    "Education", "High school diploma, 2014",
+  ]],
+];
+
 const ANALYST_REQUIREMENTS = [
       { category: "Qualification", criterion: "بكالوريوس في الإحصاء أو علوم البيانات", must: true, high: false,
         guide: "0: لا توجد شهادة جامعية\n4: بكالوريوس في تخصص غير ذي صلة\n7: بكالوريوس في تخصص قريب (رياضيات، اقتصاد)\n10: بكالوريوس أو أعلى في الإحصاء أو علوم البيانات" },
@@ -288,6 +359,22 @@ async function topUp() {
     if (!app) continue;
     await portal("POST", "respond_offer", { email: app.email, epoch: await epochOf(app.email), name: app.code, accept: "1", reason: "", signature: app.full_name });
     added.push(`offer accepted by ${app.email}`);
+  }
+
+  // 5. Applicants with real Word CVs, so the CV scoring shows real results.
+  const detail = await portal("GET", `job?lang=ar&name=${analyst.code}`);
+  const degreeOption = detail.message.screening.find((x) => x.type === "Single Choice")?.options || [];
+  for (const [name, email, phone, years, deg, rtl, lines] of REAL_CVS) {
+    if (byEmail[email]) { console.log(`skip CV applicant ${email}: already applied`); continue; }
+    let epoch = "0";
+    try { epoch = String((await portal("POST", "signup", { full_name: name, email, password: "Demo-Applicant-2026", lang: rtl ? "ar" : "en" })).message.epoch ?? 0); }
+    catch { epoch = await epochOf(email); }
+    const form = new FormData();
+    for (const [k, v] of Object.entries({ email, epoch, job: analyst.code, phone, country: "United Arab Emirates", declaration: "1", lang: "ar",
+      screening: JSON.stringify({ sq1: years, sq2: degreeOption[deg]?.value ?? "" }) })) form.append(k, v);
+    form.append("cv", new Blob([docx(lines, rtl)], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }), `cv-${email.split("@")[0]}.docx`);
+    try { await portal("POST", "apply", undefined, form); added.push(`CV applicant ${email}`); }
+    catch (e) { console.log(`skip CV applicant ${email}: ${e.message.slice(0, 160)}`); }
   }
 
   console.log(added.length ? `Added: ${added.join("; ")}.` : "Nothing missing.");

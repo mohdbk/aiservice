@@ -1753,5 +1753,6 @@
  "error.override_reason": "Give a reason for the change (at least 3 characters).",
  "error.override_score": "The score must be between 0 and 10.",
  "ai.Review": "Needs a Human Look",
- "cvr.min_years": "at least {n} years"
+ "cvr.min_years": "at least {n} years",
+ "dup.compact": "Possibly the same person as {n} other applications (click to see)"
 }

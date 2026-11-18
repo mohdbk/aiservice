@@ -103,9 +103,9 @@ export default function Applicant() {
       ]} />
 
       {tab === "overview" && (a.duplicates?.length ?? 0) > 0 && (
-        <div className="mb-6"><Note tone="warning">
-          <p className="m-0 font-semibold">{t("dup.title")}</p>
-          <ul className="mt-2 space-y-1">
+        <details className="mb-4 rounded-xl border border-camel-200 bg-camel-50 px-4 py-2 text-sm text-camel-900">
+          <summary className="cursor-pointer font-semibold">{t("dup.compact", { n: a.duplicates!.length })}</summary>
+          <ul className="mt-2 space-y-1 pb-1">
             {a.duplicates!.map((d) => (
               <li key={d.id}>
                 <Link to={to(`/applicants/${d.id}`)} className="font-semibold text-camel-900 underline">{d.full_name}</Link> <span dir="ltr">{d.email}</span>
@@ -113,7 +113,7 @@ export default function Applicant() {
               </li>
             ))}
           </ul>
-        </Note></div>
+        </details>
       )}
       {tab === "overview" && <div className="mb-6"><SelectionCard s={a.selection} /></div>}
       {tab === "overview" && (
