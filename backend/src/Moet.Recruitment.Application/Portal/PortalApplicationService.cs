@@ -15,7 +15,7 @@ namespace Moet.Recruitment.Application.Portal;
 
 public sealed record ApplyInput(
     string? Email, string? Epoch, string? Job, string? Phone, string? Country, string? CoverNote, string? Declaration,
-    string? Lang, string? Screening, string? FileName, byte[]? Cv, string? TalentPool = null, string? Nationality = null, string? ReuseCv = null);
+    string? Lang, string? Screening, string? FileName, byte[]? Cv, string? TalentPool = null, string? Nationality = null, string? ReuseCv = null, string? CvId = null);
 
 public sealed record StatusView(string Code, string Tone);
 
@@ -25,7 +25,7 @@ public sealed record ApplicationSummaryView(string Id, string Job, string Title,
 public sealed class PortalApplicationService(
     IAppDbContext db, ContentService content, PortalAccountService accounts, PortalSiteService site, AssessmentWorkflow assessments,
     JobQueue jobs, ICodeGenerator codes, IClock clock, PortalMailer mailer, BookingService bookings, DocumentService documents,
-    BackofficeInterviewService offers, IVirusScanner scanner)
+    BackofficeInterviewService offers, IVirusScanner scanner, CandidateCvService cvs)
 {
     public async Task<object> ApplyAsync(ApplyInput input, CancellationToken ct = default)
     {
@@ -46,6 +46,13 @@ public sealed class PortalApplicationService(
         if (evaluation.Missing.Count > 0)
             throw DomainException.Invalid("screening_required", new Dictionary<string, object?> { ["questions"] = evaluation.Missing });
 
+        // A CV from the candidate's own library, chosen on the form.
+        var fromLibrary = false;
+        if ((input.Cv == null || input.Cv.Length == 0) && int.TryParse(input.CvId, out var cvId) && await cvs.ForApplyingAsync(user.Id, cvId, ct) is { } saved)
+        {
+            input = input with { Cv = saved.Content, FileName = saved.FileName };
+            fromLibrary = true;
+        }
         // The candidate may use the CV from their latest application instead of uploading one again.
         if ((input.Cv == null || input.Cv.Length == 0) && input.ReuseCv is "1" or "true")
         {
@@ -108,6 +115,12 @@ public sealed class PortalApplicationService(
         await mailer.QueueAsync(app.Email, app.FullName, lang, "application_received", await mailer.LinkAsync(lang, "/applications", ct),
             new Dictionary<string, string> { ["job_title"] = job.In(lang).Title, ["reference"] = app.Reference }, ct);
         await db.SaveChangesAsync(ct);
+        // A new CV uploaded with the application is also kept in the candidate's library (unless the library is full).
+        if (!fromLibrary)
+        {
+            try { await cvs.AddAsync(user.Id, input.FileName, input.Cv, null, false, ct); }
+            catch (DomainException) { /* a full library or the same file again: the application has its copy */ }
+        }
         return new { application = app.Code, reference = app.Reference };
     }
 

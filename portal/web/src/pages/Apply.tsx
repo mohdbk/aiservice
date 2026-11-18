@@ -6,6 +6,7 @@ import { useAuth } from "../auth";
 import { Field, IconBox, RequiredMark, Steps } from "../components/Bits";
 import { DIAL_CODES, fullPhone } from "../components/dialCodes";
 import { Alert, Skeleton, Spinner } from "../components/States";
+import { uploadCv, type SavedCv } from "../components/CvLibrary";
 import { usePageTitle, useSite } from "../site";
 import { useAsync } from "../useAsync";
 import NotFound from "./NotFound";
@@ -84,11 +85,57 @@ export default function Apply() {
   const countries = (config.countries || []).map((c: { value: string; label: string } | string) => (typeof c === "string" ? { value: c, label: c } : c));
   const [note, setNote] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  // A CV from an earlier application can be used again instead of uploading one.
-  const { data: mine } = useAsync((signal) => api<{ last_cv?: { submitted: string; job: string } | null }>(`/api/applications?lang=${lang}`, { signal }).catch(() => ({ last_cv: null })), [lang]);
-  const lastCv = mine?.last_cv || null;
-  const [reuse, setReuse] = useState(true);
-  const reusing = !!lastCv && reuse && !file;
+  // The candidate's saved CVs: the default is chosen; a new file is saved to them and read, so the form can be filled in.
+  const library = useAsync((signal) => api<{ cvs: SavedCv[] }>("/api/cvs", { signal }).catch(() => ({ cvs: [] as SavedCv[] })), []);
+  const saved = library.data?.cvs || [];
+  const [choice, setChoice] = useState<number | "new" | null>(null);
+  const chosen = choice ?? (saved.find((c) => c.is_default)?.id ?? (saved.length ? saved[0].id : "new"));
+  const reusing = chosen !== "new";
+  const [uploading, setUploading] = useState(false);
+  type Prefill = { status: string; phone: string; years: number | null; latest_role: string; employer: string; education: string[]; skills: string[]; languages: string[] };
+  const [prefill, setPrefill] = useState<Prefill | null>(null);
+  const [reading, setReading] = useState(false);
+  // Details from the chosen CV: read once it is ready (a new CV takes a few seconds), the phone filled in when empty.
+  useEffect(() => {
+    if (typeof chosen !== "number") { setPrefill(null); return; }
+    let stop = false;
+    (async () => {
+      setReading(true);
+      for (let i = 0; i < 15 && !stop; i++) {
+        const p = await api<Prefill>(`/api/cvs/${chosen}/prefill`).catch(() => null);
+        if (!p || p.status !== "pending") {
+          if (stop) return;
+          setPrefill(p);
+          if (p?.phone) {
+            const digits = p.phone.replace(/[^\d+]/g, "");
+            const match = DIAL_CODES.filter(([, code]) => digits.startsWith(`+${code}`)).sort((a, b) => b[1].length - a[1].length)[0];
+            setPhone((cur) => cur || (match ? digits.slice(match[1].length + 1) : digits.replace(/^0+/, "")));
+            if (match) setDial((d) => (phone ? d : match[0]));
+          }
+          break;
+        }
+        await new Promise((res) => setTimeout(res, 2000));
+      }
+      if (!stop) setReading(false);
+    })();
+    return () => { stop = true; };
+  }, [chosen]);
+  const pickFile = async (f: File | null) => {
+    setFile(f);
+    if (!f) return;
+    setError(null);
+    setUploading(true);
+    try {
+      const id = await uploadCv(f, config.max_cv_mb);
+      library.reload();
+      setChoice(id);
+      setFile(null);
+    } catch (err) {
+      setError(err);
+    } finally {
+      setUploading(false);
+    }
+  };
   const [declared, setDeclared] = useState(false);
   const [talentPool, setTalentPool] = useState(false);
   const [screening, setScreening] = useState<Record<string, unknown>>({});
@@ -115,9 +162,9 @@ export default function Apply() {
     if (!declared) return setError(new ApiError("declaration_required", 400));
     setBusy(true);
     try {
-      const cv = file ? { name: file.name, type: file.type, data: await fileToBase64(file) } : undefined;
+      const cv = !reusing && file ? { name: file.name, type: file.type, data: await fileToBase64(file) } : undefined;
       const r = await api<{ application: string }>("/api/applications", {
-        body: { job: job.id, phone: number, country, nationality, cover_note: note, declaration: true, talent_pool: talentPool, lang, screening, ...(cv ? { cv } : { reuse_cv: true }) },
+        body: { job: job.id, phone: number, country, nationality, cover_note: note, declaration: true, talent_pool: talentPool, lang, screening, ...(cv ? { cv } : { cv_id: chosen }) },
       });
       navigate(`${path(`/applications/${encodeURIComponent(r.application)}`)}?new=1`);
     } catch (err) {
@@ -182,29 +229,46 @@ export default function Apply() {
 
           <div>
             <p className="mb-1 block text-sm font-medium leading-6 text-aeblack-800" id="cv-label">{t("apply.cv")}<RequiredMark /></p>
-            {lastCv && !file && (
+            {saved.length > 0 && (
               <div className="mb-3 space-y-2" role="radiogroup" aria-labelledby="cv-label">
-                <label className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 ${reuse ? "border-primary-600 bg-primary-50" : "border-aeblack-200"}`}>
-                  <input type="radio" name="cv-source" className="mt-1 h-5 w-5 accent-primary-600" checked={reuse} onChange={() => setReuse(true)} />
-                  <span><span className="block font-medium">{t("apply.cv_reuse")}</span><span className="text-sm text-aeblack-600"><bdi>{t("apply.cv_reuse_from", { job: lastCv.job, date: formatDate(lastCv.submitted) })}</bdi></span></span>
-                </label>
-                <label className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 ${!reuse ? "border-primary-600 bg-primary-50" : "border-aeblack-200"}`}>
-                  <input type="radio" name="cv-source" className="h-5 w-5 accent-primary-600" checked={!reuse} onChange={() => setReuse(false)} />
+                {saved.map((c) => (
+                  <label key={c.id} className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 ${chosen === c.id ? "border-primary-600 bg-primary-50" : "border-aeblack-200"}`}>
+                    <input type="radio" name="cv-source" className="mt-1 h-5 w-5 accent-primary-600" checked={chosen === c.id} onChange={() => setChoice(c.id)} />
+                    <span className="min-w-0"><span className="block truncate font-medium"><bdi>{c.file_name}</bdi></span>
+                      <span className="text-sm text-aeblack-600">{t("cvs.uploaded", { date: formatDate(c.uploaded_at.slice(0, 10)) })}{c.is_default ? ` · ${t("cvs.default")}` : ""}</span></span>
+                  </label>
+                ))}
+                <label className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 ${chosen === "new" ? "border-primary-600 bg-primary-50" : "border-aeblack-200"}`}>
+                  <input type="radio" name="cv-source" className="h-5 w-5 accent-primary-600" checked={chosen === "new"} onChange={() => setChoice("new")} />
                   <span className="font-medium">{t("apply.cv_new")}</span>
                 </label>
               </div>
             )}
             {!reusing && <>
             <input id="cv" type="file" className="peer sr-only" accept=".pdf,.docx,.jpg,.jpeg,.png" aria-labelledby="cv-label cv-choose" aria-describedby="cv-hint"
-              onChange={(e) => setFile(e.target.files?.[0] || null)} />
+              onChange={(e) => pickFile(e.target.files?.[0] || null)} />
             <label htmlFor="cv" className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-8 text-center transition peer-focus-visible:ring-2 peer-focus-visible:ring-primary-600 ${file ? "border-aegreen-500 bg-aegreen-50" : "border-primary-300 bg-whitely-50 hover:border-primary-500 hover:bg-primary-50"}`}>
               <span className={`flex h-16 w-16 items-center justify-center rounded-full ${file ? "bg-aegreen-100 text-aegreen-700" : "bg-primary-100 text-primary-700"}`} aria-hidden="true">
                 {file ? <FileText size={40} weight="duotone" /> : <UploadSimple size={40} weight="duotone" />}
               </span>
-              <span id="cv-choose" className="font-semibold text-primary-800"><bdi>{file ? t("apply.cv_selected", { name: file.name }) : t("apply.cv_choose")}</bdi></span>
+              <span id="cv-choose" className="font-semibold text-primary-800"><bdi>{uploading ? t("apply.cv_saving") : file ? t("apply.cv_selected", { name: file.name }) : t("apply.cv_choose")}</bdi></span>
               <span className="text-sm text-aeblack-600" id="cv-hint">{t("apply.cv_hint", { max: config.max_cv_mb })}</span>
             </label>
             </>}
+            {reusing && reading && <div className="mt-3 text-sm text-aeblack-700"><Spinner label={t("apply.cv_reading")} /></div>}
+            {reusing && prefill && prefill.status === "ready" && (prefill.latest_role || prefill.years || prefill.education.length > 0 || prefill.skills.length > 0) && (
+              <div className="mt-3 rounded-xl border border-aegreen-200 bg-aegreen-50 p-4 text-sm" aria-live="polite">
+                <p className="font-semibold text-aeblack-900">{t("apply.from_cv")}</p>
+                <dl className="mt-2 grid gap-x-6 gap-y-1 sm:grid-cols-2">
+                  {prefill.latest_role && <div><dt className="text-aeblack-600">{t("apply.from_cv_role")}</dt><dd className="font-medium"><bdi>{[prefill.latest_role, prefill.employer].filter(Boolean).join(", ")}</bdi></dd></div>}
+                  {prefill.years ? <div><dt className="text-aeblack-600">{t("apply.from_cv_years")}</dt><dd className="font-medium">{t("app.years_value", { years: prefill.years })}</dd></div> : null}
+                  {prefill.education.length > 0 && <div><dt className="text-aeblack-600">{t("apply.from_cv_education")}</dt><dd className="font-medium"><bdi>{prefill.education[0]}</bdi></dd></div>}
+                  {prefill.languages.length > 0 && <div><dt className="text-aeblack-600">{t("apply.from_cv_languages")}</dt><dd className="font-medium"><bdi>{prefill.languages.join(", ")}</bdi></dd></div>}
+                  {prefill.skills.length > 0 && <div className="sm:col-span-2"><dt className="text-aeblack-600">{t("apply.from_cv_skills")}</dt><dd className="font-medium"><bdi>{prefill.skills.join(", ")}</bdi></dd></div>}
+                </dl>
+                <p className="mt-2 text-aeblack-600">{t("apply.from_cv_check")}</p>
+              </div>
+            )}
           </div>
 
           {job.screening && job.screening.length > 0 && (

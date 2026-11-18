@@ -1,3 +1,4 @@
+import { CvLibrary } from "../components/CvLibrary";
 import { DownloadSimple, Trash, UserCircle } from "@phosphor-icons/react";
 import { FormEvent, useState } from "react";
 import { api, ApiError } from "../api";
@@ -91,6 +92,8 @@ export default function Account() {
           <DownloadSimple size={24} aria-hidden="true" />{t("account.download")}
         </button>
       </section>
+
+      <CvLibrary />
 
       <section className="mc-surface mt-6 rounded-2xl border border-aeblack-100 bg-white p-6" aria-labelledby="pool-title">
         <h2 id="pool-title" className="font-heading text-lg font-semibold text-aeblack-900">{t("account.pool_title")}</h2>

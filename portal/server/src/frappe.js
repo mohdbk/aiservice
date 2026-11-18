@@ -92,6 +92,17 @@ export function createFrappe(cfg, fetchImpl = globalThis.fetch) {
     jobAlerts: (u, lang) => call("job_alerts", { query: { email: u.email, epoch: u.epoch || 0, lang } }),
     saveJobAlert: (u, a) => call("save_job_alert", { json: { email: u.email, epoch: u.epoch || 0, keywords: a.keywords, department: a.department, location: a.location, lang: a.lang } }),
     deleteJobAlert: (u, id) => call("delete_job_alert", { json: { email: u.email, epoch: u.epoch || 0, id } }),
+    // The candidate's CV library.
+    myCvs: (u) => call("my_cvs", { query: { email: u.email, epoch: u.epoch || 0 } }),
+    uploadCv: (u, file, makeDefault) => {
+      const form = new FormData();
+      for (const [k, v] of Object.entries({ email: u.email, epoch: u.epoch || 0, default: makeDefault ? "1" : "0" })) form.append(k, String(v));
+      form.append("file", new Blob([file.data], { type: file.type || "application/octet-stream" }), file.name);
+      return call("upload_cv", { form, timeoutMs: 120_000 });
+    },
+    deleteCv: (u, id) => call("delete_cv", { json: { email: u.email, epoch: u.epoch || 0, id } }),
+    defaultCv: (u, id) => call("default_cv", { json: { email: u.email, epoch: u.epoch || 0, id } }),
+    cvPrefill: (u, id) => call("cv_prefill", { query: { email: u.email, epoch: u.epoch || 0, id } }),
     setTalentPool: (u, join) => call("talent_pool", { json: { email: u.email, epoch: u.epoch || 0, join: join ? "1" : "0" } }),
     respondOffer: (u, name, accept, reason, signature) => call("respond_offer", { json: { email: u.email, epoch: u.epoch || 0, name, accept: accept ? "1" : "0", reason, ...(signature ? { signature } : {}) } }),
     withdraw: (u, name, reason) => call("withdraw_application", { json: { email: u.email, epoch: u.epoch || 0, name, reason } }),

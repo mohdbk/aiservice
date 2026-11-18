@@ -218,6 +218,24 @@ public static class BackofficeEndpoints
         setup.MapGet("/approval-settings", (ApprovalService s, CancellationToken ct) => s.SettingsAsync(ct));
         setup.MapPut("/approval-settings", (ApprovalSettingsInput b, ApprovalService s, CancellationToken ct) => s.SaveSettingsAsync(b, ct));
         setup.MapGet("/candidates", ([AsParameters] ListQuery lq, bool? verified, bool? enabled, bool? pool, CandidateService s, CancellationToken ct) => s.ListAsync(lq, verified, enabled, pool, ct));
+        // A candidate's CV library: HR can see, download, upload (for example a CV sent by email) and delete CVs.
+        setup.MapGet("/candidates/{id:int}/cvs", (int id, Application.Portal.CandidateCvService s, CancellationToken ct) => s.ListAsync(id, ct));
+        setup.MapPost("/candidates/{id:int}/cvs", async (int id, HttpRequest req, Application.Portal.CandidateCvService s, ICurrentActor actor, CancellationToken ct) =>
+        {
+            if (!req.HasFormContentType) throw DomainException.Invalid("cv_required");
+            var form = await req.ReadFormAsync(ct);
+            var f = form.Files.FirstOrDefault() ?? throw DomainException.Invalid("cv_required");
+            using var ms = new MemoryStream();
+            await f.CopyToAsync(ms, ct);
+            return new { id = await s.AddAsync(id, f.FileName, ms.ToArray(), actor.Id, form["default"] == "1", ct) };
+        }).DisableAntiforgery();
+        setup.MapDelete("/candidates/{id:int}/cvs/{cvId:int}", (int id, int cvId, Application.Portal.CandidateCvService s, CancellationToken ct) => s.DeleteAsync(id, cvId, ct));
+        setup.MapPost("/candidates/{id:int}/cvs/{cvId:int}/default", (int id, int cvId, Application.Portal.CandidateCvService s, CancellationToken ct) => s.SetDefaultAsync(id, cvId, ct));
+        setup.MapGet("/candidates/{id:int}/cvs/{cvId:int}/file", async (int id, int cvId, bool? download, Application.Portal.CandidateCvService s, CancellationToken ct) =>
+        {
+            var (content, type, name) = await s.FileAsync(id, cvId, ct);
+            return download == true ? Results.File(content, type, name) : Results.File(content, type);
+        });
         setup.MapGet("/candidates/duplicates", (CandidateService s, CancellationToken ct) => s.DuplicatesAsync(ct));
         setup.MapPost("/candidates/{id:int}/merge", (int id, MergeBody b, CandidateService s, CancellationToken ct) => s.MergeAsync(b.KeepId, id, ct));
         setup.MapGet("/candidates/{id:int}", (int id, CandidateService s, CancellationToken ct) => s.GetAsync(id, ct));

@@ -7,6 +7,7 @@ import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
 type Row = {
   id: number; full_name: string; email: string; joined_at: string | null; applications: number;
   latest: { id: number; created_at: string; status: string; job_title: string; score: number | null; years: number | null; summary: string } | null;
+  cv?: { id: number; file_name: string; years: number | null; summary: string; uploaded_at: string; status: string } | null; cvs?: number;
 };
 
 /** Candidates who agreed to be considered for other jobs, searchable by what is in their CVs, and invited to apply. */
@@ -41,9 +42,14 @@ export default function TalentPool() {
               <p className="text-sm">{r.latest.job_title} <span className="text-aeblack-500">· {date(r.latest.created_at)}</span></p>
               {r.latest.summary && <p className="mt-1 line-clamp-2 text-xs text-aeblack-600" dir="auto">{r.latest.summary}</p>}
             </div>
+          ) : r.cv ? (
+            <div className="max-w-md">
+              <p className="text-sm"><Badge tone="blue">{t("pool.cv_only")}</Badge> <a href={`/api/backoffice/candidates/${r.id}/cvs/${r.cv.id}/file`} target="_blank" rel="noreferrer" className="text-primary-700 hover:underline" dir="auto">{r.cv.file_name}</a></p>
+              {r.cv.summary && <p className="mt-1 line-clamp-2 text-xs text-aeblack-600" dir="auto">{r.cv.summary}</p>}
+            </div>
           ) : "-" },
           { key: "score", label: t("apps.score"), render: (r) => <Score value={r.latest?.score} /> },
-          { key: "years", label: t("pool.years"), render: (r) => <span className="tabular-nums">{r.latest?.years ?? "-"}</span> },
+          { key: "years", label: t("pool.years"), render: (r) => <span className="tabular-nums">{r.latest?.years ?? r.cv?.years ?? "-"}</span> },
           { key: "joined", label: t("pool.joined"), sort: "joined", className: "whitespace-nowrap", render: (r) => r.joined_at ? date(r.joined_at) : <Badge>-</Badge> },
           { key: "act", label: t("common.actions"), render: (r) => (
             <Button variant="outline" size="sm" onClick={() => setInvite(r)} icon={<PaperPlaneTilt size={20} className="rtl:-scale-x-100" aria-hidden="true" />}>{t("pool.invite")}</Button>

@@ -760,3 +760,14 @@ public class StructuredScoringTests
         Assert.DoesNotContain("Male", r.Replace("[REDACTED]", ""));
     }
 }
+
+public class CandidateCvTests
+{
+    [Fact]
+    public void Phone_numbers_are_found_in_cv_text()
+    {
+        Assert.Equal("+971 50 482 9136", Moet.Recruitment.Application.Portal.CandidateCvService.FindPhone("ريم\nالهاتف: +971 50 482 9136\nالبريد"));
+        Assert.Equal("+971501234567", Moet.Recruitment.Application.Portal.CandidateCvService.FindPhone("Tel 00971501234567"));
+        Assert.Equal("", Moet.Recruitment.Application.Portal.CandidateCvService.FindPhone("Analyst, 2018 - 2020, team of 12"));
+    }
+}

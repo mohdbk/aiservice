@@ -15,6 +15,7 @@ public static class JobTypes
     public const string SuggestMarks = "SuggestMarks";
     public const string HandOff = "HandOff";
     public const string SuggestPortalText = "SuggestPortalText";
+    public const string ReadCandidateCv = "ReadCandidateCv";
 }
 
 public interface IJobHandler

@@ -5,6 +5,7 @@ import { DataTable, useList } from "../components/DataTable";
 import { Badge, Button, ErrorState, Loading, Modal, Note, PageHeader, TextArea, useSaving } from "../components/ui";
 import { api, useAsync, useLang, usePageTitle, useToast } from "../core";
 import { Duplicates } from "../components/Duplicates";
+import { CandidateCvs } from "../components/CandidateCvs";
 
 type Row = {
   id: number; full_name: string; email: string; verified: boolean; enabled: boolean; talent_pool: boolean; joined_at: string;
@@ -104,6 +105,8 @@ function CandidateDialog({ id, onClose, onChanged }: { id: number; onClose: () =
               {d.locked_until && d.enabled && <Button size="sm" variant="outline" busy={act.busy} onClick={() => run("enabled", { enabled: true }, t("cand.unlocked"))}>{t("cand.unlock")}</Button>}
             </div>
           </div>
+
+          <CandidateCvs id={d.id} />
 
           <div>
             <p className="mb-2 text-sm font-semibold">{t("nav.applicants")}</p>

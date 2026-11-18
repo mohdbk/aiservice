@@ -226,7 +226,8 @@ export function createApp(cfg = loadConfig(), deps = {}) {
       limit(`apply:${ip}`, LIMITS.apply);
       const b = await readJson(req, cfg.maxBodyMb * 1024 * 1024);
       const cv = b.cv && typeof b.cv === "object" ? b.cv : null;
-      const reuse = !cv && b.reuse_cv === true;
+      const cvId = !cv && Number.isInteger(b.cv_id) ? b.cv_id : null;
+      const reuse = !cv && (b.reuse_cv === true || cvId !== null);
       const name = str(cv?.name, 200).replace(/[\\/\r\n"]/g, "_");
       if (!reuse && (!cv || !name || typeof cv.data !== "string")) throw new HttpError(400, "cv_required");
       if (!reuse && !CV_EXT.test(name)) throw new HttpError(400, "cv_type");
@@ -234,7 +235,7 @@ export function createApp(cfg = loadConfig(), deps = {}) {
       if (!reuse && !data.length) throw new HttpError(400, "cv_empty");
       const result = await frappe.apply({ email: u.email, epoch: u.epoch || 0, job: str(b.job, 140), phone: str(b.phone, 30), country: str(b.country, 140), nationality: str(b.nationality, 140),
         cover_note: str(b.cover_note, 4000), declaration: b.declaration ? "1" : "0", talent_pool: b.talent_pool === true ? "1" : "0", lang: str(b.lang, 10),
-        screening: JSON.stringify(b.screening && typeof b.screening === "object" && !Array.isArray(b.screening) ? b.screening : {}).slice(0, 20000), reuse_cv: reuse ? "1" : "0" },
+        screening: JSON.stringify(b.screening && typeof b.screening === "object" && !Array.isArray(b.screening) ? b.screening : {}).slice(0, 20000), reuse_cv: reuse && cvId === null ? "1" : "0", cv_id: cvId === null ? "" : String(cvId) },
       reuse ? null : { name, data, type: str(cv.type, 100) });
       return send(res, 200, result);
     }
@@ -296,6 +297,31 @@ export function createApp(cfg = loadConfig(), deps = {}) {
       checkCsrf(req);
       const u = requireUser(req);
       return send(res, 200, await frappe.deleteJobAlert(u, Number(mm[1])));
+    }
+    // The candidate's CV library: list, add (JSON with the file as base64, like applying), make default, delete, and what a CV
+    // can fill in on the application form.
+    if (m === "GET" && pathname === "/api/cvs") return send(res, 200, await frappe.myCvs(requireUser(req)));
+    if (m === "POST" && pathname === "/api/cvs") {
+      checkCsrf(req);
+      const u = requireUser(req);
+      limit(`cvs:${ip}`, LIMITS.apply);
+      const b = await readJson(req, cfg.maxBodyMb * 1024 * 1024);
+      const cv = b.cv && typeof b.cv === "object" ? b.cv : null;
+      const name = str(cv?.name, 200).replace(/[\\/\r\n"]/g, "_");
+      if (!cv || !name || typeof cv.data !== "string") throw new HttpError(400, "cv_required");
+      if (!CV_EXT.test(name)) throw new HttpError(400, "cv_type");
+      const data = Buffer.from(cv.data, "base64");
+      if (!data.length) throw new HttpError(400, "cv_empty");
+      return send(res, 200, await frappe.uploadCv(u, { name, data, type: str(cv.type, 100) }, b.default === true));
+    }
+    mm = pathname.match(/^\/api\/cvs\/(\d{1,9})(?:\/(default|prefill))?$/);
+    if (mm) {
+      const u = requireUser(req);
+      const id = Number(mm[1]);
+      if (m === "GET" && mm[2] === "prefill") return send(res, 200, await frappe.cvPrefill(u, id));
+      checkCsrf(req);
+      if (m === "POST" && mm[2] === "default") return send(res, 200, await frappe.defaultCv(u, id));
+      if (m === "DELETE" && !mm[2]) return send(res, 200, await frappe.deleteCv(u, id));
     }
     if (m === "POST" && pathname === "/api/account/talent-pool") {
       checkCsrf(req);

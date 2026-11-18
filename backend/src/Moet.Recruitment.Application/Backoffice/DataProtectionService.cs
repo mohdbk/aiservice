@@ -251,6 +251,10 @@ public sealed class DataProtectionService(IAppDbContext db, ICurrentActor actor,
         await db.EmailMessages.Where(m => m.ToAddress == u.Email).ExecuteDeleteAsync(ct);
         await db.AccountTokens.Where(t => t.ApplicantAccountId == u.Id).ExecuteDeleteAsync(ct);
         await db.JobAlerts.Where(a => a.ApplicantAccountId == u.Id).ExecuteDeleteAsync(ct);
+        // Their CV library goes with the account (applications keep their own copies until they are anonymised).
+        var cvFiles = await db.CandidateCvs.Where(c => c.ApplicantAccountId == u.Id).Select(c => c.StoredFileId).ToListAsync(ct);
+        await db.CandidateCvs.Where(c => c.ApplicantAccountId == u.Id).ExecuteDeleteAsync(ct);
+        if (cvFiles.Count > 0) await db.StoredFiles.Where(f => cvFiles.Contains(f.Id) && !db.JobApplications.Any(a => a.CvFileId == f.Id)).ExecuteDeleteAsync(ct);
         u.Email = $"anonymised-{u.Id}@invalid.local";
         u.FullName = Removed;
         u.PasswordHash = "";

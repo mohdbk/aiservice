@@ -130,6 +130,8 @@ export function createMockFrappe() {
   };
   const deletionRequests = new Set();
   const talentPool = new Set();
+  const cvLib = new Map();
+  let cvSeq = 0;
   const alerts = [];
   const apps = [
     { id: "HR-APP-2026-00012", job: "HR-OPN-2026-0001", email: "layla@example.com", submitted: "2026-11-05", status: { code: "interview", tone: "success" }, ready: true },
@@ -337,6 +339,36 @@ export function createMockFrappe() {
       if (i < 0) throw new FrappeError("not_found", 404);
       alerts.splice(i, 1);
       return { ok: true };
+    },
+    async myCvs(u) {
+      current(u);
+      return { cvs: (cvLib.get(u.email) || []), max: 5 };
+    },
+    async uploadCv(u, file, makeDefault) {
+      current(u);
+      const list = cvLib.get(u.email) || [];
+      if (list.length >= 5) throw new FrappeError("cv_limit", 409, { max: 5 });
+      const id = ++cvSeq;
+      if (makeDefault || list.length === 0) list.forEach((c) => { c.is_default = false; });
+      list.unshift({ id, file_name: file.name, size: file.data.length, is_default: makeDefault || list.length === 0, status: "ready", uploaded_at: new Date().toISOString(), by_staff: false, years: 6, summary: "" });
+      cvLib.set(u.email, list);
+      return { id };
+    },
+    async deleteCv(u, id) {
+      current(u);
+      const list = (cvLib.get(u.email) || []).filter((c) => c.id !== id);
+      if (list.length && !list.some((c) => c.is_default)) list[0].is_default = true;
+      cvLib.set(u.email, list);
+      return { ok: true };
+    },
+    async defaultCv(u, id) {
+      current(u);
+      (cvLib.get(u.email) || []).forEach((c) => { c.is_default = c.id === id; });
+      return { ok: true };
+    },
+    async cvPrefill(u) {
+      current(u);
+      return { status: "ready", phone: "+971 50 123 4567", years: 6, latest_role: "Senior AI Engineer", employer: "Emirates Digital", education: ["MSc Computer Science, Khalifa University"], skills: ["Python", "SQL"], languages: ["Arabic", "English (Fluent)"] };
     },
     async setTalentPool(u, join) {
       current(u);

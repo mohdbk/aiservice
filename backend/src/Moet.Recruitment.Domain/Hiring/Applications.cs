@@ -160,3 +160,29 @@ public static class CvFile
         throw DomainException.Invalid("cv_type", p);
     }
 }
+
+/// <summary>
+/// One of a candidate's own CVs, kept with their account: uploaded by them in the portal (or by HR for them), read once
+/// for the text, a phone number and a structured profile, used to fill in applications and to find them in the talent pool.
+/// </summary>
+public class CandidateCv
+{
+    public const int MaxPerAccount = 5;
+    public int Id { get; set; }
+    public int ApplicantAccountId { get; set; }
+    public Guid StoredFileId { get; set; }
+    public string FileName { get; set; } = "";
+    public long SizeBytes { get; set; }
+    public string Sha256 { get; set; } = "";
+    public bool IsDefault { get; set; }
+    /// <summary>Pending (not read yet), Ready (profile read), TextOnly (text read, no language model) or Unreadable.</summary>
+    public string Status { get; set; } = "Pending";
+    public string Phone { get; set; } = "";
+    public decimal? YearsOfExperience { get; set; }
+    public string Summary { get; set; } = "";
+    public string? ProfileJson { get; set; }
+    public string Text { get; set; } = "";
+    public int? UploadedByStaffId { get; set; }
+    public DateTime UploadedAt { get; set; }
+    public DateTime? ReadAt { get; set; }
+}

@@ -19,7 +19,8 @@ public sealed class TalentPoolService(IAppDbContext db, IRequestLanguage languag
         if (!string.IsNullOrWhiteSpace(cvText))
         {
             var t = cvText.Trim();
-            q = q.Where(u => db.JobApplications.Any(a => a.ApplicantAccountId == u.Id && (a.CvAnalysis!.Summary.Contains(t) || a.CvAnalysis.ProfileJson!.Contains(t))));
+            q = q.Where(u => db.JobApplications.Any(a => a.ApplicantAccountId == u.Id && (a.CvAnalysis!.Summary.Contains(t) || a.CvAnalysis.ProfileJson!.Contains(t)))
+                || db.CandidateCvs.Any(c => c.ApplicantAccountId == u.Id && (c.Summary.Contains(t) || c.Text.Contains(t) || c.ProfileJson!.Contains(t))));
         }
         if (notAppliedTo != null) q = q.Where(u => !db.JobApplications.Any(a => a.ApplicantAccountId == u.Id && a.JobOpeningId == notAppliedTo));
         var en = language.English;
@@ -28,6 +29,10 @@ public sealed class TalentPoolService(IAppDbContext db, IRequestLanguage languag
         {
             id = u.Id, full_name = u.FullName, email = u.Email, joined_at = u.TalentPoolAt, language = u.PreferredLanguageCode,
             applications = db.JobApplications.Count(a => a.ApplicantAccountId == u.Id),
+            // Their own CV (from their profile), so people who never applied can be found and judged too.
+            cv = db.CandidateCvs.Where(c => c.ApplicantAccountId == u.Id).OrderByDescending(c => c.IsDefault).ThenByDescending(c => c.UploadedAt)
+                .Select(c => new { id = c.Id, file_name = c.FileName, years = c.YearsOfExperience, summary = c.Summary, uploaded_at = c.UploadedAt, status = c.Status }).FirstOrDefault(),
+            cvs = db.CandidateCvs.Count(c => c.ApplicantAccountId == u.Id),
             latest = db.JobApplications.Where(a => a.ApplicantAccountId == u.Id).OrderByDescending(a => a.CreatedAt).Select(a => new
             {
                 id = a.Id, created_at = a.CreatedAt, status = a.Status,
