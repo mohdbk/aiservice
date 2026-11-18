@@ -119,7 +119,7 @@ public sealed class PortalApplicationService(
         if (!fromLibrary)
         {
             try { await cvs.AddAsync(user.Id, input.FileName, input.Cv, null, false, ct); }
-            catch (DomainException) { /* a full library or the same file again: the application has its copy */ }
+            catch (Exception e) when (e is DomainException or DbUpdateException) { /* a full library or the same file again: the application has its copy */ }
         }
         return new { application = app.Code, reference = app.Reference };
     }

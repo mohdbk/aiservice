@@ -50,6 +50,8 @@ public sealed partial class CandidateCvService(IAppDbContext db, IClock clock, C
         var name = TextUtil.Clip(Path.GetFileName(fileName ?? $"cv.{ext}"), 200);
         var file = new StoredFile { Id = Guid.NewGuid(), FileName = name, ContentType = CvFile.ContentTypes[ext], SizeBytes = data.Length, Sha256 = sha, Content = data, CreatedAt = now };
         db.StoredFiles.Add(file);
+        // The file first: the CV row refers to it (no navigation for the database to order the inserts by).
+        await db.SaveChangesAsync(ct);
         var first = !await db.CandidateCvs.AnyAsync(c => c.ApplicantAccountId == accountId, ct);
         if (makeDefault && !first)
             await db.CandidateCvs.Where(c => c.ApplicantAccountId == accountId && c.IsDefault).ForEachAsync(c => c.IsDefault = false, ct);
