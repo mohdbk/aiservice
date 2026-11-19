@@ -17,7 +17,6 @@ a HRMS assistant. Arabic first, on the UAE Design System.
 | `e2e/` | Browser tests, design audit and the walkthrough film |
 | `docs/ON_PREM.md` | **On-premises deployment guide** (IIS and containers, settings, security) |
 | `docs/SERVICES.md` | Services and every setting |
-| `frappe/` | The earlier Frappe HR version, kept for reference |
 
 ## How it works
 
