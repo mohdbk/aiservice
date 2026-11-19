@@ -114,7 +114,7 @@
  "jobs.new_applicants": "New",
  "jobs.tab.details": "Details",
  "jobs.tab.english": "English",
- "jobs.tab.screening": "Screening Questions",
+ "jobs.tab.screening": "Application Questions",
  "jobs.tab.tests": "Tests",
  "jobs.tab.criteria": "Screening Requirements",
  "jobs.criteria_hint": "Derived from the description when the first CV is scored, and again whenever the description changes. Every applicant to this job is scored against the same list.",

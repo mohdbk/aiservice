@@ -114,7 +114,7 @@
  "jobs.new_applicants": "الجدد",
  "jobs.tab.details": "التفاصيل",
  "jobs.tab.english": "الإنجليزية",
- "jobs.tab.screening": "أسئلة الفرز",
+ "jobs.tab.screening": "أسئلة التقديم",
  "jobs.tab.tests": "الاختبارات",
  "jobs.tab.criteria": "متطلبات الفرز",
  "jobs.criteria_hint": "تُستخرج من الوصف عند تقييم أول سيرة ذاتية، ومرة أخرى كلما تغير الوصف. يُقيَّم جميع المتقدمين لهذه الوظيفة بالمعايير نفسها.",
