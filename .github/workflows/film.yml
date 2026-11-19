@@ -5,7 +5,7 @@ name: Journey Film
 on:
   workflow_dispatch:
   push:
-    branches: [dotnet-backend]
+    branches: [main]
     paths: ["e2e/film/**", ".github/workflows/film.yml"]
 
 permissions:

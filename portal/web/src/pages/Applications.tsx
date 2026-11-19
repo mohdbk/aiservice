@@ -36,7 +36,7 @@ export default function Applications() {
                     <p className="mt-1 text-sm text-aeblack-600">
                       {t("apps.submitted", { date: formatDate(a.submitted) })}
                       <span className="mx-2" aria-hidden="true">·</span>
-                      <span dir="ltr">{t("apps.reference", { ref: a.reference })}</span>
+                      <span>{t("apps.reference", { ref: `\u2066${a.reference}\u2069` })}</span>
                     </p>
                   </div>
                   </div>

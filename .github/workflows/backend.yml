@@ -2,7 +2,7 @@ name: Backend
 
 on:
   push:
-    branches: [main, dotnet-backend]
+    branches-ignore: [film, screenshots, audit]
     paths: ["backend/**", "hrms/scripts/**", "hrms/web/**", "deploy/hrms.Dockerfile", ".github/workflows/backend.yml"]
   pull_request:
     paths: ["backend/**", "hrms/scripts/**", "hrms/web/**", "deploy/hrms.Dockerfile", ".github/workflows/backend.yml"]

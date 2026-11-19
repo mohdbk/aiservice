@@ -2,7 +2,7 @@ name: Portal
 
 on:
   push:
-    branches: [main, dotnet-backend]
+    branches-ignore: [film, screenshots, audit]
     paths: ["portal/**", ".github/workflows/portal.yml"]
   pull_request:
     paths: ["portal/**", ".github/workflows/portal.yml"]

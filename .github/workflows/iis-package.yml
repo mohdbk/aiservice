@@ -6,7 +6,7 @@ name: IIS Package
 
 on:
   push:
-    branches: [main, dotnet-backend]
+    branches-ignore: [film, screenshots, audit]
     paths: ["deploy/iis/**", "portal/host/**", "backend/src/Moet.Hrms.Api/**", ".github/workflows/iis-package.yml"]
   workflow_dispatch:
 

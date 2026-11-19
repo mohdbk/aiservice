@@ -5,7 +5,7 @@ name: End to End
 # signs in and uses the assistant panel.
 on:
   push:
-    branches: [main, dotnet-backend]
+    branches-ignore: [film, screenshots, audit]
     paths: ["backend/**", "hrms/**", "portal/**", "e2e/**", ".github/workflows/e2e.yml"]
   workflow_dispatch:
 

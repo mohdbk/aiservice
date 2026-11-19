@@ -2,7 +2,7 @@ name: HRMS Web
 
 on:
   push:
-    branches: [main, dotnet-backend]
+    branches-ignore: [film, screenshots, audit]
     paths: ["hrms/**", ".github/workflows/hrms-web.yml"]
   pull_request:
     paths: ["hrms/**", ".github/workflows/hrms-web.yml"]
