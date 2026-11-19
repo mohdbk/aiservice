@@ -182,6 +182,8 @@ public class CandidateCv
     public string Summary { get; set; } = "";
     public string? ProfileJson { get; set; }
     public string Text { get; set; } = "";
+    /// <summary>How the text was read: pdf-text, word, ocr or model ("" when not read).</summary>
+    public string ReadMethod { get; set; } = "";
     public int? UploadedByStaffId { get; set; }
     public DateTime UploadedAt { get; set; }
     public DateTime? ReadAt { get; set; }
@@ -208,6 +210,7 @@ public class CvDraft
     public string Summary { get; set; } = "";
     public string? ProfileJson { get; set; }
     public string Text { get; set; } = "";
+    public string ReadMethod { get; set; } = "";
     public DateTime CreatedAt { get; set; }
     public DateTime ExpiresAt { get; set; }
     public DateTime? ReadAt { get; set; }

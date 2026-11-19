@@ -165,13 +165,13 @@ public sealed class CandidateCvReadHandler(IAppDbContext db, ILanguageModel mode
         var file = await db.StoredFiles.AsNoTracking().FirstOrDefaultAsync(f => f.Id == cv.StoredFileId, ct);
         var r = await CvReading.ReadAsync(file?.Content, cv.FileName, reader, model, clock, ct);
         cv.ReadAt = clock.UtcNow;
-        (cv.Status, cv.Text, cv.Phone, cv.YearsOfExperience, cv.Summary, cv.ProfileJson) = (r.Status, r.Text, r.Phone, r.Years, r.Summary, r.ProfileJson);
+        (cv.Status, cv.Text, cv.ReadMethod, cv.Phone, cv.YearsOfExperience, cv.Summary, cv.ProfileJson) = (r.Status, r.Text, r.Method, r.Phone, r.Years, r.Summary, r.ProfileJson);
         await db.SaveChangesAsync(ct);
     }
 }
 
 /// <summary>What reading a candidate's own CV gives: its text, contact details and (with a model) a structured profile.</summary>
-public sealed record CvReadResult(string Status, string Text, string Phone, string Email, string FullName, decimal? Years, string Summary, string? ProfileJson);
+public sealed record CvReadResult(string Status, string Text, string Phone, string Email, string FullName, decimal? Years, string Summary, string? ProfileJson, string Method = "");
 
 /// <summary>
 /// Reads a candidate's own CV to fill in their forms: the text (PDF, Word, or the images through OCR or the model), the
@@ -185,11 +185,11 @@ public static partial class CvReading
     public static async Task<CvReadResult> ReadAsync(byte[]? content, string fileName, ICvReader reader, ILanguageModel model, IClock clock, CancellationToken ct)
     {
         var text = content == null ? null : await reader.ReadAsync(content, Path.GetExtension(fileName), ct);
-        if (text == null || text.Text.Trim().Length < 50) return new CvReadResult("Unreadable", "", "", "", "", null, "", null);
+        if (text == null || text.Text.Trim().Length < 50) return new CvReadResult("Unreadable", "", "", "", "", null, "", null, text?.Method ?? "");
         var all = TextUtil.Clip(text.Text, 60000);
         var phone = TextUtil.Clip(CandidateCvService.FindPhone(text.Text), 40);
         var email = TextUtil.Clip(EmailRe().Match(text.Text).Value.ToLowerInvariant(), 200);
-        if (!model.IsConfigured) return new CvReadResult("TextOnly", all, phone, email, "", null, "", null);
+        if (!model.IsConfigured) return new CvReadResult("TextOnly", all, phone, email, "", null, "", null, text.Method);
         JsonElement profile;
         try
         {
@@ -197,7 +197,7 @@ public static partial class CvReading
         }
         catch (Exception e) when (e is InvalidOperationException or HttpRequestException or TaskCanceledException or JsonException)
         {
-            return new CvReadResult("TextOnly", all, phone, email, "", null, "", null);
+            return new CvReadResult("TextOnly", all, phone, email, "", null, "", null, text.Method);
         }
         var work = CvScoringHandler.Arr(profile, "work").Select(w => (CvScoringHandler.Str(w, "startDate"), CvScoringHandler.Str(w, "endDate"))).ToList();
         var years = CvScoring.ResolveExperience(CvScoring.YearsOfExperience(work, clock.Today()), CvScoringHandler.Num(profile, "stated_years_of_experience"));
@@ -206,6 +206,6 @@ public static partial class CvReading
         var summary = TextUtil.Clip(TextUtil.NoEmDash(string.Join(". ", new[] { B("label"), B("summary") }.Where(x => x.Length > 0))), 2000);
         if (phone.Length == 0) phone = TextUtil.Clip(B("phone"), 40);
         if (email.Length == 0 && TextUtil.ValidEmail(TextUtil.NormEmail(B("email")))) email = TextUtil.NormEmail(B("email"));
-        return new CvReadResult("Ready", all, phone, email, TextUtil.Clip(B("name"), 140), years, summary, profile.GetRawText());
+        return new CvReadResult("Ready", all, phone, email, TextUtil.Clip(B("name"), 140), years, summary, profile.GetRawText(), text.Method);
     }
 }

@@ -67,7 +67,7 @@ public sealed class CvDraftService(IAppDbContext db, IClock clock, ContentServic
         {
             ApplicantAccountId = accountId, StoredFileId = d.StoredFileId, FileName = d.FileName, SizeBytes = d.SizeBytes, Sha256 = d.Sha256,
             IsDefault = true, Status = d.Status, Phone = d.Phone, YearsOfExperience = d.YearsOfExperience, Summary = d.Summary,
-            ProfileJson = d.ProfileJson, Text = d.Text, UploadedAt = d.CreatedAt, ReadAt = d.ReadAt,
+            ProfileJson = d.ProfileJson, Text = d.Text, ReadMethod = d.ReadMethod, UploadedAt = d.CreatedAt, ReadAt = d.ReadAt,
         };
         db.CandidateCvs.Add(cv);
         db.CvDrafts.Remove(d);
@@ -104,8 +104,8 @@ public sealed class CvDraftReadHandler(IAppDbContext db, ILanguageModel model, I
         var file = await db.StoredFiles.AsNoTracking().FirstOrDefaultAsync(f => f.Id == d.StoredFileId, ct);
         var r = await CvReading.ReadAsync(file?.Content, d.FileName, reader, model, clock, ct);
         d.ReadAt = clock.UtcNow;
-        (d.Status, d.Text, d.Phone, d.Email, d.FullName, d.YearsOfExperience, d.Summary, d.ProfileJson) =
-            (r.Status, r.Text, r.Phone, r.Email, r.FullName, r.Years, r.Summary, r.ProfileJson);
+        (d.Status, d.Text, d.ReadMethod, d.Phone, d.Email, d.FullName, d.YearsOfExperience, d.Summary, d.ProfileJson) =
+            (r.Status, r.Text, r.Method, r.Phone, r.Email, r.FullName, r.Years, r.Summary, r.ProfileJson);
         await db.SaveChangesAsync(ct);
     }
 }

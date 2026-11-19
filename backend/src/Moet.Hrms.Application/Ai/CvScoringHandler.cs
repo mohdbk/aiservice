@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -32,7 +33,13 @@ public sealed class CvScoringHandler(IAppDbContext db, ILanguageModel model, ICv
             return;
         }
         var file = await db.StoredFiles.AsNoTracking().FirstAsync(f => f.Id == app.CvFileId, ct);
-        var cv = await reader.ReadAsync(file.Content, Path.GetExtension(file.FileName), ct);
+        // The same CV saved in the candidate's library has been read already: its text (no second OCR or image reading)
+        // and, when it has one, its profile are used instead of reading the file again.
+        var saved = await db.CandidateCvs.AsNoTracking()
+            .Where(x => x.ApplicantAccountId == app.ApplicantAccountId && x.Sha256 == file.Sha256 && x.Text != "")
+            .OrderByDescending(x => x.ReadAt).FirstOrDefaultAsync(ct);
+        var cv = saved != null ? new CvText(saved.Text, saved.ReadMethod.Length > 0 ? saved.ReadMethod : "library")
+            : await reader.ReadAsync(file.Content, Path.GetExtension(file.FileName), ct);
         if (cv.Text.Trim().Length < 50)
         {
             await FailedAsync(applicationId, "The CV could not be read (no text found).", ct);
@@ -41,7 +48,9 @@ public sealed class CvScoringHandler(IAppDbContext db, ILanguageModel model, ICv
         var redacted = TextUtil.Clip(CvScoring.Redact(cv.Text, app.FullName), 40000);
         var job = await db.JobOpenings.Include(j => j.Criteria).FirstAsync(j => j.Id == app.JobOpeningId, ct);
 
-        var profile = await model.CompleteJsonAsync(Prompts.Profile, $"<cv>\n{redacted}\n</cv>", Prompts.ProfileSchema, "cv_profile", ct);
+        var profile = saved?.ProfileJson is { Length: > 0 } savedProfile
+            ? ForScoring(savedProfile, app.FullName)
+            : await model.CompleteJsonAsync(Prompts.Profile, $"<cv>\n{redacted}\n</cv>", Prompts.ProfileSchema, "cv_profile", ct);
         var work = Arr(profile, "work").Select(w => (Str(w, "startDate"), Str(w, "endDate"))).ToList();
         var years = CvScoring.ResolveExperience(CvScoring.YearsOfExperience(work, clock.Today()), Num(profile, "stated_years_of_experience"));
 
@@ -197,7 +206,9 @@ public sealed class CvScoringHandler(IAppDbContext db, ILanguageModel model, ICv
         IReadOnlyList<CvScoring.Criterion> criteria, string cvText, string applicantName, DateOnly today, CancellationToken ct = default)
     {
         var redacted = TextUtil.Clip(CvScoring.Redact(cvText, applicantName), 40000);
-        var profile = await model.CompleteJsonAsync(Prompts.Profile, $"<cv>\n{redacted}\n</cv>", Prompts.ProfileSchema, "cv_profile", ct);
+        var profile = saved?.ProfileJson is { Length: > 0 } savedProfile
+            ? ForScoring(savedProfile, app.FullName)
+            : await model.CompleteJsonAsync(Prompts.Profile, $"<cv>\n{redacted}\n</cv>", Prompts.ProfileSchema, "cv_profile", ct);
         var work = Arr(profile, "work").Select(w => (Str(w, "startDate"), Str(w, "endDate"))).ToList();
         var years = CvScoring.ResolveExperience(CvScoring.YearsOfExperience(work, today), Num(profile, "stated_years_of_experience"));
         var result = await model.CompleteJsonAsync(Prompts.Score, ScoreInput(jobTitle, jobDescription, criteria, "", profile, years, redacted), Prompts.ScoreSchema, "cv_score", ct);
@@ -239,6 +250,40 @@ public sealed class CvScoringHandler(IAppDbContext db, ILanguageModel model, ICv
         var certs = Arr(p, "certificates").Select(x => Str(x, "name")).Where(x => x.Length > 0).ToList();
         if (certs.Count > 0) sb.AppendLine("- Certificates: " + string.Join(", ", certs));
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// A saved CV's profile made fit for scoring: the contact details and location are dropped, and every other text is
+    /// redacted like the CV text (the name and personal details), so scoring sees no more than when it reads the CV itself.
+    /// </summary>
+    public static JsonElement ForScoring(string profileJson, string? applicantName)
+    {
+        var node = JsonNode.Parse(profileJson) as JsonObject ?? new JsonObject();
+        if (node["basics"] is JsonObject basics)
+            foreach (var k in new[] { "name", "email", "phone", "location", "url", "profiles" }) basics.Remove(k);
+        Clean(node);
+        return JsonDocument.Parse(node.ToJsonString()).RootElement.Clone();
+
+        void Clean(JsonNode? n)
+        {
+            switch (n)
+            {
+                case JsonObject o:
+                    foreach (var key in o.Select(p => p.Key).ToList())
+                    {
+                        if (o[key] is JsonValue v && v.TryGetValue<string>(out var str)) o[key] = CvScoring.Redact(str, applicantName);
+                        else Clean(o[key]);
+                    }
+                    break;
+                case JsonArray a:
+                    for (var i = 0; i < a.Count; i++)
+                    {
+                        if (a[i] is JsonValue v && v.TryGetValue<string>(out var str)) a[i] = CvScoring.Redact(str, applicantName);
+                        else Clean(a[i]);
+                    }
+                    break;
+            }
+        }
     }
 
     static string WithYears(JsonElement profile, decimal years)

@@ -117,3 +117,29 @@ public class ScreeningSuggestionTests
     public void Experience_and_qualification_questions_can_be_suggested(string text) =>
         Assert.True(Moet.Hrms.Application.Portal.ScreeningSuggestionService.Allowed(Q(text)));
 }
+
+/// <summary>A saved CV's profile reused for scoring carries no personal details.</summary>
+public class SavedProfileTests
+{
+    [Fact]
+    public void Contact_details_and_the_name_are_removed_before_scoring()
+    {
+        const string json = """
+            {"basics":{"name":"Mariam Al Hammadi","email":"mariam@example.com","phone":"+971 50 123 4567","location":{"country":"UAE"},
+              "label":"Economic Analyst","summary":"Mariam has six years in trade analysis. Contact mariam@example.com."},
+             "work":[{"name":"Ministry of Economy","position":"Analyst","startDate":"2019-03","endDate":"","summary":"Mariam prepared price indices","highlights":["Led by Mariam Al Hammadi"]}],
+             "skills":[{"name":"Excel","keywords":["Power BI"]}],"stated_years_of_experience":6,"cv_language":"en"}
+            """;
+        var p = Moet.Hrms.Application.Ai.CvScoringHandler.ForScoring(json, "Mariam Al Hammadi");
+        var text = p.GetRawText();
+        Assert.DoesNotContain("Mariam", text);
+        Assert.DoesNotContain("Hammadi", text);
+        Assert.DoesNotContain("mariam@example.com", text);
+        Assert.DoesNotContain("123 4567", text);
+        Assert.False(p.GetProperty("basics").TryGetProperty("location", out _));
+        Assert.Equal("Economic Analyst", p.GetProperty("basics").GetProperty("label").GetString());
+        Assert.Equal("2019-03", p.GetProperty("work")[0].GetProperty("startDate").GetString());
+        Assert.Equal("Ministry of Economy", p.GetProperty("work")[0].GetProperty("name").GetString());
+        Assert.Equal(6, p.GetProperty("stated_years_of_experience").GetInt32());
+    }
+}
