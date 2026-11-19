@@ -99,7 +99,8 @@ html[lang|="ar"] [lang|="en"] { font-family: "Roboto Variable", "Roboto", "Noto 
 /* The list scrolls inside its frame so the column headings stay in view. */
 .mh-table-wrap { overflow: auto; max-height: max(28rem, calc(100vh - 13rem)); scrollbar-width: thin; scrollbar-color: var(--color-aeblack-200) transparent; }
 /* Thin, quiet scrollbars for panels that scroll on their own (side menu, lists). */
-aside nav, aside .overflow-y-auto { scrollbar-width: thin; scrollbar-color: var(--color-aeblack-200) transparent; }
+aside .overflow-y-auto { scrollbar-width: none; }
+aside:hover .overflow-y-auto, aside:focus-within .overflow-y-auto { scrollbar-width: thin; scrollbar-color: var(--color-aeblack-200) transparent; }
 .mh-table-wrap .mh-table thead th { position: sticky; top: 0; z-index: 2; }
 .mh-table-compact th, .mh-table-compact td { padding-top: .4rem; padding-bottom: .4rem; }
 .mh-table tbody tr.mh-row-picked td { background: var(--color-primary-50); }

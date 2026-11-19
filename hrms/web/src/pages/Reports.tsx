@@ -74,7 +74,7 @@ function TestBars({ tests }: { tests: Report["tests"] }) {
             <li key={x.assessment_id} className="text-sm">
               <div className="mb-1 flex justify-between gap-3"><span className="truncate text-aeblack-800">{x.title}</span>
                 <span className="shrink-0 tabular-nums text-aeblack-600" dir="ltr">{x.passed + x.failed > 0 ? `${pct(x.passed, x.passed + x.failed)}%` : "-"}</span></div>
-              <div className="flex h-4 gap-[2px] overflow-hidden rounded-md bg-aeblack-50" dir="ltr" title={`${t("rep.legend_passed")} ${x.passed}, ${t("rep.legend_failed")} ${x.failed}, ${t("rep.legend_open")} ${open}`}>
+              <div className="flex h-4 gap-[2px] overflow-hidden rounded-md bg-aeblack-50" title={`${t("rep.legend_passed")} ${x.passed}, ${t("rep.legend_failed")} ${x.failed}, ${t("rep.legend_open")} ${open}`}>
                 {x.passed > 0 && <span className="bg-aegreen-500" style={{ width: seg(x.passed, x.invited) }} />}
                 {x.failed > 0 && <span className="bg-aered-400" style={{ width: seg(x.failed, x.invited) }} />}
                 {open > 0 && <span className="bg-aeblack-200" style={{ width: seg(open, x.invited) }} />}
