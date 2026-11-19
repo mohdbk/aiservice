@@ -1,13 +1,14 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { createServer, request } from "node:http";
+import { fileURLToPath } from "node:url";
 
 import { createApp } from "../src/server.js";
 import { createToken, readToken } from "../src/session.js";
 import { createFrappe } from "../src/frappe.js";
 
 const cfg = { port: 0, mock: true, sessionSecret: "x".repeat(40), sessionHours: 8, cookieSecure: true, trustProxy: false,
-  webDist: new URL("./fixtures/web", import.meta.url).pathname, maxBodyMb: 2, frappeTimeoutMs: 5000 };
+  webDist: fileURLToPath(new URL("./fixtures/web", import.meta.url)), maxBodyMb: 2, frappeTimeoutMs: 5000 };
 let server, base, mock;
 
 before(async () => {
@@ -36,7 +37,8 @@ test("SPA routes serve index.html with security headers", async () => {
   assert.equal(r.headers.get("x-content-type-options"), "nosniff");
   const a = await fetch(base + "/assets/app.js");
   assert.match(a.headers.get("cache-control"), /immutable/);
-  for (const raw of ["/assets/../../../../etc/passwd", "/assets/%2e%2e/%2e%2e/%2e%2e/etc/passwd", "/..%2f..%2fpackage.json"]) {
+  for (const raw of ["/assets/../../../../etc/passwd", "/assets/%2e%2e/%2e%2e/%2e%2e/etc/passwd", "/..%2f..%2fpackage.json",
+    "/assets/..%5C..%5C..%5Cpackage.json", "/assets/%5C..%5C..%5Cpackage.json", "/assets/C:%5CWindows%5Cwin.ini", "/favicon.ico::$DATA"]) {
     const body = await new Promise((resolve) => {
       const u = new URL(base);
       const req = request({ host: u.hostname, port: u.port, path: raw }, (r) => { let d = ""; r.on("data", (c) => (d += c)); r.on("end", () => resolve(d)); });
@@ -213,4 +215,20 @@ test("assessments: start, timed sections, answers, finish", async () => {
   assert.equal((await again.json()).error.code, "no_attempts_left");
   const other = await fetch(base + "/api/assessments/AINV-00001?lang=en");
   assert.equal(other.status, 401);
+});
+
+test("behind IIS the client address is the last forwarded entry, which the browser cannot set", async () => {
+  const keys = [];
+  const limiter = { hit: (key) => { keys.push(key); return true; } };
+  const { createMockFrappe } = await import("../src/mock.js");
+  const app = createApp({ ...cfg, trustProxy: true, clientIpFrom: "last" }, { frappe: createMockFrappe(), limiter });
+  const srv = createServer(app);
+  await new Promise((r) => srv.listen(0, r));
+  try {
+    await fetch(`http://127.0.0.1:${srv.address().port}/api/config?lang=en`, { headers: { "X-Forwarded-For": "6.6.6.6, 10.1.2.3" } });
+    assert.ok(keys.includes("all:10.1.2.3"), keys.join());
+    assert.ok(!keys.some((k) => k.includes("6.6.6.6")));
+  } finally {
+    srv.close();
+  }
 });

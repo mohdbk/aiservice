@@ -2,8 +2,8 @@
 // component that talks to the internal Frappe server. No runtime dependencies (Node 22 built-ins only).
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
-import { extname, join, normalize } from "node:path";
-import { pathToFileURL } from "node:url";
+import { extname, join, posix, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { loadConfig } from "./config.js";
 import { createFrappe, FrappeError } from "./frappe.js";
@@ -56,7 +56,8 @@ export function createApp(cfg = loadConfig(), deps = {}) {
 
   const clientIp = (req) => {
     if (cfg.trustProxy) {
-      const fwd = String(req.headers[cfg.clientIpHeader || "x-forwarded-for"] || "").split(",")[0].trim();
+      const all = String(req.headers[cfg.clientIpHeader || "x-forwarded-for"] || "").split(",").map((v) => v.trim()).filter(Boolean);
+      const fwd = (cfg.clientIpFrom === "last" ? all[all.length - 1] : all[0]) || "";
       if (fwd) return fwd;
     }
     return req.socket.remoteAddress || "unknown";
@@ -404,8 +405,10 @@ export function createApp(cfg = loadConfig(), deps = {}) {
       res.writeHead(302, { Location: `/${lang}`, "Cache-Control": "no-store" });
       return res.end();
     }
-    const safe = normalize(path).replace(/^(\.\.[/\\])+/, "");
-    if (safe.includes("\0")) return send(res, 400, { error: { code: "bad_request", params: {} } });
+    if (path.includes("\0")) return send(res, 400, { error: { code: "bad_request", params: {} } });
+    // URL paths use forward slashes on every system. A backslash or a colon (Windows separators, drive letters and
+    // alternate streams) never appears in the app's own files, so such a path is never given to the file system.
+    const safe = /[\\:]/.test(path) ? "/" : posix.normalize(path).replace(/^(\.\.\/)+/, "");
     if (safe.startsWith("/assets/") && (await serveFile(res, join(cfg.webDist, safe), "public, max-age=31536000, immutable"))) return;
     if (/^\/[\w.-]+\.(ico|png|svg|txt|webmanifest)$/.test(safe) && (await serveFile(res, join(cfg.webDist, safe), "public, max-age=3600"))) return;
     if (safe.startsWith("/assets/")) return send(res, 404, { error: { code: "not_found", params: {} } });
@@ -435,12 +438,17 @@ export function createApp(cfg = loadConfig(), deps = {}) {
   };
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] || "").href) {
+// Started directly (node server/src/server.js), not imported by the tests. Compared as paths, without regard to case on
+// Windows, where the drive letter's case differs between the two.
+const same = (a, b) => (process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b);
+if (process.argv[1] && same(fileURLToPath(import.meta.url), resolve(process.argv[1]))) {
   const cfg = loadConfig();
   const server = createServer(createApp(cfg));
   server.requestTimeout = 180_000;
   server.headersTimeout = 30_000;
-  server.listen(cfg.port, () => console.log(`careers portal on :${cfg.port}${cfg.mock ? " (mock Frappe)" : ""}`));
+  const ready = () => console.log(`careers portal on ${cfg.host || "*"}:${cfg.port}${cfg.mock ? " (mock Frappe)" : ""}`);
+  if (cfg.host) server.listen(cfg.port, cfg.host, ready);
+  else server.listen(cfg.port, ready);
   const stop = () => server.close(() => process.exit(0));
   process.on("SIGTERM", stop);
   process.on("SIGINT", stop);

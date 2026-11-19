@@ -2,9 +2,10 @@
 // Never enable in production (MOCK_FRAPPE=1).
 import { readFileSync, existsSync } from "node:fs";
 import { randomBytes } from "node:crypto";
+import { fileURLToPath } from "node:url";
 import { FrappeError } from "./frappe.js";
 
-const TEXT_DIR = process.env.MOCK_TEXT_DIR || new URL("../../../frappe/apps/moet_careers/moet_careers/portal_text/", import.meta.url).pathname;
+const TEXT_DIR = process.env.MOCK_TEXT_DIR || fileURLToPath(new URL("../../../frappe/apps/moet_careers/moet_careers/portal_text/", import.meta.url));
 const readText = (lang) => {
   const p = `${TEXT_DIR}${lang}.json`;
   return existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : {};

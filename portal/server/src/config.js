@@ -1,10 +1,15 @@
-// All settings come from the environment. See docs/ON_PREM.md, "External careers portal".
+// All settings come from the environment. See docs/ON_PREM.md, "Careers portal settings".
+import { fileURLToPath } from "node:url";
+
 const env = process.env;
 const bool = (v, d) => (v === undefined || v === "" ? d : !["0", "false", "no", "off"].includes(String(v).toLowerCase()));
 
 export function loadConfig(overrides = {}) {
   const c = {
-    port: Number(env.PORT || 8080),
+    // On IIS the ASP.NET Core Module starts the server and hands it a port in ASPNETCORE_PORT.
+    port: Number(env.ASPNETCORE_PORT || env.PORT || 8080),
+    // Address to listen on: empty means every interface; 127.0.0.1 when IIS sits in front on the same machine.
+    host: env.HOST || "",
     // The recruitment API (.NET). FRAPPE_URL is still read for older installations.
     apiUrl: (env.RECRUITMENT_API_URL || "").replace(/\/+$/, ""),
     frappeUrl: (env.FRAPPE_URL || "").replace(/\/+$/, ""),
@@ -17,8 +22,11 @@ export function loadConfig(overrides = {}) {
     trustProxy: bool(env.TRUST_PROXY, false),
     // Header holding the client address when behind a trusted proxy: x-forwarded-for (first entry) or x-real-ip.
     clientIpHeader: (env.CLIENT_IP_HEADER || "x-forwarded-for").toLowerCase(),
+    // Which x-forwarded-for entry is the client: "first", or "last" when the proxy in front appends the address it saw
+    // (IIS does), so an address the browser made up cannot be used.
+    clientIpFrom: (env.CLIENT_IP_FROM || "first").toLowerCase() === "last" ? "last" : "first",
     mock: bool(env.MOCK_FRAPPE, false),
-    webDist: env.WEB_DIST || new URL("../../web/dist", import.meta.url).pathname,
+    webDist: env.WEB_DIST || fileURLToPath(new URL("../../web/dist", import.meta.url)),
     maxBodyMb: Number(env.MAX_BODY_MB || 30),
     frappeTimeoutMs: Number(env.FRAPPE_TIMEOUT_MS || 30000),
     ...overrides,
