@@ -53,6 +53,11 @@ if (-not (Test-Path $SettingsFile)) { Fail "settings file not found: $SettingsFi
 $S = Import-PowerShellDataFile -Path $SettingsFile
 $root = Value $S 'InstallRoot'
 if (-not $root) { Fail 'InstallRoot is empty in the settings file.' }
+$fullRoot = [IO.Path]::GetFullPath($root).TrimEnd('\')
+$fullPackage = [IO.Path]::GetFullPath($PackageRoot).TrimEnd('\')
+if ($fullRoot -eq $fullPackage -or $fullRoot.StartsWith("$fullPackage\", 'OrdinalIgnoreCase') -or $fullPackage.StartsWith("$fullRoot\", 'OrdinalIgnoreCase')) {
+    Fail "InstallRoot ($fullRoot) must be a separate folder from the package ($fullPackage), for example D:\MoET\Recruitment."
+}
 
 Import-Module WebAdministration
 $modules = @(Get-WebGlobalModule | ForEach-Object { $_.Name })
