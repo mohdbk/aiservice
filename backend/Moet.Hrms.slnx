@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Moet.Hrms.Domain/Moet.Hrms.Domain.csproj" />
+    <Project Path="src/Moet.Hrms.Application/Moet.Hrms.Application.csproj" />
+    <Project Path="src/Moet.Hrms.Infrastructure/Moet.Hrms.Infrastructure.csproj" />
+    <Project Path="src/Moet.Hrms.Agent/Moet.Hrms.Agent.csproj" />
+    <Project Path="src/Moet.Hrms.Api/Moet.Hrms.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Moet.Hrms.Domain.Tests/Moet.Hrms.Domain.Tests.csproj" />
+    <Project Path="tests/Moet.Hrms.Api.Tests/Moet.Hrms.Api.Tests.csproj" />
+    <Project Path="tests/Moet.Hrms.Agent.Tests/Moet.Hrms.Agent.Tests.csproj" />
+  </Folder>
+</Solution>

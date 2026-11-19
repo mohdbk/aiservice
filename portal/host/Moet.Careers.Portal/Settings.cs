@@ -6,7 +6,7 @@ namespace Moet.Careers.Portal;
 /// </summary>
 public sealed record PortalSettings
 {
-    /// <summary>The recruitment API as this server reaches it (RECRUITMENT_API_URL).</summary>
+    /// <summary>The HRMS API as this server reaches it (HRMS_API_URL; RECRUITMENT_API_URL is still read).</summary>
     public string ApiUrl { get; init; } = "";
     public string ApiKey { get; init; } = "";
     public string ApiSecret { get; init; } = "";
@@ -29,7 +29,7 @@ public sealed record PortalSettings
         static int Int(string? v, int d) => int.TryParse(v, out var n) && n > 0 ? n : d;
         var s = new PortalSettings
         {
-            ApiUrl = (c["RECRUITMENT_API_URL"] ?? "").TrimEnd('/'),
+            ApiUrl = (c["HRMS_API_URL"] is { Length: > 0 } u ? u : c["RECRUITMENT_API_URL"] ?? "").TrimEnd('/'),
             ApiKey = c["CAREERS_PORTAL_API_KEY"] ?? "",
             ApiSecret = c["CAREERS_PORTAL_API_SECRET"] ?? "",
             SessionSecret = c["SESSION_SECRET"] ?? "",
@@ -42,7 +42,7 @@ public sealed record PortalSettings
             MaxBodyMb = Int(c["MAX_BODY_MB"], 30),
             ApiTimeoutMs = Int(c["API_TIMEOUT_MS"], Int(c["FRAPPE_TIMEOUT_MS"], 30000)),
         };
-        var missing = new[] { (s.ApiUrl, "RECRUITMENT_API_URL"), (s.ApiKey, "CAREERS_PORTAL_API_KEY"), (s.ApiSecret, "CAREERS_PORTAL_API_SECRET") }
+        var missing = new[] { (s.ApiUrl, "HRMS_API_URL"), (s.ApiKey, "CAREERS_PORTAL_API_KEY"), (s.ApiSecret, "CAREERS_PORTAL_API_SECRET") }
             .Where(x => x.Item1.Length == 0).Select(x => x.Item2).ToList();
         if (missing.Count > 0) throw new InvalidOperationException("Missing settings: " + string.Join(", ", missing));
         if (s.SessionSecret.Length < 32) throw new InvalidOperationException("SESSION_SECRET must be at least 32 characters");

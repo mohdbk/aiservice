@@ -20,7 +20,7 @@ public sealed class PortalError(int status, string code, object? parameters = nu
 /// CVs, the candidate's own data), each request checked here (session, same-origin, rate limits, sizes) and passed on
 /// to the recruitment API with the portal's key; and the built candidate app.
 /// </summary>
-public sealed partial class PortalApp(PortalSettings cfg, RecruitmentApi api, RateLimiter limiter, ILogger<PortalApp> log)
+public sealed partial class PortalApp(PortalSettings cfg, HrmsApi api, RateLimiter limiter, ILogger<PortalApp> log)
 {
     static readonly string Csp = string.Join("; ",
         "default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",

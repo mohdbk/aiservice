@@ -1,0 +1,131 @@
+using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Moet.Hrms.Application.Backoffice;
+using Moet.Hrms.Application.Common;
+using Moet.Hrms.Domain;
+using Moet.Hrms.Domain.Assessments;
+using Moet.Hrms.Domain.Common;
+
+namespace Moet.Hrms.Application.Assessments;
+
+public sealed record RoleProfileInput(string? NameAr, string? NameEn, string? PersonalityModel, IReadOnlyDictionary<string, int>? Weights,
+    IReadOnlyDictionary<string, string>? Targets, IReadOnlyList<string>? Types, int StrongFrom, int ModerateFrom, bool IsActive, int SortOrder, string? RowVersion);
+
+/// <summary>HR's role profiles for personality questionnaires, and the personality results worked out with them.</summary>
+public sealed class RoleProfileService(IAppDbContext db, ICurrentActor actor, IClock clock)
+{
+    public async Task<object> ListAsync(string? model, CancellationToken ct = default)
+    {
+        var q = db.RoleProfiles.AsNoTracking().AsQueryable();
+        if (Enum.TryParse<PersonalityModel>(model, out var m)) q = q.Where(r => r.PersonalityModel == m);
+        var rows = await q.OrderBy(r => r.PersonalityModel).ThenBy(r => r.SortOrder).ThenBy(r => r.NameEn).ToListAsync(ct);
+        // The jobs each profile is linked to (a 16-type profile counts the jobs of its Big Five sibling with the same name).
+        var links = await db.JobOpenings.AsNoTracking().Where(j => j.RoleProfileId != null)
+            .Select(j => new { j.Id, j.Code, j.Title, j.Status, ProfileId = j.RoleProfileId!.Value }).ToListAsync(ct);
+        var names = await db.RoleProfiles.AsNoTracking().ToDictionaryAsync(r => r.Id, r => r.NameEn, ct);
+        return new
+        {
+            items = rows.Select(r =>
+            {
+                var jobs = links.Where(l => l.ProfileId == r.Id || (names.TryGetValue(l.ProfileId, out var n) && n == r.NameEn)).ToList();
+                return new
+                {
+                    profile = Full(r), jobs = jobs.Count,
+                    job_list = jobs.OrderByDescending(j => j.Id).Take(10).Select(j => new { id = j.Id, code = j.Code, title = j.Title, status = j.Status.ToString() }),
+                };
+            }).Select(x => Merge(x.profile, x.jobs, x.job_list)),
+        };
+    }
+
+    public async Task<object> GetAsync(int id, CancellationToken ct = default) =>
+        Full(await db.RoleProfiles.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound());
+
+    public async Task<object> SaveAsync(int? id, RoleProfileInput input, CancellationToken ct = default)
+    {
+        var now = clock.UtcNow;
+        RoleProfile r;
+        if (id == null)
+        {
+            r = new RoleProfile { CreatedAt = now };
+            db.RoleProfiles.Add(r);
+        }
+        else
+        {
+            r = await db.RoleProfiles.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound();
+            if (!string.IsNullOrEmpty(input.RowVersion) && input.RowVersion != Convert.ToBase64String(r.RowVersion))
+                throw DomainException.Conflict("changed_elsewhere");
+        }
+        r.NameAr = TextUtil.NoEmDash(TextUtil.Clip(input.NameAr?.Trim(), 150));
+        r.NameEn = TextUtil.NoEmDash(TextUtil.Clip(input.NameEn?.Trim(), 150));
+        r.PersonalityModel = BackofficeJobService.Parse<PersonalityModel>(input.PersonalityModel, "personality_model");
+        r.Weights = JsonSerializer.Serialize(input.Weights ?? new Dictionary<string, int>());
+        r.Targets = JsonSerializer.Serialize(input.Targets ?? new Dictionary<string, string>());
+        r.Types = string.Join(",", input.Types ?? []);
+        r.StrongFrom = (byte)Math.Clamp(input.StrongFrom, 0, 255);
+        r.ModerateFrom = (byte)Math.Clamp(input.ModerateFrom, 0, 255);
+        r.IsActive = input.IsActive;
+        r.SortOrder = input.SortOrder;
+        r.UpdatedAt = now;
+        r.UpdatedByStaffId = actor.Id;
+        r.Validate();
+        await db.SaveChangesAsync(ct);
+        return new { id = r.Id };
+    }
+
+    public async Task<object> DeleteAsync(int id, CancellationToken ct = default)
+    {
+        var r = await db.RoleProfiles.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound();
+        if (await db.JobOpenings.AnyAsync(j => j.RoleProfileId == id, ct)) throw DomainException.Conflict("role_profile_in_use");
+        db.RoleProfiles.Remove(r);
+        await db.SaveChangesAsync(ct);
+        return new { ok = true };
+    }
+
+    /// <summary>A profile's fields with the jobs linked to it.</summary>
+    static Dictionary<string, object?> Merge(object profile, int jobs, object jobList)
+    {
+        var d = profile.GetType().GetProperties().ToDictionary(p => p.Name, p => p.GetValue(profile));
+        d["jobs"] = jobs;
+        d["job_list"] = jobList;
+        return d;
+    }
+
+    static object Full(RoleProfile r) => new
+    {
+        id = r.Id, name_ar = r.NameAr, name_en = r.NameEn, personality_model = r.PersonalityModel.ToString(), weights = r.WeightMap(), targets = r.TargetMap(),
+        types = r.TypeList(), strong_from = (int)r.StrongFrom, moderate_from = (int)r.ModerateFrom, is_active = r.IsActive, sort_order = r.SortOrder,
+        updated_at = r.UpdatedAt, row_version = Convert.ToBase64String(r.RowVersion),
+    };
+
+    /// <summary>Active profiles, loaded once per request by the pages that show personality results.</summary>
+    public Task<List<RoleProfile>> ActiveAsync(CancellationToken ct = default) =>
+        db.RoleProfiles.AsNoTracking().Where(r => r.IsActive).OrderBy(r => r.SortOrder).ThenBy(r => r.NameEn).ToListAsync(ct);
+
+    /// <summary>
+    /// What the backoffice shows next to a trait profile: the 4-letter type and its notes (16-type questionnaire) and the fit
+    /// with each active role profile of the same model. Null when there is no profile yet.
+    /// </summary>
+    public static object? Summary(PersonalityModel model, string? traitProfileJson, IReadOnlyList<RoleProfile> roles,
+        BandCutoffs? cutoffs = null, IReadOnlyDictionary<string, TypeReport>? reports = null)
+    {
+        if (string.IsNullOrEmpty(traitProfileJson)) return null;
+        var profile = JsonSerializer.Deserialize<List<TraitScore>>(traitProfileJson) ?? [];
+        if (profile.Count == 0) return null;
+        var type = model == PersonalityModel.WorkplaceType16 ? Personality.TypeOf(profile) : null;
+        var report = type != null && (reports ?? TypeReports.All).TryGetValue(type.Value.Type, out var r) ? r : null;
+        return new
+        {
+            type = type?.Type,
+            pairs = type?.Pairs.Select(p => new { first = p.First, second = p.Second, first_mean = p.FirstMean, second_mean = p.SecondMean, letter = p.Letter }),
+            report = report == null ? null : new
+            {
+                name_ar = report.NameAr, name_en = report.NameEn, strengths_ar = report.StrengthsAr, strengths_en = report.StrengthsEn,
+                risks_ar = report.RisksAr, risks_en = report.RisksEn,
+            },
+            fits = roles.Select(role => role.Fit(model, profile, cutoffs)).Where(f => f != null).Select(f => new
+            {
+                profile_id = f!.ProfileId, name_ar = f.NameAr, name_en = f.NameEn, percent = f.Percent, level = f.Level, below_target = f.BelowTarget,
+            }),
+        };
+    }
+}

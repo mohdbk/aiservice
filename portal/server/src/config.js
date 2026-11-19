@@ -11,7 +11,7 @@ export function loadConfig(overrides = {}) {
     // Address to listen on: empty means every interface; 127.0.0.1 when IIS sits in front on the same machine.
     host: env.HOST || "",
     // The recruitment API (.NET). FRAPPE_URL is still read for older installations.
-    apiUrl: (env.RECRUITMENT_API_URL || "").replace(/\/+$/, ""),
+    apiUrl: (env.HRMS_API_URL || "").replace(/\/+$/, ""),
     frappeUrl: (env.FRAPPE_URL || "").replace(/\/+$/, ""),
     frappeSite: env.FRAPPE_SITE || "",
     apiKey: env.CAREERS_PORTAL_API_KEY || "",
@@ -32,7 +32,7 @@ export function loadConfig(overrides = {}) {
     ...overrides,
   };
   if (!c.mock) {
-    const missing = [c.apiUrl || c.frappeUrl ? null : "RECRUITMENT_API_URL", c.apiKey ? null : "CAREERS_PORTAL_API_KEY", c.apiSecret ? null : "CAREERS_PORTAL_API_SECRET"].filter(Boolean);
+    const missing = [c.apiUrl || c.frappeUrl ? null : "HRMS_API_URL", c.apiKey ? null : "CAREERS_PORTAL_API_KEY", c.apiSecret ? null : "CAREERS_PORTAL_API_SECRET"].filter(Boolean);
     if (missing.length) throw new Error(`Missing settings: ${missing.join(", ")}`);
   }
   if (!c.sessionSecret || c.sessionSecret.length < 32) {

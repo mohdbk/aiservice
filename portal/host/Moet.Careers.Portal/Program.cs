@@ -15,9 +15,9 @@ builder.Services.Configure<IISServerOptions>(o => o.MaxRequestBodySize = maxBody
 
 builder.Services.AddSingleton(settings);
 builder.Services.AddSingleton<RateLimiter>();
-builder.Services.AddSingleton(sp => new RecruitmentApi(
+builder.Services.AddSingleton(sp => new HrmsApi(
     new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) }) { Timeout = Timeout.InfiniteTimeSpan },
-    settings, sp.GetRequiredService<ILogger<RecruitmentApi>>()));
+    settings, sp.GetRequiredService<ILogger<HrmsApi>>()));
 builder.Services.AddSingleton<PortalApp>();
 
 var app = builder.Build();

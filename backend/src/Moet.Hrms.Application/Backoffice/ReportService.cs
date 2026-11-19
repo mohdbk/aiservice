@@ -1,0 +1,178 @@
+using Microsoft.EntityFrameworkCore;
+using Moet.Hrms.Application.Common;
+using Moet.Hrms.Domain;
+using Moet.Hrms.Domain.Common;
+
+namespace Moet.Hrms.Application.Backoffice;
+
+/// <summary>
+/// The hiring report: for the applications received in a period (optionally one job or department), how far they got (the
+/// funnel), how long hiring took, test pass rates, where candidates dropped out, and the same by department and week.
+/// </summary>
+public sealed class ReportService(IAppDbContext db, IRequestLanguage language, IClock clock)
+{
+    const string En = "en";
+
+    public async Task<object> HiringAsync(DateOnly? from, DateOnly? to, int? jobId, int? departmentId, CancellationToken ct = default)
+    {
+        var today = clock.Today();
+        var end = to ?? today;
+        var start = from ?? end.AddDays(-89);
+        if (start > end) (start, end) = (end, start);
+        var startAt = start.ToDateTime(TimeOnly.MinValue);
+        var endAt = end.AddDays(1).ToDateTime(TimeOnly.MinValue);
+        var en = language.English;
+
+        var q = db.JobApplications.AsNoTracking().Where(a => a.CreatedAt >= startAt && a.CreatedAt < endAt);
+        if (jobId != null) q = q.Where(a => a.JobOpeningId == jobId);
+        if (departmentId != null) q = q.Where(a => a.JobOpening!.DepartmentId == departmentId);
+        // Bounded: a report covers at most 50,000 applications.
+        var apps = await q.OrderBy(a => a.Id).Take(50000).Select(a => new
+        {
+            a.Id, a.CreatedAt, a.Status, a.ScreeningOutcome, a.JobOpening!.DepartmentId, a.Nationality, a.JobOpeningId,
+            Score = a.CvAnalysis != null && a.CvAnalysis.Status == CvAnalysisStatus.Scored ? a.CvAnalysis.Score : null,
+        }).ToListAsync(ct);
+        var ids = apps.Select(a => a.Id).ToList();
+
+        var invitations = await db.Invitations.AsNoTracking().Where(i => ids.Contains(i.JobApplicationId)).Select(i => new
+        {
+            i.JobApplicationId, i.AssessmentId, i.Status, i.Result, Personality = i.Assessment!.PersonalityModel != PersonalityModel.None,
+            Title = en ? i.Assessment.Translations.Where(t => t.LanguageCode == En && t.Title != "").Select(t => t.Title).FirstOrDefault() ?? i.Assessment.Title : i.Assessment.Title,
+        }).ToListAsync(ct);
+        var interviews = await db.Interviews.AsNoTracking().Where(i => ids.Contains(i.JobApplicationId) && i.Status != InterviewStatus.Cancelled)
+            .Select(i => new { i.JobApplicationId, i.StartsAt, i.Status }).ToListAsync(ct);
+        var offers = await db.JobOffers.AsNoTracking().Where(o => ids.Contains(o.JobApplicationId))
+            .Select(o => new { o.JobApplicationId, o.Status, o.CreatedAt, o.UpdatedAt }).ToListAsync(ct);
+        var departments = await db.Departments.AsNoTracking().Select(d => new
+        {
+            d.Id, Name = en ? d.Translations.Where(t => t.LanguageCode == En && t.Name != "").Select(t => t.Name).FirstOrDefault() ?? d.Name : d.Name,
+        }).ToDictionaryAsync(d => d.Id, d => d.Name, ct);
+
+        var created = apps.ToDictionary(a => a.Id, a => a.CreatedAt);
+        var tested = invitations.Where(i => !i.Personality && i.Status is InvitationStatus.Submitted or InvitationStatus.Marked).Select(i => i.JobApplicationId).ToHashSet();
+        var passed = invitations.Where(i => !i.Personality && i.Result == InvitationResult.Pass).Select(i => i.JobApplicationId).ToHashSet();
+        var interviewed = interviews.Select(i => i.JobApplicationId).ToHashSet();
+        var offered = offers.Where(o => o.Status != OfferStatus.Draft).Select(o => o.JobApplicationId).ToHashSet();
+        var hired = offers.Where(o => o.Status == OfferStatus.Accepted).Select(o => o.JobApplicationId).ToHashSet();
+        var screenedIn = apps.Where(a => a.ScreeningOutcome != ScreeningOutcome.DoesNotMeet).Select(a => a.Id).ToHashSet();
+
+        var funnel = new[]
+        {
+            ("applied", apps.Count), ("screened_in", screenedIn.Count), ("tested", tested.Count), ("passed", passed.Count),
+            ("interviewed", interviewed.Count), ("offered", offered.Count), ("hired", hired.Count),
+        };
+
+        // Days from applying to the offer being accepted (the offer's last change), and to the first interview.
+        static double? Median(List<double> v)
+        {
+            if (v.Count == 0) return null;
+            v.Sort();
+            return Math.Round(v.Count % 2 == 1 ? v[v.Count / 2] : (v[v.Count / 2 - 1] + v[v.Count / 2]) / 2, 1);
+        }
+        var toHire = offers.Where(o => o.Status == OfferStatus.Accepted && created.ContainsKey(o.JobApplicationId))
+            .GroupBy(o => o.JobApplicationId).Select(g => (g.Min(o => o.UpdatedAt) - created[g.Key]).TotalDays).ToList();
+        var toInterview = interviews.Where(i => created.ContainsKey(i.JobApplicationId)).GroupBy(i => i.JobApplicationId)
+            .Select(g => Math.Max(0, (g.Min(i => i.StartsAt) - created[g.Key]).TotalDays)).ToList();
+        var toOffer = offers.Where(o => o.Status != OfferStatus.Draft && created.ContainsKey(o.JobApplicationId)).GroupBy(o => o.JobApplicationId)
+            .Select(g => (g.Min(o => o.CreatedAt) - created[g.Key]).TotalDays).ToList();
+
+        var tests = invitations.Where(i => !i.Personality).GroupBy(i => (i.AssessmentId, i.Title)).Select(g => new
+        {
+            assessment_id = g.Key.AssessmentId, title = g.Key.Title, invited = g.Count(),
+            completed = g.Count(i => i.Status is InvitationStatus.Submitted or InvitationStatus.Marked),
+            passed = g.Count(i => i.Result == InvitationResult.Pass), failed = g.Count(i => i.Result == InvitationResult.Fail),
+            expired = g.Count(i => i.Status == InvitationStatus.Expired),
+        }).OrderByDescending(x => x.invited).Take(20).ToList();
+
+        var dropOff = new
+        {
+            screened_out = apps.Count(a => a.ScreeningOutcome == ScreeningOutcome.DoesNotMeet),
+            tests_not_taken = invitations.Count(i => i.Status == InvitationStatus.Expired),
+            tests_failed = invitations.Count(i => !i.Personality && i.Result == InvitationResult.Fail),
+            interview_rejected = interviews.Count(i => i.Status == InterviewStatus.Rejected),
+            offers_declined = offers.Count(o => o.Status == OfferStatus.Declined),
+            offers_withdrawn = offers.Count(o => o.Status == OfferStatus.Withdrawn),
+            not_selected = apps.Count(a => a.Status == ApplicationStatus.Rejected),
+        };
+
+        var byDepartment = apps.GroupBy(a => a.DepartmentId).Select(g => new
+        {
+            department_id = g.Key, name = g.Key is { } d && departments.TryGetValue(d, out var n) ? n : "",
+            applied = g.Count(), interviewed = g.Count(a => interviewed.Contains(a.Id)), offered = g.Count(a => offered.Contains(a.Id)),
+            hired = g.Count(a => hired.Contains(a.Id)),
+        }).OrderByDescending(x => x.applied).ToList();
+
+        // Fairness: how each group (Emirati, other nationalities, not given) moves through the stages. The impact ratio compares
+        // each group's rate with the best group's; below 0.8 (the four-fifths rule) is flagged when the group is large enough to tell.
+        var uae = await db.Countries.AsNoTracking().Where(c => c.Code == Domain.Content.Country.UaeCode).Select(c => c.NameEn).FirstOrDefaultAsync(ct) ?? "United Arab Emirates";
+        string Group(string n) => n.Length == 0 ? "not_given" : n == uae ? "emirati" : "other";
+        var groups = apps.GroupBy(a => Group(a.Nationality)).Select(g =>
+        {
+            var applied = g.Count();
+            double Rate(int n) => applied == 0 ? 0 : Math.Round(100.0 * n / applied, 1);
+            var si = g.Count(a => screenedIn.Contains(a.Id));
+            var iv = g.Count(a => interviewed.Contains(a.Id));
+            var of = g.Count(a => offered.Contains(a.Id));
+            var hi = g.Count(a => hired.Contains(a.Id));
+            return new { group = g.Key, applied, screened_in = si, interviewed = iv, offered = of, hired = hi, interview_rate = Rate(iv), offer_rate = Rate(of), hire_rate = Rate(hi) };
+        }).OrderBy(x => x.group == "emirati" ? 0 : x.group == "other" ? 1 : 2).ToList();
+        var bestInterview = groups.Where(g => g.group != "not_given").Select(g => g.interview_rate).DefaultIfEmpty(0).Max();
+        var bestOffer = groups.Where(g => g.group != "not_given").Select(g => g.offer_rate).DefaultIfEmpty(0).Max();
+        var fairness = new
+        {
+            given = apps.Count(a => a.Nationality.Length > 0),
+            emirati_share_applied = apps.Count == 0 ? 0 : Math.Round(100.0 * apps.Count(a => Group(a.Nationality) == "emirati") / apps.Count, 1),
+            emirati_share_hired = hired.Count == 0 ? (double?)null : Math.Round(100.0 * apps.Count(a => hired.Contains(a.Id) && Group(a.Nationality) == "emirati") / hired.Count, 1),
+            groups = groups.Select(g => new
+            {
+                g.group, g.applied, g.screened_in, g.interviewed, g.offered, g.hired, g.interview_rate, g.offer_rate, g.hire_rate,
+                interview_ratio = g.group == "not_given" || bestInterview == 0 ? (double?)null : Math.Round(g.interview_rate / bestInterview, 2),
+                offer_ratio = g.group == "not_given" || bestOffer == 0 ? (double?)null : Math.Round(g.offer_rate / bestOffer, 2),
+                flagged = g.group != "not_given" && g.applied >= 20 && ((bestInterview > 0 && g.interview_rate / bestInterview < 0.8) || (bestOffer > 0 && g.offer_rate / bestOffer < 0.8)),
+            }),
+        };
+
+        // How often the AI's ranking agrees with people's decisions: within each job, the top quarter by CV score against the
+        // bottom half, and how many of each went on (interview, offer or accepted). Low-scored people picked anyway are counted too.
+        var progressed = apps.Where(a => interviewed.Contains(a.Id) || offered.Contains(a.Id) || a.Status == ApplicationStatus.Accepted).Select(a => a.Id).ToHashSet();
+        var top = new List<int>();
+        var bottom = new List<int>();
+        foreach (var job in apps.Where(a => a.Score != null).GroupBy(a => a.JobOpeningId).Where(g => g.Count() >= 4))
+        {
+            var ranked = job.OrderByDescending(a => a.Score).Select(a => a.Id).ToList();
+            top.AddRange(ranked.Take((int)Math.Ceiling(ranked.Count / 4.0)));
+            bottom.AddRange(ranked.Skip(ranked.Count / 2));
+        }
+        double Pct(IReadOnlyCollection<int> set) => set.Count == 0 ? 0 : Math.Round(100.0 * set.Count(progressed.Contains) / set.Count, 1);
+        var agreement = new
+        {
+            scored = apps.Count(a => a.Score != null),
+            top_count = top.Count, top_progressed = Pct(top),
+            bottom_count = bottom.Count, bottom_progressed = Pct(bottom),
+            low_picked = bottom.Count(progressed.Contains),
+        };
+
+        // Applications per week (weeks start on Monday), every week of the period present.
+        var firstMonday = start.AddDays(-(((int)start.DayOfWeek + 6) % 7));
+        var weeks = new List<object>();
+        for (var w = firstMonday; w <= end; w = w.AddDays(7))
+        {
+            var ws = w.ToDateTime(TimeOnly.MinValue);
+            var we = w.AddDays(7).ToDateTime(TimeOnly.MinValue);
+            weeks.Add(new { week = w.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture), applied = apps.Count(a => a.CreatedAt >= ws && a.CreatedAt < we) });
+        }
+
+        return new
+        {
+            from = start.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+            to = end.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+            truncated = apps.Count == 50000,
+            funnel = funnel.Select(f => new { stage = f.Item1, count = f.Item2 }),
+            time = new
+            {
+                to_interview_days = Median(toInterview), to_offer_days = Median(toOffer), to_hire_days = Median(toHire), hires = toHire.Count,
+            },
+            tests, drop_off = dropOff, departments = byDepartment, weeks, fairness, agreement,
+        };
+    }
+}

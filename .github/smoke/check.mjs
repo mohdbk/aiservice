@@ -1,20 +1,20 @@
-// Smoke check of the live demo: pages load through the backoffice, the API answers behind it, and screenshots of the
+// Smoke check of the live demo: HRMS pages load, its API answers, and screenshots of the
 // sign-in screen in Arabic and English (desktop and phone) show the logo on the left at its proper proportions.
 import { chromium } from "playwright";
 const BASE = process.env.BASE_URL;
 const ok = (c, m) => { if (!c) { console.error("FAIL " + m); process.exitCode = 1; } else console.log("ok   " + m); };
 
 const health = await fetch(`${BASE}/healthz`);
-ok(health.ok, "backoffice /healthz");
+ok(health.ok, "HRMS /healthz");
 const me = await fetch(`${BASE}/api/backoffice/me`);
-ok(me.status === 401, `API reached through the backoffice (/api/backoffice/me -> ${me.status})`);
+ok(me.status === 401, `HRMS API answers (/api/backoffice/me -> ${me.status})`);
 const page = await fetch(`${BASE}/ar/applicants`);
 ok(page.ok && (await page.text()).includes('id="root"'), "client routes return the app");
 ok((page.headers.get("content-security-policy") || "").includes("default-src 'self'"), "security headers on pages");
 const run = await fetch(`${BASE}/api/backoffice/agent/run`, { method: "POST", headers: { "X-Backoffice": "1", "Content-Type": "application/json" }, body: "{}" });
 ok(run.status === 401, `assistant needs a signed-in staff member (${run.status})`);
 
-// Careers portal: its server reads jobs from the recruitment API (no Frappe).
+// Careers portal: its server reads jobs from the HRMS API (no Frappe).
 const PORTAL = process.env.PORTAL_URL;
 const pj = await fetch(`${PORTAL}/api/jobs?lang=ar`);
 const jobs = pj.ok ? await pj.json() : null;

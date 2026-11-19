@@ -1,6 +1,6 @@
 # On-Premises Deployment Guide
 
-**Ministry of Economy & Tourism: Recruitment System (careers portal, backoffice, API, assistant)**
+**Ministry of Economy & Tourism: HRMS (Human Resources Management System) and Careers Portal**
 
 This guide covers moving the system from the Railway demo to ministry servers, on **Windows Server with IIS** (section 3)
 or on **containers** (section 4). Nothing in the production setup depends on Railway or on any outside service: the
@@ -14,21 +14,21 @@ Two apps, each one ASP.NET Core (.NET 10) site, plus SQL Server and the ministry
 
 | App | Folders | What is in it | Who reaches it |
 |---|---|---|---|
-| **Backoffice** | `backend` (with the assistant in `backend/src/Moet.Recruitment.Agent`), `backoffice/web` | The staff app (React), the API on SQL Server (portal API, backoffice API, background jobs for emails, scoring, reminders and backups, PDF letters) and the recruitment assistant (Microsoft Agent Framework), in one app | Staff only (internal network or VPN) |
+| **HRMS** | `backend` (with the assistant in `backend/src/Moet.Hrms.Agent`), `hrms/web` | The staff app (React), the API on SQL Server (portal API, staff API, background jobs for emails, scoring, reminders and backups, PDF letters) and the HRMS assistant (Microsoft Agent Framework), in one app | Staff only (internal network or VPN) |
 | **Careers portal** | `portal/host`, `portal/web` | The candidate site (React) and its small server, the only part that calls the API, with a service key | Internet (DMZ) |
-| **SQL Server** | | 2019 or later, licensed edition. The backoffice creates and updates the schema itself on start | No |
+| **SQL Server** | | 2019 or later, licensed edition. The HRMS creates and updates the schema itself on start | No |
 | **Model server** | | Any OpenAI-compatible endpoint (vLLM recommended), in-country or on-prem | No |
 | **ClamAV** | | Virus scanning of every upload (`CLAMAV_HOST`) | Recommended |
-| **OCR service** | | Optional (`OCR_URL`): reads scanned and photographed CVs. Without it, PDF text and Word CVs are read and image-only CVs are marked unreadable for a person to check | Optional |
+| **OCR service** | | Optional (`OCR_URL`): reads scanned and photographed CVs. Without it, the AI model reads them from the page images if it accepts images (`LLM_VISION_MODEL`, or the main model; `CV_READ_WITH_MODEL=0` turns this off); otherwise they are marked unreadable for a person to check | Optional |
 
 ```
-Staff browser ──HTTPS──► Backoffice site (staff app + API + assistant) ──► SQL Server
+Staff browser ──HTTPS──► HRMS site (staff app + API + assistant) ──► SQL Server
                                      │                                └──► model server, SMTP relay, ClamAV, OCR, backup store
-Candidate browser ──HTTPS──► Careers portal site (DMZ) ──service key──► Backoffice site /api/portal
+Candidate browser ──HTTPS──► Careers portal site (DMZ) ──service key──► HRMS site /api/portal
 ```
 
 The staff app and its API share one address, so the staff sign-in cookie stays `SameSite=Strict` and the API's
-same-origin check holds. The assistant runs inside the backoffice app: it listens on the machine's loopback address
+same-origin check holds. The assistant runs inside the HRMS app: it listens on the machine's loopback address
 only, and its tools call the API in memory as the signed-in staff member. The portal's server calls the API with
 `Authorization: token <key>:<secret>`; candidates' browsers never reach the API.
 
@@ -40,7 +40,7 @@ only, and its tools call the API in memory as the signed-in staff member. The po
 |---|---|---|
 | Fits | Ministry Windows estate, IIS skills, Windows patching and monitoring | A container platform (Kubernetes, OpenShift, Docker hosts) |
 | Package | One zip from the **IIS Package** workflow, installed by `Install-Moet.ps1` | One image per folder (`Dockerfile` in each) |
-| Sites | Two IIS sites: backoffice and careers portal | The same two apps as images, behind the platform's ingress |
+| Sites | Two IIS sites: HRMS and careers portal | The same two apps as images, behind the platform's ingress |
 
 Both run the same code with the same settings (`docs/SERVICES.md`).
 
@@ -55,16 +55,29 @@ Rewrite, no Application Request Routing, no Node.js.
 
 | IIS site | App pool | What is in it | Default bindings |
 |---|---|---|---|
-| MoET Recruitment Backoffice | `MoetRecruitmentBackoffice` | Staff app, API and assistant; always running (background jobs) | `https://recruitment.moet.gov.ae`, plus `http://127.0.0.1:5080` for the portal on the same server |
+| MoET HRMS | `MoetHrms` | Staff app, API and assistant; always running (background jobs) | `https://hrms.moet.gov.ae`, plus `http://127.0.0.1:5080` for the portal on the same server |
 | MoET Careers Portal | `MoetCareersPortal` | Candidate site and its server | `https://careers.moet.gov.ae` |
 
 Usual placements:
 
-- **Two servers (recommended):** the backoffice on an internal server, the portal on a DMZ server. The portal's
-  `RECRUITMENT_API_URL` is then the backoffice's internal HTTPS address, and the firewall allows only the DMZ server to
+- **Two servers (recommended):** HRMS on an internal server, the portal on a DMZ server. The portal's
+  `HRMS_API_URL` is then the HRMS internal HTTPS address, and the firewall allows only the DMZ server to
   reach it.
 - **One server:** both sites on one internal server, with only the portal's HTTPS published to the internet through
   the reverse proxy or WAF. The portal reaches the API on `http://127.0.0.1:5080`.
+
+### 3.1a Keeping the portal to the portal API
+
+When the portal is on a DMZ server, its firewall rule opens one port on the HRMS server. Two settings keep that path to
+the portal API only:
+
+- **`PortalPort`** (and `PortalIpAddress`) in the HRMS section: an extra HTTPS binding, for example `5443` on the
+  server's internal address, with the site's certificate. Only `/api/portal` and `/healthz` answer on it; the staff
+  app and its API are "not found" there. Open only this port to the portal server, and set the portal's
+  `HRMS_API_URL` to it (for example `https://hrms.moet.gov.ae:5443`). The local port (`LocalPort`, `127.0.0.1:5080`,
+  for a portal on the same server) works the same way. The installer sets `PORTAL_ONLY_PORTS` from both.
+- **`PORTAL_API_ALLOWED_IPS`** in the HRMS settings: the portal server's address or range (and `127.0.0.1` for a portal
+  on the same server). Any other address is refused at the portal API, even with the key.
 
 ### 3.2 Server prerequisites
 
@@ -82,12 +95,12 @@ The servers need no internet access: the package carries the built apps and Chro
 Download the **built** package, not GitHub's "Code > Download ZIP" (that is the source code):
 
 - GitHub Actions, **IIS Package** workflow (runs on every change to the IIS files, or on demand), latest green run,
-  artifact `moet-recruitment-iis`. The download is a zip holding `moet-recruitment-iis.zip`: unzip both. The same run
+  artifact `moet-hrms-iis`. The download is a zip holding `moet-hrms-iis.zip`: unzip both. The same run
   installs the package on a fresh IIS and checks both sites; see section 3.9.
 - Or on a Windows build machine with the .NET 10 SDK, Node 22 and internet access:
-  `powershell -ExecutionPolicy Bypass -File deploy\iis\Build-Package.ps1` (writes `out\moet-recruitment-iis.zip`).
+  `powershell -ExecutionPolicy Bypass -File deploy\iis\Build-Package.ps1` (writes `out\moet-hrms-iis.zip`).
 
-The package holds `backoffice` (the app with the staff app in `wwwroot`), `portal` (the app with the candidate site in
+The package holds `hrms` (the app with the staff app in `wwwroot`), `portal` (the app with the candidate site in
 `wwwroot`), `ms-playwright` (Chromium), `iis` (the install script and settings example) and `VERSION.txt`.
 
 ### 3.4 Settings
@@ -101,33 +114,33 @@ notepad iis\moet.settings.psd1
 ```
 
 The file names the sites, bindings and certificates, and holds each app's settings. `InstallRoot` must be a separate
-folder from the package (for example `D:\MoET\Recruitment`). The script writes the settings into each site's
+folder from the package (for example `D:\MoET\Hrms`). The script writes the settings into each site's
 `web.config` as environment variables and limits that folder to administrators, SYSTEM and the site's app pool. Keep
 the settings file where only administrators can read it, or delete it after installing and keep the values in the
 ministry's secrets store.
 
-Must match between the two sites: the backoffice's `PORTAL_API_KEY` and `PORTAL_API_SECRET` are the portal's
+Must match between the two sites: the HRMS `PORTAL_API_KEY` and `PORTAL_API_SECRET` are the portal's
 `CAREERS_PORTAL_API_KEY` and `CAREERS_PORTAL_API_SECRET`.
 
-`AGENT_KEY` (16 characters or more) protects the assistant inside the backoffice and encrypts secrets saved in the
+`AGENT_KEY` (16 characters or more) protects the assistant inside HRMS and encrypts secrets saved in the
 database (such as model keys saved in Setup). Choose it once; changing it later makes those saved secrets unreadable,
 and they have to be entered again.
 
 Generate keys and secrets with, for example:
 `[Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }) -as [byte[]])`
 
-For a first test without certificates: `HttpsPort = 0` and `HttpPort = 8081` (backoffice) or `8082` (portal); the script
+For a first test without certificates: `HttpsPort = 0` and `HttpPort = 8081` (HRMS) or `8082` (portal); the script
 then also lets staff sign in over HTTP.
 
 ### 3.5 SQL Server
 
-- Create the database (for example `MoetRecruitment`) and give the backoffice's account **db_owner** on it: the app runs
-  the schema scripts in `backend/src/Moet.Recruitment.Infrastructure/Persistence/Schema` on every start, in order,
+- Create the database (for example `MoetHrms`) and give the HRMS account **db_owner** on it: the app runs
+  the schema scripts in `backend/src/Moet.Hrms.Infrastructure/Persistence/Schema` on every start, in order,
   each once.
-- **Windows sign-in (recommended):** run the backoffice's app pool as a gMSA or service account (`Identity` in the
-  settings file; for a gMSA, `MOET\svc-recruit$` with an empty password) and use `Integrated Security=True` in
+- **Windows sign-in (recommended):** run the HRMS app pool as a gMSA or service account (`Identity` in the
+  settings file; for a gMSA, `MOET\svc-hrms$` with an empty password) and use `Integrated Security=True` in
   `DB_CONNECTION`. With the default app pool identity on the same machine, the login is
-  `IIS AppPool\MoetRecruitmentBackoffice`.
+  `IIS AppPool\MoetHrms`.
 - **SQL sign-in:** `User Id=...;Password=...` in `DB_CONNECTION`.
 - Use `Encrypt=True` and a trusted certificate on SQL Server (`TrustServerCertificate=True` only for testing).
 - The first administrator comes from `ADMIN_EMAIL` and `ADMIN_PASSWORD` (12 characters or more) on the first start.
@@ -140,14 +153,14 @@ From the package folder, in the same administrator window, one line at a time:
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
 .\iis\Install-Moet.ps1                    # both sites on this server
-.\iis\Install-Moet.ps1 -Roles Backoffice  # internal server only
+.\iis\Install-Moet.ps1 -Roles HRMS  # internal server only
 .\iis\Install-Moet.ps1 -Roles Portal      # DMZ server only
 ```
 
 The script:
 
 1. Checks the Hosting Bundle, the package and the settings, and that the paired keys match.
-2. Copies each app to `InstallRoot` (`backoffice`, `portal`, `ms-playwright`).
+2. Copies each app to `InstallRoot` (`hrms`, `portal`, `ms-playwright`).
 3. Adds the settings to each app's `web.config` as environment variables.
 4. Creates or updates the app pools: no managed code, always running, no idle timeout, no scheduled recycling, one
    worker at a time (background jobs and schema updates never run twice during a recycle), user profile loaded.
@@ -156,7 +169,7 @@ The script:
 6. Starts both and checks they answer on their HTTP or local bindings: the API, the staff app, the sign-in check and
    the portal reaching the API. A site on HTTPS only is checked in a browser.
 
-The backoffice's first start creates the database tables and can take a few minutes; the script waits up to 5.
+The HRMS first start creates the database tables and can take a few minutes; the script waits up to 5.
 
 ### 3.7 Update
 
@@ -166,15 +179,15 @@ database backup before updating; to go back, restore it and run the script from 
 
 ### 3.8 How each site is set up
 
-- **Backoffice:** IIS runs the app in-process. Built assets (`/assets/*`) are cached for a year, every other page path
+- **HRMS:** IIS runs the app in-process. Built assets (`/assets/*`) are cached for a year, every other page path
   returns the staff app (the React router), and `/api` is the API with its JSON errors. The security headers match the
   container version (CSP, `frame-ancestors 'none'`, HSTS on HTTPS). Compression is off for dynamic responses so the
   assistant's streamed answers are not held back. Uploads up to 50 MB.
-- **Assistant:** started by the backoffice app on `127.0.0.1` with a free port; nothing else can call it (it needs
+- **Assistant:** started by HRMS app on `127.0.0.1` with a free port; nothing else can call it (it needs
   `AGENT_KEY` and a staff session). Its tools call the API in memory, through the same sign-in, same-origin and audit
   checks as the browser.
 - **Careers portal:** IIS runs the portal server in-process; it serves the candidate pages and its small API and calls
-  the backoffice's `/api/portal` with the service key. IIS gives it the real client address for its rate limits. If a
+  the HRMS `/api/portal` with the service key. IIS gives it the real client address for its rate limits. If a
   load balancer or WAF sits in front, set `TRUST_PROXY=1` and `CLIENT_IP_HEADER` to the header it sets (for example
   `x-real-ip`), or `CLIENT_IP_FROM=last` when it appends to `X-Forwarded-For`.
 
@@ -182,7 +195,7 @@ database backup before updating; to go back, restore it and run the script from 
 
 On a fresh Windows Server runner it installs IIS and the Hosting Bundle only, installs the package with
 `Install-Moet.ps1` under Windows PowerShell 5.1, and checks: the staff app, its routes, cached assets and headers; the
-API, encoded characters and the same-origin check (a write from another site is refused, a write from the backoffice
+API, encoded characters and the same-origin check (a write from another site is refused, a write from HRMS
 passes); that neither site serves its `web.config`; the portal's pages and assets, that it reaches the API with its key
 and that its same-origin check passes; and a PDF letter printed with the bundled Chromium. There is no SQL Server on
 the runner, so the API runs without its database there; the full journey with a database (including the assistant)
@@ -191,7 +204,7 @@ runs in the End to End workflow, against the same two apps.
 ### 3.10 PDF letters
 
 Offer and other letters are printed by Chromium (Playwright headless shell) from the same HTML as the preview. The
-package's `ms-playwright` folder is copied to `InstallRoot\ms-playwright` and the backoffice finds it through
+package's `ms-playwright` folder is copied to `InstallRoot\ms-playwright` and HRMS finds it through
 `PLAYWRIGHT_BROWSERS_PATH`; nothing is downloaded and nothing is fetched while printing. For the same letter look as
 the Linux image, install the **Noto Sans** and **Noto Kufi Arabic** fonts on the server (Google Fonts, SIL Open Font
 License); otherwise Windows fonts with Arabic support are used.
@@ -200,29 +213,29 @@ License); otherwise Windows fonts with Arabic support are used.
 
 - Both apps log warnings and errors to the Windows **Event Log** (Application). For a start-up failure set
   `stdoutLogEnabled="true"` in that site's `web.config` for a while and read `logs\stdout*`.
-- With `OTEL_EXPORTER_OTLP_ENDPOINT` set, the backoffice sends traces, metrics and logs to the ministry's OpenTelemetry
-  collector. **System Health** in the backoffice shows the database, email, scanner, model, assistant and backups.
+- With `OTEL_EXPORTER_OTLP_ENDPOINT` set, HRMS sends traces, metrics and logs to the ministry's OpenTelemetry
+  collector. **System Health** in HRMS shows the database, email, scanner, model, assistant and backups.
 
 | Symptom | Cause and fix |
 |---|---|
 | "powershell" or "robocopy is not recognized" | The server's PATH lacks `C:\Windows\System32`. Open `C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe` directly; the script itself calls Windows' tools by full path |
 | "Settings file not found" | Copy `iis\moet.settings.example.psd1` to `iis\moet.settings.psd1` and fill it in |
-| "The package has no 'backoffice' app" | That is the source code zip; download the built package (section 3.3) |
+| "The package has no 'HRMS' app" | That is the source code zip; download the built package (section 3.3) |
 | HTTP 500.19 | The .NET 10 Hosting Bundle is missing, or was installed before IIS: install it again |
 | HTTP 500.30 or 502.5 | The app did not start: Event Log, then `stdoutLogEnabled`. Often `DB_CONNECTION`, SQL permissions, or a portal setting missing (`SESSION_SECRET` under 32 characters, key or secret empty) |
 | Staff sign-in does nothing on HTTP | The sign-in cookie needs HTTPS. The script allows HTTP only when the site has no HTTPS binding |
-| The portal says the service is unavailable | It cannot reach `RECRUITMENT_API_URL`, or its key and secret differ from the backoffice's |
-| HTTP 404.13 or 413 on uploads | Request size: 50 MB on the backoffice, 32 MB on the portal |
+| The portal says the service is unavailable | It cannot reach `HRMS_API_URL`, or its key and secret differ from the HRMS |
+| HTTP 404.13 or 413 on uploads | Request size: 50 MB on HRMS, 32 MB on the portal |
 | PDF letters fail | The app pool cannot read `ms-playwright`, or `PLAYWRIGHT_BROWSERS_PATH` is wrong |
 
 ---
 
 ## 4. Containers
 
-Two images, the same apps as the IIS sites: the backoffice (`docker build -f deploy/backoffice.Dockerfile .`, the staff
-app, API and assistant) and the careers portal (`docker build portal`). Publish the backoffice to staff only and the
+Two images, the same apps as the IIS sites: HRMS (`docker build -f deploy/hrms.Dockerfile .`, the staff
+app, API and assistant) and the careers portal (`docker build portal`). Publish HRMS to staff only and the
 portal to the internet (in the DMZ), and give SQL Server no public route. `docs/SERVICES.md` lists the settings. The
-backoffice image already contains Chromium and the Noto fonts.
+HRMS image already contains Chromium and the Noto fonts.
 
 ---
 
@@ -232,14 +245,14 @@ Every setting, by part, is in `docs/SERVICES.md`. The ones needed to start:
 
 | Part | Settings |
 |---|---|
-| Backoffice (API and assistant) | `DB_CONNECTION`, `PORTAL_API_KEY`, `PORTAL_API_SECRET`, `PORTAL_URL`, `BACKOFFICE_URL`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` (first start), `AGENT_KEY`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, `SMTP_*`, `TIME_ZONE` |
-| Careers portal | `RECRUITMENT_API_URL`, `CAREERS_PORTAL_API_KEY`, `CAREERS_PORTAL_API_SECRET`, `SESSION_SECRET` |
+| HRMS (API and assistant) | `DB_CONNECTION`, `PORTAL_API_KEY`, `PORTAL_API_SECRET`, `PORTAL_URL`, `HRMS_URL`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` (first start), `AGENT_KEY`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, `SMTP_*`, `TIME_ZONE` |
+| Careers portal | `HRMS_API_URL`, `CAREERS_PORTAL_API_KEY`, `CAREERS_PORTAL_API_SECRET`, `SESSION_SECRET` |
 
 ### Careers portal settings
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `RECRUITMENT_API_URL` | | The API, as the portal server reaches it |
+| `HRMS_API_URL` | | The API, as the portal server reaches it |
 | `CAREERS_PORTAL_API_KEY`, `CAREERS_PORTAL_API_SECRET` | | The API's `PORTAL_API_KEY` and `PORTAL_API_SECRET` |
 | `SESSION_SECRET` | | 32 characters or more; signs the candidate's session cookie |
 | `SESSION_HOURS` | 8 | Candidate session length |
@@ -259,9 +272,9 @@ Every setting, by part, is in `docs/SERVICES.md`. The ones needed to start:
 - Any OpenAI-compatible `/v1/chat/completions` endpoint with **tool calling** (the assistant) and **JSON schema or JSON
   mode** (CV scoring and drafts). With vLLM, turn tool calling on (`--enable-auto-tool-choice --tool-call-parser
   <parser for your model>`).
-- Set `LLM_BASE_URL`, `LLM_MODEL` and `LLM_API_KEY` on the backoffice. The assistant uses the same model unless it has its
+- Set `LLM_BASE_URL`, `LLM_MODEL` and `LLM_API_KEY` on HRMS. The assistant uses the same model unless it has its
   own (`AGENT_LLM_BASE_URL`, `AGENT_LLM_MODEL`, `AGENT_LLM_API_KEY`), and its settings can also be changed in the
-  backoffice under **Setup > Assistant Settings**. `LLM_SCORE_MODEL` scores CVs with a different
+  HRMS under **Setup > Assistant Settings**. `LLM_SCORE_MODEL` scores CVs with a different
   (stronger) model; `CV_SCORE_TWICE=1` scores each CV twice and asks for a person when the two disagree.
 - A context of 32k tokens or more is enough. Sizing guide for a 27B dense model: one 80 GB GPU (FP16/BF16), or one
   48 GB GPU with FP8 or AWQ quantisation; expect about 5 to 15 seconds per CV.
@@ -275,9 +288,9 @@ Every setting, by part, is in `docs/SERVICES.md`. The ones needed to start:
 ## 7. Network and security checklist
 
 - [ ] **Inbound from the internet:** HTTPS to the careers portal only, through the reverse proxy or WAF.
-- [ ] **Staff:** HTTPS to the backoffice from the ministry network or VPN only.
-- [ ] **DMZ to internal:** the portal server to the backoffice site's HTTPS port only. Nothing else.
-- [ ] **Backoffice outbound:** SQL Server (1433), the model server, the SMTP relay, ClamAV (3310), the OCR service and
+- [ ] **Staff:** HTTPS to HRMS from the ministry network or VPN only.
+- [ ] **DMZ to internal:** the portal server to the HRMS site's portal port (`PortalPort`) only. Nothing else.
+- [ ] **HRMS outbound:** SQL Server (1433), the model server, the SMTP relay, ClamAV (3310), the OCR service and
       the backup store, if used.
 - [ ] TLS certificates on the two public sites; HSTS is sent by both.
 - [ ] Settings files and `web.config` readable by administrators and the site's own app pool only (the install
@@ -286,7 +299,7 @@ Every setting, by part, is in `docs/SERVICES.md`. The ones needed to start:
 - [ ] **Assistant permissions:** its tools act as the signed-in staff member with that person's role. Every change it
       proposes needs an **Approve** click by the same person; admin tools are hidden by role and checked again by
       the API.
-- [ ] **Audit:** staff actions and assistant turns are in the audit log in the backoffice.
+- [ ] **Audit:** staff actions and assistant turns are in the audit log in HRMS.
 - [ ] **AI governance:** scores are recommendations; people make every decision. Each job's requirements (Essential
       and Desirable) are approved by HR before scoring. Staff can correct a requirement's score with a reason; the
       correction is kept and **Hiring Report** shows how often staff and scores agree.
@@ -302,7 +315,7 @@ Every setting, by part, is in `docs/SERVICES.md`. The ones needed to start:
   `BACKUP_INTERVAL_HOURS` and keep `BACKUP_KEEP` copies (`BACKUP_S3_*` settings). By default an empty database is
   refilled from the newest export when the API starts (`BACKUP_RESTORE_ON_EMPTY`), which suits the demo; in
   production set `BACKUP_RESTORE_ON_EMPTY=0` and restore deliberately, and use a bucket of its own.
-- **Monitoring:** System Health in the backoffice, the Windows Event Log or container logs, OpenTelemetry where set up,
+- **Monitoring:** System Health in HRMS, the Windows Event Log or container logs, OpenTelemetry where set up,
   and the model server's latency.
 
 ---
@@ -313,7 +326,7 @@ Every setting, by part, is in `docs/SERVICES.md`. The ones needed to start:
    data is processed and to object to decisions made by automated processing alone. Hiring decisions here are
    always made by people. The portal shows no privacy notice, so ask the legal and data protection team to confirm
    this, or add a notice page in `portal/web`.
-2. **Email.** Point `SMTP_*` at the ministry relay and set `PORTAL_URL` and `BACKOFFICE_URL`, so activation, password
+2. **Email.** Point `SMTP_*` at the ministry relay and set `PORTAL_URL` and `HRMS_URL`, so activation, password
    reset, interview and staff emails go out with the right links.
 3. **Fonts.** Both apps bundle their fonts; no font is fetched from the internet.
 4. **UAE PASS** is not wired in yet. It would be added to the portal server as an OpenID Connect sign-in; email
@@ -326,7 +339,7 @@ Every setting, by part, is in `docs/SERVICES.md`. The ones needed to start:
 ## 10. Migrating from the Railway demo
 
 The demo holds fictional data only. Start the on-prem system with an empty database: the API creates the schema and
-the first administrator, and staff create jobs and settings in the backoffice. Do not copy demo applicants, and do not
+the first administrator, and staff create jobs and settings in HRMS. Do not copy demo applicants, and do not
 point `BACKUP_S3_*` at the demo's bucket: an empty database would be refilled from it.
 
 ---

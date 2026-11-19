@@ -1,12 +1,12 @@
 <#
 .SYNOPSIS
-    Installs or updates the MoET recruitment system on IIS (Ministry of Economy & Tourism).
+    Installs or updates the MoET HRMS on IIS (Ministry of Economy & Tourism).
 
 .DESCRIPTION
     Two IIS sites, both plain ASP.NET Core apps (IIS needs only the .NET 10 Hosting Bundle):
 
-      Backoffice  the staff app, its API and the recruitment assistant, in one app
-      Portal      the candidate site and its small server, which calls the backoffice's API with a service key
+      HRMS        the staff app, its API and the HRMS assistant, in one app
+      Portal      the candidate site and its small server, which calls the HRMS API with a service key
 
     The script copies each app from the package, writes its web.config from the settings file, creates or updates the
     app pool and site, sets folder permissions, and checks that each site answers. Run it again with the same settings
@@ -18,10 +18,10 @@
     The settings (see moet.settings.example.psd1). Default: moet.settings.psd1 next to this script.
 
 .PARAMETER PackageRoot
-    The unzipped package (folders backoffice, portal, ms-playwright). Default: the folder above this script.
+    The unzipped package (folders hrms, portal, ms-playwright). Default: the folder above this script.
 
 .PARAMETER Roles
-    Which sites to install on this server: Backoffice, Portal. Default: both.
+    Which sites to install on this server: HRMS, Portal. Default: both.
 
 .EXAMPLE
     .\Install-Moet.ps1
@@ -32,8 +32,8 @@
 param(
     [string]$SettingsFile = (Join-Path $PSScriptRoot 'moet.settings.psd1'),
     [string]$PackageRoot = (Split-Path $PSScriptRoot -Parent),
-    [ValidateSet('Backoffice', 'Portal')]
-    [string[]]$Roles = @('Backoffice', 'Portal'),
+    [ValidateSet('Hrms', 'Portal')]
+    [string[]]$Roles = @('Hrms', 'Portal'),
     [switch]$SkipHealthCheck
 )
 
@@ -58,7 +58,7 @@ if (-not $root) { Fail 'InstallRoot is empty in the settings file.' }
 $fullRoot = [IO.Path]::GetFullPath($root).TrimEnd('\')
 $fullPackage = [IO.Path]::GetFullPath($PackageRoot).TrimEnd('\')
 if ($fullRoot -eq $fullPackage -or $fullRoot.StartsWith("$fullPackage\", 'OrdinalIgnoreCase') -or $fullPackage.StartsWith("$fullRoot\", 'OrdinalIgnoreCase')) {
-    Fail "InstallRoot ($fullRoot) must be a separate folder from the package ($fullPackage), for example D:\MoET\Recruitment."
+    Fail "InstallRoot ($fullRoot) must be a separate folder from the package ($fullPackage), for example D:\MoET\Hrms."
 }
 
 # Windows' own tools by full path: some servers have a PATH without System32.
@@ -85,17 +85,17 @@ foreach ($r in $Roles) {
 function Require($settings, [string]$section, [string[]]$keys) {
     foreach ($k in $keys) { if (-not (Value $settings $k)) { Fail "$section setting $k is empty." } }
 }
-if ($Roles -contains 'Backoffice') {
-    Require $S.Backoffice.Settings 'Backoffice' @('DB_CONNECTION', 'PORTAL_API_KEY', 'PORTAL_API_SECRET', 'AGENT_KEY')
-    if ($S.Backoffice.Settings.AGENT_KEY.Length -lt 16) { Fail 'Backoffice AGENT_KEY must be at least 16 characters.' }
+if ($Roles -contains 'Hrms') {
+    Require $S.Hrms.Settings 'Hrms' @('DB_CONNECTION', 'PORTAL_API_KEY', 'PORTAL_API_SECRET', 'AGENT_KEY')
+    if ($S.Hrms.Settings.AGENT_KEY.Length -lt 16) { Fail 'HRMS AGENT_KEY must be at least 16 characters.' }
 }
 if ($Roles -contains 'Portal') {
-    Require $S.Portal.Settings 'Portal' @('RECRUITMENT_API_URL', 'CAREERS_PORTAL_API_KEY', 'CAREERS_PORTAL_API_SECRET', 'SESSION_SECRET')
+    Require $S.Portal.Settings 'Portal' @('HRMS_API_URL', 'CAREERS_PORTAL_API_KEY', 'CAREERS_PORTAL_API_SECRET', 'SESSION_SECRET')
     if ($S.Portal.Settings.SESSION_SECRET.Length -lt 32) { Fail 'Portal SESSION_SECRET must be at least 32 characters.' }
 }
-if ($Roles -contains 'Backoffice' -and $Roles -contains 'Portal') {
-    if ($S.Backoffice.Settings.PORTAL_API_KEY -ne $S.Portal.Settings.CAREERS_PORTAL_API_KEY -or $S.Backoffice.Settings.PORTAL_API_SECRET -ne $S.Portal.Settings.CAREERS_PORTAL_API_SECRET) {
-        Fail 'the portal''s CAREERS_PORTAL_API_KEY and CAREERS_PORTAL_API_SECRET differ from the backoffice''s PORTAL_API_KEY and PORTAL_API_SECRET.'
+if ($Roles -contains 'Hrms' -and $Roles -contains 'Portal') {
+    if ($S.Hrms.Settings.PORTAL_API_KEY -ne $S.Portal.Settings.CAREERS_PORTAL_API_KEY -or $S.Hrms.Settings.PORTAL_API_SECRET -ne $S.Portal.Settings.CAREERS_PORTAL_API_SECRET) {
+        Fail 'the portal''s CAREERS_PORTAL_API_KEY and CAREERS_PORTAL_API_SECRET differ from the HRMS PORTAL_API_KEY and PORTAL_API_SECRET.'
     }
 }
 
@@ -236,14 +236,14 @@ function Probe([string]$name, [string]$url, [int[]]$ok, [int]$wait) {
 
 New-Item -ItemType Directory -Force -Path $root | Out-Null
 
-# ---------------------------------------------------------------- backoffice (staff app, API, assistant)
+# ---------------------------------------------------------------- HRMS (staff app, API, assistant)
 
-if ($Roles -contains 'Backoffice') {
-    $c = $S.Backoffice; $dir = Join-Path $root 'backoffice'; $pool = Value $c 'AppPool' 'MoetRecruitmentBackoffice'
-    $site = Value $c 'SiteName' 'MoET Recruitment Backoffice'
+if ($Roles -contains 'Hrms') {
+    $c = $S.Hrms; $dir = Join-Path $root 'hrms'; $pool = Value $c 'AppPool' 'MoetHrms'
+    $site = Value $c 'SiteName' 'MoET HRMS'
     $browsers = Join-Path $root 'ms-playwright'
-    Say "Backoffice -> $dir"
-    Copy-App (Join-Path $PackageRoot 'backoffice') $dir
+    Say "HRMS -> $dir"
+    Copy-App (Join-Path $PackageRoot 'hrms') $dir
     if (Test-Path (Join-Path $PackageRoot 'ms-playwright')) {
         Say "Chromium for PDF letters -> $browsers"
         & $robocopy (Join-Path $PackageRoot 'ms-playwright') $browsers /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
@@ -259,7 +259,7 @@ if ($Roles -contains 'Backoffice') {
     # Staff sign-in needs HTTPS unless the site has no HTTPS binding (a test without a certificate).
     if ([int](Value $c 'HttpsPort' 0) -le 0) { $env['COOKIE_SECURE'] = '0' }
     foreach ($k in $c.Settings.Keys) { $env[$k] = $c.Settings[$k] }
-    Write-WebConfig (Join-Path $dir 'web.config') 'Moet.Recruitment.Api.dll' $env
+    Write-WebConfig (Join-Path $dir 'web.config') 'Moet.Hrms.Api.dll' $env
     Set-Pool $pool (Value $c 'Identity' @{})
     Protect-Folder $dir $pool
     if (Test-Path $browsers) { Grant $browsers "IIS AppPool\$pool" 'RX' }

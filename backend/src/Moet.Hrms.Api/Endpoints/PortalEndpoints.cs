@@ -1,0 +1,148 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using Moet.Hrms.Application.Backoffice;
+using Moet.Hrms.Application.Portal;
+using Moet.Hrms.Domain.Common;
+using Moet.Hrms.Infrastructure;
+
+namespace Moet.Hrms.Api.Endpoints;
+
+/// <summary>
+/// The API the career portal backend (in the DMZ) calls: /api/portal/{method}. Authenticated with the portal
+/// service key ("Authorization: token KEY:SECRET"); browsers never reach it. The portal backend has already
+/// signed the applicant in and passes their email and session version. Replies are {"message": ...}; failures are
+/// {"message": {"error": {"code", "params"}}} with a 4xx status, so the portal shows them in the visitor's language.
+/// </summary>
+public static class PortalEndpoints
+{
+    sealed record Input(Dictionary<string, string> Values, IFormFile? File)
+    {
+        public string? this[string k] => Values.TryGetValue(k, out var v) ? v : null;
+        public int Int(string k, int d = -1) => int.TryParse(this[k], out var n) ? n : d;
+    }
+
+    public static void Map(WebApplication app)
+    {
+        app.MapMethods("/api/portal/{method}", ["GET", "POST"], Handle).DisableAntiforgery();
+    }
+
+    static async Task<IResult> Handle(string method, HttpContext ctx, IConfiguration cfg, IServiceProvider sp, CancellationToken ct)
+    {
+        if (!Authorised(ctx, cfg)) return Results.Json(Envelope.Error("forbidden", null), Json.Options, statusCode: 403);
+        var input = await ReadAsync(ctx, ct);
+        if (input["email"] is { Length: > 0 } email) ctx.Items[HttpCurrentActor.ApplicantHeader] = email;
+        var site = sp.GetRequiredService<PortalSiteService>();
+        var acc = sp.GetRequiredService<PortalAccountService>();
+        var apps = sp.GetRequiredService<PortalApplicationService>();
+        var asm = sp.GetRequiredService<PortalAssessmentService>();
+        var pdp = sp.GetRequiredService<DataProtectionService>();
+        var post = HttpMethods.IsPost(ctx.Request.Method);
+        try
+        {
+            if (method == "logo")
+            {
+                var (content, type, name) = await site.LogoAsync(input["dark"] == "1", ct);
+                return Results.File(content, type, name);
+            }
+            object result = (method, post) switch
+            {
+                ("config", false) => await site.ConfigAsync(input["lang"], ct),
+                ("jobs", false) => await site.JobsAsync(input["lang"], input["q"], input["department"], input["location"], input.Int("page", 1), ct),
+                ("job", false) => await site.JobAsync(input["lang"], input["name"], ct),
+                ("signup", true) => await acc.SignUpAsync(input["full_name"], input["email"], input["password"], input["lang"], input["next_path"], ct),
+                ("authenticate", true) => await acc.AuthenticateAsync(input["email"], input["password"], ct),
+                ("resend_verification", true) => await acc.ResendVerificationAsync(input["email"], input["lang"], input["next_path"], ct),
+                ("verify_email", true) => await acc.VerifyEmailAsync(input["token"], ct),
+                ("request_password_reset", true) => await acc.RequestPasswordResetAsync(input["email"], input["lang"], ct),
+                ("reset_password", true) => await acc.ResetPasswordAsync(input["token"], input["password"], ct),
+                ("applications", false) => await apps.ListAsync(input["email"], input["epoch"], input["lang"], ct),
+                ("application", false) => await apps.DetailAsync(input["email"], input["epoch"], input["name"], input["lang"], ct),
+                ("add_correction", true) => await apps.AddCorrectionAsync(input["email"], input["epoch"], input["name"], input["note"], ct),
+                ("apply", true) => await apps.ApplyAsync(new ApplyInput(input["email"], input["epoch"], input["job"], input["phone"],
+                    input["country"], input["cover_note"], input["declaration"], input["lang"], input["screening"],
+                    input.File?.FileName, await BytesAsync(input.File, ct), input["talent_pool"], input["nationality"], input["reuse_cv"], input["cv_id"]), ct),
+                ("my_cvs", false) => await sp.GetRequiredService<CandidateCvService>().ListAsync((await acc.RequireAsync(input["email"], input["epoch"], ct)).Id, ct),
+                ("upload_cv", true) => new { id = await sp.GetRequiredService<CandidateCvService>().AddAsync((await acc.RequireAsync(input["email"], input["epoch"], ct)).Id,
+                    input.File?.FileName, await BytesAsync(input.File, ct), null, input["default"] == "1", ct) },
+                ("delete_cv", true) => await sp.GetRequiredService<CandidateCvService>().DeleteAsync((await acc.RequireAsync(input["email"], input["epoch"], ct)).Id, input.Int("id"), ct),
+                ("default_cv", true) => await sp.GetRequiredService<CandidateCvService>().SetDefaultAsync((await acc.RequireAsync(input["email"], input["epoch"], ct)).Id, input.Int("id"), ct),
+                ("cv_prefill", false) => await sp.GetRequiredService<CandidateCvService>().PrefillAsync((await acc.RequireAsync(input["email"], input["epoch"], ct)).Id, input.Int("id"), ct),
+                ("my_data", false) => await pdp.ExportAsync(await acc.RequireAsync(input["email"], input["epoch"], ct), ct),
+                ("data_requests", false) => await pdp.MyRequestsAsync(await acc.RequireAsync(input["email"], input["epoch"], ct), ct),
+                ("job_alerts", false) => await sp.GetRequiredService<JobAlertService>().ListAsync(await acc.RequireAsync(input["email"], input["epoch"], ct), input["lang"], ct),
+                ("save_job_alert", true) => await sp.GetRequiredService<JobAlertService>().SaveAsync(await acc.RequireAsync(input["email"], input["epoch"], ct),
+                    input["keywords"], input.Int("department") is > 0 and var dep ? dep : null, input.Int("location") is > 0 and var loc ? loc : null, input["lang"], ct),
+                ("delete_job_alert", true) => await sp.GetRequiredService<JobAlertService>().DeleteAsync(await acc.RequireAsync(input["email"], input["epoch"], ct), input.Int("id"), ct),
+                ("talent_pool", true) => await pdp.SetTalentPoolAsync(await acc.RequireAsync(input["email"], input["epoch"], ct), input["join"] == "1", "account", ct),
+                ("respond_offer", true) => await apps.RespondOfferAsync(input["email"], input["epoch"], input["name"], input["accept"] == "1", input["reason"], ct, input["signature"]),
+                ("withdraw_application", true) => await apps.WithdrawAsync(input["email"], input["epoch"], input["name"], input["reason"], ct),
+                ("reschedule_interview", true) => await apps.RescheduleAsync(input["email"], input["epoch"], input["name"], input["reason"], ct),
+                ("book_interview", true) => await sp.GetRequiredService<BookingService>().PickAsync(await acc.RequireAsync(input["email"], input["epoch"], ct),
+                    input["name"], input.Int("slot"), ct),
+                ("request_deletion", true) => await pdp.RequestDeletionAsync(await acc.RequireAsync(input["email"], input["epoch"], ct), input["reason"], ct),
+                ("assessments", false) => await asm.ListAsync(input["email"], input["epoch"], input["lang"], ct),
+                ("assessment", false) => await asm.DetailAsync(input["email"], input["epoch"], input["name"], input["lang"], ct),
+                ("start_assessment", true) => await asm.StartAsync(input["email"], input["epoch"], input["name"], input["lang"], ct),
+                ("assessment_state", false) => await asm.StateAsync(input["email"], input["epoch"], input["name"], input["lang"], ct),
+                ("save_assessment_answer", true) => await asm.SaveAnswerAsync(input["email"], input["epoch"], input["name"], input["key"],
+                    input["answer"], input.Int("section"), ct),
+                ("upload_assessment_file", true) => await asm.UploadAsync(input["email"], input["epoch"], input["name"], input["key"],
+                    input.Int("section"), input.File?.FileName, await BytesAsync(input.File, ct), ct),
+                ("next_assessment_section", true) => await asm.NextSectionAsync(input["email"], input["epoch"], input["name"], input["lang"],
+                    input.Int("section"), ct),
+                ("assessment_event", true) => await asm.EventAsync(input["email"], input["epoch"], input["name"], input["kind"], ct),
+                _ => throw DomainException.NotFound("not_found"),
+            };
+            return Results.Json(new { message = result }, Json.Options);
+        }
+        catch (DomainException e)
+        {
+            return Results.Json(Envelope.Error(e.Code, e.Params), Json.Options, statusCode: e.Status);
+        }
+    }
+
+    static bool Authorised(HttpContext ctx, IConfiguration cfg)
+    {
+        var key = cfg["PORTAL_API_KEY"] ?? "";
+        var secret = cfg["PORTAL_API_SECRET"] ?? "";
+        if (key.Length < 8 || secret.Length < 16) return false;
+        var header = ctx.Request.Headers.Authorization.ToString();
+        var expected = $"token {key}:{secret}";
+        return CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(header), Encoding.UTF8.GetBytes(expected));
+    }
+
+    static async Task<Input> ReadAsync(HttpContext ctx, CancellationToken ct)
+    {
+        var values = new Dictionary<string, string>();
+        foreach (var (k, v) in ctx.Request.Query) values[k] = v.ToString();
+        IFormFile? file = null;
+        if (ctx.Request.HasFormContentType)
+        {
+            var form = await ctx.Request.ReadFormAsync(ct);
+            foreach (var (k, v) in form) values[k] = v.ToString();
+            file = form.Files.GetFile("cv") ?? form.Files.GetFile("file");
+        }
+        else if (ctx.Request.ContentType?.StartsWith("application/json", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            using var doc = await JsonDocument.ParseAsync(ctx.Request.Body, cancellationToken: ct);
+            if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                foreach (var p in doc.RootElement.EnumerateObject())
+                    values[p.Name] = p.Value.ValueKind switch
+                    {
+                        JsonValueKind.String => p.Value.GetString() ?? "",
+                        JsonValueKind.Null => "",
+                        _ => p.Value.GetRawText(),
+                    };
+        }
+        return new Input(values, file);
+    }
+
+    static async Task<byte[]?> BytesAsync(IFormFile? f, CancellationToken ct)
+    {
+        if (f == null) return null;
+        using var ms = new MemoryStream();
+        await f.CopyToAsync(ms, ct);
+        return ms.ToArray();
+    }
+}

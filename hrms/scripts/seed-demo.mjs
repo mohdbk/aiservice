@@ -1,0 +1,386 @@
+// Fills an empty recruitment database with demo content through the public APIs (nothing is written directly).
+// Usage: API=http://localhost:5080 ADMIN_EMAIL=... ADMIN_PASSWORD=... PORTAL_KEY=key:secret node hrms/scripts/seed-demo.mjs
+const API = (process.env.API || "http://localhost:5080").replace(/\/$/, "");
+const { ADMIN_EMAIL, ADMIN_PASSWORD, PORTAL_KEY } = process.env;
+let cookie = "";
+
+async function call(method, path, body, { portal = false, form } = {}) {
+  const headers = { Accept: "application/json" };
+  if (portal) headers.Authorization = `token ${PORTAL_KEY}`;
+  else {
+    if (cookie) headers.Cookie = cookie;
+    if (method !== "GET") headers["X-Backoffice"] = "1";
+  }
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const res = await fetch(API + path, { method, headers, body: form || (body !== undefined ? JSON.stringify(body) : undefined) });
+  const setCookie = res.headers.get("set-cookie");
+  if (setCookie) cookie = setCookie.split(";")[0];
+  const text = await res.text();
+  if (!res.ok) throw new Error(`${method} ${path} -> ${res.status} ${text.slice(0, 300)}`);
+  return text ? JSON.parse(text) : null;
+}
+const bo = (m, p, b) => call(m, `/api/backoffice${p}`, b);
+const portal = (m, p, b, form) => call(m, `/api/portal/${p}`, b, { portal: true, form });
+
+const today = new Date();
+const day = (n) => new Date(today.getTime() + n * 86400000).toISOString().slice(0, 10);
+
+async function main() {
+  await bo("POST", "/sign-in", { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+  const existing = await bo("GET", "/jobs?size=10");
+  if (existing.total > 0) {
+    console.log("Demo content already present; adding anything missing.");
+    await topUp();
+    return;
+  }
+
+  // Staff
+  for (const s of [
+    { email: "fatima.alhashmi@moet.test", full_name: "فاطمة الهاشمي", role: "RecruitmentAdmin" },
+    { email: "khalid.almansoori@moet.test", full_name: "خالد المنصوري", role: "Recruiter" },
+    { email: "sara.alketbi@moet.test", full_name: "سارة الكتبي", role: "Recruiter" },
+  ]) await bo("POST", "/staff", { ...s, is_enabled: true, password: "Demo-Password-2026" });
+  const staff = (await bo("GET", "/lookups")).staff;
+
+  // Departments and interview rounds
+  const depts = [];
+  for (const [ar, en] of [["إدارة التحول الرقمي", "Digital Transformation"], ["إدارة السياسات الاقتصادية", "Economic Policy"], ["إدارة الموارد البشرية", "Human Resources"], ["إدارة السياحة", "Tourism"]])
+    depts.push((await bo("POST", "/departments", { name: ar, name_en: en, is_active: true, description: null, skills: null })).id);
+  const rounds = [];
+  for (const [name, name_en, skills] of [
+    ["مقابلة فنية", "Technical Interview", ["المعرفة التقنية", "حل المشكلات", "التواصل"]],
+    ["مقابلة مع لجنة الموارد البشرية", "HR Panel Interview", ["الملاءمة الثقافية", "الدافعية", "التواصل"]],
+  ]) rounds.push((await bo("POST", "/rounds", { name, name_en, description: "", is_active: true, skills })).id);
+
+  // Screening questions
+  const sqLicence = (await bo("POST", "/screening-questions", { text: "هل تحمل رخصة قيادة إماراتية سارية؟", text_en: "Do you hold a valid UAE driving licence?", english_approved: true, answer_type: "YesNo", category: "عام", is_active: true, options: [] })).id;
+  const sqYears = (await bo("POST", "/screening-questions", { text: "كم سنة من الخبرة لديك في تحليل البيانات؟", text_en: "How many years of data analysis experience do you have?", english_approved: true, answer_type: "Number", category: "خبرة", is_active: true, options: [] })).id;
+  const sqDegree = (await bo("POST", "/screening-questions", {
+    text: "ما أعلى مؤهل علمي حصلت عليه؟", text_en: "What is your highest qualification?", english_approved: true, answer_type: "SingleChoice", category: "تعليم", is_active: true,
+    options: [{ text: "دبلوم", text_en: "Diploma" }, { text: "بكالوريوس", text_en: "Bachelor's Degree" }, { text: "ماجستير", text_en: "Master's Degree" }, { text: "دكتوراه", text_en: "Doctorate" }],
+  })).id;
+  const sqStart = (await bo("POST", "/screening-questions", { text: "متى يمكنك المباشرة؟", text_en: "", english_approved: false, answer_type: "Date", category: "عام", is_active: true, options: [] })).id;
+
+  // Question bank and a two-section test
+  const q = async (body) => (await bo("POST", "/questions", { category: "تحليل البيانات", job_family: "البيانات", difficulty: "Medium", points: 1, tolerance: 0, rubric: "", max_words: 0, is_active: true, english_approved: true, accepted_answers: [], ...body })).id;
+  const qs = [];
+  qs.push(await q({ question_type: "SingleChoice", text: "<p>أي من الدوال التالية يحسب المتوسط في Excel؟</p>", text_en: "<p>Which function calculates the mean in Excel?</p>",
+    options: [{ text: "AVERAGE", text_en: "AVERAGE", correct: true }, { text: "SUM", text_en: "SUM", correct: false }, { text: "COUNT", text_en: "COUNT", correct: false }] }));
+  qs.push(await q({ question_type: "MultipleChoice", text: "<p>أي مما يلي يُعد من مؤشرات النزعة المركزية؟</p>", text_en: "<p>Which of these are measures of central tendency?</p>",
+    options: [{ text: "الوسيط", text_en: "Median", correct: true }, { text: "المنوال", text_en: "Mode", correct: true }, { text: "المدى", text_en: "Range", correct: false }] }));
+  qs.push(await q({ question_type: "TrueFalse", text: "<p>الارتباط القوي يعني دائمًا وجود علاقة سببية.</p>", text_en: "<p>A strong correlation always means causation.</p>",
+    options: [{ text: "صح", text_en: "True", correct: false }, { text: "خطأ", text_en: "False", correct: true }] }));
+  qs.push(await q({ question_type: "Number", text: "<p>إذا ارتفع الناتج المحلي من 400 إلى 420 مليار درهم، فما نسبة النمو المئوية؟</p>", text_en: "<p>If GDP grew from 400 to 420 billion dirhams, what is the growth rate in percent?</p>", accepted_answers: ["5"], tolerance: 0.1, difficulty: "Easy" }));
+  qs.push(await q({ question_type: "ShortAnswer", text: "<p>ما اسم الوزارة الاتحادية المسؤولة عن السياحة في الدولة؟</p>", text_en: "<p>Which federal ministry is responsible for tourism in the UAE?</p>", accepted_answers: ["وزارة الاقتصاد والسياحة", "Ministry of Economy and Tourism"], category: "عام" }));
+  qs.push(await q({ question_type: "Essay", text: "<p>صف كيف تقيس أثر مبادرة لدعم الشركات الصغيرة والمتوسطة.</p>", text_en: "<p>Describe how you would measure the impact of an SME support initiative.</p>", points: 5, max_words: 300, rubric: "Clear indicators (2), data sources (1), baseline and comparison (1), limitations (1).", difficulty: "Hard" }));
+  const test = (await bo("POST", "/assessments", {
+    title: "اختبار تحليل البيانات", title_en: "Data Analysis Test", instructions: "<p>يتكون الاختبار من قسمين مؤقتين. لا يمكن الرجوع إلى قسم بعد الانتقال منه.</p>",
+    instructions_en: "<p>The test has two timed sections. You cannot go back to a section after you move on.</p>", english_approved: true,
+    assessment_type: "KnowledgeTest", status: "Published", pass_mark: 60, max_attempts: 1, score_policy: "Highest", shuffle_questions: true, shuffle_options: true,
+    show_score_to_candidate: true, default_deadline_days: 7,
+    sections: [
+      { title: "المفاهيم الأساسية", title_en: "Core Concepts", instructions: "", instructions_en: "", minutes: 15, pass_mark: 50,
+        items: [{ question_id: qs[0], draw_category: "", draw_difficulty: "", draw_job_family: "", draw_count: 0, points_override: null },
+                { question_id: null, draw_category: "تحليل البيانات", draw_difficulty: "", draw_job_family: "", draw_count: 3, points_override: null }] },
+      { title: "سؤال مقالي", title_en: "Written Answer", instructions: "اكتب إجابة موجزة.", instructions_en: "Write a short answer.", minutes: 20, pass_mark: 0,
+        items: [{ question_id: qs[5], draw_category: "", draw_difficulty: "", draw_job_family: "", draw_count: 0, points_override: null }] },
+    ],
+  })).id;
+
+  // Jobs
+  const job = async (body) => bo("POST", "/jobs", {
+    department_id: depts[0], location: "دبي", employment_type: "FullTime", status: "Open", is_published: true, posted_on: day(-10), closes_on: day(30),
+    salary_min: null, salary_max: null, salary_currency: "AED", salary_period: "Month", show_salary: false, screening: [], stages: [], row_version: null, ...body,
+  });
+  const analyst = await job({
+    title: "محلل بيانات أول", description: "<p>نبحث عن محلل بيانات لدعم صناعة القرار الاقتصادي.</p><h3>المهام</h3><ul><li>تحليل مؤشرات الاقتصاد الوطني</li><li>إعداد لوحات المعلومات للإدارة العليا</li></ul><h3>المتطلبات</h3><ul><li>بكالوريوس في الإحصاء أو علوم البيانات (إلزامي)</li><li>خبرة لا تقل عن 3 سنوات في التحليل (إلزامي)</li><li>إتقان SQL و Power BI</li></ul>",
+    translations: [{ lang: "en", title: "Senior Data Analyst", description: "<p>We are looking for a data analyst to support economic decision making.</p><h3>Duties</h3><ul><li>Analyse national economic indicators</li><li>Build dashboards for senior management</li></ul><h3>Requirements</h3><ul><li>Bachelor's in statistics or data science (required)</li><li>At least 3 years of analysis experience (required)</li><li>Strong SQL and Power BI</li></ul>", approved: true }],
+    salary_min: 25000, salary_max: 35000, show_salary: true,
+    screening: [{ question_id: sqYears, required: true, rule: "AtLeast", expected: "3" }, { question_id: sqDegree, required: true, rule: null, expected: null }, { question_id: sqStart, required: false, rule: null, expected: null }],
+    stages: [{ assessment_id: test, send_when: "OnApply", deadline_days: 7 }],
+  });
+  await job({ title: "أخصائي سياسات اقتصادية", description: "<p>المساهمة في إعداد السياسات الاقتصادية وتقييم أثرها.</p>", department_id: depts[1], location: "أبوظبي",
+    translations: [{ lang: "en", title: "Economic Policy Specialist", description: "<p>Help prepare economic policies and assess their impact.</p>", approved: false }],
+    screening: [{ question_id: sqLicence, required: true, rule: "MustBe", expected: "Yes" }] });
+  await job({ title: "منسق فعاليات سياحية", description: "<p>تنسيق الفعاليات والمعارض السياحية داخل الدولة وخارجها.</p>", department_id: depts[3], employment_type: "Contract", translations: [] });
+  await job({ title: "مهندس برمجيات", description: "<p>تطوير الخدمات الرقمية للوزارة.</p>", status: "Draft", is_published: false, translations: [] });
+  await job({ title: "مستشار موارد بشرية", description: "<p>تقديم المشورة في سياسات الموارد البشرية.</p>", department_id: depts[2], status: "Closed", posted_on: day(-60), closes_on: day(-5), translations: [] });
+
+  // HR's approved screening criteria for the analyst role (CVs are scored only against approved criteria).
+  await bo("PUT", `/jobs/${analyst.id}/criteria`, {
+    approve: true,
+    criteria: ANALYST_REQUIREMENTS,
+  });
+
+  // Applicants through the portal API
+  const jobCode = analyst.code;
+  const detail = await portal("GET", `job?lang=ar&name=${jobCode}`);
+  const degreeOption = detail.message.screening.find((x) => x.type === "Single Choice").options;
+  const pdf = new Blob([Buffer.from("%PDF-1.4\n% demo CV\n1 0 obj << >> endobj\ntrailer << >>\n%%EOF\n")], { type: "application/pdf" });
+  const people = [
+    ["ليلى أحمد", "layla.ahmed@example.test", "6", 2], ["محمد علي", "mohammed.ali@example.test", "2", 1], ["Aisha Khan", "aisha.khan@example.test", "4", 2],
+    ["عمر حسن", "omar.hassan@example.test", "8", 3], ["نورة سالم", "noura.salem@example.test", "1", 1], ["Daniel Smith", "daniel.smith@example.test", "5", 2],
+  ];
+  const epochs = {};
+  for (const [name, email, years, deg] of people) {
+    const s = await portal("POST", "signup", { full_name: name, email, password: "Demo-Applicant-2026", lang: /[a-z]/i.test(name) ? "en" : "ar" });
+    const form = new FormData();
+    for (const [k, v] of Object.entries({ email, epoch: String(s.message.epoch ?? 0), job: jobCode, phone: "+971501234567", country: "United Arab Emirates", declaration: "1", lang: "ar",
+      cover_note: "أتطلع إلى الانضمام إلى فريق الوزارة.", screening: JSON.stringify({ sq1: years, sq2: degreeOption[deg].value }) })) form.append(k, v);
+    form.append("cv", pdf, "cv.pdf");
+    epochs[email] = String(s.message.epoch ?? 0);
+    await portal("POST", "apply", undefined, form);
+  }
+
+  // Pipeline activity
+  const apps = (await bo("GET", "/applicants?size=10&sort=name&dir=asc")).items;
+  await bo("POST", `/applicants/${apps[0].id}/status`, { status: "Replied" });
+  await bo("POST", `/applicants/${apps[1].id}/status`, { status: "Hold" });
+  await bo("POST", `/applicants/${apps[0].id}/notes`, { text: "خبرة قوية في Power BI. يُقترح دعوته لمقابلة فنية." });
+  await bo("POST", "/interviews", { application_id: apps[0].id, round_id: rounds[0], date: day(2), from: "10:00", to: "11:00", location: "مقر الوزارة، دبي", notes: "", panelists: staff.slice(0, 2).map((x) => x.id) });
+  await bo("POST", "/interviews", { application_id: apps[2].id, round_id: rounds[1], date: day(3), from: "13:00", to: "13:45", location: "Microsoft Teams", notes: "", panelists: staff.slice(1, 3).map((x) => x.id) });
+  const offer = await bo("POST", "/offers", { application_id: apps[3].id, position_title: "محلل بيانات أول", offer_date: day(0), start_date: day(30), monthly_salary: 30000, currency: "AED", terms: "عقد دائم مع فترة تجربة لمدة ستة أشهر." });
+  await bo("POST", `/offers/${offer.id}/status`, { status: "Sent" });
+  // Big Five personality questionnaire (public-domain IPIP items): add, publish, and have two applicants complete it.
+  const big5 = await bo("POST", "/assessment-templates/ipip-big-five-50", {});
+  const q5 = await bo("GET", `/assessments/${big5.id}`);
+  await bo("PUT", `/assessments/${big5.id}`, { ...q5, status: "Published" });
+  for (const [k, app] of [apps[0], apps[2]].entries()) {
+    await bo("POST", `/applicants/${app.id}/invite`, { assessment_id: big5.id, deadline_days: 7 });
+    const inv = (await bo("GET", `/applicants/${app.id}`)).invitations.find((x) => x.assessment_id === big5.id);
+    const who = { email: app.email, epoch: epochs[app.email], name: inv.code };
+    const state = (await portal("POST", "start_assessment", { ...who, lang: "ar" })).message;
+    for (const [i, q] of state.section.questions.entries()) {
+      const answer = String(((i * (k + 3)) % 5) + 1);
+      await portal("POST", "save_assessment_answer", { ...who, key: q.key, section: state.section_index, answer: JSON.stringify(answer) });
+    }
+    await portal("POST", "next_assessment_section", { ...who, section: state.section_index, lang: "ar" });
+    const done = (await bo("GET", `/applicants/${app.id}`)).invitations.find((x) => x.assessment_id === big5.id);
+    if (done.result !== "Completed" || !done.attempts[0].trait_profile) throw new Error(`Big Five not scored for ${app.email}: ${JSON.stringify(done)}`);
+  }
+
+  console.log(`Demo content created: ${apps.length} applicants for ${jobCode}, two Big Five profiles.`);
+  await topUp();
+}
+
+/** A portal session for a demo applicant (all share one password). */
+async function epochOf(email) {
+  const s = await portal("POST", "authenticate", { email, password: "Demo-Applicant-2026" });
+  return String(s.message.epoch ?? 0);
+}
+
+/** Takes an assessment from start to finish through the portal, answering each question with answer(question, i). */
+async function takeAssessment(email, code, answer) {
+  const who = { email, epoch: await epochOf(email), name: code };
+  let state = (await portal("POST", "start_assessment", { ...who, lang: "ar" })).message;
+  for (let guard = 0; guard < 10 && state && !state.finished && state.section; guard++) {
+    for (const [i, q] of state.section.questions.entries())
+      await portal("POST", "save_assessment_answer", { ...who, key: q.key, section: state.section_index, answer: JSON.stringify(answer(q, i)) });
+    state = (await portal("POST", "next_assessment_section", { ...who, section: state.section_index, lang: "ar" })).message;
+  }
+}
+
+/**
+ * Demo content added after the first version, so an existing demo gets it too. Each part checks first, so running it
+ * again changes nothing: a marked knowledge test (one pass, one not), interview feedback, a 16-type profile,
+ * a workplace Big Five profile and an accepted offer.
+ */
+
+// ---------------- Word CVs (a minimal .docx, written without libraries) ----------------
+const CRC = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+const crc32 = (buf) => { let c = 0xffffffff; for (const b of buf) c = CRC[(c ^ b) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+function zip(files) {
+  const parts = [], central = [];
+  let offset = 0;
+  for (const [name, text] of files) {
+    const data = Buffer.from(text, "utf8"), fname = Buffer.from(name, "utf8"), crc = crc32(data);
+    const head = Buffer.alloc(30);
+    head.writeUInt32LE(0x04034b50, 0); head.writeUInt16LE(20, 4); head.writeUInt16LE(0x0800, 6); head.writeUInt16LE(0, 8);
+    head.writeUInt32LE(crc, 14); head.writeUInt32LE(data.length, 18); head.writeUInt32LE(data.length, 22); head.writeUInt16LE(fname.length, 26);
+    parts.push(head, fname, data);
+    const cen = Buffer.alloc(46);
+    cen.writeUInt32LE(0x02014b50, 0); cen.writeUInt16LE(20, 4); cen.writeUInt16LE(20, 6); cen.writeUInt16LE(0x0800, 8);
+    cen.writeUInt32LE(crc, 16); cen.writeUInt32LE(data.length, 20); cen.writeUInt32LE(data.length, 24); cen.writeUInt16LE(fname.length, 28); cen.writeUInt32LE(offset, 42);
+    central.push(cen, fname);
+    offset += head.length + fname.length + data.length;
+  }
+  const size = central.reduce((s, b) => s + b.length, 0);
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0); end.writeUInt16LE(files.length, 8); end.writeUInt16LE(files.length, 10); end.writeUInt32LE(size, 12); end.writeUInt32LE(offset, 16);
+  return Buffer.concat([...parts, ...central, end]);
+}
+const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+function docx(lines, rtl = true) {
+  const p = lines.map((l) => `<w:p>${rtl ? "<w:pPr><w:bidi/></w:pPr>" : ""}<w:r>${rtl ? "<w:rPr><w:rtl/></w:rPr>" : ""}<w:t xml:space="preserve">${esc(l)}</w:t></w:r></w:p>`).join("");
+  return zip([
+    ["[Content_Types].xml", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'],
+    ["_rels/.rels", '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>'],
+    ["word/document.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${p}</w:body></w:document>`],
+  ]);
+}
+
+// Applicants with real CVs (scored by the live model against the approved requirements): strong, partial and weak.
+const REAL_CVS = [
+  ["ريم الشامسي", "reem.alshamsi@example.test", "+971 50 482 9136", "7", 2, true, [
+    "ريم الشامسي", "محللة بيانات أولى",
+    "نبذة: محللة بيانات بخبرة في بناء المؤشرات الاقتصادية ولوحات المعلومات ودعم اتخاذ القرار في الجهات الحكومية.",
+    "الخبرة العملية",
+    "محللة بيانات أولى، مركز دبي للإحصاء، 2021-01 حتى الآن",
+    "بناء لوحات معلومات Power BI للمؤشرات الاقتصادية الشهرية",
+    "كتابة استعلامات SQL متقدمة على قواعد بيانات SQL Server",
+    "محللة بيانات، دائرة الاقتصاد والسياحة، 2018-03 إلى 2020-12",
+    "تحليل بيانات الرخص التجارية باستخدام SQL و Python",
+    "التعليم", "بكالوريوس الإحصاء، جامعة الإمارات العربية المتحدة، 2017",
+    "اللغات", "العربية (لغة أم)، الإنجليزية (بطلاقة)",
+  ]],
+  ["خالد المري", "khalid.almarri@example.test", "+971 55 318 2207", "2", 1, true, [
+    "خالد المري", "محلل تقارير", "الخبرة العملية",
+    "محلل تقارير، شركة اتصالات، 2024-06 حتى الآن",
+    "إعداد تقارير المبيعات الشهرية باستخدام Excel و SQL",
+    "متابعة مؤشرات أداء فرق المبيعات وإعداد عروض تقديمية للإدارة",
+    "منسق خدمة عملاء، شركة اتصالات، 2023-07 إلى 2024-05",
+    "الرد على استفسارات العملاء وتسجيل الطلبات في نظام إدارة العملاء",
+    "الدورات: مقدمة في تحليل البيانات (عبر الإنترنت)، 2024",
+    "التعليم", "بكالوريوس نظم المعلومات، جامعة زايد، 2023",
+    "اللغات", "العربية، الإنجليزية (جيد)",
+  ]],
+  ["Peter Novak", "peter.novak@example.test", "+971 52 640 1185", "0", 0, false, [
+    "Peter Novak", "Restaurant Supervisor", "Experience",
+    "Restaurant Supervisor, Marina Restaurant, 2016 - present",
+    "Managed a team of 12 and daily stock counts in Excel",
+    "Handled customer complaints and weekly staff rotas for the restaurant",
+    "Waiter, Beach Hotel, 2014 - 2016",
+    "Served guests and supported events and banquets in the hotel ballroom",
+    "Skills: customer service, team leadership, Microsoft Excel",
+    "Education", "High school diploma, 2014",
+  ]],
+];
+
+const ANALYST_REQUIREMENTS = [
+      { category: "Qualification", criterion: "بكالوريوس في الإحصاء أو علوم البيانات", must: true, high: false,
+        guide: "0: لا توجد شهادة جامعية\n4: بكالوريوس في تخصص غير ذي صلة\n7: بكالوريوس في تخصص قريب (رياضيات، اقتصاد)\n10: بكالوريوس أو أعلى في الإحصاء أو علوم البيانات" },
+      { category: "Experience", criterion: "تحليل البيانات", min_years: 3, must: true, high: true,
+        guide: "0: لا خبرة في التحليل\n4: أقل من سنتين أو مهام تحليل جانبية\n7: 3 سنوات في تحليل البيانات\n10: 5 سنوات أو أكثر مع لوحات معلومات ومؤشرات" },
+      { category: "Skill", criterion: "SQL و Power BI", must: false, high: true, guide: "" },
+      { category: "Experience", criterion: "المؤشرات الاقتصادية أو العمل الحكومي", must: false, high: false, guide: "" },
+      { category: "Language", criterion: "الإنجليزية", level: "Fluent", must: false, high: false, guide: "" },
+];
+
+async function topUp() {
+  const jobs = (await bo("GET", "/jobs?size=50")).items;
+  const analyst = jobs.find((j) => j.title === "محلل بيانات أول");
+  if (!analyst) return;
+  const apps = (await bo("GET", `/applicants?size=50&job=${analyst.id}&sort=name&dir=asc`)).items;
+  const byEmail = Object.fromEntries(apps.map((a) => [a.email, a]));
+  const added = [];
+
+  // 0. Screening requirements in the structured form (Essential and Desirable, types, years, score guides).
+  const reqs = await bo("GET", `/jobs/${analyst.id}/criteria`);
+  if (reqs.criteria.every((c) => !c.category || c.category === "Other")) {
+    await bo("PUT", `/jobs/${analyst.id}/criteria`, { approve: true, criteria: ANALYST_REQUIREMENTS });
+    await bo("POST", `/jobs/${analyst.id}/score-again`, {});
+    added.push("structured screening requirements");
+  } else console.log("skip requirements: already structured");
+
+  // 1. The Data Analysis Test: Aisha passes it, Daniel does not. Written answers are marked by HR.
+  const tests = (await bo("GET", "/assessments?size=50")).items;
+  const dat = tests.find((x) => x.title === "اختبار تحليل البيانات");
+  for (const [email, pass] of [["aisha.khan@example.test", true], ["daniel.smith@example.test", false]]) {
+    const app = byEmail[email];
+    if (!app || !dat) { console.log(`skip test for ${email}: ${!dat ? "no Data Analysis Test" : "no application"}`); continue; }
+    let inv = (await bo("GET", `/applicants/${app.id}`)).invitations.find((i) => i.assessment_id === dat.id);
+    if (!inv) {
+      await bo("POST", `/applicants/${app.id}/invite`, { assessment_id: dat.id, deadline_days: 7 });
+      inv = (await bo("GET", `/applicants/${app.id}`)).invitations.find((i) => i.assessment_id === dat.id);
+    }
+    if (inv.attempts.some((a) => a.status === "Marked")) { console.log(`skip test for ${email}: already marked`); continue; }
+    if (inv.attempts.length === 0) {
+      await takeAssessment(email, inv.code, (q) => (q.options?.length ? (q.type === "Multiple Choice" ? [q.options[0].key] : q.options[0].key)
+        : q.type === "Number" ? "5" : "Ministry of Economy and Tourism. I would set clear indicators, a baseline and compare against similar firms."));
+      inv = (await bo("GET", `/applicants/${app.id}`)).invitations.find((i) => i.assessment_id === dat.id);
+    }
+    const attempt = inv.attempts[inv.attempts.length - 1];
+    if (!attempt || attempt.status === "InProgress") { console.log(`skip test for ${email}: attempt ${attempt ? "still in progress" : "missing"} (invitation ${inv.status})`); continue; }
+    const detail = await bo("GET", `/attempts/${attempt.id}`);
+    const marks = detail.questions.map((q, i) => ({
+      question_id: q.id,
+      points: pass ? q.points : i === 0 ? q.points : q.question_type === "Essay" ? Math.round(q.points * 0.2) : 0,
+      comment: q.question_type === "Essay" ? (pass ? "Clear indicators, data sources and a baseline." : "Too brief; no indicators or baseline.") : "",
+    }));
+    await bo("POST", `/attempts/${attempt.id}/marks`, { marks });
+    added.push(`${pass ? "passed" : "not passed"} test for ${email}`);
+  }
+
+  // 2. Interview feedback from the administrator on the interviews they sit on.
+  const me = await bo("GET", "/me");
+  for (const row of (await bo("GET", "/interviews?scope=all&size=20")).items) {
+    const iv = await bo("GET", `/interviews/${row.id}`);
+    const onPanel = (iv.panel || iv.panelists || []).some((p) => (p.id ?? p.staff_id) === me.id);
+    const given = (iv.feedback || []).some((f) => (f.staff_id ?? f.by_id) === me.id || f.by === me.full_name);
+    if (!onPanel || given) { console.log(`skip feedback on interview ${row.id}: ${!onPanel ? "not on the panel" : "already given"}`); continue; }
+    const skills = iv.round?.skills || iv.skills || [];
+    await bo("POST", `/interviews/${row.id}/feedback`, {
+      recommendation: "Cleared", comments: "إجابات واضحة ومنظمة، وخبرة عملية جيدة في لوحات المعلومات.",
+      ratings: skills.map((sk, k) => ({ skill: typeof sk === "string" ? sk : sk.name, rating: [4, 5, 3][k % 3] })),
+    });
+    added.push(`interview feedback on ${row.id}`);
+  }
+
+  // 3. Personality questionnaires: a 16-type profile and a workplace Big Five profile.
+  for (const [key, people, pattern] of [
+    ["workplace-type-16-32", ["omar.hassan@example.test", "noura.salem@example.test"], (i, k) => String(k === 0 ? (i % 4 === 0 ? 2 : 5) : (i % 3 === 0 ? 4 : 2))],
+    ["workplace-big-five-25", ["layla.ahmed@example.test"], (i) => String([4, 5, 3, 4, 2][i % 5])],
+  ]) {
+    const title = (await bo("GET", "/assessment-templates")).find((x) => x.key === key)?.title;
+    let asm = (await bo("GET", "/assessments?size=50")).items.find((x) => x.title === title);
+    if (!asm) {
+      const created = await bo("POST", `/assessment-templates/${key}`, {});
+      const full = await bo("GET", `/assessments/${created.id}`);
+      await bo("PUT", `/assessments/${created.id}`, { ...full, status: "Published" });
+      asm = { id: created.id };
+    }
+    for (const [k, email] of people.entries()) {
+      const app = byEmail[email];
+      if (!app) continue;
+      let inv = (await bo("GET", `/applicants/${app.id}`)).invitations.find((i) => i.assessment_id === asm.id);
+      if (inv?.attempts.some((a) => a.trait_profile)) continue;
+      if (!inv) {
+        await bo("POST", `/applicants/${app.id}/invite`, { assessment_id: asm.id, deadline_days: 7 });
+        inv = (await bo("GET", `/applicants/${app.id}`)).invitations.find((i) => i.assessment_id === asm.id);
+      }
+      if (inv.attempts.length === 0) await takeAssessment(email, inv.code, (q, i) => pattern(i, k));
+      added.push(`${key} for ${email}`);
+    }
+  }
+
+  // 4. The candidate accepts the offer sent to them (from the careers portal).
+  for (const o of (await bo("GET", "/offers?size=20&status=Sent")).items) {
+    const app = apps.find((a) => a.id === o.applicant_id);
+    if (!app) continue;
+    await portal("POST", "respond_offer", { email: app.email, epoch: await epochOf(app.email), name: app.code, accept: "1", reason: "", signature: app.full_name });
+    added.push(`offer accepted by ${app.email}`);
+  }
+
+  // 5. Applicants with real Word CVs, so the CV scoring shows real results.
+  const detail = await portal("GET", `job?lang=ar&name=${analyst.code}`);
+  const degreeOption = detail.message.screening.find((x) => x.type === "Single Choice")?.options || [];
+  for (const [name, email, phone, years, deg, rtl, lines] of REAL_CVS) {
+    if (byEmail[email]) { console.log(`skip CV applicant ${email}: already applied`); continue; }
+    let epoch = "0";
+    try { epoch = String((await portal("POST", "signup", { full_name: name, email, password: "Demo-Applicant-2026", lang: rtl ? "ar" : "en" })).message.epoch ?? 0); }
+    catch { epoch = await epochOf(email); }
+    const form = new FormData();
+    for (const [k, v] of Object.entries({ email, epoch, job: analyst.code, phone, country: "United Arab Emirates", declaration: "1", lang: "ar",
+      screening: JSON.stringify({ sq1: years, sq2: degreeOption[deg]?.value ?? "" }) })) form.append(k, v);
+    form.append("cv", new Blob([docx(lines, rtl)], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }), `cv-${email.split("@")[0]}.docx`);
+    try { await portal("POST", "apply", undefined, form); added.push(`CV applicant ${email}`); }
+    catch (e) { console.log(`skip CV applicant ${email}: ${e.message.slice(0, 160)}`); }
+  }
+
+  console.log(added.length ? `Added: ${added.join("; ")}.` : "Nothing missing.");
+}
+
+main().catch((e) => {
+  console.error(e.message);
+  process.exit(1);
+});

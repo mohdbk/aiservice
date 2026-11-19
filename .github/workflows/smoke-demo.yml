@@ -10,7 +10,7 @@ jobs:
   smoke:
     runs-on: ubuntu-24.04
     env:
-      BASE_URL: https://moet-recruitment-backoffice.up.railway.app
+      BASE_URL: https://moet-hrms.up.railway.app
       PORTAL_URL: https://careers-portal-production-bd6b.up.railway.app
     steps:
       - uses: actions/checkout@v4

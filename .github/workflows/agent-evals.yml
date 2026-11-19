@@ -5,10 +5,10 @@ name: Agent Evals
 on:
   push:
     paths:
-      - "backend/src/Moet.Recruitment.Application/Ai/Prompts.cs"
-      - "backend/src/Moet.Recruitment.Application/Ai/CvScoringHandler.cs"
-      - "backend/src/Moet.Recruitment.Domain/Hiring/CvScoring.cs"
-      - "backend/tests/Moet.Recruitment.Api.Tests/CvEvals/**"
+      - "backend/src/Moet.Hrms.Application/Ai/Prompts.cs"
+      - "backend/src/Moet.Hrms.Application/Ai/CvScoringHandler.cs"
+      - "backend/src/Moet.Hrms.Domain/Hiring/CvScoring.cs"
+      - "backend/tests/Moet.Hrms.Api.Tests/CvEvals/**"
   schedule:
     - cron: "17 2 * * 1"
   workflow_dispatch:
@@ -32,10 +32,10 @@ jobs:
           dotnet-version: "10.0.x"
       - name: Live evaluations
         if: env.AGENT_EVAL_API_KEY != '' && github.event_name != 'push'
-        run: dotnet test tests/Moet.Recruitment.Agent.Tests -c Release --filter "FullyQualifiedName~LiveEvals" --logger "console;verbosity=normal"
+        run: dotnet test tests/Moet.Hrms.Agent.Tests -c Release --filter "FullyQualifiedName~LiveEvals" --logger "console;verbosity=normal"
       - name: Live CV scoring evaluations (20 test CVs and the fairness check)
         if: env.AGENT_EVAL_API_KEY != ''
-        run: dotnet test tests/Moet.Recruitment.Api.Tests -c Release --filter "FullyQualifiedName~CvLiveEvals" --logger "console;verbosity=normal"
+        run: dotnet test tests/Moet.Hrms.Api.Tests -c Release --filter "FullyQualifiedName~CvLiveEvals" --logger "console;verbosity=normal"
       - name: Skipped
         if: env.AGENT_EVAL_API_KEY == ''
         run: echo "Set the AGENT_EVAL_API_KEY secret (and optionally AGENT_EVAL_BASE_URL and the AGENT_EVAL_MODEL variable) to run the live evaluations."

@@ -3,9 +3,9 @@ name: Backend
 on:
   push:
     branches: [main, dotnet-backend]
-    paths: ["backend/**", "backoffice/scripts/**", "backoffice/web/**", "deploy/backoffice.Dockerfile", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "hrms/scripts/**", "hrms/web/**", "deploy/hrms.Dockerfile", ".github/workflows/backend.yml"]
   pull_request:
-    paths: ["backend/**", "backoffice/scripts/**", "backoffice/web/**", "deploy/backoffice.Dockerfile", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "hrms/scripts/**", "hrms/web/**", "deploy/hrms.Dockerfile", ".github/workflows/backend.yml"]
   workflow_dispatch:
 
 jobs:
@@ -34,31 +34,31 @@ jobs:
         with:
           dotnet-version: "10.0.x"
       - name: Restore
-        run: dotnet restore Moet.Recruitment.slnx
+        run: dotnet restore Moet.Hrms.slnx
       - name: Build (warnings shown)
-        run: dotnet build Moet.Recruitment.slnx --no-restore -c Release
+        run: dotnet build Moet.Hrms.slnx --no-restore -c Release
       - name: Domain tests
-        run: dotnet test tests/Moet.Recruitment.Domain.Tests --no-build -c Release --logger "console;verbosity=normal"
+        run: dotnet test tests/Moet.Hrms.Domain.Tests --no-build -c Release --logger "console;verbosity=normal"
       - name: Assistant tests (scripted model, fake backoffice, real AG-UI endpoint)
-        run: dotnet test tests/Moet.Recruitment.Agent.Tests --no-build -c Release --filter "FullyQualifiedName!~LiveEvals" --logger "console;verbosity=normal"
+        run: dotnet test tests/Moet.Hrms.Agent.Tests --no-build -c Release --filter "FullyQualifiedName!~LiveEvals" --logger "console;verbosity=normal"
       - name: Virus scanner (ClamAV) test
         run: |
           docker run -d --name clamav -p 3310:3310 clamav/clamav:1.4
           for i in $(seq 1 60); do (printf 'zPING\0' | timeout 3 nc -q 2 localhost 3310 | grep -q PONG) && break; sleep 5; done
-          CLAMAV_HOST=localhost:3310 dotnet test tests/Moet.Recruitment.Api.Tests --no-build -c Release --filter "FullyQualifiedName~VirusScanTests" --logger "console;verbosity=normal"
+          CLAMAV_HOST=localhost:3310 dotnet test tests/Moet.Hrms.Api.Tests --no-build -c Release --filter "FullyQualifiedName~VirusScanTests" --logger "console;verbosity=normal"
       - name: Chromium for PDF letters
-        run: pwsh src/Moet.Recruitment.Api/bin/Release/net10.0/playwright.ps1 install --with-deps --only-shell chromium
+        run: pwsh src/Moet.Hrms.Api/bin/Release/net10.0/playwright.ps1 install --with-deps --only-shell chromium
       - name: End-to-end tests on SQL Server
         env:
-          TEST_DB_CONNECTION: "Server=localhost,1433;Database=MoetRecruitmentCi;User Id=sa;Password=Ci-Strong-Password-123;TrustServerCertificate=True;Encrypt=False"
-        run: dotnet test tests/Moet.Recruitment.Api.Tests --no-build -c Release --logger "console;verbosity=normal"
+          TEST_DB_CONNECTION: "Server=localhost,1433;Database=MoetHrmsCi;User Id=sa;Password=Ci-Strong-Password-123;TrustServerCertificate=True;Encrypt=False"
+        run: dotnet test tests/Moet.Hrms.Api.Tests --no-build -c Release --logger "console;verbosity=normal"
       - name: Load test (6,000 applicants on one job; pages and assistant tools timed)
         env:
-          LOAD_DB_CONNECTION: "Server=localhost,1433;Database=MoetRecruitmentLoad;User Id=sa;Password=Ci-Strong-Password-123;TrustServerCertificate=True;Encrypt=False"
-        run: dotnet test tests/Moet.Recruitment.Api.Tests --no-build -c Release --filter "FullyQualifiedName~LoadTests" --logger "console;verbosity=detailed"
+          LOAD_DB_CONNECTION: "Server=localhost,1433;Database=MoetHrmsLoad;User Id=sa;Password=Ci-Strong-Password-123;TrustServerCertificate=True;Encrypt=False"
+        run: dotnet test tests/Moet.Hrms.Api.Tests --no-build -c Release --filter "FullyQualifiedName~LoadTests" --logger "console;verbosity=detailed"
       - name: Demo data loads through the real API (catches mapping and contract errors end to end)
         env:
-          DB_CONNECTION: "Server=localhost,1433;Database=MoetRecruitmentSeed;User Id=sa;Password=Ci-Strong-Password-123;TrustServerCertificate=True;Encrypt=False"
+          DB_CONNECTION: "Server=localhost,1433;Database=MoetHrmsSeed;User Id=sa;Password=Ci-Strong-Password-123;TrustServerCertificate=True;Encrypt=False"
           ADMIN_EMAIL: admin@moet.test
           ADMIN_PASSWORD: Admin-Password-123
           PORTAL_API_KEY: ci-portal-key
@@ -68,17 +68,17 @@ jobs:
           RUN_WORKERS: "0"
           AGENT_KEY: ci-agent-key-0123456789
         run: |
-          dotnet src/Moet.Recruitment.Api/bin/Release/net10.0/Moet.Recruitment.Api.dll --urls http://localhost:5080 > api.log 2>&1 &
+          dotnet src/Moet.Hrms.Api/bin/Release/net10.0/Moet.Hrms.Api.dll --urls http://localhost:5080 > api.log 2>&1 &
           for i in $(seq 1 60); do curl -sf http://localhost:5080/healthz && break; sleep 2; done
-          API=http://localhost:5080 PORTAL_KEY=ci-portal-key:ci-portal-secret-0123456789 node ../backoffice/scripts/seed-demo.mjs || (tail -80 api.log; exit 1)
+          API=http://localhost:5080 PORTAL_KEY=ci-portal-key:ci-portal-secret-0123456789 node ../hrms/scripts/seed-demo.mjs || (tail -80 api.log; exit 1)
           # A second run (as on the live demo) adds nothing and fails on nothing.
-          API=http://localhost:5080 PORTAL_KEY=ci-portal-key:ci-portal-secret-0123456789 node ../backoffice/scripts/seed-demo.mjs | tee seed2.log || (tail -80 api.log; exit 1)
+          API=http://localhost:5080 PORTAL_KEY=ci-portal-key:ci-portal-secret-0123456789 node ../hrms/scripts/seed-demo.mjs | tee seed2.log || (tail -80 api.log; exit 1)
           grep -q "Nothing missing." seed2.log || (echo "second seed run changed something"; tail -80 api.log; exit 1)
       - name: Container image builds (staff app, API and assistant) and serves the staff app
         run: |
-          docker build -f ../deploy/backoffice.Dockerfile -t moet-recruitment-api ..
+          docker build -f ../deploy/hrms.Dockerfile -t moet-hrms ..
           docker run -d --name bo -p 8088:8080 -e MIGRATE_ON_START=0 -e RUN_WORKERS=0 -e AGENT_KEY=ci-agent-key-0123456789 \
-            -e DB_CONNECTION="Server=127.0.0.1,1;Database=None;User Id=x;Password=x;Connect Timeout=1;TrustServerCertificate=True" moet-recruitment-api
+            -e DB_CONNECTION="Server=127.0.0.1,1;Database=None;User Id=x;Password=x;Connect Timeout=1;TrustServerCertificate=True" moet-hrms
           for i in $(seq 1 30); do curl -sf http://localhost:8088/healthz && break; sleep 1; done
           curl -sf http://localhost:8088/ar/applicants | grep -q '<div id="root">'
           curl -sI http://localhost:8088/ | grep -qi "content-security-policy: default-src 'self'"
@@ -89,7 +89,7 @@ jobs:
         run: |
           sudo apt-get install -y -qq poppler-utils > /dev/null
           mkdir -p pdf-check && chmod 777 pdf-check
-          docker run --rm -v "$PWD/pdf-check:/out" moet-recruitment-api --pdf-check /out/letter.pdf
+          docker run --rm -v "$PWD/pdf-check:/out" moet-hrms --pdf-check /out/letter.pdf
           pdffonts pdf-check/letter.pdf | tee pdf-check/fonts.txt
           grep -q "NotoKufiArabic" pdf-check/fonts.txt
           pdftotext pdf-check/letter.pdf - | tee pdf-check/text.txt

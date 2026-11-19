@@ -39,7 +39,7 @@ jobs:
       - name: Container image builds and serves the app
         run: |
           docker build -t moet-careers-portal portal
-          docker run -d --name po -p 8089:8080 -e RECRUITMENT_API_URL=http://127.0.0.1:1 -e CAREERS_PORTAL_API_KEY=k -e CAREERS_PORTAL_API_SECRET=s \
+          docker run -d --name po -p 8089:8080 -e HRMS_API_URL=http://127.0.0.1:1 -e CAREERS_PORTAL_API_KEY=k -e CAREERS_PORTAL_API_SECRET=s \
             -e COOKIE_SECURE=0 -e SESSION_SECRET=ci-only-session-secret-0123456789 moet-careers-portal
           for i in $(seq 1 20); do curl -sf http://localhost:8089/healthz && break; sleep 1; done
           curl -sf http://localhost:8089/ar/jobs | grep -q '<div id="root">'

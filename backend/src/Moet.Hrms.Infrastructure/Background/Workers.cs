@@ -1,0 +1,232 @@
+using System.Net;
+using System.Net.Mail;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Moet.Hrms.Application.Assessments;
+using Moet.Hrms.Application.Backoffice;
+using Moet.Hrms.Application.Common;
+using Moet.Hrms.Application.Portal;
+using Moet.Hrms.Domain;
+using Moet.Hrms.Infrastructure.Persistence;
+
+namespace Moet.Hrms.Infrastructure.Background;
+
+/// <summary>Sends queued emails over SMTP, with retries.</summary>
+public sealed class EmailOutboxWorker(IServiceScopeFactory scopes, ILogger<EmailOutboxWorker> log) : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stop)
+    {
+        while (!stop.IsCancellationRequested)
+        {
+            try
+            {
+                await SendDueAsync(stop);
+                await SendTextsAsync(stop);
+            }
+            catch (Exception e) when (!stop.IsCancellationRequested)
+            {
+                log.LogError(e, "Email outbox failed");
+            }
+            await Task.Delay(TimeSpan.FromSeconds(10), stop).ContinueWith(_ => { });
+        }
+    }
+
+    async Task SendDueAsync(CancellationToken ct)
+    {
+        using var scope = scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var clock = scope.ServiceProvider.GetRequiredService<IClock>();
+        // The server set in the backoffice, otherwise the SMTP_* environment settings; nothing is sent without either.
+        var config = await scope.ServiceProvider.GetRequiredService<MailConfig>().CurrentAsync(ct);
+        if (config == null) return;
+        var sender = scope.ServiceProvider.GetRequiredService<IMailSender>();
+        var now = clock.UtcNow;
+        var due = await db.EmailMessages.Where(m => m.Status == EmailStatus.Queued && m.NextAttemptAt <= now)
+            .OrderBy(m => m.Id).Take(20).ToListAsync(ct);
+        if (due.Count == 0) return;
+        foreach (var m in due)
+        {
+            try
+            {
+                MailAttachment? file = null;
+                if (m.AttachmentFileId is { } fid && await db.StoredFiles.AsNoTracking().FirstOrDefaultAsync(f => f.Id == fid, ct) is { SizeBytes: > 0 } f)
+                    file = new MailAttachment(f.FileName, f.ContentType, f.Content);
+                await sender.SendAsync(config, m.ToAddress, m.Subject, m.HtmlBody, m.TextBody, ct, file);
+                m.Status = EmailStatus.Sent;
+                m.SentAt = clock.UtcNow;
+                m.Attempts++;
+                AppMetrics.EmailsSent.Add(1);
+            }
+            catch (Exception e) when (e is SmtpException or InvalidOperationException or FormatException or System.Net.Sockets.SocketException)
+            {
+                m.Failed(e.Message, clock.UtcNow);
+                AppMetrics.EmailsFailed.Add(1);
+                log.LogWarning("Email {Id} to {To} failed: {Error}", m.Id, m.ToAddress, e.Message);
+            }
+        }
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Text messages (SMS or WhatsApp) waiting in the outbox, when a provider is set up.</summary>
+    async Task SendTextsAsync(CancellationToken ct)
+    {
+        using var scope = scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var clock = scope.ServiceProvider.GetRequiredService<IClock>();
+        var now = clock.UtcNow;
+        if (!await db.TextMessages.AnyAsync(m => m.Status == EmailStatus.Queued && m.NextAttemptAt <= now, ct)) return;
+        var config = await scope.ServiceProvider.GetRequiredService<TextService>().ConfigAsync(ct);
+        if (config == null) return;
+        var sender = scope.ServiceProvider.GetRequiredService<ITextSender>();
+        var due = await db.TextMessages.Where(m => m.Status == EmailStatus.Queued && m.NextAttemptAt <= now).OrderBy(m => m.Id).Take(20).ToListAsync(ct);
+        foreach (var m in due)
+        {
+            try
+            {
+                await sender.SendAsync(config, m.ToNumber, m.Body, ct);
+                m.Status = EmailStatus.Sent;
+                m.SentAt = clock.UtcNow;
+                m.Attempts++;
+                AppMetrics.TextsSent.Add(1);
+            }
+            catch (Exception e) when (e is HttpRequestException or TaskCanceledException or InvalidOperationException)
+            {
+                m.Failed(e.Message, clock.UtcNow);
+                AppMetrics.TextsFailed.Add(1);
+                log.LogWarning("Text {Id} failed: {Error}", m.Id, e.Message);
+            }
+        }
+        await db.SaveChangesAsync(ct);
+    }
+}
+
+/// <summary>Runs queued background jobs (CV scoring, translation drafts, mark suggestions) and the schedules.</summary>
+public sealed class JobWorker(IServiceScopeFactory scopes, ILogger<JobWorker> log) : BackgroundService
+{
+    static readonly string Owner = Environment.MachineName + ":" + Environment.ProcessId;
+    DateTime _nextHourly = DateTime.MinValue;
+    DateTime _nextDaily = DateTime.MinValue;
+    // The first backup waits a while after start, so a restore or a seed can finish first.
+    DateTime _nextBackup = DateTime.UtcNow.AddMinutes(30);
+    DateTime _nextHealth = DateTime.UtcNow.AddMinutes(5);
+    static DateTime? _backupFailedAt;
+
+    protected override async Task ExecuteAsync(CancellationToken stop)
+    {
+        while (!stop.IsCancellationRequested)
+        {
+            var worked = false;
+            try
+            {
+                worked = await RunOneAsync(stop);
+                await SchedulesAsync(stop);
+            }
+            catch (Exception e) when (!stop.IsCancellationRequested)
+            {
+                log.LogError(e, "Background job loop failed");
+            }
+            if (!worked) await Task.Delay(TimeSpan.FromSeconds(3), stop).ContinueWith(_ => { });
+        }
+    }
+
+    async Task<bool> RunOneAsync(CancellationToken ct)
+    {
+        using var scope = scopes.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var now = DateTime.UtcNow;
+        // Claim one due job atomically (several API instances can run this loop safely).
+        var ids = await db.Database.SqlQueryRaw<long>(
+            """
+            UPDATE TOP (1) j SET Status = 'Running', LockedUntil = DATEADD(minute, 30, SYSUTCDATETIME()), Attempts = Attempts + 1
+            OUTPUT inserted.Id AS [Value]
+            FROM ops.BackgroundJob j WITH (READPAST, UPDLOCK, ROWLOCK)
+            WHERE (j.Status = 'Queued' AND j.RunAfter <= SYSUTCDATETIME())
+               OR (j.Status = 'Running' AND j.LockedUntil < SYSUTCDATETIME())
+            """).ToListAsync(ct);
+        if (ids.Count == 0) return false;
+        var job = await db.BackgroundJobs.FirstAsync(j => j.Id == ids[0], ct);
+        var handler = scope.ServiceProvider.GetServices<IJobHandler>().FirstOrDefault(h => h.JobType == job.JobType);
+        try
+        {
+            if (handler == null) throw new InvalidOperationException($"No handler for {job.JobType}");
+            await handler.RunAsync(job.TargetId, ct);
+            AppMetrics.JobsDone.Add(1, new KeyValuePair<string, object?>("type", job.JobType));
+            db.ChangeTracker.Clear();
+            await db.BackgroundJobs.Where(j => j.Id == job.Id).ExecuteUpdateAsync(u => u
+                .SetProperty(j => j.Status, BackgroundJobStatus.Done).SetProperty(j => j.CompletedAt, DateTime.UtcNow)
+                .SetProperty(j => j.LockedUntil, (DateTime?)null), ct);
+        }
+        catch (Exception e) when (!ct.IsCancellationRequested)
+        {
+            AppMetrics.JobsFailed.Add(1, new KeyValuePair<string, object?>("type", job.JobType));
+            log.LogWarning(e, "Job {Type} {Target} failed (attempt {Attempt})", job.JobType, job.TargetId, job.Attempts);
+            db.ChangeTracker.Clear();
+            var failed = job.Attempts >= Domain.Operations.BackgroundJob.MaxAttempts;
+            var error = e.Message.Length > 1000 ? e.Message[..1000] : e.Message;
+            await db.BackgroundJobs.Where(j => j.Id == job.Id).ExecuteUpdateAsync(u => u
+                .SetProperty(j => j.Status, failed ? BackgroundJobStatus.Failed : BackgroundJobStatus.Queued)
+                .SetProperty(j => j.RunAfter, now.AddMinutes(2 * job.Attempts))
+                .SetProperty(j => j.LockedUntil, (DateTime?)null)
+                .SetProperty(j => j.LastError, error), ct);
+            if (failed && handler is IJobFailureHandler f) await f.FailedAsync(job.TargetId, error, ct);
+        }
+        return true;
+    }
+
+    async Task SchedulesAsync(CancellationToken ct)
+    {
+        var now = DateTime.UtcNow;
+        if (now < _nextHourly && now < _nextDaily && now < _nextBackup && now < _nextHealth) return;
+        using var scope = scopes.CreateScope();
+        if (now >= _nextHealth)
+        {
+            _nextHealth = now.AddMinutes(10);
+            var extra = _backupFailedAt is { } bf && now - bf < TimeSpan.FromDays(1)
+                ? new[] { new HealthAlertService.Problem("backup_failed", "The last scheduled backup failed.", "فشل آخر نسخ احتياطي مجدول.") } : null;
+            try { await scope.ServiceProvider.GetRequiredService<HealthAlertService>().CheckAsync(extra, ct); }
+            catch (Exception e) when (e is Microsoft.Data.SqlClient.SqlException or InvalidOperationException) { log.LogError(e, "Health alert check failed"); }
+        }
+        if (now >= _nextBackup)
+        {
+            var backups = scope.ServiceProvider.GetRequiredService<BackupService>();
+            _nextBackup = now.AddHours(backups.IntervalHours);
+            if (backups.IsConfigured)
+            {
+                try { await backups.BackUpAsync(ct); AppMetrics.Backups.Add(1); _backupFailedAt = null; }
+                catch (Exception e) when (e is HttpRequestException or Microsoft.Data.SqlClient.SqlException or TaskCanceledException)
+                {
+                    log.LogError(e, "Scheduled backup failed");
+                    _backupFailedAt = now;
+                }
+            }
+        }
+        if (now >= _nextHourly)
+        {
+            _nextHourly = now.AddHours(1);
+            var n = await scope.ServiceProvider.GetRequiredService<AssessmentWorkflow>().ExpireInvitationsAsync(ct);
+            if (n > 0) log.LogInformation("Expired {Count} assessment invitations", n);
+            var alerts = await scope.ServiceProvider.GetRequiredService<JobAlertService>().RunAsync(ct);
+            if (alerts > 0) log.LogInformation("Queued {Count} job alert emails", alerts);
+            var digests = await scope.ServiceProvider.GetRequiredService<StaffNotificationService>().SendDueAsync(Environment.GetEnvironmentVariable("HRMS_URL") is { Length: > 0 } hrmsUrl ? hrmsUrl : Environment.GetEnvironmentVariable("BACKOFFICE_URL") ?? "", ct);
+            if (digests > 0) log.LogInformation("Queued {Count} staff digest emails", digests);
+        }
+        if (now >= _nextDaily)
+        {
+            _nextDaily = now.AddDays(1);
+            await scope.ServiceProvider.GetRequiredService<PortalAccountService>().PurgeOldTokensAsync(ct);
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var old = now.AddDays(-30);
+            await db.BackgroundJobs.Where(j => j.Status == BackgroundJobStatus.Done && j.CompletedAt < old).ExecuteDeleteAsync(ct);
+            // Sent emails older than 30 days go, with the files they carried.
+            var files = await db.EmailMessages.Where(m => m.Status == EmailStatus.Sent && m.SentAt < old && m.AttachmentFileId != null).Select(m => m.AttachmentFileId!.Value).ToListAsync(ct);
+            await db.EmailMessages.Where(m => m.Status == EmailStatus.Sent && m.SentAt < old).ExecuteDeleteAsync(ct);
+            if (files.Count > 0) await db.StoredFiles.Where(f => files.Contains(f.Id)).ExecuteDeleteAsync(ct);
+            // Retention (PDPL): old unsuccessful applications and inactive accounts are anonymised.
+            var n = await scope.ServiceProvider.GetRequiredService<DataProtectionService>().RunRetentionAsync(false, ct);
+            if (n > 0) log.LogInformation("Retention anonymised {Count} records", n);
+        }
+    }
+}

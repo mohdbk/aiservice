@@ -1,6 +1,6 @@
 name: Design Audit
 
-# The whole stack with demo content, then screenshots of every backoffice and portal page in Arabic and English, on a
+# The whole stack with demo content, then screenshots of every HRMS and portal page in Arabic and English, on a
 # desktop and a phone, with a report of anything wider than the screen. Images go to the "audit" branch.
 on:
   schedule:
@@ -42,11 +42,11 @@ jobs:
           node-version: "22"
       - name: Build
         run: |
-          dotnet build backend/src/Moet.Recruitment.Api -c Release
+          dotnet build backend/src/Moet.Hrms.Api -c Release
           dotnet build portal/host/Moet.Careers.Portal -c Release
-          (cd backoffice/web && npm install --no-audit --no-fund && npm run build)
+          (cd hrms/web && npm install --no-audit --no-fund && npm run build)
           (cd portal/web && npm install --no-audit --no-fund && npm run build)
-      - name: Start the stack (backoffice app with the assistant on :5080, portal on :8080)
+      - name: Start the stack (HRMS app with the assistant on :5080, portal on :8080)
         run: SCENARIO=1 MODEL_SCRIPT=e2e/fake-model.mjs DB_NAME=MoetAudit RUN_WORKERS=0 e2e/start-stack.sh
       - name: Screenshots
         run: |

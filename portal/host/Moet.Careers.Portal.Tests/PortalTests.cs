@@ -50,7 +50,7 @@ public class PortalTests
     {
         protected override void ConfigureWebHost(IWebHostBuilder b)
         {
-            b.UseSetting("RECRUITMENT_API_URL", "http://api.test");
+            b.UseSetting("HRMS_API_URL", "http://api.test");
             b.UseSetting("CAREERS_PORTAL_API_KEY", "portal-key");
             b.UseSetting("CAREERS_PORTAL_API_SECRET", "portal-secret");
             b.UseSetting("SESSION_SECRET", Secret);
@@ -59,7 +59,7 @@ public class PortalTests
             foreach (var (k, v) in extra ?? []) b.UseSetting(k, v);
             b.ConfigureTestServices(s =>
             {
-                s.AddSingleton(sp => new RecruitmentApi(new HttpClient(fake), sp.GetRequiredService<PortalSettings>(), NullLogger<RecruitmentApi>.Instance));
+                s.AddSingleton(sp => new HrmsApi(new HttpClient(fake), sp.GetRequiredService<PortalSettings>(), NullLogger<HrmsApi>.Instance));
                 if (limiter != null) s.AddSingleton(limiter);
             });
         }

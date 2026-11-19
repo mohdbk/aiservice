@@ -11,7 +11,7 @@ const BASE = process.env.BASE_URL || "http://127.0.0.1:4173";
 const PORTAL = process.env.PORTAL_URL || "http://127.0.0.1:8080";
 const REPO = process.env.REPO || "../..";
 const CVS = process.env.CVS || "cvs";
-const T = JSON.parse(fs.readFileSync(path.join(REPO, "backoffice/web/src/text/ar.json"), "utf8"));
+const T = JSON.parse(fs.readFileSync(path.join(REPO, "hrms/web/src/text/ar.json"), "utf8"));
 const P = JSON.parse(fs.readFileSync(path.join(REPO, "portal/web/src/text/ar.json"), "utf8"));
 const OUT = "film";
 fs.mkdirSync(OUT, { recursive: true });
@@ -101,7 +101,7 @@ chapterOf("The Job Opening", "الإعلان عن الوظيفة");
 const boPage = await hr.newPage();
 await step("dashboard", async () => {
   await boPage.goto(`${BASE}/ar`, { waitUntil: "networkidle" });
-  await shot(boPage, "HR starts in the recruitment backoffice", "يبدأ فريق الموارد البشرية من نظام التوظيف");
+  await shot(boPage, "HR starts in HRMS", "يبدأ فريق الموارد البشرية من نظام إدارة الموارد البشرية");
 });
 await step("jobs list", async () => {
   await boPage.goto(`${BASE}/ar/jobs`, { waitUntil: "networkidle" });

@@ -1,12 +1,12 @@
 name: End to End
 
-# The whole stack in CI as on IIS: SQL Server, the backoffice app (API, assistant with a stand-in model, staff app), the
+# The whole stack in CI as on IIS: SQL Server, the HRMS app (API, assistant with a stand-in model, staff app), the
 # careers portal; then a phone browser
 # signs in and uses the assistant panel.
 on:
   push:
     branches: [main, dotnet-backend]
-    paths: ["backend/**", "backoffice/**", "portal/**", "e2e/**", ".github/workflows/e2e.yml"]
+    paths: ["backend/**", "hrms/**", "portal/**", "e2e/**", ".github/workflows/e2e.yml"]
   workflow_dispatch:
 
 jobs:
@@ -38,13 +38,13 @@ jobs:
           node-version: "22"
       - name: Build
         run: |
-          dotnet build backend/src/Moet.Recruitment.Api -c Release
+          dotnet build backend/src/Moet.Hrms.Api -c Release
           dotnet build portal/host/Moet.Careers.Portal -c Release
-          (cd backoffice/web && npm install --no-audit --no-fund && npm run build)
+          (cd hrms/web && npm install --no-audit --no-fund && npm run build)
           (cd portal/web && npm install --no-audit --no-fund && npm run build)
       - name: Chromium for PDF letters
-        run: pwsh backend/src/Moet.Recruitment.Api/bin/Release/net10.0/playwright.ps1 install --with-deps --only-shell chromium
-      - name: Start the stack (backoffice app with the assistant on :5080, portal on :8080)
+        run: pwsh backend/src/Moet.Hrms.Api/bin/Release/net10.0/playwright.ps1 install --with-deps --only-shell chromium
+      - name: Start the stack (HRMS app with the assistant on :5080, portal on :8080)
         run: MODEL_SCRIPT=e2e/fake-model.mjs DB_NAME=MoetE2e RUN_WORKERS=0 e2e/start-stack.sh
       - name: Assistant on a phone
         run: |

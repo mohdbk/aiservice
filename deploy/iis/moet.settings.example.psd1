@@ -1,16 +1,16 @@
-# Settings for Install-Moet.ps1 (MoET recruitment system on IIS, Ministry of Economy & Tourism).
+# Settings for Install-Moet.ps1 (MoET HRMS on IIS, Ministry of Economy & Tourism).
 # Copy this file to moet.settings.psd1 in the same folder, fill it in, and run the script as an administrator.
 # The file holds passwords and keys: keep it where only administrators can read it, or delete it after installing.
 # Every setting is listed in docs/ON_PREM.md and docs/SERVICES.md.
 @{
-    # Where the sites go, a separate folder from this package: backoffice, portal (and ms-playwright for PDF letters).
-    InstallRoot = 'D:\MoET\Recruitment'
+    # Where the sites go, a separate folder from this package: HRMS, portal (and ms-playwright for PDF letters).
+    InstallRoot = 'D:\MoET\Hrms'
 
-    # Site 1: the staff app, its API and the recruitment assistant, in one app. Staff only (internal network or VPN).
-    Backoffice = @{
-        SiteName = 'MoET Recruitment Backoffice'
-        AppPool = 'MoetRecruitmentBackoffice'
-        HostName = 'recruitment.moet.gov.ae'    # empty answers on any name
+    # Site 1: the staff app, its API and the HRMS assistant, in one app. Staff only (internal network or VPN).
+    Hrms = @{
+        SiteName = 'MoET HRMS'
+        AppPool = 'MoetHrms'
+        HostName = 'hrms.moet.gov.ae'    # empty answers on any name
         IpAddress = '*'
         HttpsPort = 443
         HttpPort = 0                            # 0: no plain HTTP binding (for a test without a certificate: HttpsPort = 0, HttpPort = 8081)
@@ -23,16 +23,16 @@
         # portal API answers (same certificate). Open only this port to the portal server. 0: none.
         PortalPort = 0
         PortalIpAddress = '*'
-        # Run the app pool as this account (for example a gMSA, 'MOET\svc-recruit$', with an empty password) when SQL
-        # Server uses Windows sign-in. Empty: the app pool's own identity (IIS AppPool\MoetRecruitmentBackoffice).
+        # Run the app pool as this account (for example a gMSA, 'MOET\svc-hrms$', with an empty password) when SQL
+        # Server uses Windows sign-in. Empty: the app pool's own identity (IIS AppPool\MoetHrms).
         Identity = @{ User = ''; Password = '' }
         Settings = @{
-            DB_CONNECTION = 'Server=sql01;Database=MoetRecruitment;Integrated Security=True;TrustServerCertificate=True;Encrypt=True'
+            DB_CONNECTION = 'Server=sql01;Database=MoetHrms;Integrated Security=True;TrustServerCertificate=True;Encrypt=True'
             # Any long random values; the same two go in the Portal section below.
             PORTAL_API_KEY = ''
             PORTAL_API_SECRET = ''
             PORTAL_URL = 'https://careers.moet.gov.ae'
-            BACKOFFICE_URL = 'https://recruitment.moet.gov.ae'
+            HRMS_URL = 'https://hrms.moet.gov.ae'
             # The first administrator, created on the first start (password at least 12 characters).
             ADMIN_EMAIL = ''
             ADMIN_PASSWORD = ''
@@ -69,11 +69,11 @@
         CertificateThumbprint = ''
         LocalPort = 0
         Settings = @{
-            # The backoffice's API as the portal server reaches it: http://127.0.0.1:5080 on the same server (the
-            # backoffice's LocalPort); from a DMZ server, the backoffice's PortalPort, for example
-            # https://recruitment.moet.gov.ae:5443, allowed through the firewall from the portal server only.
-            RECRUITMENT_API_URL = 'http://127.0.0.1:5080'
-            # The same pair as PORTAL_API_KEY and PORTAL_API_SECRET in the Backoffice section.
+            # The HRMS's API as the portal server reaches it: http://127.0.0.1:5080 on the same server (the
+            # HRMS's LocalPort); from a DMZ server, the HRMS's PortalPort, for example
+            # https://hrms.moet.gov.ae:5443, allowed through the firewall from the portal server only.
+            HRMS_API_URL = 'http://127.0.0.1:5080'
+            # The same pair as PORTAL_API_KEY and PORTAL_API_SECRET in the HRMS section.
             CAREERS_PORTAL_API_KEY = ''
             CAREERS_PORTAL_API_SECRET = ''
             # At least 32 random characters; signs the candidates' session cookie.

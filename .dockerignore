@@ -1,4 +1,4 @@
-# For images built from the repository root (deploy/backoffice.Dockerfile).
+# For images built from the repository root (deploy/hrms.Dockerfile).
 .git
 **/node_modules
 **/dist

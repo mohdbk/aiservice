@@ -53,7 +53,7 @@ const draw = async (html, file, transparent) => {
 };
 
 for (const m of manifest) await draw(caption(m), m.file.replace(".jpg", ".cap.png"), true);
-await draw(card({ kicker: "Ministry of Economy & Tourism · Recruitment", title: "From Job Opening to Interview", titleAr: "من الإعلان عن الوظيفة إلى المقابلة",
+await draw(card({ kicker: "Ministry of Economy & Tourism · HRMS", title: "From Job Opening to Interview", titleAr: "من الإعلان عن الوظيفة إلى المقابلة",
   sub: "One candidate's journey: requirements, applying, the Big Five questionnaire, scoring and booking an interview.",
   subAr: "رحلة مرشحة واحدة: المتطلبات، والتقديم، واستبيان السمات الخمس، والتقييم، وحجز المقابلة." }), "card_title.jpg", false);
 const chapters = [...new Map(manifest.map((m) => [m.chapter, m])).values()];
