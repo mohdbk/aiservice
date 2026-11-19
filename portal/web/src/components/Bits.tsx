@@ -62,7 +62,7 @@ export function Field({ id, label, hint, optional, required, prefix: P, children
         {P && <span className="control-prefix" aria-hidden="true"><P size={24} weight="regular" /></span>}
         {children}
       </div>
-      {hint && <p id={`${id}-hint`} className="mt-1 text-sm text-aeblack-600">{hint}</p>}
+      {hint && <p id={`${id}-hint`} className="!mb-0 !mt-1 text-sm text-aeblack-600">{hint}</p>}
     </div>
   );
 }

@@ -173,7 +173,7 @@ export default function Apply() {
     if (el) { el.scrollIntoView({ block: "center" }); (errField === "cv" ? document.getElementById("cv") : el)?.focus({ preventScroll: true }); }
     else errRef.current?.querySelector<HTMLElement>("[role=alert]")?.focus();
   }, [error]);
-  const fieldError = (f: string) => errField === f && <p id={`${f}-error`} className="mt-1 text-sm font-medium text-aered-700">{errorText(error)}</p>;
+  const fieldError = (f: string) => errField === f && <p id={`${f}-error`} className="!mb-0 !mt-1 text-sm font-medium text-aered-700">{errorText(error)}</p>;
 
   if (loadError && (loadError as ApiError).status === 404) return <NotFound />;
   if (!job) return <div className="container mx-auto max-w-3xl space-y-4 px-4 py-10"><Skeleton className="h-10 w-1/2" /><Skeleton className="h-96" /></div>;
@@ -245,7 +245,7 @@ export default function Apply() {
                 </div>
               </div>
               {fieldError("phone")}
-              <p id="phone-hint" className="mt-1 text-sm text-aeblack-600">{t("apply.phone_hint")}</p>
+              <p id="phone-hint" className="!mb-0 !mt-1 text-sm text-aeblack-600">{t("apply.phone_hint")}</p>
             </div>
             <Field id="country" label={t("apply.country")} optional prefix={GlobeHemisphereEast}>
               <select id="country" value={country} onChange={(e) => setCountry(e.target.value)} autoComplete="country-name">
