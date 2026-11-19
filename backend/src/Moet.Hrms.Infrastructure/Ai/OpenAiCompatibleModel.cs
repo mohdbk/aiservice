@@ -143,7 +143,19 @@ public sealed partial class OpenAiCompatibleModel(HttpClient http, IConfiguratio
         {
             // Some servers reject strict schemas or provider options: retry with plain JSON mode.
             body.Remove("reasoning");
-            if (body.ContainsKey("response_format")) body["response_format"] = new JsonObject { ["type"] = "json_object" };
+            if (body["response_format"] is JsonObject rf)
+            {
+                // Plain JSON mode does not carry the schema, and some servers (DeepSeek) also need the word "json" in
+                // the prompt: put the schema in the system message so the answer keeps the same shape.
+                var schema = rf["json_schema"]?["schema"]?.ToJsonString();
+                if (schema != null && body["messages"] is JsonArray msgs && msgs.Count > 0 && msgs[0] is JsonObject first)
+                {
+                    var note = $"\n\nRespond with one JSON object only, no other text, matching this JSON schema:\n{schema}";
+                    if (first["role"]?.GetValue<string>() == "system") first["content"] = (first["content"]?.GetValue<string>() ?? "") + note;
+                    else msgs.Insert(0, new JsonObject { ["role"] = "system", ["content"] = note.TrimStart() });
+                }
+                body["response_format"] = new JsonObject { ["type"] = "json_object" };
+            }
             res = await SendAsync(body, ct);
         }
         var text = await res.Content.ReadAsStringAsync(ct);
