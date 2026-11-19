@@ -37,7 +37,7 @@ export function Alert({ tone = "info", title, children, id }: { tone?: "info" | 
       <div className="flex items-start gap-3">
         {(() => { const I = ALERT_ICONS[tone]; return <I size={24} weight="regular" className="mt-0.5 shrink-0" aria-hidden="true" />; })()}
         <div className="alert-content min-w-0 flex-1">
-          {title && <p className="alert-title">{title}</p>}
+          {title && <p className={`alert-title ${children ? "!mb-1" : "!mb-0"}`}>{title}</p>}
           {children && <div>{children}</div>}
         </div>
       </div>
