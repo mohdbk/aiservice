@@ -2,7 +2,7 @@
   "name": "moet-careers-portal-server",
   "version": "0.1.0",
   "private": true,
-  "description": "Ministry of Economy & Tourism careers portal backend (DMZ). No runtime dependencies.",
+  "description": "Ministry of Economy & Tourism careers portal: design preview server with mock data (screenshots, local design work). Not deployed; the deployed server is portal/host (.NET).",
   "author": "Ministry of Economy & Tourism",
   "license": "MIT",
   "type": "module",

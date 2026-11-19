@@ -44,25 +44,22 @@ The agent fetches these from `/api/internal/agent/settings`, which accepts only 
 
 ## Environment variables
 
-| Variable | Where | Purpose |
-|---|---|---|
-| `BACKEND_URL` | agent | Internal URL of the API, for example `http://api:8080` |
-| `AGENT_KEY` | agent and API | Shared secret, at least 16 characters; only the API may call the agent |
-| `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` | agent | OpenAI-compatible endpoint with tool calling (on-prem vLLM, Ollama, Azure OpenAI and so on) |
-| `AGENT_URL` | API | Internal URL of the agent, for example `http://agent:8080` |
+| Variable | Purpose |
+|---|---|
+| `AGENT_KEY` | At least 16 characters; protects the assistant's loopback endpoint and encrypts saved secrets |
+| `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` | The API's model, used by the assistant too (OpenAI-compatible with tool calling: on-prem vLLM, Ollama, Azure OpenAI and so on) |
+| `AGENT_LLM_BASE_URL`, `AGENT_LLM_MODEL`, `AGENT_LLM_API_KEY` | Optional: a different model for the assistant |
 
-The assistant can be switched off under Setup › Assistant Settings. It is also off if `AGENT_URL` is not set.
+The assistant can be switched off under Setup › Assistant Settings.
 
 ## On-prem
 
-- Build the image with `docker build -t moet-recruitment-agent agent/`. It listens on port 8080 and has a health check at `/healthz`.
-- Run it on the same private network as the API. Do not publish it to users: browsers reach it only through the API.
+- It runs inside the API (and so inside the backoffice site on IIS): there is nothing to deploy on its own.
 - It keeps no data. Conversations stay in the staff member's browser, and proposals and changes are stored by the API in SQL Server.
-- The model server needs to support tool calling (the `tools` field of `/v1/chat/completions`).
 
 ## Tests
 
-`dotnet test agent/tests/Moet.Recruitment.Agent.Tests` runs the real AG-UI endpoint with a scripted model and a fake backoffice. The tests check:
+`dotnet test backend/tests/Moet.Recruitment.Agent.Tests` runs the real AG-UI endpoint with a scripted model and a fake backoffice. The tests check:
 
 - the tool calls and the A2UI approval surface in the event stream;
 - that the staff member's session is passed on with each tool call;

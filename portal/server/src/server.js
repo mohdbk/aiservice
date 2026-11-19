@@ -1,5 +1,5 @@
-// MoET careers portal backend. Runs in the DMZ: serves the React app and a small JSON API, and is the only
-// component that talks to the internal Frappe server. No runtime dependencies (Node 22 built-ins only).
+// MoET careers portal: design preview server (mock data for screenshots and local design work). Not deployed: the
+// deployed server is portal/host (.NET), which has the same routes. No runtime dependencies (Node 22 built-ins only).
 import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { extname, join, posix, resolve } from "node:path";
