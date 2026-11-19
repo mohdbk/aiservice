@@ -289,7 +289,7 @@ export function Shell({ children }: { children: ReactNode }) {
             <UserMenu placement="sidebar" collapsed={collapsed} />
           </div>
         </aside>
-        <main id="main" className="mh-main min-w-0 flex-1 px-4 py-6 sm:px-8 sm:py-8"><ErrorBoundary key={loc.pathname}>{children}</ErrorBoundary></main>
+        <main id="main" className="mh-main min-w-0 flex-1 px-4 pt-6 pb-24 sm:px-8 sm:pt-8"><ErrorBoundary key={loc.pathname}>{children}</ErrorBoundary></main>
       </div>
     </div>
   );

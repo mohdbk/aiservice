@@ -125,7 +125,7 @@ const compact = (n: number) => new Intl.NumberFormat("en", { notation: "compact"
 function ModelUseCard({ m }: { m: ModelUse }) {
   const { t, date } = useLang();
   const max = Math.max(1, ...m.days.map((d) => d.assistant + d.features));
-  const money = (n: number | null) => n == null ? "-" : `${n.toLocaleString("en", { maximumFractionDigits: 2 })} ${m.currency}`;
+  const money = (n: number | null) => n == null ? "-" : `${m.currency} ${n.toLocaleString("en", { maximumFractionDigits: 2 })}`;
   const name = (f: string) => { const k = `usage.feature.${f}`; const v = t(k); return v === k ? f : v; };
   return (
     <Card title={t("usage.model_title")}>

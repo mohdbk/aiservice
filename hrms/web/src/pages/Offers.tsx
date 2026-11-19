@@ -51,7 +51,7 @@ export default function Offers() {
         { key: "applicant", label: t("int.applicant"), sort: "applicant", render: (o) => <><Link to={to(`/applicants/${o.applicant_id}`)}>{o.applicant}</Link><p className="text-xs text-aeblack-500">{o.job_title}</p></> },
         { key: "position", label: t("offer.position"), render: (o) => o.position_title },
         { key: "date", label: t("offer.date"), sort: "offer_date", className: "whitespace-nowrap", render: (o) => date(o.offer_date) },
-        { key: "salary", label: t("offer.salary"), sort: "salary", render: (o) => <span className="tabular-nums" dir="ltr">{o.monthly_salary != null ? `${o.monthly_salary.toLocaleString()} ${o.currency}` : "-"}</span> },
+        { key: "salary", label: t("offer.salary"), sort: "salary", render: (o) => <span className="tabular-nums" dir="ltr">{o.monthly_salary != null ? `${o.currency} ${o.monthly_salary.toLocaleString("en")}` : "-"}</span> },
         { key: "status", label: t("common.status"), sort: "status", render: (o) => <>
           <Badge tone={tone(o.status)}>{t(`offer.status.${o.status}`)}</Badge>
           {o.signed_name && <p className="mt-1 text-xs text-aeblack-600" title={o.signed_at ? date(o.signed_at, true) : undefined}>{t("offer.signed_by", { name: o.signed_name })}</p>}
