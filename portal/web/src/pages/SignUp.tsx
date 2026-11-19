@@ -62,6 +62,7 @@ export default function SignUp() {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!form.full_name.trim() || !form.email.trim() || !form.password) return setError(new ApiError("required_fields", 400));
     if (form.password.length < 8) return setError(new ApiError("password_short", 400));
     setBusy(true);
     setError(null);
@@ -109,7 +110,7 @@ export default function SignUp() {
           <Field id="password" label={t("auth.password")} hint={t("auth.password_hint")} prefix={LockSimple}>
             <PasswordInput id="password" value={form.password} onChange={set("password")} autoComplete="new-password" describedBy="password-hint" />
           </Field>
-          <button type="submit" className="aegov-btn btn-block" disabled={busy || !form.full_name || !form.email || !form.password}><UserPlus size={20} aria-hidden="true" />{busy ? t("auth.working") : t("auth.signup_button")}</button>
+          <button type="submit" className="aegov-btn btn-block" disabled={busy}><UserPlus size={20} aria-hidden="true" />{busy ? t("auth.working") : t("auth.signup_button")}</button>
         </form>
       )}
       <p className="mt-6 text-center text-aeblack-700">

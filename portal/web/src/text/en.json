@@ -463,5 +463,6 @@
  "signup.cv_saved": "Your CV will be saved to your account, ready for your applications.",
  "apply.sq_from_cv": "From Your CV",
  "apply.sq_filled": "Some answers were filled in from your CV. Please check each one before sending.",
- "footer.copyright": "© {year} Ministry of Economy & Tourism. All rights reserved."
+ "footer.copyright": "© {year} Ministry of Economy & Tourism. All rights reserved.",
+ "error.required_fields": "Fill in all the required fields."
 }

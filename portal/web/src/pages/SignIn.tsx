@@ -49,6 +49,7 @@ export default function SignIn() {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!email.trim() || !password) return setError(new ApiError("required_fields", 400));
     setBusy(true);
     setError(null);
     try {
@@ -81,7 +82,7 @@ export default function SignIn() {
           <PasswordInput id="password" value={password} onChange={setPassword} autoComplete="current-password" />
         </Field>
         <p className="-mt-2 text-end text-sm"><Link className="font-medium text-primary-700 underline" to={`${path("/forgot-password")}${email ? `?email=${encodeURIComponent(email.trim())}` : ""}`}>{t("auth.forgot_link")}</Link></p>
-        <button type="submit" className="aegov-btn btn-block" disabled={busy || !email || !password}><SignInIcon size={20} className="rtl:-scale-x-100" aria-hidden="true" />{busy ? t("auth.working") : t("auth.sign_in_button")}</button>
+        <button type="submit" className="aegov-btn btn-block" disabled={busy}><SignInIcon size={20} className="rtl:-scale-x-100" aria-hidden="true" />{busy ? t("auth.working") : t("auth.sign_in_button")}</button>
       </form>
       <p className="mt-6 text-center text-aeblack-700">
         {t("auth.no_account")} <Link className="font-semibold text-primary-700 underline" to={`${path("/create-account")}?next=${encodeURIComponent(next)}`}><UserPlus size={20} className="me-1 inline align-text-bottom" aria-hidden="true" />{t("auth.create_link")}</Link>

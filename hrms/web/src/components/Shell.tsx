@@ -101,7 +101,7 @@ function NavList({ onPick, collapsed = false }: { onPick?: () => void; collapsed
           <div key={gi}>
             {g.group && (collapsed
               ? gi > 0 && <hr className="mx-2 mb-3 border-aeblack-100" aria-hidden="true" />
-              : <p className="mb-2 px-3 text-xs font-bold uppercase tracking-wide text-aeblack-500">{g.group}</p>)}
+              : <p className="mb-2 px-3 text-xs font-bold ltr:uppercase ltr:tracking-wide text-aeblack-500">{g.group}</p>)}
             <ul className="space-y-1">
               {items.map((it) => (
                 <li key={it.to}>

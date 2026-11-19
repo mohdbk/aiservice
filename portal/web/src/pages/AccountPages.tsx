@@ -121,6 +121,7 @@ export function ForgotPassword() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (!email.includes("@")) return setError(new ApiError("required_fields", 400));
     setState("busy");
     try {
       await api("/api/forgot-password", { body: { email: email.trim(), lang } });
@@ -140,7 +141,7 @@ export function ForgotPassword() {
           <Field id="email" label={t("auth.email")} prefix={Envelope}>
             <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required maxLength={200} inputMode="email" dir="ltr" className="rtl:text-right" />
           </Field>
-          <button type="submit" className="aegov-btn btn-block" disabled={state === "busy" || !email.includes("@")}>
+          <button type="submit" className="aegov-btn btn-block" disabled={state === "busy"}>
             <PaperPlaneTilt size={20} className="rtl:-scale-x-100" aria-hidden="true" />{t("auth.forgot_button")}
           </button>
         </form>
@@ -190,7 +191,7 @@ export function ResetPassword() {
         <Field id="confirm" label={t("auth.confirm_password")} prefix={LockSimple}>
           <PasswordInput id="confirm" value={confirm} onChange={setConfirm} autoComplete="new-password" />
         </Field>
-        <button type="submit" className="aegov-btn btn-block" disabled={busy || !password || !confirm || !token}>
+        <button type="submit" className="aegov-btn btn-block" disabled={busy || !token}>
           <Key size={20} aria-hidden="true" />{t("auth.reset_button")}
         </button>
       </form>

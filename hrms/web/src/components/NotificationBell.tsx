@@ -82,7 +82,7 @@ export function NotificationBell() {
             </ul>
             {data && (
               <div className="space-y-1 border-t border-aeblack-100 px-4 py-3">
-                <p className="text-xs font-bold uppercase tracking-wide text-aeblack-500">{t("notes.emails")}</p>
+                <p className="text-xs font-bold ltr:uppercase ltr:tracking-wide text-aeblack-500">{t("notes.emails")}</p>
                 <Toggle label={t("notes.daily")} checked={data.daily_digest} onChange={(v) => prefs({ daily_digest: v })} />
                 <Toggle label={t("notes.weekly")} checked={data.weekly_report} onChange={(v) => prefs({ weekly_report: v })} />
                 {!data.email && <p className="text-xs text-aeblack-500">{t("notes.no_email")}</p>}

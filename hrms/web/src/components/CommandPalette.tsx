@@ -100,7 +100,7 @@ export function CommandPalette({ pages }: { pages: NavPage[] }) {
               lastGroup = e.group;
               return (
                 <li key={e.key} role="presentation">
-                  {head && <p className="px-3 pb-1 pt-3 text-[11px] font-bold uppercase tracking-wide text-aeblack-500">{head}</p>}
+                  {head && <p className="px-3 pb-1 pt-3 text-[11px] font-bold ltr:uppercase ltr:tracking-wide text-aeblack-500">{head}</p>}
                   <button type="button" id={`cmd-${e.key}`} role="option" aria-selected={n === active} data-index={n}
                     onMouseMove={() => setActive(n)} onClick={() => go(e)}
                     className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-start ${n === active ? "bg-primary-50 text-primary-900" : "text-aeblack-800"}`}>
