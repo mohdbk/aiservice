@@ -145,10 +145,10 @@ export function DataTable<T>({ list, columns, rowKey, filters = [], searchLabel,
       <form onSubmit={submit} role="search" className="mb-4 space-y-3">
         <div className="flex items-end gap-2">
           <div className="aegov-form-control min-w-0 flex-1">
-            <label htmlFor="list-q" className="mb-1 block text-sm font-semibold">{searchLabel || t("common.search")}</label>
+            <label htmlFor="list-q" className={searchLabel ? "mb-1 block text-sm font-semibold" : "sr-only"}>{searchLabel || t("common.search")}</label>
             <div className="form-control-input">
               <span className="control-prefix"><MagnifyingGlass size={20} aria-hidden="true" /></span>
-              <input id="list-q" type="search" value={q} onChange={(e) => setQ(e.target.value)} />
+              <input id="list-q" type="search" value={q} placeholder={searchLabel ? undefined : t("list.search_placeholder")} onChange={(e) => setQ(e.target.value)} />
             </div>
           </div>
           <Button type="submit" variant="outline" aria-label={t("common.search")} icon={<MagnifyingGlass size={20} aria-hidden="true" />}>

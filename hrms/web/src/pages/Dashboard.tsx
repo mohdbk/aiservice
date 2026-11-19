@@ -131,7 +131,7 @@ export default function Dashboard() {
             </ul>
           )}
         </Card>
-        <Card title={t("dash.next_interviews")}>
+        <Card title={t("dash.next_interviews")} className="xl:self-start">
           {data.interviews.length === 0 ? <Empty /> : (
             <ul className="space-y-3">
               {data.interviews.map((iv) => (
