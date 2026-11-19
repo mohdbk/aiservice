@@ -59,6 +59,13 @@ if ($fullRoot -eq $fullPackage -or $fullRoot.StartsWith("$fullPackage\", 'Ordina
     Fail "InstallRoot ($fullRoot) must be a separate folder from the package ($fullPackage), for example D:\MoET\Recruitment."
 }
 
+# Windows' own tools by full path: some servers have a PATH without System32.
+$sys32 = Join-Path $env:SystemRoot 'System32'
+$robocopy = Join-Path $sys32 'robocopy.exe'
+$icacls = Join-Path $sys32 'icacls.exe'
+$dotnet = Join-Path $env:ProgramFiles 'dotnet\dotnet.exe'
+if (-not (Test-Path $dotnet)) { $found = Get-Command dotnet -ErrorAction SilentlyContinue; $dotnet = $(if ($found) { $found.Source } else { '' }) }
+
 Import-Module WebAdministration
 $modules = @(Get-WebGlobalModule | ForEach-Object { $_.Name })
 $need = @{ 'AspNetCoreModuleV2' = '.NET 10 Hosting Bundle' }
@@ -70,7 +77,8 @@ $missing = @($need.Keys | Where-Object { $modules -notcontains $_ } | ForEach-Ob
 if ($missing.Count -gt 0) { Fail ("install first: " + ($missing -join ', ') + '. See docs/ON_PREM.md, "Windows Server and IIS".') }
 
 if ($Roles -contains 'Api' -or $Roles -contains 'Agent') {
-    $runtimes = (& dotnet --list-runtimes 2>$null) -join "`n"
+    if (-not $dotnet) { Fail 'dotnet.exe not found: install the .NET 10 Hosting Bundle.' }
+    $runtimes = (& $dotnet --list-runtimes 2>$null) -join "`n"
     if ($runtimes -notmatch 'Microsoft\.AspNetCore\.App 10\.') { Fail 'the ASP.NET Core 10 runtime is missing: install the .NET 10 Hosting Bundle.' }
 }
 $node = Value $S 'NodePath' 'C:\Program Files\nodejs\node.exe'
@@ -112,6 +120,7 @@ function Write-WebConfig([string]$template, [string]$target, [hashtable]$env, [h
         if ($v -ne '') { '          <environmentVariable name="{0}" value="{1}" />' -f $k, [Security.SecurityElement]::Escape($v) }
     }
     $text = $text.Replace('{{ENV}}', ($lines -join "`r`n"))
+    if ($dotnet) { $text = $text.Replace('processPath="dotnet"', 'processPath="' + [Security.SecurityElement]::Escape($dotnet) + '"') }
     foreach ($t in $tokens.Keys) { $text = $text.Replace("{{$t}}", [Security.SecurityElement]::Escape([string]$tokens[$t])) }
     [xml]$text | Out-Null   # a malformed file would take the site down: check before writing
     [IO.File]::WriteAllText($target, $text, (New-Object Text.UTF8Encoding($false)))
@@ -125,20 +134,20 @@ function Copy-App([string]$from, [string]$to, [bool]$offline) {
         Set-Content -Path $marker -Value '<!doctype html><title>Updating</title><p>Updating, back in a minute.</p>' -Encoding UTF8
         Start-Sleep -Seconds 3
     }
-    & robocopy $from $to /MIR /NFL /NDL /NJH /NJS /NP /R:5 /W:2 /XF web.config app_offline.htm /XD logs | Out-Null
+    & $robocopy $from $to /MIR /NFL /NDL /NJH /NJS /NP /R:5 /W:2 /XF web.config app_offline.htm /XD logs | Out-Null
     if ($LASTEXITCODE -ge 8) { Fail "copying $from to $to failed (robocopy exit code $LASTEXITCODE)." }
     $global:LASTEXITCODE = 0
     New-Item -ItemType Directory -Force -Path (Join-Path $to 'logs') | Out-Null
 }
 
 function Grant([string]$path, [string]$who, [string]$rights) {
-    & icacls $path /grant:r "${who}:(OI)(CI)$rights" /T /C /Q | Out-Null
+    & $icacls $path /grant:r "${who}:(OI)(CI)$rights" /T /C /Q | Out-Null
     if ($LASTEXITCODE -ne 0) { Fail "could not grant $who on $path." }
 }
 
 function Protect-Folder([string]$path, [string]$pool) {
     # Only administrators, SYSTEM and the app's own pool: web.config holds the app's passwords and keys.
-    & icacls $path /inheritance:r /grant:r 'BUILTIN\Administrators:(OI)(CI)F' 'NT AUTHORITY\SYSTEM:(OI)(CI)F' /C /Q | Out-Null
+    & $icacls $path /inheritance:r /grant:r 'BUILTIN\Administrators:(OI)(CI)F' 'NT AUTHORITY\SYSTEM:(OI)(CI)F' /C /Q | Out-Null
     Grant $path "IIS AppPool\$pool" 'RX'
     Grant (Join-Path $path 'logs') "IIS AppPool\$pool" 'M'
 }
@@ -262,7 +271,7 @@ if ($Roles -contains 'Api') {
     Copy-App (Join-Path $PackageRoot 'api') $dir $true
     if (Test-Path (Join-Path $PackageRoot 'ms-playwright')) {
         Say "Chromium for PDF letters -> $browsers"
-        & robocopy (Join-Path $PackageRoot 'ms-playwright') $browsers /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+        & $robocopy (Join-Path $PackageRoot 'ms-playwright') $browsers /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
         if ($LASTEXITCODE -ge 8) { Fail "copying Chromium failed (robocopy exit code $LASTEXITCODE)." }
         $global:LASTEXITCODE = 0
     } else {
