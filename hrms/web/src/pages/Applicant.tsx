@@ -19,7 +19,7 @@ import { useLookups } from "./JobEdit";
 type Detail = {
   id: number; code: string; reference: string; full_name: string; email: string; phone: string; country: string; nationality?: string; cover_note: string; status: string;
   language: string; created_at: string; job: { id: number; code: string; title: string; role_profile?: { id: number; name_ar: string; name_en: string } | null };
-  cv: { file_name: string; content_type: string; size: number; url: string } | null;
+  cv: { file_name: string; content_type: string; size: number; url: string; saved?: { file_name: string; is_default: boolean } | null } | null;
   screening: { outcome: string; answers: { question: string; answer: string; meets: boolean | null }[] };
   analysis: null | Analysis;
   notes: { id: number; kind: string; text: string; created_at: string; author: string }[];
@@ -145,6 +145,7 @@ export default function Applicant() {
 
       {tab === "cv" && (
         <Card title={a.cv?.file_name} actions={a.cv && <a className="aegov-btn btn-outline btn-sm" href={`${a.cv.url}?download=true`}><DownloadSimple size={20} aria-hidden="true" />{t("app.download_cv")}</a>}>
+          {a.cv?.saved && <p className="mb-3 text-sm text-aeblack-600">{t("app.sent_with", { name: a.cv.saved.file_name })}{a.cv.saved.is_default ? ` · ${t("app.sent_with_default")}` : ""}</p>}
           {!a.cv ? <Empty /> : a.cv.content_type === "application/pdf" ? (
             <iframe title={a.cv.file_name} src={`/api/backoffice/applicants/${a.id}/cv`} className="h-[75vh] w-full rounded-lg border border-aeblack-100" />
           ) : a.cv.content_type.startsWith("image/") ? (

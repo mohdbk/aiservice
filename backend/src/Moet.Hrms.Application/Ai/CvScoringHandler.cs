@@ -35,7 +35,11 @@ public sealed class CvScoringHandler(IAppDbContext db, ILanguageModel model, ICv
         var file = await db.StoredFiles.AsNoTracking().FirstAsync(f => f.Id == app.CvFileId, ct);
         // The same CV saved in the candidate's library has been read already: its text (no second OCR or image reading)
         // and, when it has one, its profile are used instead of reading the file again.
-        var saved = await db.CandidateCvs.AsNoTracking()
+        // The saved CV the application was sent with; for older applications, the candidate's saved CV with the same file.
+        var saved = app.CandidateCvId is int savedId
+            ? await db.CandidateCvs.AsNoTracking().FirstOrDefaultAsync(x => x.Id == savedId && x.ApplicantAccountId == app.ApplicantAccountId && x.Text != "", ct)
+            : null;
+        saved ??= await db.CandidateCvs.AsNoTracking()
             .Where(x => x.ApplicantAccountId == app.ApplicantAccountId && x.Sha256 == file.Sha256 && x.Text != "")
             .OrderByDescending(x => x.ReadAt).FirstOrDefaultAsync(ct);
         var cv = saved != null ? new CvText(saved.Text, saved.ReadMethod.Length > 0 ? saved.ReadMethod : "library")
@@ -206,9 +210,7 @@ public sealed class CvScoringHandler(IAppDbContext db, ILanguageModel model, ICv
         IReadOnlyList<CvScoring.Criterion> criteria, string cvText, string applicantName, DateOnly today, CancellationToken ct = default)
     {
         var redacted = TextUtil.Clip(CvScoring.Redact(cvText, applicantName), 40000);
-        var profile = saved?.ProfileJson is { Length: > 0 } savedProfile
-            ? ForScoring(savedProfile, app.FullName)
-            : await model.CompleteJsonAsync(Prompts.Profile, $"<cv>\n{redacted}\n</cv>", Prompts.ProfileSchema, "cv_profile", ct);
+        var profile = await model.CompleteJsonAsync(Prompts.Profile, $"<cv>\n{redacted}\n</cv>", Prompts.ProfileSchema, "cv_profile", ct);
         var work = Arr(profile, "work").Select(w => (Str(w, "startDate"), Str(w, "endDate"))).ToList();
         var years = CvScoring.ResolveExperience(CvScoring.YearsOfExperience(work, today), Num(profile, "stated_years_of_experience"));
         var result = await model.CompleteJsonAsync(Prompts.Score, ScoreInput(jobTitle, jobDescription, criteria, "", profile, years, redacted), Prompts.ScoreSchema, "cv_score", ct);

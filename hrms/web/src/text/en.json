@@ -1777,5 +1777,7 @@
  "readm.word": "Word Document",
  "readm.ocr": "Text Recognition (OCR)",
  "readm.model": "Read by the AI Model from the Image",
- "readm.none": "Not Readable"
+ "readm.none": "Not Readable",
+ "app.sent_with": "Sent with the candidate's saved CV: {name}",
+ "app.sent_with_default": "Their Default CV"
 }

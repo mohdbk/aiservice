@@ -24,10 +24,19 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
     {
         var a = await db.JobApplications.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw DomainException.NotFound();
         if (a.AnonymisedAt != null) throw DomainException.Conflict("anonymised");
-        var file = await db.StoredFiles.AsNoTracking().FirstOrDefaultAsync(f => f.Id == a.CvFileId, ct) ?? throw DomainException.NotFound();
+        // The saved CV the application was sent with has been read already: its text is used (no second reading of a scan).
+        var saved = a.CandidateCvId is int savedId
+            ? await db.CandidateCvs.AsNoTracking().Where(x => x.Id == savedId && x.ApplicantAccountId == a.ApplicantAccountId && x.Text != "")
+                .Select(x => new { x.Text, x.ReadMethod }).FirstOrDefaultAsync(ct)
+            : null;
         CvText cv;
-        try { cv = await cvReader.ReadAsync(file.Content, Path.GetExtension(file.FileName), ct); }
-        catch (Exception e) when (e is not OperationCanceledException and not DomainException) { throw DomainException.Conflict("cv_unreadable"); }
+        if (saved != null) cv = new CvText(saved.Text, saved.ReadMethod.Length > 0 ? saved.ReadMethod : "library");
+        else
+        {
+            var file = await db.StoredFiles.AsNoTracking().FirstOrDefaultAsync(f => f.Id == a.CvFileId, ct) ?? throw DomainException.NotFound();
+            try { cv = await cvReader.ReadAsync(file.Content, Path.GetExtension(file.FileName), ct); }
+            catch (Exception e) when (e is not OperationCanceledException and not DomainException) { throw DomainException.Conflict("cv_unreadable"); }
+        }
         var text = CvScoring.Redact(cv.Text, a.FullName).Trim();
         if (text.Length == 0) throw DomainException.Conflict("cv_unreadable");
         const int max = 10000;
@@ -88,6 +97,11 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
         var en = language.English;
         var cv = await db.StoredFiles.AsNoTracking().Where(f => f.Id == a.CvFileId)
             .Select(f => new { f.FileName, f.ContentType, f.SizeBytes }).FirstOrDefaultAsync(ct);
+        // Which of the candidate's saved CVs it was sent with (the saved CV may have been deleted since; the application keeps its copy).
+        var savedCv = a.CandidateCvId is int sid
+            ? await db.CandidateCvs.AsNoTracking().Where(x => x.Id == sid && x.ApplicantAccountId == a.ApplicantAccountId)
+                .Select(x => new { file_name = x.FileName, is_default = x.IsDefault }).FirstOrDefaultAsync(ct)
+            : null;
         var interviews = await db.Interviews.AsNoTracking().Where(i => i.JobApplicationId == id).Include(i => i.InterviewRound)
             .OrderByDescending(i => i.StartsAt).Select(i => new
             {
@@ -168,7 +182,7 @@ public sealed class BackofficeApplicantService(IAppDbContext db, ICurrentActor a
                     ? await db.RoleProfiles.AsNoTracking().Where(r => r.Id == rp).Select(r => new { id = r.Id, name_ar = r.NameAr, name_en = r.NameEn }).FirstOrDefaultAsync(ct)
                     : null,
             },
-            cv = cv == null ? null : new { file_name = cv.FileName, content_type = cv.ContentType, size = cv.SizeBytes, url = $"/api/backoffice/applicants/{a.Id}/cv" },
+            cv = cv == null ? null : new { file_name = cv.FileName, content_type = cv.ContentType, size = cv.SizeBytes, url = $"/api/backoffice/applicants/{a.Id}/cv", saved = savedCv },
             screening = new
             {
                 outcome = a.ScreeningOutcome.ToString(),

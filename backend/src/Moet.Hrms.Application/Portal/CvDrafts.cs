@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Moet.Hrms.Application.Ai;
@@ -128,7 +129,7 @@ public sealed partial class ScreeningSuggestionService(IAppDbContext db, ILangua
     {
         var empty = new { answers = new Dictionary<string, object>(), quotes = new Dictionary<string, string>() };
         if (!model.IsConfigured) return empty;
-        var cv = await db.CandidateCvs.AsNoTracking().FirstOrDefaultAsync(c => c.ApplicantAccountId == accountId && c.Id == cvId, ct)
+        var cv = await db.CandidateCvs.FirstOrDefaultAsync(c => c.ApplicantAccountId == accountId && c.Id == cvId, ct)
             ?? throw DomainException.NotFound("cv_not_found");
         if (cv.Text.Trim().Length < 50) return empty;
         var job = await db.JobOpenings.AsNoTracking()
@@ -137,6 +138,13 @@ public sealed partial class ScreeningSuggestionService(IAppDbContext db, ILangua
             .AsSplitQuery().FirstOrDefaultAsync(j => j.Code == jobCode && j.IsPublished, ct) ?? throw DomainException.NotFound("job_not_found");
         var asked = PortalSiteService.Asked(job).Where(a => Allowed(a.Question)).ToList();
         if (asked.Count == 0) return empty;
+
+        // Worked out once per CV and job (and the job's questions as they are now): reopening the form asks the model again
+        // only if HR changed the questions.
+        var signature = jobCode + ":" + Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(string.Join("|",
+            asked.Select(x => $"{x.Key}/{x.Question.Id}/{x.Question.AnswerType}/{x.Question.Text}/{string.Join(",", x.Question.Options.Select(o => o.Id))}")))))[..16];
+        var kept = Kept(cv.ScreeningSuggestionsJson);
+        if (kept[signature] is JsonObject hit) return JsonSerializer.Deserialize<JsonElement>(hit.ToJsonString());
 
         var questions = asked.Select(a => new
         {
@@ -168,7 +176,18 @@ public sealed partial class ScreeningSuggestionService(IAppDbContext db, ILangua
             answers[key] = value;
             quotes[key] = TextUtil.Clip(TextUtil.NoEmDash(CvScoringHandler.Str(a, "quote")), 300);
         }
-        return new { answers, quotes };
+        var found = new { answers, quotes };
+        kept[signature] = JsonSerializer.SerializeToNode(found);
+        while (kept.Count > 20) kept.Remove(kept.First().Key);
+        cv.ScreeningSuggestionsJson = kept.ToJsonString();
+        await db.SaveChangesAsync(ct);
+        return found;
+    }
+
+    static JsonObject Kept(string? json)
+    {
+        try { return JsonNode.Parse(json ?? "{}") as JsonObject ?? new JsonObject(); }
+        catch (JsonException) { return new JsonObject(); }
     }
 
     /// <summary>The answer in the form the application form takes, or null when it does not fit the question.</summary>

@@ -48,10 +48,12 @@ public sealed class PortalApplicationService(
 
         // A CV from the candidate's own library, chosen on the form.
         var fromLibrary = false;
+        int? savedCvId = null;
         if ((input.Cv == null || input.Cv.Length == 0) && int.TryParse(input.CvId, out var cvId) && await cvs.ForApplyingAsync(user.Id, cvId, ct) is { } saved)
         {
             input = input with { Cv = saved.Content, FileName = saved.FileName };
             fromLibrary = true;
+            savedCvId = cvId;
         }
         // The candidate may use the CV from their latest application instead of uploading one again.
         if ((input.Cv == null || input.Cv.Length == 0) && input.ReuseCv is "1" or "true")
@@ -75,7 +77,7 @@ public sealed class PortalApplicationService(
             Code = await codes.NextAsync(CodeKind.JobApplication, ct), JobOpeningId = job.Id, ApplicantAccountId = user.Id,
             FullName = user.FullName, Email = user.Email, Phone = TextUtil.Clip(input.Phone!.Trim(), 30),
             Country = await KnownCountryAsync(input.Country, ct), Nationality = await KnownCountryAsync(input.Nationality, ct), CoverNote = TextUtil.Clip(input.CoverNote?.Trim(), 4000),
-            Status = ApplicationStatus.Open, LanguageCode = lang, DeclarationAcceptedAt = now, CvFileId = file.Id,
+            Status = ApplicationStatus.Open, LanguageCode = lang, DeclarationAcceptedAt = now, CvFileId = file.Id, CandidateCvId = savedCvId,
             ScreeningOutcome = evaluation.Outcome(asked), CreatedAt = now, UpdatedAt = now,
             CvAnalysis = new CvAnalysis { Status = s.AutoScoreApplications ? CvAnalysisStatus.Pending : CvAnalysisStatus.Skipped, UpdatedAt = now },
         };
@@ -118,7 +120,12 @@ public sealed class PortalApplicationService(
         // A new CV uploaded with the application is also kept in the candidate's library (unless the library is full).
         if (!fromLibrary)
         {
-            try { await cvs.AddAsync(user.Id, input.FileName, input.Cv, null, false, ct); }
+            try
+            {
+                // Recorded on the application, so scoring can use what is read from it rather than read the file again.
+                app.CandidateCvId = await cvs.AddAsync(user.Id, input.FileName, input.Cv, null, false, ct);
+                await db.SaveChangesAsync(ct);
+            }
             catch (Exception e) when (e is DomainException or DbUpdateException) { /* a full library or the same file again: the application has its copy */ }
         }
         return new { application = app.Code, reference = app.Reference };

@@ -23,6 +23,8 @@ public class JobApplication
     public string LanguageCode { get; set; } = "ar";
     public DateTime DeclarationAcceptedAt { get; set; }
     public Guid CvFileId { get; set; }
+    /// <summary>The candidate's saved CV the application was sent with (its file is copied to CvFileId); null for older ones.</summary>
+    public int? CandidateCvId { get; set; }
     public ScreeningOutcome ScreeningOutcome { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
@@ -184,6 +186,8 @@ public class CandidateCv
     public string Text { get; set; } = "";
     /// <summary>How the text was read: pdf-text, word, ocr or model ("" when not read).</summary>
     public string ReadMethod { get; set; } = "";
+    /// <summary>Suggested screening answers already worked out from this CV, by job code: {"JOB-0001": {"answers": {...}}}.</summary>
+    public string? ScreeningSuggestionsJson { get; set; }
     public int? UploadedByStaffId { get; set; }
     public DateTime UploadedAt { get; set; }
     public DateTime? ReadAt { get; set; }
