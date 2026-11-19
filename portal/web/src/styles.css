@@ -118,4 +118,4 @@ html.mc-contrast input[type="checkbox"]:checked, html.mc-contrast input[type="ra
 html[dir="rtl"] :is(p, dd)[dir="ltr"]:not([lang="en"]) { text-align: right; }
 
 /* Headings get focus after a page change so screen readers announce them; no ring for that programmatic focus. */
-[tabindex="-1"]:focus:not(:focus-visible) { outline: none; }
+:is(h1, h2, main)[tabindex="-1"]:focus { outline: none; }

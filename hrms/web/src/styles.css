@@ -330,7 +330,7 @@ html.mh-dark .mh-popup, html.mh-dark .mh-dialog { box-shadow: 0 16px 40px rgb(0 
 html[dir="rtl"] :is(p, dd)[dir="ltr"]:not([lang="en"]) { text-align: right; }
 
 /* Headings get focus after a page change so screen readers announce them; no ring for that programmatic focus. */
-[tabindex="-1"]:focus:not(:focus-visible) { outline: none; }
+:is(h1, h2, main)[tabindex="-1"]:focus { outline: none; }
 
 /* The command palette search box shows focus with its gold underline, not a square ring. */
 .mh-cmd-input:focus, .mh-cmd-input:focus-visible { outline: none; box-shadow: none; }
