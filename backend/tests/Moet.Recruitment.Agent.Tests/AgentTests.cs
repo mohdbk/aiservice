@@ -137,19 +137,13 @@ public class AgUiEndToEndTests
         }
     }
 
-    sealed class App(FakeBackoffice backoffice, ScriptedModel? model = null) : WebApplicationFactory<Program>
+    sealed class App(FakeBackoffice backoffice, ScriptedModel? model = null) : IDisposable
     {
         public ScriptedModel Model { get; } = model ?? new ScriptedModel();
-        protected override void ConfigureWebHost(IWebHostBuilder b)
-        {
-            b.UseSetting("AGENT_KEY", Key);
-            b.UseSetting("BACKEND_URL", "http://backend.test");
-            b.ConfigureTestServices(s =>
-            {
-                s.AddSingleton<IChatClient>(Model);
-                s.AddHttpClient(BackofficeApi.Client).ConfigurePrimaryHttpMessageHandler(() => backoffice);
-            });
-        }
+        TestHost? host;
+        TestHost Host => host ??= new TestHost(backoffice, Model, new Dictionary<string, string?> { ["AGENT_KEY"] = Key, ["BACKEND_URL"] = "http://backend.test" });
+        public HttpClient CreateClient() => Host.CreateClient();
+        public void Dispose() => host?.Dispose();
     }
 
     static StringContent Run(string text) => new(JsonSerializer.Serialize(new

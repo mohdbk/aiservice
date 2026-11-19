@@ -188,7 +188,7 @@ public static class BackofficeEndpoints
         staff.MapPost("/suggest-english/missing", (BackofficeSetupService s, CancellationToken ct) => s.SuggestAllMissingAsync(ct));
         staff.MapPost("/suggest-english/{kind}/{id:int}", (string kind, int id, BackofficeSetupService s, CancellationToken ct) => s.SuggestEnglishAsync(kind, id, ct));
 
-        // recruitment agent: the browser talks AG-UI to the agent service through this proxy; the agent can only propose changes
+        // recruitment assistant: the browser talks AG-UI to it through this endpoint (it runs inside this process); it can only propose changes
         staff.MapPost("/agent/run", AgentProxy.RunAsync).RequireRateLimiting("assistant");
         staff.MapPost("/agent/proposals", (ProposalInput b, AgentProposalService s, CancellationToken ct) => s.ProposeAsync(b, ct));
         staff.MapPost("/agent/proposals/{id:guid}/approve", (Guid id, string? lang, ApproveBody? b, AgentProposalService s, CancellationToken ct) => s.ApproveAsync(id, lang, b?.Changes, ct));
@@ -325,11 +325,11 @@ public static class BackofficeEndpoints
         sys.MapPut("/health-alerts", (HealthAlertInput b, HealthAlertService s, CancellationToken ct) => s.SaveAsync(b, ct));
         sys.MapPost("/health-alerts/check", async (HealthAlertService s, CancellationToken ct) =>
             new { problems = (await s.ProblemsAsync(null, ct)).Select(p => new { key = p.Key, en = p.En, ar = p.Ar }), emailed = await s.CheckAsync(null, ct) });
-        sys.MapGet("/health", async (SystemService s, IHttpClientFactory http, IConfiguration cfg, CancellationToken ct) =>
+        sys.MapGet("/health", async (SystemService s, IHttpClientFactory http, Hosting.EmbeddedAgent agent, CancellationToken ct) =>
         {
-            // The assistant service answers on /healthz when it is set up and running.
+            // The assistant (inside this process, on the loopback address) answers on /healthz once it has started.
             object assistant;
-            var url = cfg["AGENT_URL"];
+            var url = agent.BaseUrl;
             if (string.IsNullOrWhiteSpace(url)) assistant = new { state = "off", ms = 0L };
             else
             {

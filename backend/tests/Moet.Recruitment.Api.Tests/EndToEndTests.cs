@@ -149,7 +149,33 @@ public class EndToEndTests
         Assert.Contains(detail.GetProperty("notes").EnumerateArray(), n => n.GetProperty("text").GetString() == "Edited: strong analytics background");
         var unknown = await admin.PostAsync("/api/backoffice/agent/proposals", JsonBody(new { action = "delete_everything", arguments = new { } }));
         Assert.Equal(HttpStatusCode.BadRequest, unknown.StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await admin.PostAsync("/api/backoffice/agent/run", JsonBody(new { }))).StatusCode);
+
+        // The assistant runs inside the API: its tools reach the backoffice API in memory, as the signed-in staff member,
+        // through the same sign-in, same-origin and audit checks as a browser request.
+        var plainClient = app.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+        var signIn = await plainClient.PostAsync("/api/backoffice/sign-in", JsonBody(new { email = "admin@moet.test", password = "Admin-Password-123" }));
+        var cookie = signIn.Headers.GetValues("Set-Cookie").First(c => c.StartsWith("moet_backoffice=")).Split(';')[0];
+        var inProcess = new HttpClient(app.Services.GetRequiredService<Moet.Recruitment.Api.Hosting.InProcessBackoffice>().CreateHandler())
+            { BaseAddress = new Uri("http://in-process/api/backoffice/") };
+        async Task<HttpResponseMessage> Tool(HttpMethod method, string path, object? body = null, bool withCookie = true, bool backofficeHeader = true)
+        {
+            using var req = new HttpRequestMessage(method, path);
+            if (withCookie) req.Headers.Add("Cookie", cookie);
+            if (backofficeHeader) req.Headers.Add("X-Backoffice", "1");
+            req.Headers.Add("X-Via-Assistant", "1");
+            if (body != null) req.Content = JsonBody(body);
+            return await inProcess.SendAsync(req);
+        }
+        Assert.Equal("admin@moet.test", (await Read(await Tool(HttpMethod.Get, "me"))).GetProperty("email").GetString());
+        Assert.Equal(HttpStatusCode.Unauthorized, (await Tool(HttpMethod.Get, "me", withCookie: false)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await Tool(HttpMethod.Post, "agent/proposals", new { action = "add_note" }, backofficeHeader: false)).StatusCode);
+        var viaTool = await Read(await Tool(HttpMethod.Post, "agent/proposals",
+            new { action = "add_note", arguments = new { applicant_id = applicantId, text = "From the assistant" }, thread_id = "t2", lang = "en" }));
+        Assert.StartsWith("Add a note to", viaTool.GetProperty("label").GetString());
+        var search = await Read(await Tool(HttpMethod.Get, $"applicants?q={Uri.EscapeDataString("a b")}&page=1"));
+        Assert.True(search.TryGetProperty("items", out _));
+        var assistant = await Read(await admin.GetAsync("/api/backoffice/health"));
+        Assert.Equal("ok", assistant.GetProperty("assistant").GetProperty("state").GetString());
 
         // Admins design the agent's components; each approval card may only edit what its action allows.
         var card = new

@@ -19,12 +19,16 @@ if (args.Length >= 2 && args[0] == "--pdf-check")
 
 var builder = WebApplication.CreateBuilder(args);
 var cfg = builder.Configuration;
-builder.AddTelemetry("moet-recruitment-api", Moet.Recruitment.Infrastructure.AppMetrics.MeterName);
+builder.AddTelemetry("moet-recruitment-api", Moet.Recruitment.Infrastructure.AppMetrics.MeterName, "Microsoft.Agents.AI", "Experimental.Microsoft.Extensions.AI");
 
 builder.Services.AddApplication();
 builder.Services.AddBackofficeApplication();
 builder.Services.AddInfrastructure(cfg, runWorkers: cfg["RUN_WORKERS"] != "0");
 builder.Services.AddHttpClient(AgentProxy.Client, c => c.Timeout = TimeSpan.FromMinutes(10));
+// The recruitment assistant runs inside this process (see EmbeddedAgent).
+builder.Services.AddSingleton<InProcessBackoffice>();
+builder.Services.AddSingleton<EmbeddedAgent>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<EmbeddedAgent>());
 builder.Services.ConfigureHttpJsonOptions(o => Json.Configure(o.SerializerOptions));
 builder.Services.Configure<ForwardedHeadersOptions>(o =>
 {
@@ -54,6 +58,11 @@ builder.Services.AddRateLimiter(o =>
 });
 
 var app = builder.Build();
+
+// The assistant's calls to the backoffice API go through this pipeline in memory (InProcessBackoffice), so it is
+// captured here, with routing right after it.
+app.Use(next => { app.Services.GetRequiredService<InProcessBackoffice>().Pipeline = next; return next; });
+app.UseRouting();
 
 if (cfg["TRUST_PROXY"] == "1") app.UseForwardedHeaders();
 app.UseMiddleware<SecurityHeaders>();

@@ -1,18 +1,17 @@
 # Recruitment Agent
 
-The recruitment assistant in the backoffice, run as its own service. Made by the Ministry of Economy & Tourism.
+The recruitment assistant in the backoffice: a library the API runs inside its own process (no separate service). Made by the Ministry of Economy & Tourism.
 
 - **Microsoft Agent Framework** (`Microsoft.Agents.AI`): a `ChatClientAgent` with 20 tools, using any OpenAI-compatible model.
-- **AG-UI**: served with `MapAGUIServer("/agent", agent)`. Each run streams text, tool calls and tool results as server-sent events.
+- **AG-UI**: the API serves it at `/api/backoffice/agent/run` with `MapAGUIServer`. Each run streams text, tool calls and tool results as server-sent events.
 - **A2UI v1.0**: the show and propose tools return A2UI surfaces (applicant cards, comparisons, approval cards) inside their tool results. The backoffice draws them with UAE Design System styles and sends button events back.
 
 ## How a request flows
 
 ```
-Browser (backoffice)  --AG-UI-->  API /api/backoffice/agent/run  --AG-UI + session + X-Agent-Key-->  Agent /agent
-                                                                                                        |
-Browser  <--events (text, tool calls, A2UI)-----------------------------------------------------------  |
-Agent tools  --staff member's own session-->  API /api/backoffice/*  (role checks, audit trail)
+Browser (backoffice)  --AG-UI-->  API /api/backoffice/agent/run  (staff sign-in, rate limit, the agent runs here)
+Browser  <--events (text, tool calls, A2UI)--
+Agent tools  --staff member's own session, in memory-->  API /api/backoffice/*  (role checks, audit trail)
 ```
 
 - The agent holds no credentials. Each tool call goes to the backoffice API with the signed-in staff member's session, so it can see and do only what that person can.

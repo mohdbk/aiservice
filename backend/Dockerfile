@@ -1,4 +1,5 @@
-# MoET recruitment API (Ministry of Economy & Tourism). Serves only the API; the backoffice and portal are separate services.
+# MoET recruitment API (Ministry of Economy & Tourism), with the recruitment assistant inside it. The backoffice and portal are
+# separate services here (on IIS the backoffice is served by this app too).
 # Build context: backend/ (docker build backend).
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
@@ -6,6 +7,7 @@ COPY Directory.Build.props ./
 COPY src/Moet.Recruitment.Domain/Moet.Recruitment.Domain.csproj src/Moet.Recruitment.Domain/
 COPY src/Moet.Recruitment.Application/Moet.Recruitment.Application.csproj src/Moet.Recruitment.Application/
 COPY src/Moet.Recruitment.Infrastructure/Moet.Recruitment.Infrastructure.csproj src/Moet.Recruitment.Infrastructure/
+COPY src/Moet.Recruitment.Agent/Moet.Recruitment.Agent.csproj src/Moet.Recruitment.Agent/
 COPY src/Moet.Recruitment.Api/Moet.Recruitment.Api.csproj src/Moet.Recruitment.Api/
 RUN dotnet restore src/Moet.Recruitment.Api/Moet.Recruitment.Api.csproj
 COPY src/ src/

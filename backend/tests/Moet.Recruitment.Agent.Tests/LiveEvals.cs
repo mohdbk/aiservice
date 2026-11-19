@@ -51,17 +51,18 @@ public class LiveEvals
         }
     }
 
-    sealed class App(Backoffice backoffice) : WebApplicationFactory<Program>
+    sealed class App(Backoffice backoffice) : IDisposable
     {
-        protected override void ConfigureWebHost(IWebHostBuilder b)
+        readonly TestHost host = new(backoffice, null, new Dictionary<string, string?>
         {
-            b.UseSetting("AGENT_KEY", Key);
-            b.UseSetting("BACKEND_URL", "http://backend.test");
-            b.UseSetting("LLM_API_KEY", Environment.GetEnvironmentVariable("AGENT_EVAL_API_KEY"));
-            b.UseSetting("LLM_BASE_URL", Environment.GetEnvironmentVariable("AGENT_EVAL_BASE_URL") ?? "");
-            b.UseSetting("LLM_MODEL", Environment.GetEnvironmentVariable("AGENT_EVAL_MODEL") ?? "gpt-4o-mini");
-            b.ConfigureTestServices(s => s.AddHttpClient(BackofficeApi.Client).ConfigurePrimaryHttpMessageHandler(() => backoffice));
-        }
+            ["AGENT_KEY"] = Key,
+            ["BACKEND_URL"] = "http://backend.test",
+            ["LLM_API_KEY"] = Environment.GetEnvironmentVariable("AGENT_EVAL_API_KEY"),
+            ["LLM_BASE_URL"] = Environment.GetEnvironmentVariable("AGENT_EVAL_BASE_URL") ?? "",
+            ["LLM_MODEL"] = Environment.GetEnvironmentVariable("AGENT_EVAL_MODEL") ?? "gpt-4o-mini",
+        });
+        public HttpClient CreateClient() => host.CreateClient();
+        public void Dispose() => host.Dispose();
     }
 
     static async Task<(string Sse, Backoffice Api)> AskAsync(string text, string lang = "en")

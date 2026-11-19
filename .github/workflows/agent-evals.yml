@@ -1,7 +1,7 @@
 name: Agent Evals
 
 # Live behaviour checks against a real model (ambiguity, language, instructions hidden in CVs, writing rules). Runs weekly
-# and on demand when the AGENT_EVAL_API_KEY secret is set; the deterministic safety tests run on every push in agent.yml.
+# and on demand when the AGENT_EVAL_API_KEY secret is set; the deterministic safety tests run on every push in backend.yml.
 on:
   push:
     paths:
@@ -24,7 +24,7 @@ jobs:
       AGENT_EVAL_MODEL: ${{ vars.AGENT_EVAL_MODEL }}
     defaults:
       run:
-        working-directory: agent
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -35,7 +35,6 @@ jobs:
         run: dotnet test tests/Moet.Recruitment.Agent.Tests -c Release --filter "FullyQualifiedName~LiveEvals" --logger "console;verbosity=normal"
       - name: Live CV scoring evaluations (20 test CVs and the fairness check)
         if: env.AGENT_EVAL_API_KEY != ''
-        working-directory: backend
         run: dotnet test tests/Moet.Recruitment.Api.Tests -c Release --filter "FullyQualifiedName~CvLiveEvals" --logger "console;verbosity=normal"
       - name: Skipped
         if: env.AGENT_EVAL_API_KEY == ''

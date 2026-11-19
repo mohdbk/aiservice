@@ -39,6 +39,8 @@ jobs:
         run: dotnet build Moet.Recruitment.slnx --no-restore -c Release
       - name: Domain tests
         run: dotnet test tests/Moet.Recruitment.Domain.Tests --no-build -c Release --logger "console;verbosity=normal"
+      - name: Assistant tests (scripted model, fake backoffice, real AG-UI endpoint)
+        run: dotnet test tests/Moet.Recruitment.Agent.Tests --no-build -c Release --filter "FullyQualifiedName!~LiveEvals" --logger "console;verbosity=normal"
       - name: Virus scanner (ClamAV) test
         run: |
           docker run -d --name clamav -p 3310:3310 clamav/clamav:1.4

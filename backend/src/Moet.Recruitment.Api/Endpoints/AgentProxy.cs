@@ -5,16 +5,17 @@ using Moet.Recruitment.Domain.Common;
 namespace Moet.Recruitment.Api.Endpoints;
 
 /// <summary>
-/// Forwards an AG-UI run from the backoffice to the recruitment agent service and streams its events back.
-/// The browser keeps one origin; the agent receives the staff member's own session so every tool call it makes
-/// against this API runs with that person's permissions. The shared AGENT_KEY stops anyone else calling the agent.
+/// Forwards an AG-UI run from the backoffice to the recruitment assistant, which runs inside this process on the
+/// loopback address (<see cref="Hosting.EmbeddedAgent"/>), and streams its events back. The assistant receives the
+/// staff member's own session, so every tool call it makes against this API runs with that person's permissions.
+/// AGENT_KEY stops anything else on the machine calling it.
 /// </summary>
 public static class AgentProxy
 {
     public const string Client = "agent";
 
     /// <summary>
-    /// Endpoints only the agent service may call (X-Agent-Key): its settings, including the model key, read on each run.
+    /// Endpoints only the assistant may call (X-Agent-Key): its settings, including the model key, read on each run.
     /// </summary>
     public static void MapInternal(WebApplication app)
     {
@@ -41,10 +42,10 @@ public static class AgentProxy
 
     public sealed record UsageReport(string? Model, int InputTokens, int OutputTokens);
 
-    public static async Task RunAsync(HttpContext ctx, IHttpClientFactory factory, IConfiguration cfg, AgentSettingsService settings, CancellationToken ct)
+    public static async Task RunAsync(HttpContext ctx, IHttpClientFactory factory, IConfiguration cfg, AgentSettingsService settings, Hosting.EmbeddedAgent agent, CancellationToken ct)
     {
-        var baseUrl = cfg["AGENT_URL"];
-        if (string.IsNullOrWhiteSpace(baseUrl)) throw DomainException.Forbidden("assistant_off");
+        var baseUrl = agent.BaseUrl;
+        if (string.IsNullOrWhiteSpace(baseUrl)) throw new DomainException("agent_unavailable", 503);
         await settings.StartRunAsync(ct);
 
         using var req = new HttpRequestMessage(HttpMethod.Post, baseUrl.TrimEnd('/') + "/agent");

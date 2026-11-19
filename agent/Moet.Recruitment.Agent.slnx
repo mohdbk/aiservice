@@ -1,8 +1,0 @@
-<Solution>
-  <Folder Name="/src/">
-    <Project Path="src/Moet.Recruitment.Agent/Moet.Recruitment.Agent.csproj" />
-  </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/Moet.Recruitment.Agent.Tests/Moet.Recruitment.Agent.Tests.csproj" />
-  </Folder>
-</Solution>
