@@ -468,5 +468,6 @@
  "account.details_title": "بياناتك الشخصية",
  "account.change_password": "تغيير كلمة المرور",
  "account.password_sent": "أرسلنا رابط تغيير كلمة المرور إلى بريدك الإلكتروني.",
- "error.confirm_delete": "أكّد أنك تفهم أن حسابك وطلباتك سيتم حذفها."
+ "error.confirm_delete": "أكّد أنك تفهم أن حسابك وطلباتك سيتم حذفها.",
+ "apply.all_required": "جميع الحقول مطلوبة ما لم يُذكر أنها اختيارية."
 }

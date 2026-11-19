@@ -468,5 +468,6 @@
  "account.details_title": "Your Details",
  "account.change_password": "Change Password",
  "account.password_sent": "We have sent a link to change your password to your email.",
- "error.confirm_delete": "Confirm that you understand your account and applications will be removed."
+ "error.confirm_delete": "Confirm that you understand your account and applications will be removed.",
+ "apply.all_required": "All fields are required unless marked as optional."
 }

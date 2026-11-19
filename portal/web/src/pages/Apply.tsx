@@ -164,7 +164,16 @@ export default function Apply() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const errRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { if (error) errRef.current?.querySelector<HTMLElement>("[role=alert]")?.focus(); }, [error]);
+  const errCode = error instanceof ApiError ? error.code : "";
+  const errField = errCode === "phone_invalid" ? "phone" : errCode.startsWith("cv_") ? "cv" : errCode === "declaration_required" ? "declaration" : "";
+  // A problem with one field: take the person to that field (its message is shown under it); otherwise to the summary.
+  useEffect(() => {
+    if (!error) return;
+    const el = errField ? document.getElementById(errField === "cv" ? "cv-box" : errField) : null;
+    if (el) { el.scrollIntoView({ block: "center" }); (errField === "cv" ? document.getElementById("cv") : el)?.focus({ preventScroll: true }); }
+    else errRef.current?.querySelector<HTMLElement>("[role=alert]")?.focus();
+  }, [error]);
+  const fieldError = (f: string) => errField === f && <p id={`${f}-error`} className="mt-1 text-sm font-medium text-aered-700">{errorText(error)}</p>;
 
   if (loadError && (loadError as ApiError).status === 404) return <NotFound />;
   if (!job) return <div className="container mx-auto max-w-3xl space-y-4 px-4 py-10"><Skeleton className="h-10 w-1/2" /><Skeleton className="h-96" /></div>;
@@ -212,7 +221,10 @@ export default function Apply() {
         <div className="mt-6"><Alert tone="warning" title={t("job.closed")} /></div>
       ) : (
         <form onSubmit={submit} className="mc-surface mt-6 space-y-6 rounded-2xl border border-aeblack-100 bg-white p-6 md:p-8" noValidate aria-busy={busy}>
-          <h2 className="font-heading text-xl font-semibold text-aeblack-900">{t("apply.your_details")}</h2>
+          <div>
+            <h2 className="font-heading text-xl font-semibold text-aeblack-900">{t("apply.your_details")}</h2>
+            <p className="mt-1 text-sm text-aeblack-600">{t("apply.all_required")}</p>
+          </div>
           <dl className="grid gap-4 rounded-xl bg-whitely-100 p-4 sm:grid-cols-2">
             <div className="relative flex min-h-10 flex-col justify-center ps-[3.25rem]"><dt className="text-sm text-aeblack-600"><IconBox icon={UserCircle} className="absolute start-0 top-1/2 -translate-y-1/2" />{t("apply.name")}</dt><dd className="font-medium text-aeblack-900">{user?.full_name}</dd></div>
             <div className="relative flex min-h-10 min-w-0 flex-col justify-center ps-[3.25rem]"><dt className="text-sm text-aeblack-600"><IconBox icon={Envelope} className="absolute start-0 top-1/2 -translate-y-1/2" />{t("apply.email")}</dt><dd className="truncate font-medium text-aeblack-900"><bdi>{user?.email}</bdi></dd></div>
@@ -229,9 +241,10 @@ export default function Apply() {
                 </div>
                 <div className="form-control-input min-w-0 flex-1">
                   <span className="control-prefix" aria-hidden="true"><Phone size={24} /></span>
-                  <input id="phone" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel-national" required maxLength={24} aria-describedby="phone-hint" placeholder="50 123 4567" />
+                  <input id="phone" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel-national" required maxLength={24} aria-describedby={errField === "phone" ? "phone-error phone-hint" : "phone-hint"} aria-invalid={errField === "phone" || undefined} placeholder="50 123 4567" />
                 </div>
               </div>
+              {fieldError("phone")}
               <p id="phone-hint" className="mt-1 text-sm text-aeblack-600">{t("apply.phone_hint")}</p>
             </div>
             <Field id="country" label={t("apply.country")} optional prefix={GlobeHemisphereEast}>
@@ -248,7 +261,7 @@ export default function Apply() {
             </Field>
           </div>
 
-          <div>
+          <div id="cv-box">
             <p className="mb-1 block text-sm font-medium leading-6 text-aeblack-800" id="cv-label">{t("apply.cv")}<RequiredMark /></p>
             {saved.length > 0 && (
               <div className="mb-3 space-y-2" role="radiogroup" aria-labelledby="cv-label">
@@ -276,6 +289,7 @@ export default function Apply() {
               <span className="text-sm text-aeblack-600" id="cv-hint">{t("apply.cv_hint", { max: config.max_cv_mb })}</span>
             </label>
             </>}
+            {fieldError("cv")}
             {reusing && reading && <div className="mt-3 text-sm text-aeblack-700"><Spinner label={t("apply.cv_reading")} /></div>}
             {reusing && prefill && prefill.status === "ready" && (prefill.latest_role || prefill.years || prefill.education.length > 0 || prefill.skills.length > 0) && (
               <div className="mt-3 rounded-xl border border-aegreen-200 bg-aegreen-50 p-4 text-sm" aria-live="polite">
@@ -318,8 +332,9 @@ export default function Apply() {
             <input id="declaration" type="checkbox" checked={declared} onChange={(e) => setDeclared(e.target.checked)} required />
             <label htmlFor="declaration">{t("apply.declaration")}<RequiredMark /></label>
           </div>
+          {fieldError("declaration")}
 
-          <div ref={errRef}>{error ? <Alert tone="error" title={errorText(error)} /> : null}</div>
+          <div ref={errRef}>{error && !errField ? <Alert tone="error" title={errorText(error)} /> : null}</div>
 
           <div className="flex flex-wrap items-center gap-3">
             <button type="submit" className="aegov-btn" disabled={busy}><PaperPlaneTilt size={20} className="rtl:-scale-x-100" aria-hidden="true" />{t("apply.submit")}</button>

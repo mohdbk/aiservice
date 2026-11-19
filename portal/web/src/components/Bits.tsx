@@ -43,8 +43,9 @@ export function Steps({ current }: { current: 1 | 2 | 3 }) {
   );
 }
 
+/** UAE Design System: no asterisks; forms say "All fields are required unless marked as optional" instead. */
 export function RequiredMark() {
-  return <span className="text-aered-600" aria-hidden="true"> *</span>;
+  return null;
 }
 
 /** A labelled field. Required fields carry a red asterisk (screen readers hear "required" from the input itself). */
