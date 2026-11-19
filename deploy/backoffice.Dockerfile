@@ -1,16 +1,23 @@
-# MoET recruitment API (Ministry of Economy & Tourism), with the recruitment assistant inside it. The backoffice and portal are
-# separate services here (on IIS the backoffice is served by this app too).
-# Build context: backend/ (docker build backend).
+# MoET recruitment backoffice (Ministry of Economy & Tourism): the staff app, the API and the recruitment assistant in one
+# image, the same app as the backoffice site on IIS. Build context: the repository root
+# (docker build -f deploy/backoffice.Dockerfile .).
+FROM node:22-slim AS web
+WORKDIR /web
+COPY backoffice/web/package.json ./
+RUN npm install --no-audit --no-fund
+COPY backoffice/web/ ./
+RUN npm run build && test -f dist/index.html
+
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
-COPY Directory.Build.props ./
-COPY src/Moet.Recruitment.Domain/Moet.Recruitment.Domain.csproj src/Moet.Recruitment.Domain/
-COPY src/Moet.Recruitment.Application/Moet.Recruitment.Application.csproj src/Moet.Recruitment.Application/
-COPY src/Moet.Recruitment.Infrastructure/Moet.Recruitment.Infrastructure.csproj src/Moet.Recruitment.Infrastructure/
-COPY src/Moet.Recruitment.Agent/Moet.Recruitment.Agent.csproj src/Moet.Recruitment.Agent/
-COPY src/Moet.Recruitment.Api/Moet.Recruitment.Api.csproj src/Moet.Recruitment.Api/
+COPY backend/Directory.Build.props ./
+COPY backend/src/Moet.Recruitment.Domain/Moet.Recruitment.Domain.csproj src/Moet.Recruitment.Domain/
+COPY backend/src/Moet.Recruitment.Application/Moet.Recruitment.Application.csproj src/Moet.Recruitment.Application/
+COPY backend/src/Moet.Recruitment.Infrastructure/Moet.Recruitment.Infrastructure.csproj src/Moet.Recruitment.Infrastructure/
+COPY backend/src/Moet.Recruitment.Agent/Moet.Recruitment.Agent.csproj src/Moet.Recruitment.Agent/
+COPY backend/src/Moet.Recruitment.Api/Moet.Recruitment.Api.csproj src/Moet.Recruitment.Api/
 RUN dotnet restore src/Moet.Recruitment.Api/Moet.Recruitment.Api.csproj
-COPY src/ src/
+COPY backend/src/ src/
 RUN dotnet publish src/Moet.Recruitment.Api/Moet.Recruitment.Api.csproj -c Release -o /app --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
@@ -18,6 +25,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0
 RUN apt-get update && apt-get install -y --no-install-recommends fonts-noto-core fontconfig && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=build /app .
+COPY --from=web /web/dist wwwroot
 # Chromium (headless shell) for PDF letters, with the libraries it needs, installed by Playwright's own driver from the
 # published app. Kept in the image, so letters print offline.
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright

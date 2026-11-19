@@ -1,0 +1,11 @@
+# For images built from the repository root (deploy/backoffice.Dockerfile).
+.git
+**/node_modules
+**/dist
+**/bin
+**/obj
+frappe
+e2e
+docs
+backend/tests
+portal

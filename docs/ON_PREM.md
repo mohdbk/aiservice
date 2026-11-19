@@ -40,7 +40,7 @@ only, and its tools call the API in memory as the signed-in staff member. The po
 |---|---|---|
 | Fits | Ministry Windows estate, IIS skills, Windows patching and monitoring | A container platform (Kubernetes, OpenShift, Docker hosts) |
 | Package | One zip from the **IIS Package** workflow, installed by `Install-Moet.ps1` | One image per folder (`Dockerfile` in each) |
-| Sites | Two IIS sites: backoffice and careers portal | The API, the backoffice web server and the portal, behind the platform's ingress |
+| Sites | Two IIS sites: backoffice and careers portal | The same two apps as images, behind the platform's ingress |
 
 Both run the same code with the same settings (`docs/SERVICES.md`).
 
@@ -219,10 +219,10 @@ License); otherwise Windows fonts with Arabic support are used.
 
 ## 4. Containers
 
-Each folder has a `Dockerfile` (`backend`, `backoffice/web`, `portal`). Run them on the internal network, publish only
-the backoffice web server (to staff) and the portal (to the internet, in the DMZ), and give the API and SQL Server no
-public route. The assistant runs inside the API container. `docs/SERVICES.md` lists the images and how they connect.
-The API image already contains Chromium and the Noto fonts.
+Two images, the same apps as the IIS sites: the backoffice (`docker build -f deploy/backoffice.Dockerfile .`, the staff
+app, API and assistant) and the careers portal (`docker build portal`). Publish the backoffice to staff only and the
+portal to the internet (in the DMZ), and give SQL Server no public route. `docs/SERVICES.md` lists the settings. The
+backoffice image already contains Chromium and the Noto fonts.
 
 ---
 
@@ -233,7 +233,6 @@ Every setting, by part, is in `docs/SERVICES.md`. The ones needed to start:
 | Part | Settings |
 |---|---|
 | Backoffice (API and assistant) | `DB_CONNECTION`, `PORTAL_API_KEY`, `PORTAL_API_SECRET`, `PORTAL_URL`, `BACKOFFICE_URL`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` (first start), `AGENT_KEY`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, `SMTP_*`, `TIME_ZONE` |
-| Backoffice web server (containers only) | `API_URL` |
 | Careers portal | `RECRUITMENT_API_URL`, `CAREERS_PORTAL_API_KEY`, `CAREERS_PORTAL_API_SECRET`, `SESSION_SECRET` |
 
 ### Careers portal settings

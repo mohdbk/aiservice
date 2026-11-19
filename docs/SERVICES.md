@@ -1,28 +1,25 @@
 # Recruitment System Services
 
-Made by the Ministry of Economy & Tourism. Everything is in this repository, one folder per service:
+Made by the Ministry of Economy & Tourism. Everything is in this repository. Two apps, the same on IIS, in containers and
+on the Railway demo:
 
 | Service | Folder | Image | Public | Purpose |
 |---|---|---|---|---|
-| Recruitment API | `backend/` | `docker build backend` | No (private network) | .NET 10 Clean Architecture API on SQL Server: portal API, backoffice API, background jobs, and the recruitment assistant (Microsoft Agent Framework, AG-UI with A2UI) running inside it |
-| Recruitment Backoffice | `backoffice/web/` | `docker build backoffice/web` | Yes (staff) | React app on nginx; forwards `/api` to the API on the same origin |
+| Recruitment Backoffice | `backend/`, `backoffice/web/` | `docker build -f deploy/backoffice.Dockerfile .` | Yes (staff) | The staff app (React), the .NET 10 API on SQL Server (portal API, backoffice API, background jobs, PDF letters) and the recruitment assistant (Microsoft Agent Framework, AG-UI with A2UI), in one app |
 | Careers Portal | `portal/` | `docker build portal` | Yes (candidates) | Candidate site and its small .NET server (`portal/host`), which calls the portal API with a service key |
-| SQL Server | (image) | `mcr.microsoft.com/mssql/server:2022-latest` | No | Database; schema scripts run by the API on start |
+| SQL Server | (image) | `mcr.microsoft.com/mssql/server:2022-latest` | No | Database; schema scripts run by the backoffice on start |
 
 ## How They Connect
 
 ```
-Staff browser  ->  Backoffice (nginx)  --/api-->  API  --SQL-->  SQL Server
-                                                   (the assistant runs inside the API; its tools call the API in memory as the staff member)
-Candidate browser  ->  Portal (.NET)  --service key-->  API /api/portal
+Staff browser  ->  Backoffice (staff app + API + assistant)  --SQL-->  SQL Server
+                    (the assistant's tools call the API in memory as the staff member)
+Candidate browser  ->  Portal (.NET)  --service key-->  Backoffice /api/portal
 ```
 
 ## Settings by Service
 
-- **Backoffice:**
-  - `API_URL`: for example `http://recruitment-api:8080`.
-  - `PORT`: defaults to 8080.
-- **API:**
+- **Backoffice (API and assistant):**
   - Database and portal: `DB_CONNECTION`, `PORTAL_API_KEY`, `PORTAL_API_SECRET`, `PORTAL_URL`.
   - First administrator: `ADMIN_EMAIL`, `ADMIN_PASSWORD` (at least 12 characters).
   - Assistant (inside the API): `AGENT_KEY` (16 characters or more; also encrypts saved secrets). It uses the API's model unless `AGENT_LLM_BASE_URL`, `AGENT_LLM_MODEL` and `AGENT_LLM_API_KEY` are set; its settings can also be changed under Setup › Assistant Settings.
@@ -42,13 +39,12 @@ Candidate browser  ->  Portal (.NET)  --service key-->  API /api/portal
 ## On-Prem
 
 - Windows Server and IIS: `deploy/iis` and `docs/ON_PREM.md` section 3 (two IIS sites: the backoffice, with the staff app, API and assistant in one app, and the careers portal).
-- Containers: run each folder's image on the internal network.
-- Publish only the backoffice (to staff) and the portal (to the internet, in the DMZ). The API and SQL Server stay internal.
+- Containers: the two images above. Publish the backoffice to staff only and the portal to the internet (in the DMZ); SQL Server stays internal.
 - Use a licensed SQL Server edition, on storage with 512-byte or 4 KB sectors, and back it up.
 
 ## Demo on Railway
 
-- The demo runs the services above in one Railway project (and the Demo Seed job).
+- The demo runs the two apps and SQL Server in one Railway project, plus the Demo Seed job. Pushes to `main` deploy them.
 - **SQL Server data does not persist:** Railway's volume storage gives SQL Server misaligned disk writes, and SQL Server crashes on start when its files are there. The demo database is therefore kept in the container, and a SQL Server redeploy starts it empty.
-- **Refilling the demo:** the API recreates the schema, then running the **Demo Seed** job (`backoffice/scripts`) loads the demo data again.
+- **Refilling the demo:** the backoffice recreates the schema, then running the **Demo Seed** job (`backoffice/scripts`) loads the demo data again.
 - This affects the demo only. On-prem uses normal SQL Server storage.

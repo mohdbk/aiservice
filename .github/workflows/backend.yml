@@ -3,9 +3,9 @@ name: Backend
 on:
   push:
     branches: [main, dotnet-backend]
-    paths: ["backend/**", "backoffice/scripts/**", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "backoffice/scripts/**", "backoffice/web/**", "deploy/backoffice.Dockerfile", ".github/workflows/backend.yml"]
   pull_request:
-    paths: ["backend/**", "backoffice/scripts/**", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "backoffice/scripts/**", "backoffice/web/**", "deploy/backoffice.Dockerfile", ".github/workflows/backend.yml"]
   workflow_dispatch:
 
 jobs:
@@ -74,8 +74,17 @@ jobs:
           # A second run (as on the live demo) adds nothing and fails on nothing.
           API=http://localhost:5080 PORTAL_KEY=ci-portal-key:ci-portal-secret-0123456789 node ../backoffice/scripts/seed-demo.mjs | tee seed2.log || (tail -80 api.log; exit 1)
           grep -q "Nothing missing." seed2.log || (echo "second seed run changed something"; tail -80 api.log; exit 1)
-      - name: Container image builds
-        run: docker build -t moet-recruitment-api .
+      - name: Container image builds (staff app, API and assistant) and serves the staff app
+        run: |
+          docker build -f ../deploy/backoffice.Dockerfile -t moet-recruitment-api ..
+          docker run -d --name bo -p 8088:8080 -e MIGRATE_ON_START=0 -e RUN_WORKERS=0 -e AGENT_KEY=ci-agent-key-0123456789 \
+            -e DB_CONNECTION="Server=127.0.0.1,1;Database=None;User Id=x;Password=x;Connect Timeout=1;TrustServerCertificate=True" moet-recruitment-api
+          for i in $(seq 1 30); do curl -sf http://localhost:8088/healthz && break; sleep 1; done
+          curl -sf http://localhost:8088/ar/applicants | grep -q '<div id="root">'
+          curl -sI http://localhost:8088/ | grep -qi "content-security-policy: default-src 'self'"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8088/api/backoffice/me)" = 401
+          docker logs bo 2>&1 | grep -q "Assistant started"
+          docker rm -f bo
       - name: Letters print in the image (Chromium, Arabic font, readable Arabic text)
         run: |
           sudo apt-get install -y -qq poppler-utils > /dev/null

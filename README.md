@@ -9,7 +9,7 @@ a recruitment assistant. Arabic first, on the UAE Design System.
 | Path | What |
 |---|---|
 | `backend/` | **Backoffice app**: the .NET 10 API on SQL Server (portal API, backoffice API, background jobs, PDF letters) with the recruitment assistant inside it (`src/Moet.Recruitment.Agent`) |
-| `backoffice/web/` | The staff app (React). On IIS it is served by the backoffice app from `wwwroot` |
+| `backoffice/web/` | The staff app (React), served by the backoffice app from `wwwroot` |
 | `portal/web/` | The candidate site (React) |
 | `portal/host/` | The candidate site's small .NET server: serves the site and calls the API with a service key |
 | `portal/server/` | Design preview only: the earlier Node server with mock data, used for screenshots and local design work. Not deployed |
@@ -33,5 +33,5 @@ Candidate browser ──► Careers portal site (DMZ) ──service key──►
 ## Deploying
 
 - **IIS (two sites):** `deploy/iis/README.md`, then `docs/ON_PREM.md` section 3.
-- **Containers:** one `Dockerfile` per app (`backend`, `backoffice/web`, `portal`); `docs/SERVICES.md`.
-- **Demo:** Railway deploys `main` (API, backoffice web server, portal, SQL Server, Demo Seed).
+- **Containers:** `deploy/backoffice.Dockerfile` (repository root as context) and `portal/Dockerfile`; `docs/SERVICES.md`.
+- **Demo:** Railway deploys `main`: the same two apps, SQL Server and the Demo Seed job.
