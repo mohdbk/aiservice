@@ -44,7 +44,8 @@ Candidate browser  ->  Portal (Node)  --service key-->  API /api/portal
 
 ## On-Prem
 
-- Run each folder's image on the internal network.
+- Windows Server and IIS: `deploy/iis` and `docs/ON_PREM.md` section 3 (two public IIS sites, the backoffice and the careers portal; the API and agent as internal IIS sites).
+- Containers: run each folder's image on the internal network.
 - Publish only the backoffice (to staff) and the portal (to the internet, in the DMZ). The API, agent and SQL Server stay internal.
 - Use a licensed SQL Server edition, on storage with 512-byte or 4 KB sectors, and back it up.
 

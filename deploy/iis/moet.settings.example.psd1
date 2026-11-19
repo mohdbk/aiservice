@@ -78,6 +78,8 @@
             SMTP_TLS = '1'
             TIME_ZONE = 'Asia/Dubai'
             # CLAMAV_HOST = 'clamav01:3310'
+            # Built-in exports to MinIO (BACKUP_S3_*): keep a new database empty instead of refilling it from the store.
+            BACKUP_RESTORE_ON_EMPTY = '0'
         }
     }
 
