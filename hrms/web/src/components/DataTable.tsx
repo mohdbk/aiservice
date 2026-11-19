@@ -60,7 +60,7 @@ function SavedViews({ current, apply }: { current: string; apply: (q: string) =>
   return (
     <>
       <Menu.Root>
-        <Menu.Trigger className="aegov-btn btn-outline btn-sm"><BookmarkSimple size={18} aria-hidden="true" />{t("views.title")}{views.length > 0 && <span className="text-aeblack-500" dir="ltr">({views.length})</span>}</Menu.Trigger>
+        <Menu.Trigger className="aegov-btn btn-outline"><BookmarkSimple size={20} aria-hidden="true" />{t("views.title")}{views.length > 0 && <span className="text-aeblack-500" dir="ltr">({views.length})</span>}</Menu.Trigger>
         <Menu.Portal>
           <Menu.Positioner sideOffset={6} align="start" className="z-[80]">
             <Menu.Popup className="mh-popup min-w-56">
@@ -154,6 +154,7 @@ export function DataTable<T>({ list, columns, rowKey, filters = [], searchLabel,
           <Button type="submit" variant="outline" aria-label={t("common.search")} icon={<MagnifyingGlass size={20} aria-hidden="true" />}>
             <span className="hidden sm:inline">{t("common.search")}</span>
           </Button>
+          {filters.length > 0 && <div className="hidden sm:block"><SavedViews current={list.params.toString()} apply={list.replace} /></div>}
           {(filters.length > 0 || toolbar) && (
             <Button variant="outline" className="sm:hidden" aria-expanded={showFilters} onClick={() => setShowFilters(!showFilters)}
               icon={<FunnelSimple size={20} aria-hidden="true" />} aria-label={t("list.filters")}>
@@ -168,11 +169,11 @@ export function DataTable<T>({ list, columns, rowKey, filters = [], searchLabel,
                 options={[{ value: "", label: t("common.all") }, ...f.options]} />
             ))}
             {toolbar}
+            {filters.length > 0 && <div className="sm:hidden"><SavedViews current={list.params.toString()} apply={list.replace} /></div>}
             {active && (
               <Button variant="link" onClick={clearAll}
                 icon={<X size={20} aria-hidden="true" />}>{t("list.clear")}</Button>
             )}
-            {filters.length > 0 && <div className="sm:ms-auto sm:pb-1.5"><SavedViews current={list.params.toString()} apply={list.replace} /></div>}
           </div>
         )}
       </form>
