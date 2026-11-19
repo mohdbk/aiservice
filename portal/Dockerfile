@@ -1,4 +1,4 @@
-# MoET careers portal: React app + DMZ backend in one small image (Ministry of Economy & Tourism).
+# MoET careers portal (Ministry of Economy & Tourism): the candidate app and its .NET server in one small image.
 # Build context: the portal/ folder.
 FROM node:22-slim AS web
 WORKDIR /web
@@ -7,13 +7,19 @@ RUN npm install --no-audit --no-fund
 COPY web/ ./
 RUN npm run build && test -f dist/index.html
 
-FROM node:22-slim
-ENV NODE_ENV=production PORT=8080 WEB_DIST=/app/web/dist
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS server
+WORKDIR /src
+COPY host/Directory.Build.props ./
+COPY host/Moet.Careers.Portal/Moet.Careers.Portal.csproj Moet.Careers.Portal/
+RUN dotnet restore Moet.Careers.Portal/Moet.Careers.Portal.csproj
+COPY host/Moet.Careers.Portal/ Moet.Careers.Portal/
+RUN dotnet publish Moet.Careers.Portal/Moet.Careers.Portal.csproj -c Release -o /app --no-restore
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
-COPY server/package.json server/package.json
-COPY server/src server/src
-COPY --from=web /web/dist web/dist
-USER node
+COPY --from=server /app .
+COPY --from=web /web/dist wwwroot
+ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
-HEALTHCHECK --interval=30s --timeout=5s CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||8080)+'/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-CMD ["node", "server/src/server.js"]
+USER $APP_UID
+ENTRYPOINT ["dotnet", "Moet.Careers.Portal.dll"]

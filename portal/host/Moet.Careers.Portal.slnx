@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Moet.Careers.Portal/Moet.Careers.Portal.csproj" />
+  <Project Path="Moet.Careers.Portal.Tests/Moet.Careers.Portal.Tests.csproj" />
+</Solution>

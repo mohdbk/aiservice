@@ -16,7 +16,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Server tests
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Server tests (.NET)
+        working-directory: portal/host
+        run: dotnet test Moet.Careers.Portal.slnx -c Release --logger "console;verbosity=normal"
+      - name: Design preview server tests (Node, mock data)
         working-directory: portal/server
         run: npm test
       - name: Install web
@@ -29,11 +35,12 @@ jobs:
         working-directory: portal/web
         run: npm run build
       - name: No em dashes
-        run: "! grep -rnI $'\\u2014' portal/web/src portal/server/src || (echo 'em dash found' && exit 1)"
+        run: "! grep -rnI --exclude-dir=bin --exclude-dir=obj $'\\u2014' portal/web/src portal/server/src portal/host || (echo 'em dash found' && exit 1)"
       - name: Container image builds and serves the app
         run: |
           docker build -t moet-careers-portal portal
-          docker run -d --name po -p 8089:8080 -e MOCK_FRAPPE=1 -e COOKIE_SECURE=0 -e SESSION_SECRET=ci-only-session-secret-0123456789 moet-careers-portal
+          docker run -d --name po -p 8089:8080 -e RECRUITMENT_API_URL=http://127.0.0.1:1 -e CAREERS_PORTAL_API_KEY=k -e CAREERS_PORTAL_API_SECRET=s \
+            -e COOKIE_SECURE=0 -e SESSION_SECRET=ci-only-session-secret-0123456789 moet-careers-portal
           for i in $(seq 1 20); do curl -sf http://localhost:8089/healthz && break; sleep 1; done
           curl -sf http://localhost:8089/ar/jobs | grep -q '<div id="root">'
           docker logs po
