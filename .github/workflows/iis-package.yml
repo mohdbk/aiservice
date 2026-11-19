@@ -72,17 +72,20 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           function Hit([string]$method, [string]$url, [hashtable]$headers = @{}, [string]$body = $null) {
-            try {
-              $p = @{ Uri = $url; Method = $method; Headers = $headers; UseBasicParsing = $true; MaximumRedirection = 0; TimeoutSec = 60 }
-              if ($body) { $p.Body = $body; $p.ContentType = 'application/json' }
-              $r = Invoke-WebRequest @p
-              return @{ Status = [int]$r.StatusCode; Body = $r.Content; Headers = $r.Headers }
-            } catch {
-              $resp = $_.Exception.Response
-              if (-not $resp) { throw }
-              $text = (New-Object IO.StreamReader($resp.GetResponseStream())).ReadToEnd()
-              return @{ Status = [int]$resp.StatusCode; Body = $text; Headers = $resp.Headers }
+            # HttpWebRequest directly: no redirects followed, and error responses read like any other.
+            $req = [Net.HttpWebRequest]::Create($url)
+            $req.Method = $method; $req.AllowAutoRedirect = $false; $req.Timeout = 60000
+            foreach ($k in $headers.Keys) { if ($k -eq 'Origin') { $req.Headers.Add('Origin', $headers[$k]) } else { $req.Headers[$k] = $headers[$k] } }
+            if ($body) {
+              $req.ContentType = 'application/json'
+              $bytes = [Text.Encoding]::UTF8.GetBytes($body)
+              $stream = $req.GetRequestStream(); $stream.Write($bytes, 0, $bytes.Length); $stream.Close()
             }
+            try { $resp = $req.GetResponse() } catch [Net.WebException] { $resp = $_.Exception.Response; if (-not $resp) { throw } }
+            $text = (New-Object IO.StreamReader($resp.GetResponseStream())).ReadToEnd()
+            $result = @{ Status = [int]$resp.StatusCode; Body = $text; Headers = $resp.Headers }
+            $resp.Close()
+            return $result
           }
           function Expect([string]$what, [bool]$ok, $detail) {
             if ($ok) { Write-Host "ok   $what" } else { Write-Host "FAIL $what :: $detail"; $script:bad++ }
