@@ -1791,5 +1791,6 @@
  "usage.feature.chat": "Chat",
  "ai.err.no_text": "No text was found in the CV file.",
  "ai.err.no_model": "The language model is not set up yet.",
- "ai.err.other": "Something went wrong while scoring. Try again later."
+ "ai.err.other": "Something went wrong while scoring. Try again later.",
+ "nav.group.candidates": "Candidates"
 }

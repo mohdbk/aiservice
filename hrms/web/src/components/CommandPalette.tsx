@@ -85,12 +85,12 @@ export function CommandPalette({ pages }: { pages: NavPage[] }) {
       <Dialog.Portal>
         <Dialog.Backdrop className="mh-backdrop" />
         <Dialog.Popup className="fixed inset-x-3 top-[10vh] z-[62] mx-auto max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl outline-none" aria-label={t("cmd.open")}>
-          <div className="flex items-center gap-3 border-b border-aeblack-100 px-4">
+          <div className="flex items-center gap-3 border-b-2 border-aeblack-100 px-4 focus-within:border-primary-500">
             <MagnifyingGlass size={22} className="shrink-0 text-aeblack-500" aria-hidden="true" />
             <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onKey} dir="auto"
               placeholder={t("cmd.placeholder")} aria-label={t("cmd.search")} role="combobox" aria-expanded="true" aria-controls="cmd-list"
               aria-activedescendant={entries[active] ? `cmd-${entries[active].key}` : undefined}
-              className="min-w-0 flex-1 border-0 bg-transparent py-4 text-base outline-none" style={{ boxShadow: "none" }} />
+              className="mh-cmd-input min-w-0 flex-1 border-0 bg-transparent py-4 text-base outline-none" style={{ boxShadow: "none" }} />
             <kbd className="rounded border border-aeblack-200 px-1.5 text-[11px] text-aeblack-500">Esc</kbd>
           </div>
           <ul id="cmd-list" ref={list} role="listbox" className="max-h-[60vh] overflow-y-auto p-2">

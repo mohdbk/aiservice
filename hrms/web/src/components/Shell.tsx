@@ -1,7 +1,7 @@
 import { Dialog, Menu } from "@base-ui/react";
 import {
   Briefcase, CalendarCheck, CaretDown, ChatCircleDots, ClipboardText, Exam, FileText, Gear, Handshake, Key, List, ListChecks,
-  Cube, EnvelopeSimple, HardDrives, Robot, Scroll, SignOut, SquaresFour, Target, Tray, Translate, TreeStructure, UserCircle, Users, UsersThree, X, Brain, ChartBar, ClockCounterClockwise, Pulse, ChartLine, ShieldCheck, ChatText, UsersFour, ArrowsLeftRight, MapPin, Stamp, DeviceMobile, GlobeHemisphereEast, IdentificationCard, CaretUpDown, SidebarSimple, Moon, Sun } from "@phosphor-icons/react";
+  Cube, EnvelopeSimple, HardDrives, Robot, Scroll, SignOut, SquaresFour, Target, Tray, Translate, TreeStructure, UserCircle, Users, UsersThree, X, Brain, ChartBar, ClockCounterClockwise, Pulse, ChartLine, ShieldCheck, ChatText, UsersFour, ArrowsLeftRight, MapPin, Stamp, DeviceMobile, GlobeHemisphereEast, IdentificationCard, CaretUpDown, CaretLeft, Moon, Sun } from "@phosphor-icons/react";
 import { lazy, ReactNode, Suspense, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { api, useAuth, useLang } from "../core";
@@ -20,7 +20,13 @@ function useNav(): { group?: string; items: Item[] }[] {
   const { t } = useLang();
   const i = (C: typeof Briefcase) => <C size={24} aria-hidden="true" />;
   return [
-    { items: [{ to: "/", label: t("nav.dashboard"), icon: i(SquaresFour) }, { to: "/reports", label: t("nav.reports"), icon: i(ChartBar) }] },
+    {
+      items: [
+        { to: "/", label: t("nav.dashboard"), icon: i(SquaresFour) },
+        { to: "/assistant", label: t("nav.assistant"), icon: i(ChatCircleDots) },
+        { to: "/reports", label: t("nav.reports"), icon: i(ChartBar) },
+      ],
+    },
     {
       group: t("nav.group.hiring"),
       items: [
@@ -28,11 +34,15 @@ function useNav(): { group?: string; items: Item[] }[] {
         { to: "/applicants", label: t("nav.applicants"), icon: i(Users) },
         { to: "/interviews", label: t("nav.interviews"), icon: i(CalendarCheck) },
         { to: "/offers", label: t("nav.offers"), icon: i(Handshake) },
+        { to: "/approvals", label: t("nav.approvals"), icon: i(Stamp) },
+        { to: "/requisitions", label: t("nav.requisitions"), icon: i(ClipboardText) },
+      ],
+    },
+    {
+      group: t("nav.group.candidates"),
+      items: [
         { to: "/talent-pool", label: t("nav.talent_pool"), icon: i(UsersFour) },
         { to: "/candidates", label: t("nav.candidates"), icon: i(IdentificationCard), admin: true },
-        { to: "/screening", label: t("nav.screening"), icon: i(ListChecks) },
-        { to: "/requisitions", label: t("nav.requisitions"), icon: i(ClipboardText) },
-        { to: "/approvals", label: t("nav.approvals"), icon: i(Stamp) },
       ],
     },
     {
@@ -40,29 +50,24 @@ function useNav(): { group?: string; items: Item[] }[] {
       items: [
         { to: "/tests", label: t("nav.assessments"), icon: i(Exam) },
         { to: "/invitations", label: t("nav.invitations"), icon: i(FileText) },
-        { to: "/questions", label: t("nav.questions"), icon: i(ClipboardText) },
-        { to: "/role-profiles", label: t("nav.role_profiles"), icon: i(Target) },
-        { to: "/personality-settings", label: t("nav.personality_settings"), icon: i(Brain) },
-      ],
-    },
-    {
-      group: t("nav.group.assistant"),
-      items: [
-        { to: "/assistant", label: t("nav.assistant"), icon: i(ChatCircleDots) },
-        { to: "/setup/components", label: t("nav.components"), icon: i(Cube), admin: true },
+        { to: "/questions", label: t("nav.questions"), icon: i(ListChecks) },
       ],
     },
     {
       group: t("nav.setup"),
       items: [
+        { to: "/screening", label: t("nav.screening"), icon: i(ListChecks) },
+        { to: "/setup/rounds", label: t("nav.rounds"), icon: i(UsersThree), admin: true },
+        { to: "/role-profiles", label: t("nav.role_profiles"), icon: i(Target) },
+        { to: "/personality-settings", label: t("nav.personality_settings"), icon: i(Brain) },
         { to: "/setup/departments", label: t("nav.departments"), icon: i(TreeStructure), admin: true },
         { to: "/setup/locations", label: t("nav.locations"), icon: i(MapPin), admin: true },
         { to: "/setup/countries", label: t("nav.countries"), icon: i(GlobeHemisphereEast), admin: true },
-        { to: "/setup/rounds", label: t("nav.rounds"), icon: i(UsersThree), admin: true },
-        { to: "/setup/settings", label: t("nav.settings"), icon: i(Gear), admin: true },
-        { to: "/setup/portal-text", label: t("nav.portal_text"), icon: i(Translate), admin: true },
         { to: "/setup/email-templates", label: t("nav.email_templates"), icon: i(EnvelopeSimple), admin: true },
         { to: "/setup/document-templates", label: t("nav.document_templates"), icon: i(Scroll), admin: true },
+        { to: "/setup/settings", label: t("nav.settings"), icon: i(Gear), admin: true },
+        { to: "/setup/portal-text", label: t("nav.portal_text"), icon: i(Translate), admin: true },
+        { to: "/setup/components", label: t("nav.components"), icon: i(Cube), admin: true },
       ],
     },
     {
@@ -73,8 +78,8 @@ function useNav(): { group?: string; items: Item[] }[] {
         { to: "/setup/texts", label: t("nav.texts"), icon: i(ChatText), sys: true },
         { to: "/setup/handoff", label: t("nav.handoff"), icon: i(ArrowsLeftRight), sys: true },
         { to: "/setup/assistant", label: t("nav.agent_settings"), icon: i(Robot), sys: true },
-        { to: "/setup/email-log", label: t("nav.email_log"), icon: i(Tray), sys: true },
         { to: "/setup/assistant-usage", label: t("nav.assistant_usage"), icon: i(ChartLine), sys: true },
+        { to: "/setup/email-log", label: t("nav.email_log"), icon: i(Tray), sys: true },
         { to: "/setup/audit", label: t("nav.audit"), icon: i(ClockCounterClockwise), sys: true },
         { to: "/setup/data-protection", label: t("nav.data_protection"), icon: i(ShieldCheck), sys: true },
         { to: "/setup/health", label: t("nav.health"), icon: i(Pulse), sys: true },
@@ -278,14 +283,16 @@ export function Shell({ children }: { children: ReactNode }) {
       {!/\/assistant$/.test(loc.pathname) && <AssistantPanel />}
       <Shortcuts />
       <div className="flex">
-        <aside className={`sticky top-20 hidden h-[calc(100vh-5rem)] flex-none flex-col border-e border-aeblack-100 bg-white transition-[width] duration-200 lg:flex ${collapsed ? "w-[4.5rem]" : "w-64"}`}>
+        {/* The menu is fixed to the window's height (header to bottom); this keeps its width in the page flow. */}
+        <div className={`hidden flex-none transition-[width] duration-200 lg:block ${collapsed ? "w-[4.5rem]" : "w-64"}`} aria-hidden="true" />
+        <aside className={`fixed bottom-0 start-0 top-20 z-20 hidden flex-col border-e border-aeblack-100 bg-white transition-[width] duration-200 lg:flex ${collapsed ? "w-[4.5rem]" : "w-64"}`}>
+          <button type="button" onClick={toggleCollapsed} aria-expanded={!collapsed} aria-label={collapsed ? t("app.expand_menu") : t("app.collapse_menu")}
+            title={collapsed ? t("app.expand_menu") : t("app.collapse_menu")}
+            className="mh-collapse absolute -end-3 top-5 z-10 grid size-6 place-items-center rounded-full border border-aeblack-200 bg-white text-aeblack-600 shadow-sm hover:border-primary-400 hover:text-primary-700">
+            <CaretLeft size={14} weight="bold" className={`transition-transform rtl:-scale-x-100 ${collapsed ? "rotate-180" : ""}`} aria-hidden="true" />
+          </button>
           <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden"><NavList collapsed={collapsed} /></div>
-          <div className={`space-y-1 border-t border-aeblack-100 ${collapsed ? "p-2" : "p-3"}`}>
-            <button type="button" onClick={toggleCollapsed} aria-expanded={!collapsed} title={collapsed ? t("app.expand_menu") : undefined}
-              className={`mh-nav-item w-full ${collapsed ? "is-collapsed" : ""}`}>
-              <SidebarSimple size={22} className="rtl:-scale-x-100" aria-hidden="true" />
-              <span className={collapsed ? "sr-only" : ""}>{collapsed ? t("app.expand_menu") : t("app.collapse_menu")}</span>
-            </button>
+          <div className={`border-t border-aeblack-100 ${collapsed ? "p-2" : "p-3"}`}>
             <UserMenu placement="sidebar" collapsed={collapsed} />
           </div>
         </aside>

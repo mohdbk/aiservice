@@ -330,3 +330,6 @@ html[dir="rtl"] :is(p, dd)[dir="ltr"]:not([lang="en"]) { text-align: right; }
 
 /* Headings get focus after a page change so screen readers announce them; no ring for that programmatic focus. */
 [tabindex="-1"]:focus:not(:focus-visible) { outline: none; }
+
+/* The command palette search box shows focus with its gold underline, not a square ring. */
+.mh-cmd-input:focus, .mh-cmd-input:focus-visible { outline: none; box-shadow: none; }
