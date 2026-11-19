@@ -62,6 +62,9 @@ var app = builder.Build();
 // The assistant's calls to the backoffice API go through this pipeline in memory (InProcessBackoffice), so it is
 // captured here, with routing right after it.
 app.Use(next => { app.Services.GetRequiredService<InProcessBackoffice>().Pipeline = next; return next; });
+// The built backoffice, when it is in wwwroot (IIS: one site for the staff app and its API).
+var backofficeSite = BackofficeSite.Folder(app.Environment);
+if (backofficeSite != null) BackofficeSite.UseFiles(app, backofficeSite);
 app.UseRouting();
 
 if (cfg["TRUST_PROXY"] == "1") app.UseForwardedHeaders();
@@ -78,7 +81,7 @@ app.MapGet("/healthz", () => Results.Ok(new { ok = true }));
 PortalEndpoints.Map(app);
 BackofficeEndpoints.Map(app);
 AgentProxy.MapInternal(app);
-app.MapFallback(NotFoundEnvelope.Handle);
+app.MapFallback(ctx => BackofficeSite.Fallback(ctx, backofficeSite));
 
 if (cfg["MIGRATE_ON_START"] != "0")
     await Moet.Recruitment.Infrastructure.DependencyInjection.PrepareDatabaseAsync(app.Services, cfg, app.Logger);

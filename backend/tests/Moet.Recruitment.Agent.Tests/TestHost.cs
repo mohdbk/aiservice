@@ -27,7 +27,7 @@ sealed class TestHost : IDisposable
         if (model != null) b.Services.AddSingleton(model);
         app = b.Build();
         AgentSetup.UseStandalone(app);
-        app.Start();
+        app.StartAsync().GetAwaiter().GetResult();
     }
 
     public HttpClient CreateClient() => app.GetTestClient();

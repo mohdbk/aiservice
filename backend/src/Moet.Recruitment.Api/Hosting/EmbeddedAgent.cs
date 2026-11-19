@@ -89,7 +89,7 @@ public sealed class InProcessBackoffice(IServiceScopeFactory scopes, IHttpContex
         var headers = new HeaderDictionary();
         foreach (var h in request.Headers) headers[h.Key] = h.Value.ToArray();
         if (request.Content != null) foreach (var h in request.Content.Headers) headers[h.Key] = h.Value.ToArray();
-        headers.Host = "localhost";
+        headers["Host"] = "localhost";
 
         var features = new FeatureCollection();
         features.Set<IHttpRequestFeature>(new HttpRequestFeature
