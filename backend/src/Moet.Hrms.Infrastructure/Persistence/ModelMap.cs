@@ -237,6 +237,7 @@ static class ModelMap
         m.Entity<AgentRun>(e => e.ToTable("AgentRun", "ops"));
         m.Entity<ModelUsage>(e => e.ToTable("ModelUsage", "ops"));
         m.Entity<CandidateCv>(e => e.ToTable("CandidateCv", "hiring"));
+        m.Entity<CvDraft>(e => e.ToTable("CvDraft", "hiring"));
         m.Entity<Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey>(e => e.ToTable("DataProtectionKey", "ops"));
         m.Entity<EmailSetting>(e => { e.ToTable("EmailSetting", "ops"); e.Property(x => x.Id).ValueGeneratedNever(); });
         m.Entity<EmailTemplate>(e => { e.ToTable("EmailTemplate", "ops"); e.Property(x => x.RowVersion).IsRowVersion(); });

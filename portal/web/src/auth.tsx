@@ -5,7 +5,7 @@ type Auth = {
   user: User | null;
   ready: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (full_name: string, email: string, password: string, lang: string, next?: string) => Promise<{ verification_sent?: boolean }>;
+  signUp: (full_name: string, email: string, password: string, lang: string, next?: string, cvDraft?: string) => Promise<{ verification_sent?: boolean }>;
   adopt: (user: User) => void;
   signOut: () => Promise<void>;
   clear: () => void;
@@ -26,8 +26,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const r = await api<{ user: User }>("/api/login", { body: { email, password } });
     setUser(r.user);
   }, []);
-  const signUp = useCallback(async (full_name: string, email: string, password: string, lang: string, next = "") => {
-    const r = await api<{ user?: User; verification_sent?: boolean }>("/api/signup", { body: { full_name, email, password, lang, next } });
+  const signUp = useCallback(async (full_name: string, email: string, password: string, lang: string, next = "", cvDraft = "") => {
+    const r = await api<{ user?: User; verification_sent?: boolean }>("/api/signup", { body: { full_name, email, password, lang, next, cv_draft: cvDraft } });
     if (r.user) setUser(r.user);
     return { verification_sent: r.verification_sent };
   }, []);

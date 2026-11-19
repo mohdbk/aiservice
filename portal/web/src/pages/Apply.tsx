@@ -14,12 +14,13 @@ import NotFound from "./NotFound";
 const CV_RE = /\.(pdf|docx|jpe?g|png)$/i;
 const empty = (v: unknown) => v === undefined || v === null || v === "" || (Array.isArray(v) && v.length === 0);
 
-function ScreeningField({ q, value, invalid, onChange }: { q: ScreeningQuestion; value: unknown; invalid: boolean; onChange: (v: unknown) => void }) {
+function ScreeningField({ q, value, invalid, fromCv, onChange }: { q: ScreeningQuestion; value: unknown; invalid: boolean; fromCv?: boolean; onChange: (v: unknown) => void }) {
   const { t } = useSite();
   const id = `sq-${q.key}`;
   const label = (
     <span>{q.text}{!q.required ? <span className="ms-1 font-normal text-aeblack-500">({t("common.optional")})</span> : null}
-      {q.required ? <span className="text-aered-600" aria-hidden="true"> *</span> : null}</span>
+      {q.required ? <span className="text-aered-600" aria-hidden="true"> *</span> : null}
+      {fromCv ? <span className="aegov-badge badge-info ms-2 align-middle text-xs font-normal">{t("apply.sq_from_cv")}</span> : null}</span>
   );
   const ring = invalid ? "rounded-lg ring-2 ring-aered-500 ring-offset-2" : "";
   if (q.type === "Yes or No" || q.type === "Single Choice") {
@@ -120,6 +121,26 @@ export default function Apply() {
     })();
     return () => { stop = true; };
   }, [chosen]);
+  // Suggested screening answers from the chosen CV, once it is read: they fill only questions not answered yet, and each
+  // is marked until the candidate changes it.
+  const [fromCv, setFromCv] = useState<string[]>([]);
+  useEffect(() => {
+    if (!job?.screening?.length || typeof chosen !== "number" || prefill?.status !== "ready") return;
+    let stop = false;
+    api<{ answers: Record<string, unknown> }>(`/api/screening-suggestions?${new URLSearchParams({ job: job.id, cv_id: String(chosen) })}`)
+      .then((r) => {
+        if (stop) return;
+        const keys = Object.keys(r.answers || {});
+        setScreening((cur) => {
+          const next = { ...cur };
+          for (const k of keys) if (empty(cur[k])) next[k] = r.answers[k];
+          setFromCv(keys.filter((k) => empty(cur[k])));
+          return next;
+        });
+      })
+      .catch(() => { /* no suggestions: the candidate answers as usual */ });
+    return () => { stop = true; };
+  }, [job?.id, chosen, prefill?.status]);
   const pickFile = async (f: File | null) => {
     setFile(f);
     if (!f) return;
@@ -276,9 +297,10 @@ export default function Apply() {
               <legend className="flex items-center gap-2 px-2 font-heading text-lg font-semibold text-aeblack-900">
                 <ListChecks size={24} className="text-primary-600" aria-hidden="true" />{t("apply.screening_title")}
               </legend>
+              {fromCv.length > 0 && <Alert tone="info">{t("apply.sq_filled")}</Alert>}
               {job.screening.map((q) => (
-                <ScreeningField key={q.key} q={q} value={screening[q.key]} invalid={badQuestions.includes(q.key)}
-                  onChange={(v) => { setScreening((s) => ({ ...s, [q.key]: v })); setBadQuestions((b) => b.filter((k) => k !== q.key)); }} />
+                <ScreeningField key={q.key} q={q} value={screening[q.key]} invalid={badQuestions.includes(q.key)} fromCv={fromCv.includes(q.key)}
+                  onChange={(v) => { setScreening((s) => ({ ...s, [q.key]: v })); setBadQuestions((b) => b.filter((k) => k !== q.key)); setFromCv((f) => f.filter((k) => k !== q.key)); }} />
               ))}
             </fieldset>
           )}

@@ -737,4 +737,73 @@ public class EndToEndTests
         var me = await again.SendAsync(req);
         Assert.Equal(HttpStatusCode.OK, me.StatusCode);
     }
+
+    static byte[] Docx(params string[] lines)
+    {
+        using var ms = new MemoryStream();
+        using (var doc = DocumentFormat.OpenXml.Packaging.WordprocessingDocument.Create(ms, DocumentFormat.OpenXml.WordprocessingDocumentType.Document))
+        {
+            var main = doc.AddMainDocumentPart();
+            main.Document = new DocumentFormat.OpenXml.Wordprocessing.Document(new DocumentFormat.OpenXml.Wordprocessing.Body(
+                lines.Select(l => new DocumentFormat.OpenXml.Wordprocessing.Paragraph(new DocumentFormat.OpenXml.Wordprocessing.Run(new DocumentFormat.OpenXml.Wordprocessing.Text(l))))));
+        }
+        return ms.ToArray();
+    }
+
+    [Fact]
+    public async Task A_cv_given_before_signing_up_fills_the_form_and_becomes_the_default_cv()
+    {
+        if (string.IsNullOrEmpty(Db)) return;
+        using var app = new App();
+        var portal = app.CreateClient();
+        portal.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("token", $"{Key}:{Secret}");
+        var cv = Docx("Mariam Draft", "mariam.draft@example.test | +971 50 123 4567",
+            "Economic Analyst, Ministry of Economy (2019 - present): prepared quarterly trade reports and price indices.",
+            "Bachelor of Economics, UAE University, 2018");
+
+        using var form = new MultipartFormDataContent();
+        form.Add(new ByteArrayContent(cv), "file", "mariam.docx");
+        var token = (await Read(await portal.PostAsync("/api/portal/cv_draft", form))).GetProperty("message").GetProperty("token").GetString();
+        Assert.Equal("pending", (await Read(await portal.GetAsync($"/api/portal/cv_draft_status?token={token}"))).GetProperty("message").GetProperty("status").GetString());
+
+        // The background reading (no language model here: the text, email and phone only).
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<Moet.Hrms.Infrastructure.Persistence.AppDbContext>();
+            var id = db.CvDrafts.Single(d => d.Token == Guid.Parse(token!)).Id;
+            await scope.ServiceProvider.GetServices<Moet.Hrms.Application.Common.IJobHandler>().Single(h => h.JobType == "ReadCvDraft").RunAsync(id, default);
+        }
+        var status = (await Read(await portal.GetAsync($"/api/portal/cv_draft_status?token={token}"))).GetProperty("message");
+        Assert.Equal("ready", status.GetProperty("status").GetString());
+        Assert.Equal("mariam.draft@example.test", status.GetProperty("email").GetString());
+        Assert.Contains("50 123 4567", status.GetProperty("phone").GetString());
+        Assert.Equal(HttpStatusCode.NotFound, (await portal.GetAsync("/api/portal/cv_draft_status?token=" + Guid.NewGuid())).StatusCode);
+
+        var signup = await Read(await portal.PostAsync("/api/portal/signup", JsonBody(new { full_name = "Mariam Draft", email = "mariam.draft@example.test", password = "a-good-pass-123", lang = "en", cv_draft = token })));
+        var epoch = signup.GetProperty("message").GetProperty("epoch").GetInt32();
+        var cvs = (await Read(await portal.GetAsync($"/api/portal/my_cvs?email=mariam.draft@example.test&epoch={epoch}"))).GetProperty("message").GetProperty("cvs");
+        Assert.Equal(1, cvs.GetArrayLength());
+        Assert.True(cvs[0].GetProperty("is_default").GetBoolean());
+        Assert.Equal("mariam.docx", cvs[0].GetProperty("file_name").GetString());
+        // The draft is used up.
+        Assert.Equal(HttpStatusCode.NotFound, (await portal.GetAsync($"/api/portal/cv_draft_status?token={token}")).StatusCode);
+        // Without a language model there are no suggested screening answers.
+        var cvId = cvs[0].GetProperty("id").GetInt32();
+        var suggestions = (await Read(await portal.GetAsync($"/api/portal/screening_suggestions?email=mariam.draft@example.test&epoch={epoch}&job=JOB-0&cv_id={cvId}"))).GetProperty("message");
+        Assert.Equal(0, suggestions.GetProperty("answers").EnumerateObject().Count());
+
+        // A draft nobody signed up with is deleted with its file after a day.
+        using var form2 = new MultipartFormDataContent();
+        form2.Add(new ByteArrayContent(cv), "file", "left.docx");
+        var left = (await Read(await portal.PostAsync("/api/portal/cv_draft", form2))).GetProperty("message").GetProperty("token").GetString();
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<Moet.Hrms.Infrastructure.Persistence.AppDbContext>();
+            var d = db.CvDrafts.Single(x => x.Token == Guid.Parse(left!));
+            d.ExpiresAt = DateTime.UtcNow.AddMinutes(-1);
+            await db.SaveChangesAsync();
+            Assert.True(await scope.ServiceProvider.GetRequiredService<Moet.Hrms.Application.Portal.CvDraftService>().PurgeAsync() >= 1);
+            Assert.False(db.StoredFiles.Any(f => f.Id == d.StoredFileId));
+        }
+    }
 }

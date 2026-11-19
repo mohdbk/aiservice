@@ -186,3 +186,29 @@ public class CandidateCv
     public DateTime UploadedAt { get; set; }
     public DateTime? ReadAt { get; set; }
 }
+
+/// <summary>
+/// A CV uploaded on the sign-up page before the account exists: read at once so the form can be filled in (name, email,
+/// phone), then moved into the new account's CV library. Deleted with its file a day after upload if nobody signs up.
+/// </summary>
+public class CvDraft
+{
+    public static readonly TimeSpan Lifetime = TimeSpan.FromDays(1);
+    public int Id { get; set; }
+    public Guid Token { get; set; }
+    public Guid StoredFileId { get; set; }
+    public string FileName { get; set; } = "";
+    public long SizeBytes { get; set; }
+    public string Sha256 { get; set; } = "";
+    public string Status { get; set; } = "Pending";
+    public string FullName { get; set; } = "";
+    public string Email { get; set; } = "";
+    public string Phone { get; set; } = "";
+    public decimal? YearsOfExperience { get; set; }
+    public string Summary { get; set; } = "";
+    public string? ProfileJson { get; set; }
+    public string Text { get; set; } = "";
+    public DateTime CreatedAt { get; set; }
+    public DateTime ExpiresAt { get; set; }
+    public DateTime? ReadAt { get; set; }
+}

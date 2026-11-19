@@ -10,7 +10,7 @@ namespace Moet.Hrms.Application.Portal;
 public sealed record ApplicantSession(string Email, string FullName, int Epoch);
 
 /// <summary>Applicant accounts: sign-up, sign-in, email verification and password reset.</summary>
-public sealed class PortalAccountService(IAppDbContext db, ContentService content, PortalMailer mailer, IPasswordHasher hasher, IClock clock)
+public sealed class PortalAccountService(IAppDbContext db, ContentService content, PortalMailer mailer, IPasswordHasher hasher, IClock clock, CvDraftService drafts)
 {
     static readonly Dictionary<TokenPurpose, (string Page, string Event)> Mail = new()
     {
@@ -20,7 +20,7 @@ public sealed class PortalAccountService(IAppDbContext db, ContentService conten
 
     async Task<bool> VerificationRequiredAsync(CancellationToken ct) => (await content.SettingsAsync(ct)).RequireEmailVerification && await mailer.CanSendAsync(ct);
 
-    public async Task<object> SignUpAsync(string? fullName, string? email, string? password, string? lang, string? nextPath, CancellationToken ct = default)
+    public async Task<object> SignUpAsync(string? fullName, string? email, string? password, string? lang, string? nextPath, CancellationToken ct = default, string? cvDraft = null)
     {
         var s = await content.SettingsAsync(ct);
         if (!s.AllowSignup) throw DomainException.Forbidden("signup_closed");
@@ -40,6 +40,8 @@ public sealed class PortalAccountService(IAppDbContext db, ContentService conten
         };
         db.ApplicantAccounts.Add(account);
         await db.SaveChangesAsync(ct);
+        // A CV given on the sign-up page becomes the account's default CV, with what was read from it.
+        if (!string.IsNullOrWhiteSpace(cvDraft)) await drafts.AdoptAsync(cvDraft, account.Id, ct);
         if (verify)
         {
             await SendLinkAsync(account, TokenPurpose.VerifyEmail, lang, nextPath, ct);

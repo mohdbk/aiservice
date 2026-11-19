@@ -212,6 +212,8 @@ public sealed class JobWorker(IServiceScopeFactory scopes, ILogger<JobWorker> lo
             if (alerts > 0) log.LogInformation("Queued {Count} job alert emails", alerts);
             var digests = await scope.ServiceProvider.GetRequiredService<StaffNotificationService>().SendDueAsync(Environment.GetEnvironmentVariable("HRMS_URL") is { Length: > 0 } hrmsUrl ? hrmsUrl : Environment.GetEnvironmentVariable("BACKOFFICE_URL") ?? "", ct);
             if (digests > 0) log.LogInformation("Queued {Count} staff digest emails", digests);
+            var drafts = await scope.ServiceProvider.GetRequiredService<CvDraftService>().PurgeAsync(ct);
+            if (drafts > 0) log.LogInformation("Deleted {Count} CVs from sign-ups that were not finished", drafts);
         }
         if (now >= _nextDaily)
         {

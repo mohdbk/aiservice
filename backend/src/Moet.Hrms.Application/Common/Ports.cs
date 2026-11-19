@@ -63,6 +63,7 @@ public interface IAppDbContext
     DbSet<AgentSetting> AgentSettings { get; }
     DbSet<AgentRun> AgentRuns { get; }
     DbSet<CandidateCv> CandidateCvs { get; }
+    DbSet<CvDraft> CvDrafts { get; }
     DbSet<ModelUsage> ModelUsages { get; }
     DbSet<AgentConversation> AgentConversations { get; }
     DbSet<AgentAttachment> AgentAttachments { get; }

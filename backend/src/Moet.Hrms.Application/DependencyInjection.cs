@@ -22,6 +22,9 @@ public static class DependencyInjection
         s.AddScoped<PortalApplicationService>();
         s.AddScoped<CandidateCvService>();
         s.AddScoped<IJobHandler, CandidateCvReadHandler>();
+        s.AddScoped<IJobHandler, CvDraftReadHandler>();
+        s.AddScoped<CvDraftService>();
+        s.AddScoped<ScreeningSuggestionService>();
         s.AddScoped<PortalAssessmentService>();
         s.AddScoped<IJobHandler, CvScoringHandler>();
         s.AddScoped<IJobHandler, JobDraftHandler>();

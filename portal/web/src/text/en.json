@@ -452,5 +452,15 @@
  "apply.from_cv_skills": "Skills",
  "apply.from_cv_check": "We filled in what we could from your CV. Check your details before you submit.",
  "error.cv_limit": "You can keep up to {max} CVs. Delete one first.",
- "error.cv_not_found": "This CV is no longer saved."
+ "error.cv_not_found": "This CV is no longer saved.",
+ "signup.cv_title": "Start with Your CV",
+ "signup.cv_hint": "Upload your CV and we will fill in your details from it. You can change anything before creating your account.",
+ "signup.cv_upload": "Upload CV",
+ "signup.cv_change": "Choose Another CV",
+ "signup.cv_reading": "Reading your CV…",
+ "signup.cv_filled": "We filled in the details we found. Please check them.",
+ "signup.cv_none": "We could not find your details in this CV. Please fill in the form.",
+ "signup.cv_saved": "Your CV will be saved to your account, ready for your applications.",
+ "apply.sq_from_cv": "From Your CV",
+ "apply.sq_filled": "Some answers were filled in from your CV. Please check each one before sending."
 }

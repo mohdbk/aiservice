@@ -44,6 +44,7 @@ public sealed partial class PortalApp(PortalSettings cfg, HrmsApi api, RateLimit
     [GeneratedRegex(@"^/api/assessments/([A-Za-z0-9._-]{1,140})(?:/(state|start|answer|file|next|event))?$")] private static partial Regex AssessmentPath();
     [GeneratedRegex(@"^/api/account/alerts/([0-9]{1,9})$")] private static partial Regex AlertPath();
     [GeneratedRegex(@"^/api/cvs/(\d{1,9})(?:/(default|prefill))?$")] private static partial Regex CvPath();
+    [GeneratedRegex(@"^/api/cv-draft/([0-9a-fA-F-]{36})$")] private static partial Regex DraftPath();
     [GeneratedRegex(@"^/api/applications/([A-Za-z0-9._-]{1,140})/(offer|withdraw|reschedule|book|corrections)$")] private static partial Regex ApplicationActionPath();
 
     readonly ConcurrentDictionary<string, (JsonNode? Value, DateTime Until)> configCache = new();
@@ -307,7 +308,7 @@ public sealed partial class PortalApp(PortalSettings cfg, HrmsApi api, RateLimit
             var r = await api.PostAsync("signup", new()
             {
                 ["full_name"] = Str(b, "full_name", 140), ["email"] = Str(b, "email", 200), ["password"] = Str(b, "password", 256),
-                ["lang"] = Str(b, "lang", 10), ["next_path"] = Str(b, "next", 300),
+                ["lang"] = Str(b, "lang", 10), ["next_path"] = Str(b, "next", 300), ["cv_draft"] = Str(b, "cv_draft", 64),
             }, ct);
             if (Truthy(r?["verification_sent"])) { await Send(ctx, 200, new { verification_sent = true, email = r?["email"]?.DeepClone() }); return; }
             var u = UserFrom(r);
@@ -315,6 +316,30 @@ public sealed partial class PortalApp(PortalSettings cfg, HrmsApi api, RateLimit
             await Send(ctx, 200, new { user = PublicUser(u) });
             return;
         }
+        // A CV given on the sign-up page, before the account exists: read so the form can be filled in from it, and saved to
+        // the account when the person signs up. Not signed in, so limited per address.
+        if (Post() && path == "/api/cv-draft")
+        {
+            CheckCsrf(ctx);
+            Limit($"cvdraft:{ip}", RateLimiter.CvDraft);
+            var b = await ReadJson(ctx, cfg.MaxBodyMb * 1024L * 1024);
+            var file = FileFrom(b["cv"], out var name) ?? throw new PortalError(400, "cv_required");
+            if (!CvExt().IsMatch(name)) throw new PortalError(400, "cv_type");
+            if (file.Data.Length == 0) throw new PortalError(400, "cv_empty");
+            await Send(ctx, 200, await api.PostFormAsync("cv_draft", [], "file", file, ct));
+            return;
+        }
+        mm = DraftPath().Match(path);
+        if (Get() && mm.Success) { await Send(ctx, 200, await api.GetAsync("cv_draft_status", new() { ["token"] = mm.Groups[1].Value }, ct)); return; }
+        // Suggested screening answers from the candidate's chosen CV, for them to check on the application form.
+        if (Get() && path == "/api/screening-suggestions")
+        {
+            var u = RequireUser(ctx);
+            var cvId = long.TryParse(ctx.Request.Query["cv_id"], out var c) && c > 0 ? c : 0;
+            await Send(ctx, 200, await api.GetAsync("screening_suggestions", WhoQuery(u, ("job", Q(ctx, "job", 140)), ("cv_id", cvId)), ct));
+            return;
+        }
+
         // Account links. Resend and forgot always answer the same way (no account discovery).
         if (Post() && (path == "/api/resend-verification" || path == "/api/forgot-password"))
         {

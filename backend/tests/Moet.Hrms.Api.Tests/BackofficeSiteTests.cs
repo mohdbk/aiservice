@@ -88,3 +88,32 @@ public class PortalAccessTests
         Assert.Equal(0, (await Run("/api/portal/jobs", 443, "203.0.113.5", [])).Status);        // off unless set
     }
 }
+
+/// <summary>Screening questions the CV never answers for the candidate.</summary>
+public class ScreeningSuggestionTests
+{
+    static Moet.Hrms.Domain.Hiring.ScreeningQuestion Q(string text, string category = "") => new() { Text = text, Category = category };
+
+    [Theory]
+    [InlineData("What is your nationality?")]
+    [InlineData("Are you a UAE citizen?")]
+    [InlineData("What is your expected salary?")]
+    [InlineData("What is your date of birth?")]
+    [InlineData("I declare that the information is correct")]
+    [InlineData("ما جنسيتك؟")]
+    [InlineData("هل أنت مواطن؟")]
+    [InlineData("ما الراتب المتوقع؟")]
+    [InlineData("الحالة الاجتماعية")]
+    public void Personal_and_eligibility_questions_are_never_suggested(string text) =>
+        Assert.False(Moet.Hrms.Application.Portal.ScreeningSuggestionService.Allowed(Q(text)));
+
+    [Theory]
+    [InlineData("How many years of experience do you have in economic analysis?")]
+    [InlineData("Do you hold a bachelor's degree?")]
+    [InlineData("Which languages do you speak?")]
+    [InlineData("كم سنة خبرة لديك في التحليل الاقتصادي؟")]
+    [InlineData("هل تقيم الإجراءات المالية؟")]
+    [InlineData("ما المدينة التي عملت فيها؟")]
+    public void Experience_and_qualification_questions_can_be_suggested(string text) =>
+        Assert.True(Moet.Hrms.Application.Portal.ScreeningSuggestionService.Allowed(Q(text)));
+}

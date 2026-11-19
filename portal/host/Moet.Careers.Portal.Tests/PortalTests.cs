@@ -268,4 +268,34 @@ public class PortalTests
         var mine = Session.CreateToken(new PortalUser("a@b.c", "A", 1), new string('x', 40), 1);
         Assert.Equal("a@b.c", Session.ReadToken(mine, new string('x', 40))?.Email);
     }
+
+    [Fact]
+    public async Task A_cv_before_signing_up_is_passed_on_limited_and_carried_into_sign_up()
+    {
+        var fake = new FakeApi();
+        fake.Answers["cv_draft"] = (HttpStatusCode.OK, """{"message":{"token":"0f8fad5b-d9cb-469f-a165-70867728950e"}}""");
+        fake.Answers["cv_draft_status"] = (HttpStatusCode.OK, """{"message":{"status":"ready","full_name":"Mariam","email":"m@example.com","phone":"+971501234567"}}""");
+        using var app = new App(fake, Dist());
+        var http = app.CreateClient();
+        var cv = Convert.ToBase64String(Encoding.UTF8.GetBytes("%PDF-1.4 cv"));
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await http.SendAsync(Post("/api/cv-draft", new { cv = new { name = "cv.pdf", data = cv } }, portalHeader: false))).StatusCode);
+        Assert.Contains("cv_type", await (await http.SendAsync(Post("/api/cv-draft", new { cv = new { name = "cv.exe", data = cv } }))).Content.ReadAsStringAsync());
+        var ok = await http.SendAsync(Post("/api/cv-draft", new { cv = new { name = "cv.pdf", type = "application/pdf", data = cv } }));
+        Assert.Equal(HttpStatusCode.OK, ok.StatusCode);
+        Assert.Contains("0f8fad5b", await ok.Content.ReadAsStringAsync());
+        Assert.Equal("multipart/form-data", fake.Calls.Single(c => c.Method == "cv_draft").ContentType);
+
+        var status = await http.GetAsync("/api/cv-draft/0f8fad5b-d9cb-469f-a165-70867728950e");
+        Assert.Contains("Mariam", await status.Content.ReadAsStringAsync());
+        Assert.Contains("token=0f8fad5b", fake.Calls.Single(c => c.Method == "cv_draft_status").Query);
+        Assert.Equal(HttpStatusCode.NotFound, (await http.GetAsync("/api/cv-draft/not-a-token")).StatusCode);
+
+        // Five a hour from one address (two used above: the refused type and the accepted one).
+        for (var i = 0; i < 3; i++) await http.SendAsync(Post("/api/cv-draft", new { cv = new { name = "cv.pdf", data = cv } }));
+        Assert.Equal((HttpStatusCode)429, (await http.SendAsync(Post("/api/cv-draft", new { cv = new { name = "cv.pdf", data = cv } }))).StatusCode);
+
+        await http.SendAsync(Post("/api/signup", new { full_name = "Mariam", email = "m@example.com", password = "a-good-pass-1", cv_draft = "0f8fad5b-d9cb-469f-a165-70867728950e" }));
+        Assert.Contains("\"cv_draft\":\"0f8fad5b", fake.Calls.Single(c => c.Method == "signup").Body);
+    }
 }
