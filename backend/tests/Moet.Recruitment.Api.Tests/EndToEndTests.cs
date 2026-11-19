@@ -153,6 +153,7 @@ public class EndToEndTests
         // The assistant runs inside the API: its tools reach the backoffice API in memory, as the signed-in staff member,
         // through the same sign-in, same-origin and audit checks as a browser request.
         var plainClient = app.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+        plainClient.DefaultRequestHeaders.Add("X-Backoffice", "1");
         var signIn = await plainClient.PostAsync("/api/backoffice/sign-in", JsonBody(new { email = "admin@moet.test", password = "Admin-Password-123" }));
         var cookie = signIn.Headers.GetValues("Set-Cookie").First(c => c.StartsWith("moet_backoffice=")).Split(';')[0];
         var inProcess = new HttpClient(app.Services.GetRequiredService<Moet.Recruitment.Api.Hosting.InProcessBackoffice>().CreateHandler())
