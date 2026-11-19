@@ -161,13 +161,17 @@ public static class AgentSetup
         });
     }
 
-    /// <summary>Any OpenAI-compatible endpoint: an on-prem model server or a hosted provider.</summary>
+    /// <summary>
+    /// Any OpenAI-compatible endpoint: an on-prem model server or a hosted provider. The API's model (LLM_*) unless the
+    /// assistant has its own (AGENT_LLM_*); admins can also choose one in the backoffice.
+    /// </summary>
     static IChatClient CreateChatClient(IConfiguration cfg)
     {
+        string? Get(string name) => cfg["AGENT_" + name] is { Length: > 0 } own ? own : cfg[name];
         var options = new OpenAIClientOptions();
-        if (!string.IsNullOrWhiteSpace(cfg["LLM_BASE_URL"])) options.Endpoint = new Uri(cfg["LLM_BASE_URL"]!);
-        var key = string.IsNullOrWhiteSpace(cfg["LLM_API_KEY"]) ? "not-needed" : cfg["LLM_API_KEY"]!;
-        return new OpenAIClient(new ApiKeyCredential(key), options).GetChatClient(cfg["LLM_MODEL"] ?? "gpt-4o-mini").AsIChatClient();
+        if (!string.IsNullOrWhiteSpace(Get("LLM_BASE_URL"))) options.Endpoint = new Uri(Get("LLM_BASE_URL")!);
+        var key = string.IsNullOrWhiteSpace(Get("LLM_API_KEY")) ? "not-needed" : Get("LLM_API_KEY")!;
+        return new OpenAIClient(new ApiKeyCredential(key), options).GetChatClient(Get("LLM_MODEL") ?? "gpt-4o-mini").AsIChatClient();
     }
 }
 

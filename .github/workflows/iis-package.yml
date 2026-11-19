@@ -1,13 +1,13 @@
 # Builds the IIS package (Ministry of Economy & Tourism) on Windows and installs it on a fresh IIS on the runner to
-# check that the four sites start and talk to each other: the backoffice's /api proxy, the portal's Node server under
-# the ASP.NET Core Module, the API and the agent, and PDF letters with the bundled Chromium. There is no SQL Server
-# on the runner, so the API runs without its database; everything checked here answers without one.
+# check that the two sites start and talk to each other: the backoffice (staff app, API and assistant in one app) and
+# the careers portal, and PDF letters with the bundled Chromium. There is no SQL Server on the runner, so the API runs
+# without its database; everything checked here answers without one.
 name: IIS Package
 
 on:
   push:
     branches: [main, dotnet-backend]
-    paths: ["deploy/iis/**", "portal/server/**", ".github/workflows/iis-package.yml"]
+    paths: ["deploy/iis/**", "portal/host/**", "backend/src/Moet.Recruitment.Api/**", ".github/workflows/iis-package.yml"]
   workflow_dispatch:
 
 jobs:
@@ -36,11 +36,11 @@ jobs:
           path: out/moet-recruitment-iis.zip
           retention-days: 30
 
-      - name: IIS, Hosting Bundle, URL Rewrite, ARR
+      - name: IIS and the .NET 10 Hosting Bundle (nothing else)
         shell: powershell
         run: |
           Install-WindowsFeature Web-Server, Web-AppInit, Web-Scripting-Tools, Web-Mgmt-Console | Out-Null
-          choco install dotnet-10.0-windowshosting urlrewrite iis-arr -y --no-progress
+          choco install dotnet-10.0-windowshosting -y --no-progress
           if ($LASTEXITCODE -ne 0) { throw "choco failed: $LASTEXITCODE" }
           net stop was /y
           net start w3svc
@@ -48,20 +48,15 @@ jobs:
       - name: Install on IIS (Windows PowerShell 5.1, as on the servers)
         shell: powershell
         run: |
-          $node = (Get-Command node).Source
           $key = 'ci-portal-key'; $secret = 'ci-portal-secret-0123456789'
           @"
           @{
             InstallRoot = 'C:\MoET\Recruitment'
-            NodePath = '$node'
-            Backoffice = @{ SiteName = 'MoET Recruitment Backoffice'; AppPool = 'MoetRecruitmentBackoffice'; HostName = ''; IpAddress = '*'; HttpsPort = 0; HttpPort = 8081; CertificateThumbprint = ''; ApiUrl = 'http://127.0.0.1:5080' }
-            Portal = @{ SiteName = 'MoET Careers Portal'; AppPool = 'MoetCareersPortal'; HostName = ''; IpAddress = '*'; HttpsPort = 0; HttpPort = 8082; CertificateThumbprint = ''
+            Backoffice = @{ SiteName = 'MoET Recruitment Backoffice'; AppPool = 'MoetRecruitmentBackoffice'; HostName = ''; IpAddress = '*'; HttpsPort = 0; HttpPort = 8081; CertificateThumbprint = ''; LocalPort = 5080
+              Settings = @{ DB_CONNECTION = 'Server=127.0.0.1,1;Database=None;User Id=x;Password=x;Connect Timeout=2;TrustServerCertificate=True'; MIGRATE_ON_START = '0'; RUN_WORKERS = '0'
+                PORTAL_API_KEY = '$key'; PORTAL_API_SECRET = '$secret'; AGENT_KEY = 'ci-agent-key-0123456789' } }
+            Portal = @{ SiteName = 'MoET Careers Portal'; AppPool = 'MoetCareersPortal'; HostName = ''; IpAddress = '*'; HttpsPort = 0; HttpPort = 8082; CertificateThumbprint = ''; LocalPort = 0
               Settings = @{ RECRUITMENT_API_URL = 'http://127.0.0.1:5080'; CAREERS_PORTAL_API_KEY = '$key'; CAREERS_PORTAL_API_SECRET = '$secret'; SESSION_SECRET = 'ci-session-secret-0123456789-0123456789' } }
-            Api = @{ SiteName = 'MoET Recruitment API'; AppPool = 'MoetRecruitmentApi'; IpAddress = '127.0.0.1'; HttpPort = 5080; HttpsPort = 0; HostName = ''; CertificateThumbprint = ''
-              Settings = @{ DB_CONNECTION = 'Server=127.0.0.1,1;Database=None;User Id=x;Password=x;Connect Timeout=2;TrustServerCertificate=True'; MIGRATE_ON_START = '0'; RUN_WORKERS = '0'; COOKIE_SECURE = '0'
-                PORTAL_API_KEY = '$key'; PORTAL_API_SECRET = '$secret'; AGENT_URL = 'http://127.0.0.1:5090'; AGENT_KEY = 'ci-agent-key-0123456789' } }
-            Agent = @{ SiteName = 'MoET Recruitment Agent'; AppPool = 'MoetRecruitmentAgent'; IpAddress = '127.0.0.1'; HttpPort = 5090; HttpsPort = 0; HostName = ''; CertificateThumbprint = ''
-              Settings = @{ BACKEND_URL = 'http://127.0.0.1:5080'; AGENT_KEY = 'ci-agent-key-0123456789' } }
           }
           "@ | Set-Content C:\moet.settings.psd1
           Expand-Archive out\moet-recruitment-iis.zip C:\package
@@ -103,37 +98,41 @@ jobs:
           $r = Hit GET 'http://localhost:8081/assets/missing.js'
           Expect 'a missing asset is 404, not the app' ($r.Status -eq 404) $r.Status
           $r = Hit GET 'http://localhost:8081/api/backoffice/me'
-          Expect 'backoffice /api reaches the API (401 signed out)' ($r.Status -eq 401) "$($r.Status) $($r.Body)"
+          Expect 'backoffice /api answers (401 signed out)' ($r.Status -eq 401) "$($r.Status) $($r.Body)"
           $r = Hit GET 'http://localhost:8081/api/backoffice/nothing%2Bhere?q=50%25'
-          Expect 'encoded characters pass the proxy' ($r.Status -in 401, 404) "$($r.Status) $($r.Body)"
+          Expect 'encoded characters reach the API' ($r.Status -in 401, 404) "$($r.Status) $($r.Body)"
           $r = Hit POST 'http://localhost:8081/api/backoffice/sign-in' @{ 'X-Backoffice' = '1'; Origin = 'http://evil.example' } '{"email":"a@b.c","password":"x"}'
           Expect 'a staff write from another site is refused' ($r.Status -eq 403) $r.Status
           $r = Hit POST 'http://localhost:8081/api/backoffice/sign-in' @{ 'X-Backoffice' = '1'; Origin = 'http://localhost:8081' } '{"email":"a@b.c","password":"x"}'
-          Expect 'a staff write from the backoffice passes the same-origin check (Host kept by ARR)' ($r.Status -ne 403) "$($r.Status) $($r.Body)"
+          Expect 'a staff write from the backoffice passes the same-origin check' ($r.Status -ne 403) "$($r.Status) $($r.Body)"
           $r = Hit GET 'http://localhost:8081/healthz'
           Expect 'backoffice health' ($r.Status -eq 200) $r.Status
 
           $r = Hit GET 'http://localhost:8082/'
           Expect 'portal redirects to a language' ($r.Status -eq 302) $r.Status
           $r = Hit GET 'http://localhost:8082/ar/jobs'
-          Expect 'portal serves the app through Node' ($r.Status -eq 200 -and $r.Body -match 'id="root"') $r.Status
+          Expect 'portal serves the app' ($r.Status -eq 200 -and $r.Body -match 'id="root"') $r.Status
           $asset = [regex]::Match($r.Body, '/assets/[^"]+\.js').Value
           $a = Hit GET "http://localhost:8082$asset"
           Expect "portal serves $asset" ($a.Status -eq 200 -and $a.Headers['Cache-Control'] -match 'immutable') "$($a.Status) $($a.Headers['Cache-Control'])"
-          $r = Hit GET 'http://localhost:8082/assets/..%5C..%5Cserver%5Csrc%5Cconfig.js'
-          Expect 'portal never serves its own source' ($r.Body -notmatch 'SESSION_SECRET') $r.Status
+          $r = Hit GET 'http://localhost:8082/assets/..%5C..%5Cweb.config'
+          Expect 'portal never serves its own settings' ($r.Body -notmatch 'SESSION_SECRET') $r.Status
+          $r = Hit GET 'http://localhost:8082/web.config'
+          Expect 'portal never serves web.config' ($r.Body -notmatch 'SESSION_SECRET') $r.Status
+          $r = Hit GET 'http://localhost:8081/web.config'
+          Expect 'backoffice never serves web.config' ($r.Body -notmatch 'AGENT_KEY') $r.Status
           $r = Hit GET 'http://localhost:8082/api/config?lang=ar'
           Expect 'portal server reaches the API with its key' ($r.Status -ne 403 -and $r.Status -ne 401) "$($r.Status) $($r.Body)"
           $r = Hit POST 'http://localhost:8082/api/login' @{ 'X-Portal' = '1'; Origin = 'http://localhost:8082' } '{"email":"a@b.c","password":"x"}'
-          Expect 'a candidate write passes the same-origin check (Host kept by IIS)' ($r.Status -ne 403) "$($r.Status) $($r.Body)"
+          Expect 'a candidate write passes the same-origin check' ($r.Status -ne 403) "$($r.Status) $($r.Body)"
 
-          $r = Hit GET 'http://127.0.0.1:5090/healthz'
-          Expect 'agent health' ($r.Status -eq 200) $r.Status
           $r = Hit GET 'http://127.0.0.1:5080/healthz'
-          Expect 'API health' ($r.Status -eq 200) $r.Status
+          Expect 'API health on the local binding (where the portal reaches it)' ($r.Status -eq 200) $r.Status
+          $r = Hit GET 'http://localhost:8081/api/portal/config' @{ Authorization = 'token wrong:key' }
+          Expect 'the portal API refuses a wrong key' ($r.Status -eq 401 -or $r.Status -eq 403) $r.Status
 
           $env:PLAYWRIGHT_BROWSERS_PATH = 'C:\MoET\Recruitment\ms-playwright'
-          & dotnet C:\MoET\Recruitment\api\Moet.Recruitment.Api.dll --pdf-check C:\letter.pdf
+          & dotnet C:\MoET\Recruitment\backoffice\Moet.Recruitment.Api.dll --pdf-check C:\letter.pdf
           Expect 'PDF letter prints with the bundled Chromium' ((Test-Path C:\letter.pdf) -and (Get-Item C:\letter.pdf).Length -gt 10000) $LASTEXITCODE
 
           if ($bad -gt 0) { throw "$bad check(s) failed" }

@@ -1,72 +1,39 @@
 # Settings for Install-Moet.ps1 (MoET recruitment system on IIS, Ministry of Economy & Tourism).
-# Copy this file next to the script as moet.settings.psd1, fill it in, and run the script as an administrator.
+# Copy this file to moet.settings.psd1 in the same folder, fill it in, and run the script as an administrator.
 # The file holds passwords and keys: keep it where only administrators can read it, or delete it after installing.
 # Every setting is listed in docs/ON_PREM.md and docs/SERVICES.md.
 @{
-    # Each app gets its own folder underneath: api, agent, backoffice, portal (and ms-playwright for PDF letters).
+    # Where the sites go, a separate folder from this package: backoffice, portal (and ms-playwright for PDF letters).
     InstallRoot = 'D:\MoET\Recruitment'
 
-    # node.exe (Node.js 22 LTS) for the careers portal.
-    NodePath = 'C:\Program Files\nodejs\node.exe'
-
-    # Staff site. Public to staff only (internal network or VPN).
+    # Site 1: the staff app, its API and the recruitment assistant, in one app. Staff only (internal network or VPN).
     Backoffice = @{
         SiteName = 'MoET Recruitment Backoffice'
         AppPool = 'MoetRecruitmentBackoffice'
         HostName = 'recruitment.moet.gov.ae'    # empty answers on any name
         IpAddress = '*'
         HttpsPort = 443
-        HttpPort = 0                            # 0: no plain HTTP binding
-        # Thumbprint of the certificate in Cert:\LocalMachine\My. Empty: HTTP only (testing; staff sign-in needs HTTPS
-        # unless the API has COOKIE_SECURE = '0').
+        HttpPort = 0                            # 0: no plain HTTP binding (for a test without a certificate: HttpsPort = 0, HttpPort = 8081)
+        # Thumbprint of the certificate in Cert:\LocalMachine\My (needed when HttpsPort is set).
         CertificateThumbprint = ''
-        # Where the API answers, as this server sees it.
-        ApiUrl = 'http://127.0.0.1:5080'
-    }
-
-    # Candidate site. Public on the internet, usually on a DMZ server.
-    Portal = @{
-        SiteName = 'MoET Careers Portal'
-        AppPool = 'MoetCareersPortal'
-        HostName = 'careers.moet.gov.ae'
-        IpAddress = '*'
-        HttpsPort = 443
-        HttpPort = 0
-        CertificateThumbprint = ''
-        Settings = @{
-            # The API as the portal server sees it. On a DMZ server: the API server's internal address (HTTPS if the
-            # traffic crosses networks), allowed through the firewall from the portal server only.
-            RECRUITMENT_API_URL = 'http://127.0.0.1:5080'
-            # The same pair as PORTAL_API_KEY and PORTAL_API_SECRET on the API.
-            CAREERS_PORTAL_API_KEY = ''
-            CAREERS_PORTAL_API_SECRET = ''
-            # At least 32 random characters; signs the candidates' session cookie.
-            SESSION_SECRET = ''
-        }
-    }
-
-    # The API. Not public: bound to this machine (or to the internal address the portal server reaches).
-    Api = @{
-        SiteName = 'MoET Recruitment API'
-        AppPool = 'MoetRecruitmentApi'
-        IpAddress = '127.0.0.1'
-        HttpPort = 5080
-        HttpsPort = 0
-        HostName = ''
-        CertificateThumbprint = ''
-        # Run the app pool as this account (for example a gMSA, 'MOET\svc-recruit$', with an empty password) when
-        # SQL Server uses Windows sign-in. Empty: the app pool's own identity (IIS AppPool\MoetRecruitmentApi).
+        # A plain HTTP binding on 127.0.0.1 only, for the portal when it is on this same server. 0: none.
+        LocalPort = 5080
+        # Run the app pool as this account (for example a gMSA, 'MOET\svc-recruit$', with an empty password) when SQL
+        # Server uses Windows sign-in. Empty: the app pool's own identity (IIS AppPool\MoetRecruitmentBackoffice).
         Identity = @{ User = ''; Password = '' }
         Settings = @{
             DB_CONNECTION = 'Server=sql01;Database=MoetRecruitment;Integrated Security=True;TrustServerCertificate=True;Encrypt=True'
+            # Any long random values; the same two go in the Portal section below.
             PORTAL_API_KEY = ''
             PORTAL_API_SECRET = ''
             PORTAL_URL = 'https://careers.moet.gov.ae'
             BACKOFFICE_URL = 'https://recruitment.moet.gov.ae'
+            # The first administrator, created on the first start (password at least 12 characters).
             ADMIN_EMAIL = ''
-            ADMIN_PASSWORD = ''                 # first start only; at least 12 characters
-            AGENT_URL = 'http://127.0.0.1:5090'
-            AGENT_KEY = ''                      # same value on the agent; changing it later breaks stored secrets
+            ADMIN_PASSWORD = ''
+            # At least 16 random characters. Also encrypts secrets saved in the database: choose it once.
+            AGENT_KEY = ''
+            # The AI model (any OpenAI-compatible server). Empty: the AI features stay off.
             LLM_BASE_URL = ''
             LLM_MODEL = ''
             LLM_API_KEY = ''
@@ -83,21 +50,26 @@
         }
     }
 
-    # The assistant. Not public; only the API calls it.
-    Agent = @{
-        SiteName = 'MoET Recruitment Agent'
-        AppPool = 'MoetRecruitmentAgent'
-        IpAddress = '127.0.0.1'
-        HttpPort = 5090
-        HttpsPort = 0
-        HostName = ''
+    # Site 2: the candidate site. Public on the internet, often on a DMZ server.
+    Portal = @{
+        SiteName = 'MoET Careers Portal'
+        AppPool = 'MoetCareersPortal'
+        HostName = 'careers.moet.gov.ae'
+        IpAddress = '*'
+        HttpsPort = 443
+        HttpPort = 0                            # for a test without a certificate: HttpsPort = 0, HttpPort = 8082
         CertificateThumbprint = ''
+        LocalPort = 0
         Settings = @{
-            BACKEND_URL = 'http://127.0.0.1:5080'
-            AGENT_KEY = ''
-            LLM_BASE_URL = ''
-            LLM_MODEL = ''
-            LLM_API_KEY = ''
+            # The backoffice site's API as the portal server reaches it: http://127.0.0.1:5080 on the same server (the
+            # backoffice's LocalPort); from a DMZ server, the backoffice's internal HTTPS address, allowed through the
+            # firewall from the portal server only.
+            RECRUITMENT_API_URL = 'http://127.0.0.1:5080'
+            # The same pair as PORTAL_API_KEY and PORTAL_API_SECRET in the Backoffice section.
+            CAREERS_PORTAL_API_KEY = ''
+            CAREERS_PORTAL_API_SECRET = ''
+            # At least 32 random characters; signs the candidates' session cookie.
+            SESSION_SECRET = ''
         }
     }
 }

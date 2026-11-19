@@ -43,31 +43,20 @@ jobs:
       - name: Build
         run: |
           dotnet build backend/src/Moet.Recruitment.Api -c Release
-          dotnet build agent/src/Moet.Recruitment.Agent -c Release
+          dotnet build portal/host/Moet.Careers.Portal -c Release
           (cd backoffice/web && npm install --no-audit --no-fund && npm run build)
           (cd portal/web && npm install --no-audit --no-fund && npm run build)
-      - name: Start the stack
-        run: |
-          SCENARIO=1 node e2e/fake-model.mjs > model.log 2>&1 &
-          BACKEND_URL=http://localhost:5080 LLM_BASE_URL=http://localhost:9000/v1 LLM_MODEL=fake LLM_API_KEY=none \
-            dotnet agent/src/Moet.Recruitment.Agent/bin/Release/net10.0/Moet.Recruitment.Agent.dll --urls http://localhost:5090 > agent.log 2>&1 &
-          DB_CONNECTION="Server=localhost,1433;Database=MoetAudit;User Id=sa;Password=Ci-Strong-Password-123;TrustServerCertificate=True;Encrypt=False" \
-          PORTAL_API_KEY=e2e-portal-key PORTAL_API_SECRET=e2e-secret-0123456789 PORTAL_URL=http://127.0.0.1:8080 COOKIE_SECURE=0 RUN_WORKERS=0 AGENT_URL=http://localhost:5090 \
-            dotnet backend/src/Moet.Recruitment.Api/bin/Release/net10.0/Moet.Recruitment.Api.dll --urls http://localhost:5080 > api.log 2>&1 &
-          (cd backoffice/web && npx vite preview --host 127.0.0.1 > ../../web.log 2>&1 &)
-          (cd portal/server && RECRUITMENT_API_URL=http://localhost:5080 CAREERS_PORTAL_API_KEY=e2e-portal-key CAREERS_PORTAL_API_SECRET=e2e-secret-0123456789 \
-            SESSION_SECRET=audit-session-secret-0123456789abcdef COOKIE_SECURE=0 PORT=8080 node src/server.js > ../../portal.log 2>&1 &)
-          for i in $(seq 1 60); do curl -sf http://localhost:5080/healthz && curl -sf http://127.0.0.1:4173/ >/dev/null && curl -sf http://127.0.0.1:8080/ >/dev/null && break; sleep 2; done
-          API=http://localhost:5080 PORTAL_KEY=e2e-portal-key:e2e-secret-0123456789 node backoffice/scripts/seed-demo.mjs
+      - name: Start the stack (backoffice app with the assistant on :5080, portal on :8080)
+        run: SCENARIO=1 MODEL_SCRIPT=e2e/fake-model.mjs DB_NAME=MoetAudit RUN_WORKERS=0 e2e/start-stack.sh
       - name: Screenshots
         run: |
           mkdir -p e2e/run && cd e2e/run && npm init -y >/dev/null && npm install playwright@1.49.1 axe-core@4.10.2 --no-audit --no-fund >/dev/null
           npx playwright install --with-deps chromium >/dev/null
-          cp ../audit.mjs . && BASE_URL=http://127.0.0.1:4173 PORTAL_URL=http://127.0.0.1:8080 node audit.mjs
+          cp ../audit.mjs . && BASE_URL=http://localhost:5080 PORTAL_URL=http://127.0.0.1:8080 node audit.mjs
       - name: Logs
         if: always()
         run: |
-          echo "--- api errors"; grep -n -A8 "fail:\|Exception" api.log | head -60; echo "--- agent"; grep -n -A8 "fail:\|Exception" agent.log | head -40; echo "--- model"; tail -40 model.log; echo "--- portal"; tail -30 portal.log; echo "--- web"; tail -10 web.log
+          echo "--- api errors"; grep -n -A8 "fail:\|Exception" api.log | head -60; echo "--- model"; tail -40 model.log; echo "--- portal"; tail -30 portal.log
       - name: Push to the audit branch
         if: always()
         run: |
