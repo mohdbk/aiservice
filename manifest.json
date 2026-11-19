@@ -1,0 +1,307 @@
+[
+ {
+  "file": "01.jpg",
+  "caption": "HR starts in HRMS",
+  "caption_ar": "يبدأ فريق الموارد البشرية من نظام إدارة الموارد البشرية",
+  "focus": null,
+  "chapter": "The Job Opening",
+  "chapter_ar": "الإعلان عن الوظيفة"
+ },
+ {
+  "file": "02.jpg",
+  "caption": "A new job opening: Economic Data Analyst",
+  "caption_ar": "وظيفة جديدة: محلل بيانات اقتصادية",
+  "focus": {
+   "x": 44,
+   "y": 576,
+   "w": 1491,
+   "h": 92
+  },
+  "chapter": "The Job Opening",
+  "chapter_ar": "الإعلان عن الوظيفة"
+ },
+ {
+  "file": "03.jpg",
+  "caption": "The job description states what is required and what is preferred",
+  "caption_ar": "يحدد الوصف الوظيفي ما هو مطلوب وما هو مفضل",
+  "focus": null,
+  "chapter": "The Job Opening",
+  "chapter_ar": "الإعلان عن الوظيفة"
+ },
+ {
+  "file": "04.jpg",
+  "caption": "The Big Five questionnaire is sent automatically when someone applies",
+  "caption_ar": "يرسل استبيان السمات الخمس تلقائيا عند التقديم",
+  "focus": {
+   "x": 43,
+   "y": 437,
+   "w": 1493,
+   "h": 491
+  },
+  "chapter": "The Job Opening",
+  "chapter_ar": "الإعلان عن الوظيفة"
+ },
+ {
+  "file": "05.jpg",
+  "caption": "Screening Requirements: empty until HR asks for a draft",
+  "caption_ar": "متطلبات الفرز: فارغة حتى يطلب الفريق مسودة",
+  "focus": null,
+  "chapter": "Screening Requirements",
+  "chapter_ar": "متطلبات الفرز"
+ },
+ {
+  "file": "06.jpg",
+  "caption": "Drafted from the description: Essential and Desirable, with type, years, level and importance",
+  "caption_ar": "صيغت من الوصف: أساسية ومرغوبة، مع النوع والسنوات والمستوى والأهمية",
+  "focus": {
+   "x": 1268,
+   "y": 241,
+   "w": 212,
+   "h": 32
+  },
+  "chapter": "Screening Requirements",
+  "chapter_ar": "متطلبات الفرز"
+ },
+ {
+  "file": "07.jpg",
+  "caption": "Each requirement has a score guide: what 0, 4, 7 and 10 look like",
+  "caption_ar": "لكل متطلب دليل تقييم: ما الذي يمثله 0 و4 و7 و10",
+  "focus": {
+   "x": 115,
+   "y": 440,
+   "w": 1349,
+   "h": 152
+  },
+  "chapter": "Screening Requirements",
+  "chapter_ar": "متطلبات الفرز"
+ },
+ {
+  "file": "08.jpg",
+  "caption": "HR approves. Only approved requirements are used to score CVs",
+  "caption_ar": "يعتمد الفريق المتطلبات. لا تقيم السير الذاتية إلا وفق المعتمدة",
+  "focus": null,
+  "chapter": "Screening Requirements",
+  "chapter_ar": "متطلبات الفرز"
+ },
+ {
+  "file": "09.jpg",
+  "caption": "The job appears on the careers portal",
+  "caption_ar": "تظهر الوظيفة على بوابة الوظائف",
+  "focus": null,
+  "chapter": "Applying",
+  "chapter_ar": "التقديم"
+ },
+ {
+  "file": "10.jpg",
+  "caption": "The job page",
+  "caption_ar": "صفحة الوظيفة",
+  "focus": null,
+  "chapter": "Applying",
+  "chapter_ar": "التقديم"
+ },
+ {
+  "file": "11.jpg",
+  "caption": "Candidates see the same Essential and Desirable requirements",
+  "caption_ar": "يرى المتقدمون المتطلبات الأساسية والمرغوبة نفسها",
+  "focus": {
+   "x": 741,
+   "y": 251,
+   "w": 1007,
+   "h": 37
+  },
+  "chapter": "Applying",
+  "chapter_ar": "التقديم"
+ },
+ {
+  "file": "12.jpg",
+  "caption": "Salma creates an account",
+  "caption_ar": "تنشئ سلمى حسابا",
+  "focus": null,
+  "chapter": "Applying",
+  "chapter_ar": "التقديم"
+ },
+ {
+  "file": "13.jpg",
+  "caption": "She applies: country code and number, her CV and the declaration",
+  "caption_ar": "تتقدم بطلبها: رمز الدولة والرقم وسيرتها الذاتية والإقرار",
+  "focus": {
+   "x": 513,
+   "y": 641,
+   "w": 893,
+   "h": 32
+  },
+  "chapter": "Applying",
+  "chapter_ar": "التقديم"
+ },
+ {
+  "file": "14.jpg",
+  "caption": "Application received, with a reference and its progress",
+  "caption_ar": "تم استلام الطلب مع رقم مرجعي ومتابعة المراحل",
+  "focus": null,
+  "chapter": "Applying",
+  "chapter_ar": "التقديم"
+ },
+ {
+  "file": "15.jpg",
+  "caption": "The Big Five questionnaire is waiting in her account",
+  "caption_ar": "استبيان السمات الخمس بانتظارها في حسابها",
+  "focus": null,
+  "chapter": "The Big Five Questionnaire",
+  "chapter_ar": "استبيان السمات الخمس"
+ },
+ {
+  "file": "16.jpg",
+  "caption": "One statement at a time, with progress and time at the top",
+  "caption_ar": "عبارة واحدة في كل مرة مع شريط التقدم والوقت في الأعلى",
+  "focus": {
+   "x": 428,
+   "y": 591,
+   "w": 1064,
+   "h": 38
+  },
+  "chapter": "The Big Five Questionnaire",
+  "chapter_ar": "استبيان السمات الخمس"
+ },
+ {
+  "file": "17.jpg",
+  "caption": "She can review and return to any question",
+  "caption_ar": "يمكنها مراجعة أي سؤال والعودة إليه",
+  "focus": null,
+  "chapter": "The Big Five Questionnaire",
+  "chapter_ar": "استبيان السمات الخمس"
+ },
+ {
+  "file": "18.jpg",
+  "caption": "A last check before submitting",
+  "caption_ar": "مراجعة أخيرة قبل التسليم",
+  "focus": null,
+  "chapter": "The Big Five Questionnaire",
+  "chapter_ar": "استبيان السمات الخمس"
+ },
+ {
+  "file": "19.jpg",
+  "caption": "HR sees the applicants ranked by their CV score",
+  "caption_ar": "يرى الفريق المتقدمين مرتبين حسب تقييم السيرة الذاتية",
+  "focus": {
+   "x": 44,
+   "y": 627,
+   "w": 1491,
+   "h": 412
+  },
+  "chapter": "Scoring",
+  "chapter_ar": "التقييم"
+ },
+ {
+  "file": "20.jpg",
+  "caption": "Or as a pipeline board",
+  "caption_ar": "أو كلوحة لمسار التوظيف",
+  "focus": null,
+  "chapter": "Scoring",
+  "chapter_ar": "التقييم"
+ },
+ {
+  "file": "21.jpg",
+  "caption": "Salma's application: CV score and rank in the job",
+  "caption_ar": "طلب سلمى: تقييم السيرة الذاتية وترتيبها في الوظيفة",
+  "focus": null,
+  "chapter": "Scoring",
+  "chapter_ar": "التقييم"
+ },
+ {
+  "file": "22.jpg",
+  "caption": "Essential requirements: Met, with her CV's own words as evidence",
+  "caption_ar": "المتطلبات الأساسية: مستوفاة، مع كلمات سيرتها الذاتية كدليل",
+  "focus": {
+   "x": 584,
+   "y": 200,
+   "w": 918,
+   "h": 27
+  },
+  "chapter": "Scoring",
+  "chapter_ar": "التقييم"
+ },
+ {
+  "file": "23.jpg",
+  "caption": "Desirable requirements: a score each, and what would score higher",
+  "caption_ar": "المتطلبات المرغوبة: تقييم لكل منها وما الذي يرفعه",
+  "focus": {
+   "x": 584,
+   "y": 200,
+   "w": 918,
+   "h": 27
+  },
+  "chapter": "Scoring",
+  "chapter_ar": "التقييم"
+ },
+ {
+  "file": "24.jpg",
+  "caption": "Her Big Five profile, scored from her answers",
+  "caption_ar": "ملف السمات الخمس، محسوب من إجاباتها",
+  "focus": null,
+  "chapter": "Scoring",
+  "chapter_ar": "التقييم"
+ },
+ {
+  "file": "25.jpg",
+  "caption": "Each trait against the role's profile",
+  "caption_ar": "كل سمة مقارنة بملف الدور",
+  "focus": {
+   "x": 491,
+   "y": 213,
+   "w": 597,
+   "h": 450
+  },
+  "chapter": "Scoring",
+  "chapter_ar": "التقييم"
+ },
+ {
+  "file": "26.jpg",
+  "caption": "HR offers interview times",
+  "caption_ar": "يعرض الفريق مواعيد للمقابلة",
+  "focus": {
+   "x": 533,
+   "y": 21,
+   "w": 853,
+   "h": 1037
+  },
+  "chapter": "The Interview",
+  "chapter_ar": "المقابلة"
+ },
+ {
+  "file": "27.jpg",
+  "caption": "Salma picks the time that suits her",
+  "caption_ar": "تختار سلمى الموعد المناسب لها",
+  "focus": {
+   "x": 384,
+   "y": 161,
+   "w": 1152,
+   "h": 456
+  },
+  "chapter": "The Interview",
+  "chapter_ar": "المقابلة"
+ },
+ {
+  "file": "28.jpg",
+  "caption": "Booked. The confirmation email carries a calendar invitation",
+  "caption_ar": "تم الحجز. يحمل بريد التأكيد دعوة تقويم",
+  "focus": null,
+  "chapter": "The Interview",
+  "chapter_ar": "المقابلة"
+ },
+ {
+  "file": "29.jpg",
+  "caption": "The interview, with Add to Calendar for the panel",
+  "caption_ar": "المقابلة، مع إضافة إلى التقويم للجنة",
+  "focus": null,
+  "chapter": "The Interview",
+  "chapter_ar": "المقابلة"
+ },
+ {
+  "file": "30.jpg",
+  "caption": "An interview guide: questions per skill and what a strong answer covers",
+  "caption_ar": "دليل مقابلة: أسئلة لكل مهارة وما تتضمنه الإجابة القوية",
+  "focus": null,
+  "chapter": "The Interview",
+  "chapter_ar": "المقابلة"
+ }
+]
