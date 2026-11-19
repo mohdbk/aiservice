@@ -60,7 +60,8 @@ jobs:
           }
           "@ | Set-Content C:\moet.settings.psd1
           Expand-Archive out\moet-recruitment-iis.zip C:\package
-          & C:\package\iis\Install-Moet.ps1 -SettingsFile C:\moet.settings.psd1
+          # No SQL Server here, so the installer's own checks (which expect the database) are left to the next step.
+          & C:\package\iis\Install-Moet.ps1 -SettingsFile C:\moet.settings.psd1 -SkipHealthCheck
 
       - name: Check the sites
         shell: powershell
