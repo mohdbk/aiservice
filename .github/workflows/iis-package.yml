@@ -129,6 +129,12 @@ jobs:
 
           $r = Hit GET 'http://127.0.0.1:5080/healthz'
           Expect 'API health on the local binding (where the portal reaches it)' ($r.Status -eq 200) $r.Status
+          $r = Hit GET 'http://127.0.0.1:5080/'
+          Expect 'the local binding does not serve the staff app (portal API only)' ($r.Status -eq 404) $r.Status
+          $r = Hit GET 'http://127.0.0.1:5080/api/backoffice/me'
+          Expect 'the local binding does not serve the staff API' ($r.Status -eq 404) $r.Status
+          $r = Hit GET 'http://127.0.0.1:5080/api/portal/config' @{ Authorization = 'token ci-portal-key:ci-portal-secret-0123456789' }
+          Expect 'the local binding serves the portal API' ($r.Status -ne 404 -and $r.Status -ne 403) "$($r.Status) $($r.Body)"
           $r = Hit GET 'http://localhost:8081/api/portal/config' @{ Authorization = 'token wrong:key' }
           Expect 'the portal API refuses a wrong key' ($r.Status -eq 401 -or $r.Status -eq 403) $r.Status
 

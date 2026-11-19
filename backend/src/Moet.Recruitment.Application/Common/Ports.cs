@@ -223,7 +223,16 @@ public interface ILanguageModel
 
     /// <summary>A chat turn with tools (for the HR assistant).</summary>
     Task<ChatTurn> ChatAsync(IReadOnlyList<ChatMessage> messages, IReadOnlyList<ToolSpec> tools, CancellationToken ct = default);
+
+    /// <summary>
+    /// The text in one or more images (a scanned or photographed CV), read by a model that accepts images; null when
+    /// none is set up or the model cannot read images.
+    /// </summary>
+    Task<string?> ReadImagesAsync(IReadOnlyList<ImageInput> images, CancellationToken ct = default) => Task.FromResult<string?>(null);
 }
+
+/// <summary>An image sent to the model: its bytes and media type (image/jpeg or image/png).</summary>
+public sealed record ImageInput(byte[] Data, string MediaType);
 
 public sealed record ChatMessage(string Role, string? Content, IReadOnlyList<ToolCall>? ToolCalls = null, string? ToolCallId = null);
 

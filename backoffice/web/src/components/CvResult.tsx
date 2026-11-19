@@ -36,7 +36,7 @@ export function CvResult({ appId, c, onChanged }: { appId: number; c: Analysis; 
           {c.rank && <><dt className="text-aeblack-500">{t("cvr.rank")}</dt><dd className="font-semibold">{t("cvr.rank_value", { position: c.rank.position, of: c.rank.of, top: c.rank.top_percent })}</dd></>}
           {essentials.length > 0 && <><dt className="text-aeblack-500">{t("crit.essential")}</dt><dd className="font-semibold">{t("cvr.met_of", { met, of: essentials.length })}</dd></>}
           <dt className="text-aeblack-500">{t("app.years")}</dt><dd className="font-semibold" dir="ltr">{c.years ?? "-"}</dd>
-          <dt className="text-aeblack-500">{t("app.read_as")}</dt><dd>{c.read_method}{c.read_quality === "poor" && <Badge tone="amber">{t("cvr.poor_read")}</Badge>}</dd>
+          <dt className="text-aeblack-500">{t("app.read_as")}</dt><dd>{["pdf-text", "word", "ocr", "model", "none"].includes(c.read_method) ? t(`readm.${c.read_method}`) : c.read_method}{c.read_quality === "poor" && <Badge tone="amber">{t("cvr.poor_read")}</Badge>}</dd>
         </dl>
       </div>
       {c.needs_review && (c.review_reasons?.length ?? 0) > 0 && (

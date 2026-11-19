@@ -80,6 +80,36 @@ public sealed partial class OpenAiCompatibleModel(HttpClient http, IConfiguratio
             usage?["prompt_tokens"]?.GetValue<int>() ?? 0, usage?["completion_tokens"]?.GetValue<int>() ?? 0);
     }
 
+    /// <summary>
+    /// Reads the text of CV images with a model that accepts images (LLM_VISION_MODEL, or the main model), when no OCR
+    /// service is set up. CV_READ_WITH_MODEL=0 turns it off. The image goes to the model as it is (it cannot be
+    /// redacted like text), so the model must be the ministry's own or in-country.
+    /// </summary>
+    public async Task<string?> ReadImagesAsync(IReadOnlyList<ImageInput> images, CancellationToken ct = default)
+    {
+        if (!IsConfigured || images.Count == 0 || cfg["CV_READ_WITH_MODEL"] == "0") return null;
+        var model = cfg["LLM_VISION_MODEL"] is { Length: > 0 } v ? v : ModelName;
+        var content = new JsonArray { new JsonObject { ["type"] = "text", ["text"] = CvImagePrompt } };
+        foreach (var img in images)
+            content.Add(new JsonObject
+            {
+                ["type"] = "image_url",
+                ["image_url"] = new JsonObject { ["url"] = $"data:{img.MediaType};base64,{Convert.ToBase64String(img.Data)}" },
+            });
+        var body = Body([new JsonObject { ["role"] = "user", ["content"] = content }], 0, model);
+        var data = await PostAsync(body, ct);
+        await RecordAsync(data, "cv_read_image", model);
+        var text = Strip(data["choices"]?[0]?["message"]?["content"]?.GetValue<string>()) ?? "";
+        return text.Trim().Length == 0 ? null : text;
+    }
+
+    const string CvImagePrompt = """
+        These images are the pages of one CV (a scan or a photo). Write out all of its text in reading order, exactly as it
+        is written and in its own language (Arabic, English or both): headings, names of employers and institutions,
+        dates, job titles, skills and lists, each on its own line. Do not translate, summarise, correct or add anything,
+        and do not describe the layout or the images. If a page has no readable text, write nothing for it.
+        """;
+
     async Task RecordAsync(JsonNode data, string feature, string modelName)
     {
         if (usageLog == null) return;

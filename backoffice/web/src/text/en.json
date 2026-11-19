@@ -1772,5 +1772,10 @@
  "ccv.uploaded": "CV saved. It is being read.",
  "pool.cv_only": "CV on profile",
  "error.cv_limit": "Up to {max} CVs per account. Delete one first.",
- "error.cv_not_found": "This CV no longer exists."
+ "error.cv_not_found": "This CV no longer exists.",
+ "readm.pdf-text": "PDF Text",
+ "readm.word": "Word Document",
+ "readm.ocr": "Text Recognition (OCR)",
+ "readm.model": "Read by the AI Model from the Image",
+ "readm.none": "Not Readable"
 }

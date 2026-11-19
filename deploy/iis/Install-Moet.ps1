@@ -176,6 +176,8 @@ function Set-Site([string]$name, [string]$path, [string]$pool, [hashtable]$cfg) 
     $https = [int](Value $cfg 'HttpsPort' 0)
     $http = [int](Value $cfg 'HttpPort' 0)
     $local = [int](Value $cfg 'LocalPort' 0)
+    $portalPort = [int](Value $cfg 'PortalPort' 0)
+    $portalIp = Value $cfg 'PortalIpAddress' '*'
     $thumb = (Value $cfg 'CertificateThumbprint') -replace '\s', ''
     if ($https -gt 0 -and -not $thumb) { Fail "$name has an HTTPS port but no CertificateThumbprint." }
     if ($https -le 0 -and $http -le 0) { Fail "$name has neither an HTTPS nor an HTTP port." }
@@ -184,13 +186,19 @@ function Set-Site([string]$name, [string]$path, [string]$pool, [hashtable]$cfg) 
     if ($http -gt 0) { $bindings += @{ protocol = 'http'; bindingInformation = "${ip}:${http}:$hostName" } }
     # A plain HTTP binding on this machine only: the portal on the same server reaches the API there.
     if ($local -gt 0) { $bindings += @{ protocol = 'http'; bindingInformation = "127.0.0.1:${local}:" } }
+    # An HTTPS port for the portal on another server (DMZ): only the portal API answers on it, so the firewall rule can
+    # name just this port. It uses the site's certificate.
+    if ($portalPort -gt 0) {
+        if (-not $thumb) { Fail "$name has a PortalPort but no CertificateThumbprint." }
+        $bindings += @{ protocol = 'https'; bindingInformation = "${portalIp}:${portalPort}:"; sslFlags = 0 }
+    }
     $site = "IIS:\Sites\$name"
     if (-not (Test-Path $site)) { New-Item $site -bindings $bindings[0] -physicalPath $path | Out-Null }
     Set-ItemProperty $site -Name bindings -Value $bindings
     Set-ItemProperty $site -Name physicalPath -Value $path
     Set-ItemProperty $site -Name applicationPool -Value $pool
     Set-ItemProperty $site -Name serverAutoStart -Value $true
-    if ($https -gt 0) {
+    if ($https -gt 0 -or $portalPort -gt 0) {
         if (-not (Test-Path "Cert:\LocalMachine\My\$thumb")) { Fail "certificate $thumb is not in Cert:\LocalMachine\My." }
         foreach ($b in @(Get-WebBinding -Name $name -Protocol https)) {
             try { $b.RemoveSslCertificate() } catch { }   # none yet, or bound to an older certificate
@@ -211,9 +219,9 @@ function Set-Site([string]$name, [string]$path, [string]$pool, [hashtable]$cfg) 
     } else {
         Write-Warning "IIS Application Initialization (Web-AppInit) is not installed: $name starts on its first request instead of with IIS."
     }
-    if ($local -gt 0) { return "http://127.0.0.1:$local" }
-    if ($http -gt 0) { return "http://$(if ($ip -eq '*') { '127.0.0.1' } else { $ip }):$http" }
-    return ''
+    $staff = $(if ($http -gt 0) { "http://$(if ($ip -eq '*') { '127.0.0.1' } else { $ip }):$http" } else { '' })
+    $localUrl = $(if ($local -gt 0) { "http://127.0.0.1:$local" } else { '' })
+    return @{ Staff = $staff; Local = $localUrl }
 }
 
 $probes = @()
@@ -245,6 +253,9 @@ if ($Roles -contains 'Backoffice') {
         Write-Warning 'The package has no ms-playwright folder: PDF letters need Chromium (see docs/ON_PREM.md, "PDF letters").'
     }
     $env = @{ ASPNETCORE_ENVIRONMENT = 'Production'; PLAYWRIGHT_BROWSERS_PATH = $browsers }
+    # The local port and the portal port answer only the portal API.
+    $portalOnly = @([int](Value $c 'LocalPort' 0), [int](Value $c 'PortalPort' 0)) | Where-Object { $_ -gt 0 }
+    if ($portalOnly) { $env['PORTAL_ONLY_PORTS'] = ($portalOnly -join ',') }
     # Staff sign-in needs HTTPS unless the site has no HTTPS binding (a test without a certificate).
     if ([int](Value $c 'HttpsPort' 0) -le 0) { $env['COOKIE_SECURE'] = '0' }
     foreach ($k in $c.Settings.Keys) { $env[$k] = $c.Settings[$k] }
@@ -252,12 +263,16 @@ if ($Roles -contains 'Backoffice') {
     Set-Pool $pool (Value $c 'Identity' @{})
     Protect-Folder $dir $pool
     if (Test-Path $browsers) { Grant $browsers "IIS AppPool\$pool" 'RX' }
-    $url = Set-Site $site $dir $pool $c
+    $urls = Set-Site $site $dir $pool $c
     Start-App $site $pool $dir
     # The first start creates or updates the database, which can take a few minutes.
-    Probe "$site (API)" "$url/healthz" @(200) 300
-    Probe "$site (staff app)" "$url/" @(200) 60
-    Probe "$site (sign-in check)" "$url/api/backoffice/me" @(401) 60
+    $first = $(if ($urls.Local) { $urls.Local } else { $urls.Staff })
+    Probe "$site (API)" $(if ($first) { "$first/healthz" } else { '' }) @(200) 300
+    if ($urls.Staff) {
+        Probe "$site (staff app)" "$($urls.Staff)/" @(200) 60
+        Probe "$site (sign-in check)" "$($urls.Staff)/api/backoffice/me" @(401) 60
+    }
+    if ($urls.Local) { Probe "$site (local port: portal API only)" "$($urls.Local)/" @(404) 60 }
 }
 
 # ---------------------------------------------------------------- portal (candidate site)
@@ -272,10 +287,13 @@ if ($Roles -contains 'Portal') {
     Write-WebConfig (Join-Path $dir 'web.config') 'Moet.Careers.Portal.dll' $env
     Set-Pool $pool (Value $c 'Identity' @{})
     Protect-Folder $dir $pool
-    $url = Set-Site $site $dir $pool $c
+    $urls = Set-Site $site $dir $pool $c
     Start-App $site $pool $dir
-    Probe "$site (pages)" "$url/healthz" @(200) 60
-    Probe "$site (reaches the API)" "$url/api/config" @(200) 120
+    $url = $(if ($urls.Staff) { $urls.Staff } else { $urls.Local })
+    if ($url) {
+        Probe "$site (pages)" "$url/healthz" @(200) 60
+        Probe "$site (reaches the API)" "$url/api/config" @(200) 120
+    }
 }
 
 # ---------------------------------------------------------------- health

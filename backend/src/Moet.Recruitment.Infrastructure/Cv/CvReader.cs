@@ -10,10 +10,11 @@ using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
 namespace Moet.Recruitment.Infrastructure.Cv;
 
 /// <summary>
-/// Reads CV text: the PDF text layer and Word documents directly; scans and photos through the OCR service
-/// (OCR_URL, the PaddleOCR container) when it is configured.
+/// Reads CV text: the PDF text layer and Word documents directly; scans and photos through the OCR service (OCR_URL)
+/// when one is set up, and otherwise through the AI model, if it accepts images (the page images of a scanned PDF, or
+/// the photo itself).
 /// </summary>
-public sealed class CvReader(HttpClient http, IConfiguration cfg) : ICvReader
+public sealed class CvReader(HttpClient http, IConfiguration cfg, ILanguageModel model) : ICvReader
 {
     const int MinUsefulChars = 200;
 
@@ -25,12 +26,57 @@ public sealed class CvReader(HttpClient http, IConfiguration cfg) : ICvReader
         {
             var text = PdfText(content);
             if (text.Trim().Length >= MinUsefulChars) return new CvText(text, "pdf-text");
-            var ocr = await OcrAsync(content, "application/pdf", ct);
+            var ocr = await OcrAsync(content, "application/pdf", ct) ?? await ModelAsync(PdfImages(content), ct);
             return ocr ?? new CvText(text, "pdf-text");
         }
         if (ext is "png" or "jpg" or "jpeg")
-            return await OcrAsync(content, ext == "png" ? "image/png" : "image/jpeg", ct) ?? new CvText("", "none");
+        {
+            var type = ext == "png" ? "image/png" : "image/jpeg";
+            return await OcrAsync(content, type, ct) ?? await ModelAsync([new ImageInput(content, type)], ct) ?? new CvText("", "none");
+        }
         return new CvText("", "none");
+    }
+
+    const int MaxPages = 5;
+    const int MaxImageBytes = 8 * 1024 * 1024;
+
+    /// <summary>The text of CV images read by the AI model, or null (no model for images, or nothing readable).</summary>
+    async Task<CvText?> ModelAsync(IReadOnlyList<ImageInput> images, CancellationToken ct)
+    {
+        var usable = images.Where(i => i.Data.Length is > 0 and <= MaxImageBytes).Take(MaxPages).ToList();
+        if (usable.Count == 0) return null;
+        try
+        {
+            var text = await model.ReadImagesAsync(usable, ct);
+            return string.IsNullOrWhiteSpace(text) ? null : new CvText(text, "model");
+        }
+        catch (Exception e) when (e is InvalidOperationException or HttpRequestException or TaskCanceledException or JsonException)
+        {
+            return null;   // the model cannot read images, or is unreachable: the CV is marked unreadable for a person
+        }
+    }
+
+    /// <summary>The scanned page images inside a PDF (one per page for most scans), as JPEG or PNG.</summary>
+    static List<ImageInput> PdfImages(byte[] content)
+    {
+        var list = new List<ImageInput>();
+        try
+        {
+            using var doc = PdfDocument.Open(content);
+            foreach (var page in doc.GetPages().Take(MaxPages))
+            {
+                var best = page.GetImages().OrderByDescending(i => i.WidthInSamples * i.HeightInSamples).FirstOrDefault();
+                if (best == null) continue;
+                var raw = best.RawBytes.ToArray();
+                if (raw.Length > 3 && raw[0] == 0xFF && raw[1] == 0xD8) list.Add(new ImageInput(raw, "image/jpeg"));
+                else if (best.TryGetPng(out var png) && png.Length > 0) list.Add(new ImageInput(png, "image/png"));
+            }
+        }
+        catch (Exception)
+        {
+            // an unreadable PDF: no images
+        }
+        return list;
     }
 
     static string PdfText(byte[] content)

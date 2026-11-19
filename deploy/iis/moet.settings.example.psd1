@@ -16,8 +16,13 @@
         HttpPort = 0                            # 0: no plain HTTP binding (for a test without a certificate: HttpsPort = 0, HttpPort = 8081)
         # Thumbprint of the certificate in Cert:\LocalMachine\My (needed when HttpsPort is set).
         CertificateThumbprint = ''
-        # A plain HTTP binding on 127.0.0.1 only, for the portal when it is on this same server. 0: none.
+        # A plain HTTP binding on 127.0.0.1 only, for the portal when it is on this same server. Only the portal API
+        # answers on it. 0: none.
         LocalPort = 5080
+        # For the portal on another server (DMZ): an HTTPS port, on this server's internal address, where only the
+        # portal API answers (same certificate). Open only this port to the portal server. 0: none.
+        PortalPort = 0
+        PortalIpAddress = '*'
         # Run the app pool as this account (for example a gMSA, 'MOET\svc-recruit$', with an empty password) when SQL
         # Server uses Windows sign-in. Empty: the app pool's own identity (IIS AppPool\MoetRecruitmentBackoffice).
         Identity = @{ User = ''; Password = '' }
@@ -44,6 +49,9 @@
             SMTP_FROM = ''
             SMTP_TLS = '1'
             TIME_ZONE = 'Asia/Dubai'
+            # Addresses or ranges allowed to call the portal API at all, even with the key: the portal server, and
+            # 127.0.0.1 when the portal is on this server. Empty: any address with the key.
+            PORTAL_API_ALLOWED_IPS = ''
             # CLAMAV_HOST = 'clamav01:3310'
             # Built-in exports to MinIO (BACKUP_S3_*): keep a new database empty instead of refilling it from the store.
             BACKUP_RESTORE_ON_EMPTY = '0'
@@ -61,9 +69,9 @@
         CertificateThumbprint = ''
         LocalPort = 0
         Settings = @{
-            # The backoffice site's API as the portal server reaches it: http://127.0.0.1:5080 on the same server (the
-            # backoffice's LocalPort); from a DMZ server, the backoffice's internal HTTPS address, allowed through the
-            # firewall from the portal server only.
+            # The backoffice's API as the portal server reaches it: http://127.0.0.1:5080 on the same server (the
+            # backoffice's LocalPort); from a DMZ server, the backoffice's PortalPort, for example
+            # https://recruitment.moet.gov.ae:5443, allowed through the firewall from the portal server only.
             RECRUITMENT_API_URL = 'http://127.0.0.1:5080'
             # The same pair as PORTAL_API_KEY and PORTAL_API_SECRET in the Backoffice section.
             CAREERS_PORTAL_API_KEY = ''

@@ -62,12 +62,14 @@ var app = builder.Build();
 // The assistant's calls to the backoffice API go through this pipeline in memory (InProcessBackoffice), so it is
 // captured here, with routing right after it.
 app.Use(next => { app.Services.GetRequiredService<InProcessBackoffice>().Pipeline = next; return next; });
+if (cfg["TRUST_PROXY"] == "1") app.UseForwardedHeaders();
+// Optional limits for a backoffice the portal reaches from the DMZ (PORTAL_ONLY_PORTS, PORTAL_API_ALLOWED_IPS).
+app.UseMiddleware<PortalAccess>();
 // The built backoffice, when it is in wwwroot (IIS: one site for the staff app and its API).
 var backofficeSite = BackofficeSite.Folder(app.Environment);
 if (backofficeSite != null) BackofficeSite.UseFiles(app, backofficeSite);
 app.UseRouting();
 
-if (cfg["TRUST_PROXY"] == "1") app.UseForwardedHeaders();
 app.UseMiddleware<SecurityHeaders>();
 // Outside the error envelope, so it records the final result of every action, refusals included.
 app.UseMiddleware<ActionAudit>();
