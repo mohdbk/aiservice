@@ -87,7 +87,7 @@ export function JobRanking({ jobId }: { jobId: number | string }) {
   const { t, to } = useLang();
   const list = useList<RankRow>(`/jobs/${jobId}/ranking`, ["all"]);
   const w = (list.data as unknown as { weights?: Weights } | undefined)?.weights;
-  const head = (k: keyof Weights) => <>{t(`sel.part.${k}`)}{w && <span className="ms-1 font-normal text-aeblack-500" dir="ltr">{w[k]}%</span>}</>;
+  const head = (k: keyof Weights) => <>{t(`sel.part.${k}`)}{w && <span className="ms-1 font-normal text-aeblack-500"><bdi>{w[k]}%</bdi></span>}</>;
   return (
     <>
       <div className="mb-4"><Note>{t("sel.ranking_hint")}</Note></div>

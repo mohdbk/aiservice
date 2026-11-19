@@ -39,7 +39,7 @@ export function AuditLog() {
           { key: "when", label: t("audit.when"), sort: "when", className: "whitespace-nowrap", render: (r) => date(r.when, true) },
           { key: "record", label: t("audit.record"), sort: "record", render: (r) => (
             <button type="button" className="text-start font-semibold text-primary-700" onClick={() => setShown(r)}>
-              <span dir="ltr">{r.record} #{r.key}</span>
+              <span dir="ltr">{r.record}{r.key ? ` #${r.key}` : ""}</span>
             </button>
           ) },
           { key: "action", label: t("audit.action"), sort: "action", render: (r) => (
@@ -58,7 +58,7 @@ export function AuditLog() {
           ) },
         ]} />
       {shown && (
-        <Modal open onClose={() => setShown(null)} title={<span dir="ltr">{shown.record} #{shown.key}</span>}
+        <Modal open onClose={() => setShown(null)} title={<span dir="ltr">{shown.record}{shown.key ? ` #${shown.key}` : ""}</span>}
           footer={<Button variant="outline" onClick={() => setShown(null)}>{t("common.close")}</Button>}>
           <p className="text-sm text-aeblack-600">{t(`audit.act.${shown.action}`)} · {shown.by} · {date(shown.when, true)}{shown.ip && <> · <span dir="ltr">{shown.ip}</span></>}</p>
           {shown.via === "Assistant" && <Note>{t("audit.via_note")}</Note>}
@@ -156,10 +156,10 @@ function ModelUseCard({ m }: { m: ModelUse }) {
             <tbody>{m.by_feature.map((f) => (
               <tr key={f.feature} className="border-b border-aeblack-50">
                 <td className="py-2">{name(f.feature)}</td>
-                <td className="tabular-nums" dir="ltr">{f.calls.toLocaleString("en")}</td>
-                <td className="tabular-nums" dir="ltr">{compact(f.input)}</td>
-                <td className="tabular-nums" dir="ltr">{compact(f.output)}</td>
-                <td className="tabular-nums" dir="ltr">{m.priced ? money(f.cost) : "-"}</td>
+                <td className="tabular-nums"><bdi>{f.calls.toLocaleString("en")}</bdi></td>
+                <td className="tabular-nums"><bdi>{compact(f.input)}</bdi></td>
+                <td className="tabular-nums"><bdi>{compact(f.output)}</bdi></td>
+                <td className="tabular-nums"><bdi>{m.priced ? money(f.cost) : "-"}</bdi></td>
               </tr>
             ))}</tbody>
           </table>

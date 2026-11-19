@@ -31,10 +31,9 @@ export default function TalentPool() {
       <PageHeader title={t("nav.talent_pool")} subtitle={list.data ? t("pool.subtitle", { n: list.data.total }) : undefined} />
       <DataTable list={list} rowKey={(r) => r.id} emptyHint={t("empty.talent_pool")} searchLabel={t("pool.search")}
         filters={[{ key: "job", label: t("pool.not_applied_to"), options: (jobs.data?.items || []).map((j) => ({ value: String(j.id), label: lang === "en" && j.title_en ? j.title_en : j.title })) }]}
-        toolbar={<form className="flex items-end gap-2" onSubmit={(e) => { e.preventDefault(); list.set({ cv: cv.trim() || null }); }}>
-          <TextInput label={t("pool.cv_text")} value={cv} onChange={(e) => setCv(e.target.value)} wrapClass="min-w-48" />
-          <Button type="submit" variant="outline" size="sm">{t("common.search")}</Button>
-        </form>}
+        toolbar={<TextInput label={t("pool.cv_text")} type="search" value={cv} onChange={(e) => setCv(e.target.value)} wrapClass="sm:min-w-56"
+          onBlur={() => list.get("cv") !== cv.trim() && list.set({ cv: cv.trim() || null })}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); list.set({ cv: cv.trim() || null }); } }} />}
         columns={[
           { key: "name", label: t("common.name"), sort: "name", render: (r) => <><span className="font-semibold">{r.full_name}</span><span className="block text-xs text-aeblack-500" dir="ltr">{r.email}</span></> },
           { key: "latest", label: t("pool.latest"), render: (r) => r.latest ? (

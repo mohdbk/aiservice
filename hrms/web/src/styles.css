@@ -97,7 +97,9 @@ html[lang|="ar"] [lang|="en"] { font-family: "Roboto Variable", "Roboto", "Noto 
 .mh-table td { padding: .75rem 1rem; border-bottom: 1px solid var(--color-aeblack-50, #eee); vertical-align: middle; }
 .mh-table tbody tr:hover td { background: var(--color-primary-50); }
 /* The list scrolls inside its frame so the column headings stay in view. */
-.mh-table-wrap { overflow: auto; max-height: calc(100vh - 13rem); }
+.mh-table-wrap { overflow: auto; max-height: max(28rem, calc(100vh - 13rem)); scrollbar-width: thin; scrollbar-color: var(--color-aeblack-200) transparent; }
+/* Thin, quiet scrollbars for panels that scroll on their own (side menu, lists). */
+aside nav, aside .overflow-y-auto { scrollbar-width: thin; scrollbar-color: var(--color-aeblack-200) transparent; }
 .mh-table-wrap .mh-table thead th { position: sticky; top: 0; z-index: 2; }
 .mh-table-compact th, .mh-table-compact td { padding-top: .4rem; padding-bottom: .4rem; }
 .mh-table tbody tr.mh-row-picked td { background: var(--color-primary-50); }
@@ -322,3 +324,9 @@ html.mh-dark .aegov-btn.btn-outline { background-color: transparent; }
 /* The ministry logo stays on white, as the brand asks. */
 html.mh-dark .mh-logo { background: #fff; border-radius: .5rem; padding: .2rem .5rem; }
 html.mh-dark .mh-popup, html.mh-dark .mh-dialog { box-shadow: 0 16px 40px rgb(0 0 0 / .5); }
+
+/* Codes, emails and numbers are written left to right, but in Arabic they still line up with the column they sit in. */
+html[dir="rtl"] :is(p, dd)[dir="ltr"]:not([lang="en"]) { text-align: right; }
+
+/* Headings get focus after a page change so screen readers announce them; no ring for that programmatic focus. */
+[tabindex="-1"]:focus:not(:focus-visible) { outline: none; }

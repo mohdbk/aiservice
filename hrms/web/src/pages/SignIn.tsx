@@ -1,4 +1,4 @@
-import { DeviceMobile, Eye, EyeSlash, LockKey, SignIn as SignInIcon } from "@phosphor-icons/react";
+import { DeviceMobile, Eye, EyeSlash, SignIn as SignInIcon } from "@phosphor-icons/react";
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { LangFlag } from "../components/flags";
@@ -48,7 +48,7 @@ export default function SignIn() {
         <form onSubmit={submit} className="mc-surface w-full max-w-md space-y-5 rounded-2xl border border-aeblack-100 bg-white p-6 shadow-sm sm:p-8">
           <div>
             <span className="mb-3 inline-flex rounded-full bg-primary-100 px-3 py-1 text-sm font-bold text-primary-800">{t("app.badge")}</span>
-            <h1 className="flex items-center gap-2 text-2xl font-bold text-aeblack-900"><LockKey size={24} className="text-primary-600" aria-hidden="true" />{t("auth.title")}</h1>
+            <h1 className="text-2xl font-bold text-aeblack-900">{t("auth.title")}</h1>
             <p className="mt-2 text-sm text-aeblack-600">{t("auth.intro")}</p>
           </div>
           {error && error.code !== "code_required" && <ErrorState error={error} />}

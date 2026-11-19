@@ -237,11 +237,11 @@ function Preferences({ pairs, name, pole }: {
             <li key={pr.first}>
               <div className="mb-1 grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-sm">
                 <span className={toFirst ? "font-bold text-primary-800" : "text-aeblack-500"} dir="auto">
-                  <span className="me-1 inline-flex h-6 w-6 items-center justify-center rounded bg-aeblack-50 text-xs font-bold" dir="ltr">{pr.first}</span>{name(pr.first)}
+                  <span className="me-1 inline-flex h-6 w-6 items-center justify-center rounded bg-aeblack-50 text-xs font-bold">{pr.first}</span>{name(pr.first)}
                 </span>
                 <span className="text-xs text-aeblack-500" dir="auto">{t(`pers.clarity.${level}`)}</span>
                 <span className={`text-end ${!toFirst ? "font-bold text-primary-800" : "text-aeblack-500"}`} dir="auto">
-                  {name(pr.second)}<span className="ms-1 inline-flex h-6 w-6 items-center justify-center rounded bg-aeblack-50 text-xs font-bold" dir="ltr">{pr.second}</span>
+                  {name(pr.second)}<span className="ms-1 inline-flex h-6 w-6 items-center justify-center rounded bg-aeblack-50 text-xs font-bold">{pr.second}</span>
                 </span>
               </div>
               <div className="relative h-3 rounded-full bg-aeblack-50" role="img"

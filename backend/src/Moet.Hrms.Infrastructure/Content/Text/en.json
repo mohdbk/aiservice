@@ -412,7 +412,7 @@
  "asm.next_2": "You can follow your application's progress at any time.",
  "asm.next_3": "If you move forward, we will invite you to the next step by email.",
  "asm.view_applications": "View My Applications",
- "job.requirements": "Requirements",
+ "job.requirements": "Requirements at a Glance",
  "job.req_essential": "Essential",
  "job.req_desirable": "Desirable",
  "job.req_years": "at least {n} years",
@@ -462,5 +462,6 @@
  "signup.cv_none": "We could not find your details in this CV. Please fill in the form.",
  "signup.cv_saved": "Your CV will be saved to your account, ready for your applications.",
  "apply.sq_from_cv": "From Your CV",
- "apply.sq_filled": "Some answers were filled in from your CV. Please check each one before sending."
+ "apply.sq_filled": "Some answers were filled in from your CV. Please check each one before sending.",
+ "footer.copyright": "© {year} Ministry of Economy & Tourism. All rights reserved."
 }

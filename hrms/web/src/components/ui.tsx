@@ -475,7 +475,7 @@ export function Stat({ label, value, hint }: { label: ReactNode; value: ReactNod
   return (
     <div className="mc-surface rounded-2xl border border-aeblack-100 bg-white p-4">
       <p className="text-sm text-aeblack-500">{label}</p>
-      <p className="mt-1 text-3xl font-bold tabular-nums text-aeblack-900" dir="ltr">{value}</p>
+      <p className="mt-1 text-3xl font-bold tabular-nums text-aeblack-900"><bdi>{value}</bdi></p>
       {hint && <p className="mt-1 text-xs text-aeblack-500">{hint}</p>}
     </div>
   );

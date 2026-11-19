@@ -83,7 +83,7 @@ export default function PersonalitySettings() {
           <ul className="mt-4 flex flex-wrap gap-2">
             {ranges.map(([b, from, to]) => (
               <li key={b}><Badge tone={b === "VeryHigh" || b === "High" ? "green" : b === "Moderate" ? "gray" : "amber"}>
-                {t(`pers.band.${b}`)} <span dir="ltr">{from > to ? "-" : from === to ? from : `${from} to ${to}`}</span>
+                {t(`pers.band.${b}`)} <bdi>{from > to ? "-" : from === to ? from : t("perset.range", { from, to })}</bdi>
               </Badge></li>
             ))}
           </ul>
@@ -94,7 +94,7 @@ export default function PersonalitySettings() {
           <RowList>
             {s.types.map((n) => (
               <Row key={n.type} onOpen={canEdit ? () => open(n) : undefined}
-                title={<><span dir="ltr" className="me-2 font-bold tracking-wide">{n.type}</span>{en ? n.name_en : n.name_ar}</>}
+                title={<><span className="me-2 font-bold tracking-wide"><bdi>{n.type}</bdi></span>{en ? n.name_en : n.name_ar}</>}
                 sub={(en ? n.strengths_en : n.strengths_ar).join(" · ")}
                 aside={n.customised && <Badge tone="gold">{t("perset.customised")}</Badge>} />
             ))}

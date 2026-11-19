@@ -113,3 +113,9 @@ html.mc-contrast input[type="checkbox"]:checked, html.mc-contrast input[type="ra
 
 /* A closed state with no judgement (a withdrawn application). */
 .aegov-badge.badge-neutral { background-color: var(--color-aeblack-50, #f3f4f6); color: var(--color-aeblack-700, #374151); }
+
+/* Codes, emails and numbers are written left to right, but in Arabic they still line up with the column they sit in. */
+html[dir="rtl"] :is(p, dd)[dir="ltr"]:not([lang="en"]) { text-align: right; }
+
+/* Headings get focus after a page change so screen readers announce them; no ring for that programmatic focus. */
+[tabindex="-1"]:focus:not(:focus-visible) { outline: none; }

@@ -167,12 +167,12 @@ export function DataTable<T>({ list, columns, rowKey, filters = [], searchLabel,
               <SelectInput key={f.key} wrapClass="sm:min-w-40" label={f.label} value={list.get(f.key)} onChange={(e) => list.set({ [f.key]: e.target.value || null })}
                 options={[{ value: "", label: t("common.all") }, ...f.options]} />
             ))}
-            {filters.length > 0 && <SavedViews current={list.params.toString()} apply={list.replace} />}
+            {toolbar}
             {active && (
               <Button variant="link" onClick={clearAll}
                 icon={<X size={20} aria-hidden="true" />}>{t("list.clear")}</Button>
             )}
-            {toolbar}
+            {filters.length > 0 && <div className="sm:ms-auto sm:pb-1.5"><SavedViews current={list.params.toString()} apply={list.replace} /></div>}
           </div>
         )}
       </form>

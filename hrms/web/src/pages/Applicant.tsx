@@ -122,7 +122,7 @@ export default function Applicant() {
             actions={<Button variant="outline" size="sm" busy={act.busy} onClick={() => post(`/applicants/${a.id}/rescore`, {}, t("common.queued"))} icon={<ArrowClockwise size={20} aria-hidden="true" />}>{t("app.rescore")}</Button>}>
             <p className="mb-4 text-sm text-aeblack-500">{t("app.score_hint")}</p>
             {!c || c.status !== "Scored" ? (
-              <Note tone={c?.status === "Failed" ? "warning" : "info"}>{c ? `${t(`ai.${c.status}`)}${c.error ? `: ${c.error}` : ""}` : t("app.no_analysis")}</Note>
+              <Note tone={c?.status === "Failed" ? "warning" : "info"}>{c ? `${t(`ai.${c.status}`)}${c.error ? `: ${aiError(c.error, t, lang)}` : ""}` : t("app.no_analysis")}</Note>
             ) : (
               <CvResult appId={a.id} c={c} onChanged={reload} />
             )}
@@ -238,7 +238,7 @@ export default function Applicant() {
           <Table head={[t("common.code"), t("offer.position"), t("offer.date"), t("common.status")]}>
             {a.offers.map((o) => (
               <tr key={o.id}>
-                <td dir="ltr"><Link to={to(`/offers?open=${o.id}`)}>{o.code}</Link></td>
+                <td><bdi><Link to={to(`/offers?open=${o.id}`)}>{o.code}</Link></bdi></td>
                 <td>{o.position_title}</td>
                 <td>{date(o.offer_date)}</td>
                 <td><Badge>{t(`offer.status.${o.status}`)}</Badge></td>
@@ -493,4 +493,14 @@ function BookingDialog({ onClose, lookups, onSave, busy }: {
         options={(lookups?.staff || []).map((s) => ({ value: s.id, label: s.name, hint: s.email }))} />
     </Modal>
   );
+}
+
+/** Known scoring errors come from the server in English; show them in the reader's language. */
+const AI_ERRORS: Record<string, string> = {
+  "The CV could not be read (no text found).": "ai.err.no_text",
+  "The language model is not configured.": "ai.err.no_model",
+};
+function aiError(error: string, t: (k: string) => string, lang: string) {
+  const key = AI_ERRORS[error.trim()];
+  return key ? t(key) : lang === "en" ? error : t("ai.err.other");
 }

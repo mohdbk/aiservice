@@ -69,7 +69,7 @@ export default function JobPage() {
                   if (list.length === 0) return null;
                   return (
                     <div key={String(essential)}>
-                      <h3 className="mb-2 font-semibold text-aeblack-800">{t(essential ? "job.req_essential" : "job.req_desirable")}</h3>
+                      <h3 className="mb-2 text-base font-semibold text-aeblack-800">{t(essential ? "job.req_essential" : "job.req_desirable")}</h3>
                       <ul className="space-y-2" lang={job.content_lang} dir={job.content_dir}>
                         {list.map((r, i) => (
                           <li key={i} className="flex gap-3">

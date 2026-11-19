@@ -92,28 +92,24 @@ function TestBars({ tests }: { tests: Report["tests"] }) {
   );
 }
 
-/** Average days from applying to interview, offer and hire, placed along one line to scale. */
+/** Median days from applying to interview, offer and hire, as bars on one scale (labels never overlap). */
 function TimeLine({ time }: { time: Report["time"] }) {
   const { t } = useLang();
   const steps = ([["to_interview_days", "rep.time_to_interview"], ["to_offer_days", "rep.time_to_offer"], ["to_hire_days", "rep.time_to_hire"]] as const)
-    .filter(([k]) => time[k] != null).map(([k, l]) => ({ label: t(l), days: time[k] as number }));
-  if (steps.length === 0) return null;
-  const max = Math.max(1, ...steps.map((s) => s.days));
+    .map(([k, l]) => ({ label: t(l), days: time[k] }));
+  const max = Math.max(1, ...steps.map((s) => s.days ?? 0));
   return (
-    <div className="mb-4 px-2 pt-6 pb-10" role="img" aria-label={steps.map((s) => `${s.label}: ${s.days}`).join(", ")}>
-      <div className="relative h-1 rounded-full bg-primary-100">
-        <span className="absolute -top-1.5 start-0 size-4 rounded-full border-2 border-white bg-primary-700 shadow" />
-        <span className="absolute top-3 start-0 -translate-x-1/2 text-[11px] text-aeblack-500 rtl:translate-x-1/2">{t("rep.time_applied")}</span>
-        {steps.map((s) => (
-          <span key={s.label} className="absolute -top-1.5" style={{ insetInlineStart: `calc(${(s.days / max) * 100}% - 8px)` }}>
-            <span className="block size-4 rounded-full border-2 border-white bg-primary-500 shadow" />
-            <span className="absolute top-5 start-1/2 w-24 -translate-x-1/2 text-center text-[11px] leading-tight text-aeblack-600 rtl:translate-x-1/2">
-              <strong className="block tabular-nums text-aeblack-900">{Math.round(s.days)}</strong>{s.label}
-            </span>
+    <ul className="space-y-3">
+      {steps.map((s) => (
+        <li key={s.label} className="grid grid-cols-[minmax(7rem,11rem)_1fr_auto] items-center gap-3 text-sm">
+          <span className="truncate text-aeblack-700">{s.label}</span>
+          <span className="h-5 rounded-e bg-aeblack-50">
+            {s.days != null && <span className="block h-full rounded-e bg-primary-500" style={{ width: `${Math.max(s.days > 0 ? 1.5 : 0, (s.days / max) * 100)}%` }} />}
           </span>
-        ))}
-      </div>
-    </div>
+          <span className="min-w-16 text-end tabular-nums text-aeblack-900"><bdi>{s.days == null ? "-" : t("rep.days", { n: Math.round(s.days * 10) / 10 })}</bdi></span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -168,14 +164,6 @@ export default function Reports() {
                 </Card>
                 <Card title={t("rep.time")}>
                   <TimeLine time={r.time} />
-                  <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    {([["to_interview_days", "rep.time_to_interview"], ["to_offer_days", "rep.time_to_offer"], ["to_hire_days", "rep.time_to_hire"]] as const).map(([k, l]) => (
-                      <div key={k} className="rounded-xl border border-aeblack-100 p-3">
-                        <dt className="text-xs text-aeblack-500">{t(l)}</dt>
-                        <dd className="mt-1 text-xl font-bold tabular-nums">{days(r.time[k])}</dd>
-                      </div>
-                    ))}
-                  </dl>
                   <p className="mt-3 text-xs text-aeblack-500">{t("rep.time_hint")}</p>
                 </Card>
               </div>
@@ -193,7 +181,7 @@ export default function Reports() {
                             <td className="py-2">{x.title}</td>
                             <td className="tabular-nums">{x.invited}</td>
                             <td className="tabular-nums">{x.completed} <span className="text-xs text-aeblack-500" dir="ltr">({pct(x.completed, x.invited)}%)</span></td>
-                            <td className="tabular-nums" dir="ltr">{x.passed + x.failed > 0 ? `${pct(x.passed, x.passed + x.failed)}%` : "-"}</td>
+                            <td className="tabular-nums"><bdi>{x.passed + x.failed > 0 ? `${pct(x.passed, x.passed + x.failed)}%` : "-"}</bdi></td>
                             <td className="tabular-nums">{x.expired}</td>
                           </tr>
                         ))}
@@ -259,8 +247,8 @@ function Fairness({ f, total }: { f: Report["fairness"]; total: number }) {
                 <td className="tabular-nums">{g.interviewed} <span className="text-aeblack-500">({g.interview_rate}%)</span></td>
                 <td className="tabular-nums">{g.offered} <span className="text-aeblack-500">({g.offer_rate}%)</span></td>
                 <td className="tabular-nums">{g.hired} <span className="text-aeblack-500">({g.hire_rate}%)</span></td>
-                <td className="tabular-nums" dir="ltr">{ratio(g.interview_ratio)}</td>
-                <td className="tabular-nums" dir="ltr">{ratio(g.offer_ratio)}</td>
+                <td className="tabular-nums"><bdi>{ratio(g.interview_ratio)}</bdi></td>
+                <td className="tabular-nums"><bdi>{ratio(g.offer_ratio)}</bdi></td>
               </tr>
             ))}
           </tbody>

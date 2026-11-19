@@ -202,11 +202,13 @@ function Nav({ onNavigate, mobile }: { onNavigate?: () => void; mobile?: boolean
   const { t, path } = useSite();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const link = ({ isActive }: { isActive: boolean }) =>
     `flex items-center gap-2 rounded-lg px-3 py-2 font-medium hover:bg-primary-50 ${isActive ? "bg-primary-50 text-primary-700" : "text-aeblack-800"}`;
+  const onJobs = pathname.replace(/\/$/, "") === path().replace(/\/$/, "") || pathname.startsWith(path("/jobs"));
   return (
     <ul className="flex flex-col gap-1 md:flex-row md:items-center md:gap-2">
-      <li><NavLink end to={path()} className={link} onClick={onNavigate}><Briefcase size={24} aria-hidden="true" />{t("nav.jobs")}</NavLink></li>
+      <li><NavLink end to={path()} className={() => link({ isActive: onJobs })} aria-current={onJobs ? "page" : undefined} onClick={onNavigate}><Briefcase size={24} aria-hidden="true" />{t("nav.jobs")}</NavLink></li>
       {user && <li><NavLink to={path("/applications")} className={link} onClick={onNavigate}><Files size={24} aria-hidden="true" />{t("nav.my_applications")}</NavLink></li>}
       {user && <li><NavLink to={path("/assessments")} className={link} onClick={onNavigate}><Exam size={24} aria-hidden="true" />{t("nav.my_assessments")}</NavLink></li>}
       {!mobile ? (
@@ -300,6 +302,9 @@ export default function Layout({ children }: { children: ReactNode }) {
               )}
             </ul>
           </nav>
+        </div>
+        <div className="border-t border-white/10">
+          <p className="container mx-auto px-4 py-4 text-xs text-aeblack-300">{t("footer.copyright", { year: new Date().getFullYear() })}</p>
         </div>
       </footer>
     </div>
