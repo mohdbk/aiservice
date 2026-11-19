@@ -1,5 +1,5 @@
 import { CvLibrary } from "../components/CvLibrary";
-import { DownloadSimple, Trash, UserCircle } from "@phosphor-icons/react";
+import { DownloadSimple, Envelope, Key, Trash, UserCircle } from "@phosphor-icons/react";
 import { FormEvent, useState } from "react";
 import { api, ApiError } from "../api";
 import { useAuth } from "../auth";
@@ -11,7 +11,7 @@ import { useAsync } from "../useAsync";
 
 /** The candidate's account: a copy of their data, and asking for the account to be deleted. */
 export default function Account() {
-  const { t, errorText } = useSite();
+  const { t, errorText, lang } = useSite();
   const { user } = useAuth();
   usePageTitle(t("account.title"));
   const status = useAsync((signal) => api<{ deletion_pending: boolean; in_talent_pool: boolean }>("/api/account", { signal }), []);
@@ -21,6 +21,21 @@ export default function Account() {
   const [reason, setReason] = useState("");
   const [confirm, setConfirm] = useState(false);
   const [requested, setRequested] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+
+  const changePassword = async () => {
+    if (!user) return;
+    setError(null);
+    setBusy(true);
+    try {
+      await api("/api/forgot-password", { body: { email: user.email, lang } });
+      setResetSent(true);
+    } catch (err) {
+      setError(err);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const download = async () => {
     setError(null);
@@ -49,8 +64,8 @@ export default function Account() {
 
   const remove = async (e: FormEvent) => {
     e.preventDefault();
-    if (!confirm) return;
     setError(null);
+    if (!confirm) return setError(new ApiError("confirm_delete", 400));
     setBusy(true);
     try {
       await api("/api/account/delete", { body: { reason } });
@@ -80,20 +95,35 @@ export default function Account() {
         <IconBox icon={UserCircle} />
         <div className="min-w-0">
           <h1 className="font-heading text-3xl font-bold text-aeblack-950">{t("account.title")}</h1>
-          <p className="truncate text-aeblack-600"><bdi>{user?.email}</bdi></p>
+          {user?.full_name && <p className="truncate text-aeblack-600"><bdi>{user.full_name}</bdi></p>}
         </div>
       </div>
       {error ? <div className="mb-6"><Alert tone="error" title={errorText(error)} /></div> : null}
 
-      <section className="mc-surface rounded-2xl border border-aeblack-100 bg-white p-6" aria-labelledby="data-title">
-        <h2 id="data-title" className="font-heading text-lg font-semibold text-aeblack-900">{t("account.data_title")}</h2>
-        <p className="mt-1 text-aeblack-600">{t("account.data_body")}</p>
-        <button type="button" className="aegov-btn btn-outline mt-4" onClick={download} disabled={busy}>
-          <DownloadSimple size={24} aria-hidden="true" />{t("account.download")}
-        </button>
+      <section className="mc-surface rounded-2xl border border-aeblack-100 bg-white p-6" aria-labelledby="details-title">
+        <h2 id="details-title" className="font-heading text-lg font-semibold text-aeblack-900">{t("account.details_title")}</h2>
+        <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="flex items-start gap-3">
+            <UserCircle size={24} className="mt-0.5 shrink-0 text-primary-600" aria-hidden="true" />
+            <div className="min-w-0"><dt className="text-sm text-aeblack-600">{t("auth.full_name")}</dt><dd className="font-medium text-aeblack-900"><bdi>{user?.full_name}</bdi></dd></div>
+          </div>
+          <div className="flex items-start gap-3">
+            <Envelope size={24} className="mt-0.5 shrink-0 text-primary-600" aria-hidden="true" />
+            <div className="min-w-0"><dt className="text-sm text-aeblack-600">{t("auth.email")}</dt><dd className="break-all font-medium text-aeblack-900"><bdi>{user?.email}</bdi></dd></div>
+          </div>
+        </dl>
+        <div className="mt-5 border-t border-aeblack-100 pt-5">
+          {resetSent ? <Alert tone="success" title={t("account.password_sent")} /> : (
+            <button type="button" className="aegov-btn btn-outline" onClick={changePassword} disabled={busy}>
+              <Key size={24} aria-hidden="true" />{t("account.change_password")}
+            </button>
+          )}
+        </div>
       </section>
 
       <CvLibrary />
+
+      <JobAlerts />
 
       <section className="mc-surface mt-6 rounded-2xl border border-aeblack-100 bg-white p-6" aria-labelledby="pool-title">
         <h2 id="pool-title" className="font-heading text-lg font-semibold text-aeblack-900">{t("account.pool_title")}</h2>
@@ -106,7 +136,14 @@ export default function Account() {
         )}
       </section>
 
-      <JobAlerts />
+      <section className="mc-surface mt-6 rounded-2xl border border-aeblack-100 bg-white p-6" aria-labelledby="data-title">
+        <h2 id="data-title" className="font-heading text-lg font-semibold text-aeblack-900">{t("account.data_title")}</h2>
+        <p className="mt-1 text-aeblack-600">{t("account.data_body")}</p>
+        <button type="button" className="aegov-btn btn-outline mt-4" onClick={download} disabled={busy}>
+          <DownloadSimple size={24} aria-hidden="true" />{t("account.download")}
+        </button>
+      </section>
+
 
       <section className="mc-surface mt-6 rounded-2xl border border-aeblack-100 bg-white p-6" aria-labelledby="delete-title">
         <h2 id="delete-title" className="font-heading text-lg font-semibold text-aeblack-900">{t("account.delete_title")}</h2>
@@ -123,7 +160,7 @@ export default function Account() {
               <input id="confirm-delete" type="checkbox" checked={confirm} onChange={(e) => setConfirm(e.target.checked)} />
               <label htmlFor="confirm-delete">{t("account.confirm")}</label>
             </div>
-            <button type="submit" className="aegov-btn btn-outline" disabled={!confirm || busy}>
+            <button type="submit" className="aegov-btn btn-outline !border-aered-600 !text-aered-700 hover:!bg-aered-50" disabled={busy}>
               <Trash size={24} aria-hidden="true" />{t("account.delete")}
             </button>
           </form>

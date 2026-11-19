@@ -334,3 +334,23 @@ html[dir="rtl"] :is(p, dd)[dir="ltr"]:not([lang="en"]) { text-align: right; }
 
 /* The command palette search box shows focus with its gold underline, not a square ring. */
 .mh-cmd-input:focus, .mh-cmd-input:focus-visible { outline: none; box-shadow: none; }
+
+/* Arabic (Noto Kufi Arabic, Alexandria) has tall marks above and below the letters: give every text size more line
+   height in Arabic so wrapped lines never run into each other, including headings set to a tight leading. */
+html[dir="rtl"] {
+  --text-xs--line-height: 1.7;
+  --text-sm--line-height: 1.7;
+  --text-base--line-height: 1.75;
+  --text-lg--line-height: 1.7;
+  --text-xl--line-height: 1.6;
+  --text-2xl--line-height: 1.55;
+  --text-3xl--line-height: 1.5;
+  --text-4xl--line-height: 1.45;
+  --text-5xl--line-height: 1.4;
+  --text-6xl--line-height: 1.35;
+}
+html[dir="rtl"] :is(h1, h2, h3, h4, h5, h6) { line-height: 1.5; }
+html[dir="rtl"] .leading-none { --tw-leading: 1.4; line-height: 1.4; }
+html[dir="rtl"] .leading-tight { --tw-leading: 1.5; line-height: 1.5; }
+html[dir="rtl"] .leading-snug { --tw-leading: 1.55; line-height: 1.55; }
+html[dir="rtl"] .leading-normal { --tw-leading: 1.7; line-height: 1.7; }

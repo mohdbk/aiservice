@@ -305,7 +305,7 @@
  "asm.language_hint": "Choose the language you want the questions in. The rest of the portal stays as it is.",
  "nav.my_account": "My Account",
  "account.title": "My Account",
- "account.data_title": "Your Data",
+ "account.data_title": "Download Your Data",
  "account.data_body": "Download a copy of the information in your account: your details, applications, answers and assessment attempts.",
  "account.download": "Download My Data",
  "account.delete_title": "Delete My Account",
@@ -365,7 +365,7 @@
  "alerts.any": "Any",
  "alerts.add": "Add Alert",
  "alerts.full": "You have the most alerts allowed ({n}). Remove one to add another.",
- "error.alert_empty": "Add words to look for, or choose a department or location.",
+ "error.alert_empty": "Enter a keyword or choose a department or location.",
  "error.too_many_alerts": "You have the most alerts allowed. Remove one to add another.",
  "asm.auto_next": "Move to the Next Question Automatically",
  "asm.answered_count": "{answered} of {count} Answered",
@@ -464,5 +464,9 @@
  "apply.sq_from_cv": "From Your CV",
  "apply.sq_filled": "Some answers were filled in from your CV. Please check each one before sending.",
  "footer.copyright": "© {year} Ministry of Economy & Tourism. All rights reserved.",
- "error.required_fields": "Fill in all the required fields."
+ "error.required_fields": "Fill in all the required fields.",
+ "account.details_title": "Your Details",
+ "account.change_password": "Change Password",
+ "account.password_sent": "We have sent a link to change your password to your email.",
+ "error.confirm_delete": "Confirm that you understand your account and applications will be removed."
 }

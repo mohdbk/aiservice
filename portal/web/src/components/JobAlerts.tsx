@@ -1,6 +1,6 @@
 import { BellRinging, Plus, Trash } from "@phosphor-icons/react";
 import { FormEvent, useState } from "react";
-import { api } from "../api";
+import { api, ApiError } from "../api";
 import { useSite } from "../site";
 import { useAsync } from "../useAsync";
 import { Alert } from "./States";
@@ -21,7 +21,9 @@ export function JobAlerts() {
 
   const add = async (e: FormEvent) => {
     e.preventDefault();
-    setBusy(true); setError(null); setSaved(false);
+    setError(null); setSaved(false);
+    if (!keywords.trim() && !department && !location) return setError(new ApiError("alert_empty", 400));
+    setBusy(true);
     try {
       await api("/api/account/alerts", { body: { keywords: keywords.trim(), department: Number(department) || 0, location: Number(location) || 0, lang } });
       setKeywords(""); setDepartment(""); setLocation(""); setSaved(true);
@@ -83,7 +85,7 @@ export function JobAlerts() {
             </div>
           </div>
           <div className="flex items-end">
-            <button type="submit" className="aegov-btn btn-sm w-full md:w-auto" disabled={busy || (!keywords.trim() && !department && !location)}>
+            <button type="submit" className="aegov-btn w-full md:w-auto" disabled={busy}>
               <Plus size={20} aria-hidden="true" />{t("alerts.add")}
             </button>
           </div>
